@@ -45,7 +45,7 @@ final class DomainService {
   if(isset($data['capacity']) && ((int)$data['capacity']<0 || (int)$data['capacity']>1000))throw new AuthException(422,'ظرفیت نامعتبر است.','VALIDATION_ERROR');
   if(!$id){$data['agency_id']=$aid;if(in_array('uuid',$thisColumns($c['table'],$pdo),true))$data['uuid']=Uuid::v4();$cols=array_keys($data);$sql='INSERT INTO '.$c['table'].' ('.implode(',',$cols).') VALUES ('.implode(',',array_map(fn($x)=>':'.$x,$cols)).')';$st=$pdo->prepare($sql);$st->execute($data);$id=(int)$pdo->lastInsertId();}
   else{$sets=[];$params=['id'=>$id,'agency'=>$aid];foreach($data as $f=>$v){if($f==='agency_id'||$f==='uuid')continue;$sets[]="$f=:$f";$params[$f]=$v;}if(!$sets)throw new AuthException(422,'تغییری ارسال نشده است.','VALIDATION_ERROR');$pdo->prepare('UPDATE '.$c['table'].' SET '.implode(',',$sets).' WHERE id=:id AND agency_id=:agency')->execute($params);}
-  $s=$pdo->prepare('SELECT * FROM '.$c['table'].' WHERE id=:id AND agency_id=:agency');$s->execute(['id'=>$id,'agency'=>$aid]);$row=$s->fetch();if(!$row)throw new AuthException(404,'رکورد پیدا نشد.','NOT_FOUND');return $row;
+  $s=$pdo->prepare('SELECT * FROM '.$c['table'].' WHERE id=:id AND agency_id=:agency');$s->execute(['id'=>$id,'agency'=>$aid]);$row=$s->fetch();if(!$row)throw new AuthException(404,'رکورد پیدا نشد.','NOT_FOUND');self::activity($pdo,$aid,$uid,$id?'update':'create',$c['table'],$id);return $row;
  }
  private static function validateRelations(\PDO $pdo,int $aid,string $table,array $data): void {
   $relations=[
@@ -61,11 +61,11 @@ final class DomainService {
   }
  }
 
- public static function assignStudent(int $uid,int $aid,int $serviceId,int $studentId,?string $pickupAddress=null,?int $order=null): void {
+ private static function activity(\PDO $pdo,int $aid,int $uid,string $action,string $entity,int $entityId): void { try{$q=$pdo->prepare('INSERT INTO activity_logs(agency_id,user_id,action,entity_type,entity_id) VALUES(:a,:u,:x,:t,:i)');$q->execute(['a'=>$aid,'u'=>$uid,'x'=>$action,'t'=>$entity,'i'=>$entityId]);}catch(\Throwable $e){error_log($e->getMessage());} }\n public static function assignStudent(int $uid,int $aid,int $serviceId,int $studentId,?string $pickupAddress=null,?int $order=null): void {
   Authorization::requirePermission($uid,'services.manage');Authorization::requireAgencyAccess($uid,$aid);$pdo=Connection::get();
   $q=$pdo->prepare('SELECT 1 FROM services WHERE id=:s AND agency_id=:a AND is_active=1');$q->execute(['s'=>$serviceId,'a'=>$aid]);if(!$q->fetchColumn())throw new AuthException(404,'سرویس پیدا نشد.','NOT_FOUND');
   $q=$pdo->prepare('SELECT 1 FROM students WHERE id=:s AND agency_id=:a AND is_active=1');$q->execute(['s'=>$studentId,'a'=>$aid]);if(!$q->fetchColumn())throw new AuthException(404,'دانش‌آموز پیدا نشد.','NOT_FOUND');
-  $q=$pdo->prepare('INSERT INTO service_students(service_id,student_id,pickup_address,pickup_order) VALUES(:s,:st,:p,:o) ON DUPLICATE KEY UPDATE pickup_address=VALUES(pickup_address),pickup_order=VALUES(pickup_order)');$q->execute(['s'=>$serviceId,'st'=>$studentId,'p'=>$pickupAddress,'o'=>$order]);
+  $q=$pdo->prepare('INSERT INTO service_students(service_id,student_id,pickup_address,pickup_order) VALUES(:s,:st,:p,:o) ON DUPLICATE KEY UPDATE pickup_address=VALUES(pickup_address),pickup_order=VALUES(pickup_order)');$q->execute(['s'=>$serviceId,'st'=>$studentId,'p'=>$pickupAddress,'o'=>$order]);self::activity($pdo,$aid,$uid,'assign_student','services',$serviceId);
  }
  public static function removeStudent(int $uid,int $aid,int $serviceId,int $studentId): void {
   Authorization::requirePermission($uid,'services.manage');Authorization::requireAgencyAccess($uid,$aid);$q=Connection::get()->prepare('DELETE ss FROM service_students ss JOIN services s ON s.id=ss.service_id WHERE ss.service_id=:s AND ss.student_id=:st AND s.agency_id=:a');$q->execute(['s'=>$serviceId,'st'=>$studentId,'a'=>$aid]);
