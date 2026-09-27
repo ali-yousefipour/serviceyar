@@ -18,11 +18,16 @@ final class AuthService
         }
 
         $pdo = Connection::get();
+        $ip = substr((string)($_SERVER['REMOTE_ADDR'] ?? ''), 0, 45);
+        $rate = $pdo->prepare('SELECT COUNT(*) FROM auth_login_attempts WHERE username=:u AND ip_address=:ip AND succeeded=0 AND attempted_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 15 MINUTE)');
+        $rate->execute(['u'=>$username,'ip'=>$ip]);
+        if ((int)$rate->fetchColumn() >= 10) throw new AuthException(429, 'تعداد تلاش‌های ورود بیش از حد مجاز است. بعداً دوباره تلاش کنید.', 'LOGIN_RATE_LIMITED');
         $stmt = $pdo->prepare('SELECT id, uuid, username, password_hash, first_name, last_name, is_active FROM users WHERE username = :username LIMIT 1');
         $stmt->execute(['username' => $username]);
         $user = $stmt->fetch();
 
         if (!$user || !(bool)$user['is_active'] || !password_verify($password, $user['password_hash'])) {
+            $pdo->prepare('INSERT INTO auth_login_attempts(username,ip_address,succeeded) VALUES(:u,:ip,0)')->execute(['u'=>$username,'ip'=>$ip]);
             $this->audit(null, 'auth.login_failed', null, null);
             throw new AuthException(401, 'نام کاربری یا رمز عبور صحیح نیست.', 'INVALID_CREDENTIALS');
         }
@@ -31,6 +36,9 @@ final class AuthService
             $hash = password_hash($password, PASSWORD_DEFAULT);
             $pdo->prepare('UPDATE users SET password_hash = :hash WHERE id = :id')->execute(['hash' => $hash, 'id' => $user['id']]);
         }
+
+        $pdo->prepare('INSERT INTO auth_login_attempts(username,ip_address,succeeded) VALUES(:u,:ip,1)')->execute(['u'=>$username,'ip'=>$ip]);
+        $pdo->prepare('DELETE FROM auth_login_attempts WHERE attempted_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL 30 DAY)')->execute();
 
         $rawToken = bin2hex(random_bytes(32));
         $tokenHash = hash('sha256', $rawToken);
