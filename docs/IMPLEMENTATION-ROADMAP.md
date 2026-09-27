@@ -523,5 +523,6 @@ HTTP/API
 - Phase 2: Layout & Dashboard پیاده‌سازی شده
 - Phase 3: Agency & Settings پیاده‌سازی شده
 - Phase 4 تا 15: زیرساخت داده، API، Scope، گزارش، پایش و AI ایجاد شده و توسعه تخصصی هر ماژول در ادامه همین خط انجام می‌شود
-- Phase 16: تست جامع و Regression آغاز شده؛ CI شامل PHP lint و static smoke test است و خطاهای کشف‌شده تا سبز شدن CI اصلاح می‌شوند
+- Phase 16: تست جامع و Regression در حال اجرا؛ CI شامل PHP lint و static smoke test است و ترتیب مهاجرت‌ها نیز به‌صورت صریح کنترل می‌شود
+- اصلاح مهم Phase 16: مهاجرت احراز هویت از نام قدیمی و خارج از ترتیب `002_auth_sessions.sql` به `0007_auth_sessions.sql` منتقل شد تا اجرای نصب تازه با ترتیب قطعی انجام شود
 - Phase 17: آماده‌سازی Production پس از سبز شدن کامل Phase 16 و اجرای تست‌های یکپارچه
