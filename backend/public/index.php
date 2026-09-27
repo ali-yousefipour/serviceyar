@@ -12,12 +12,13 @@ try {
  if($method==='POST'&&$path==='/api/v1/auth/logout'){ $s=$auth->current();$auth->requireCsrf($s);$auth->logout();Response::json(['ok'=>true,'data'=>['loggedOut'=>true]]); }
  if($method==='GET'&&$path==='/api/v1/auth/me'){ $s=$auth->current();Response::json(['ok'=>true,'data'=>['user'=>['id'=>$s['id'],'uuid'=>$s['uuid'],'username'=>$s['username'],'firstName'=>$s['firstName'],'lastName'=>$s['lastName']],'permissions'=>Authorization::permissions($s['id']),'agencies'=>AgencyService::list($s['id'])]]); }
  if($method==='GET'&&$path==='/api/v1/auth/csrf'){ $s=$auth->current();Response::json(['ok'=>true,'data'=>['csrfToken'=>$s['csrfToken']]]); }
- $s=$auth->current(); $aid=agencyId($s);
+ $s=$auth->current(); $aid=null;
 
  if($method==='GET'&&$path==='/api/v1/agencies')Response::json(['ok'=>true,'data'=>AgencyService::list($s['id'])]);
  if($method==='POST'&&$path==='/api/v1/agencies'){ $auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>AgencyService::create($s['id'],Request::json())],201); }
  if(preg_match('#^/api/v1/agencies/(\d+)$#',$path,$m)){ $id=(int)$m[1];if($method==='PUT'||$method==='PATCH'){ $auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>AgencyService::update($s['id'],$id,Request::json())]);} }
 
+ $aid=agencyId($s);
  if($method==='GET'&&$path==='/api/v1/settings')Response::json(['ok'=>true,'data'=>SettingsService::get($s['id'],$aid)]);
  if(($method==='PUT'||$method==='PATCH')&&$path==='/api/v1/settings'){ $auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>SettingsService::put($s['id'],$aid,Request::json())]); }
  if($method==='GET'&&$path==='/api/v1/holidays')Response::json(['ok'=>true,'data'=>HolidayService::list($s['id'],$aid)]);
