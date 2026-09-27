@@ -40,6 +40,18 @@ try {
         ]]);
     }
 
+    if ($method === 'GET' && $path === '/api/v1/dashboard/summary') {
+        $session=$auth->current();
+        Authorization::requirePermission($session['id'],'dashboard.view');
+        $pdo=ServiceYar\\Database\\Connection::get();
+        $counts=[];
+        foreach (['schools','students','drivers','services'] as $table) {
+            try { $counts[$table]=(int)$pdo->query("SELECT COUNT(*) FROM {$table} WHERE is_active=1")->fetchColumn(); }
+            catch (\\Throwable) { $counts[$table]=0; }
+        }
+        Response::json(['ok'=>true,'data'=>['counts'=>$counts]]);
+    }
+
     if ($method === 'GET' && $path === '/api/v1/auth/csrf') {
         $session=$auth->current();
         Response::json(['ok'=>true,'data'=>['csrfToken'=>$session['csrfToken']]]);
