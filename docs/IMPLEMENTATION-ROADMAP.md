@@ -519,5 +519,9 @@ HTTP/API
 - Branch هدف: main
 - این سند: نقشه رسمی اجرای پروژه
 - Phase 0: تکمیل شده
-- Phase 1: زیرساخت Authentication & Authorization پیاده‌سازی شده
-- مرحله بعد: Phase 2 — Layout & Dashboard
+- Phase 1: Authentication & Authorization پیاده‌سازی شده
+- Phase 2: Layout & Dashboard پیاده‌سازی شده
+- Phase 3: Agency & Settings پیاده‌سازی شده
+- Phase 4 تا 15: زیرساخت داده، API، Scope، گزارش، پایش و AI ایجاد شده و توسعه تخصصی هر ماژول در ادامه همین خط انجام می‌شود
+- Phase 16: تست جامع و Regression باید پس از تکمیل جزئیات عملیاتی اجرا شود
+- Phase 17: آماده‌سازی Production پس از تأیید تست‌های Phase 16
