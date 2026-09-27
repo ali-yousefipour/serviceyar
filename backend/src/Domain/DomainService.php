@@ -43,9 +43,10 @@ final class DomainService {
   self::validateRelations($pdo,$aid,$c['table'],$data);
   if(isset($data['amount']) && (!is_numeric($data['amount']) || (float)$data['amount']<0))throw new AuthException(422,'مبلغ نامعتبر است.','VALIDATION_ERROR');
   if(isset($data['capacity']) && ((int)$data['capacity']<0 || (int)$data['capacity']>1000))throw new AuthException(422,'ظرفیت نامعتبر است.','VALIDATION_ERROR');
+  $wasCreate=!$id;
   if(!$id){$data['agency_id']=$aid;if(in_array('uuid',$thisColumns($c['table'],$pdo),true))$data['uuid']=Uuid::v4();$cols=array_keys($data);$sql='INSERT INTO '.$c['table'].' ('.implode(',',$cols).') VALUES ('.implode(',',array_map(fn($x)=>':'.$x,$cols)).')';$st=$pdo->prepare($sql);$st->execute($data);$id=(int)$pdo->lastInsertId();}
   else{$sets=[];$params=['id'=>$id,'agency'=>$aid];foreach($data as $f=>$v){if($f==='agency_id'||$f==='uuid')continue;$sets[]="$f=:$f";$params[$f]=$v;}if(!$sets)throw new AuthException(422,'تغییری ارسال نشده است.','VALIDATION_ERROR');$pdo->prepare('UPDATE '.$c['table'].' SET '.implode(',',$sets).' WHERE id=:id AND agency_id=:agency')->execute($params);}
-  $s=$pdo->prepare('SELECT * FROM '.$c['table'].' WHERE id=:id AND agency_id=:agency');$s->execute(['id'=>$id,'agency'=>$aid]);$row=$s->fetch();if(!$row)throw new AuthException(404,'رکورد پیدا نشد.','NOT_FOUND');self::activity($pdo,$aid,$uid,$id?'update':'create',$c['table'],$id);return $row;
+  $s=$pdo->prepare('SELECT * FROM '.$c['table'].' WHERE id=:id AND agency_id=:agency');$s->execute(['id'=>$id,'agency'=>$aid]);$row=$s->fetch();if(!$row)throw new AuthException(404,'رکورد پیدا نشد.','NOT_FOUND');self::activity($pdo,$aid,$uid,$wasCreate?'create':'update',$c['table'],$id);return $row;
  }
  private static function validateRelations(\PDO $pdo,int $aid,string $table,array $data): void {
   $relations=[
