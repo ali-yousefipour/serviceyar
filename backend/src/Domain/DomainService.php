@@ -40,10 +40,27 @@ final class DomainService {
   $c=self::cfg($resource); Authorization::requirePermission($uid,$c['permission'].'.manage'); Authorization::requireAgencyAccess($uid,$aid);
   $pdo=Connection::get();$data=[];foreach($c['fields'] as $f){$camel=preg_replace_callback('/_([a-z])/',fn($m)=>strtoupper($m[1]),$f);if(array_key_exists($camel,$b))$data[$f]=$b[$camel];elseif(array_key_exists($f,$b))$data[$f]=$b[$f];}
   foreach($data as $f=>$v){if(is_array($v)||is_object($v))throw new AuthException(422,'مقدار ورودی نامعتبر است.','VALIDATION_ERROR');}
+  self::validateRelations($pdo,$aid,$c['table'],$data);
+  if(isset($data['amount']) && (!is_numeric($data['amount']) || (float)$data['amount']<0))throw new AuthException(422,'مبلغ نامعتبر است.','VALIDATION_ERROR');
+  if(isset($data['capacity']) && ((int)$data['capacity']<0 || (int)$data['capacity']>1000))throw new AuthException(422,'ظرفیت نامعتبر است.','VALIDATION_ERROR');
   if(!$id){$data['agency_id']=$aid;if(in_array('uuid',$thisColumns($c['table'],$pdo),true))$data['uuid']=Uuid::v4();$cols=array_keys($data);$sql='INSERT INTO '.$c['table'].' ('.implode(',',$cols).') VALUES ('.implode(',',array_map(fn($x)=>':'.$x,$cols)).')';$st=$pdo->prepare($sql);$st->execute($data);$id=(int)$pdo->lastInsertId();}
   else{$sets=[];$params=['id'=>$id,'agency'=>$aid];foreach($data as $f=>$v){if($f==='agency_id'||$f==='uuid')continue;$sets[]="$f=:$f";$params[$f]=$v;}if(!$sets)throw new AuthException(422,'تغییری ارسال نشده است.','VALIDATION_ERROR');$pdo->prepare('UPDATE '.$c['table'].' SET '.implode(',',$sets).' WHERE id=:id AND agency_id=:agency')->execute($params);}
   $s=$pdo->prepare('SELECT * FROM '.$c['table'].' WHERE id=:id AND agency_id=:agency');$s->execute(['id'=>$id,'agency'=>$aid]);$row=$s->fetch();if(!$row)throw new AuthException(404,'رکورد پیدا نشد.','NOT_FOUND');return $row;
  }
+ private static function validateRelations(\\PDO $pdo,int $aid,string $table,array $data): void {
+  $relations=[
+   'students'=>['school_id'=>'schools'],'drivers'=>['vehicle_id'=>'vehicles'],'services'=>['school_id'=>'schools','driver_id'=>'drivers'],
+   'driver_work'=>['driver_id'=>'drivers','service_id'=>'services'],'driver_payments'=>['driver_id'=>'drivers'],
+   'school_charges'=>['school_id'=>'schools'],'service_charges'=>['service_id'=>'services'],'payments'=>['invoice_id'=>'invoices']
+  ];
+  foreach($relations[$table]??[] as $field=>$parent){
+   if(!isset($data[$field])||$data[$field]===''||$data[$field]===null)continue;
+   $q=$pdo->prepare("SELECT 1 FROM {$parent} WHERE id=:id AND agency_id=:a AND is_active=1 LIMIT 1");
+   try{$q->execute(['id'=>(int)$data[$field],'a'=>$aid]);}catch(\\PDOException $e){$q=$pdo->prepare("SELECT 1 FROM {$parent} WHERE id=:id AND agency_id=:a LIMIT 1");$q->execute(['id'=>(int)$data[$field],'a'=>$aid]);}
+   if(!$q->fetchColumn())throw new AuthException(422,'ارتباط انتخاب‌شده خارج از محدوده سازمان است.','CROSS_SCOPE_REFERENCE');
+  }
+ }
+
  public static function assignStudent(int $uid,int $aid,int $serviceId,int $studentId,?string $pickupAddress=null,?int $order=null): void {
   Authorization::requirePermission($uid,'services.manage');Authorization::requireAgencyAccess($uid,$aid);$pdo=Connection::get();
   $q=$pdo->prepare('SELECT 1 FROM services WHERE id=:s AND agency_id=:a AND is_active=1');$q->execute(['s'=>$serviceId,'a'=>$aid]);if(!$q->fetchColumn())throw new AuthException(404,'سرویس پیدا نشد.','NOT_FOUND');
