@@ -44,6 +44,18 @@ final class DomainService {
   else{$sets=[];$params=['id'=>$id,'agency'=>$aid];foreach($data as $f=>$v){if($f==='agency_id'||$f==='uuid')continue;$sets[]="$f=:$f";$params[$f]=$v;}if(!$sets)throw new AuthException(422,'تغییری ارسال نشده است.','VALIDATION_ERROR');$pdo->prepare('UPDATE '.$c['table'].' SET '.implode(',',$sets).' WHERE id=:id AND agency_id=:agency')->execute($params);}
   $s=$pdo->prepare('SELECT * FROM '.$c['table'].' WHERE id=:id AND agency_id=:agency');$s->execute(['id'=>$id,'agency'=>$aid]);$row=$s->fetch();if(!$row)throw new AuthException(404,'رکورد پیدا نشد.','NOT_FOUND');return $row;
  }
+ public static function assignStudent(int $uid,int $aid,int $serviceId,int $studentId,?string $pickupAddress=null,?int $order=null): void {
+  Authorization::requirePermission($uid,'services.manage');Authorization::requireAgencyAccess($uid,$aid);$pdo=Connection::get();
+  $q=$pdo->prepare('SELECT 1 FROM services WHERE id=:s AND agency_id=:a AND is_active=1');$q->execute(['s'=>$serviceId,'a'=>$aid]);if(!$q->fetchColumn())throw new AuthException(404,'سرویس پیدا نشد.','NOT_FOUND');
+  $q=$pdo->prepare('SELECT 1 FROM students WHERE id=:s AND agency_id=:a AND is_active=1');$q->execute(['s'=>$studentId,'a'=>$aid]);if(!$q->fetchColumn())throw new AuthException(404,'دانش‌آموز پیدا نشد.','NOT_FOUND');
+  $q=$pdo->prepare('INSERT INTO service_students(service_id,student_id,pickup_address,pickup_order) VALUES(:s,:st,:p,:o) ON DUPLICATE KEY UPDATE pickup_address=VALUES(pickup_address),pickup_order=VALUES(pickup_order)');$q->execute(['s'=>$serviceId,'st'=>$studentId,'p'=>$pickupAddress,'o'=>$order]);
+ }
+ public static function removeStudent(int $uid,int $aid,int $serviceId,int $studentId): void {
+  Authorization::requirePermission($uid,'services.manage');Authorization::requireAgencyAccess($uid,$aid);$q=Connection::get()->prepare('DELETE ss FROM service_students ss JOIN services s ON s.id=ss.service_id WHERE ss.service_id=:s AND ss.student_id=:st AND s.agency_id=:a');$q->execute(['s'=>$serviceId,'st'=>$studentId,'a'=>$aid]);
+ }
+ public static function serviceStudents(int $uid,int $aid,int $serviceId): array {
+  Authorization::requirePermission($uid,'services.view');Authorization::requireAgencyAccess($uid,$aid);$q=Connection::get()->prepare('SELECT st.id,st.uuid,st.first_name,st.last_name,st.grade,st.national_code,ss.pickup_address,ss.pickup_order FROM service_students ss JOIN students st ON st.id=ss.student_id JOIN services s ON s.id=ss.service_id WHERE ss.service_id=:s AND s.agency_id=:a ORDER BY ss.pickup_order,st.last_name,st.first_name');$q->execute(['s'=>$serviceId,'a'=>$aid]);return $q->fetchAll();
+ }
  public static function delete(int $uid,int $aid,string $resource,int $id): void { $c=self::cfg($resource);Authorization::requirePermission($uid,$c['permission'].'.manage');Authorization::requireAgencyAccess($uid,$aid);$pdo=Connection::get();$s=$pdo->prepare("UPDATE {$c['table']} SET is_active=0 WHERE id=:id AND agency_id=:agency");try{$s->execute(['id'=>$id,'agency'=>$aid]);}catch(\PDOException){$pdo->prepare("DELETE FROM {$c['table']} WHERE id=:id AND agency_id=:agency")->execute(['id'=>$id,'agency'=>$aid]);} }
 }
 function thisColumns(string $table,\PDO $pdo): array { static $cache=[];if(isset($cache[$table]))return $cache[$table];$s=$pdo->query("SHOW COLUMNS FROM $table");return $cache[$table]=$s->fetchAll(\PDO::FETCH_COLUMN); }
