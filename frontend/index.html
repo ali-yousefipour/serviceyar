@@ -1,31 +1,29 @@
 <!doctype html>
 <html lang="fa" dir="rtl">
-<head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#1A327A"><title>سرویس‌یار</title>
-  <link rel="stylesheet" href="/assets/app.css">
-</head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#1A327A"><title>سرویس‌یار</title><link rel="stylesheet" href="/assets/app.css"></head>
 <body>
-<main class="shell">
-<section class="card">
-  <div class="brand">سرویس‌یار</div>
-  <h1>سامانه مدیریت سرویس مدارس</h1>
-  <div id="loginView">
-    <p>برای ورود، اطلاعات حساب کاربری را وارد کنید.</p>
-    <form id="loginForm" class="form">
-      <label>نام کاربری<input id="username" autocomplete="username" required></label>
-      <label>رمز عبور<input id="password" type="password" autocomplete="current-password" required></label>
-      <button type="submit">ورود</button>
-      <div id="loginError" class="status error" hidden></div>
-    </form>
-  </div>
-  <div id="appView" hidden>
-    <div id="welcome" class="status ok"></div>
-    <div class="actions"><button id="logout" type="button">خروج</button></div>
-  </div>
-  <div id="health" class="status">در حال بررسی وضعیت سرور...</div>
-</section>
-</main>
+<div id="app" class="app">
+  <aside class="sidebar">
+    <div class="logo">سرویس‌یار</div>
+    <nav>
+      <a class="nav active" href="#dashboard" data-page="dashboard">داشبورد</a>
+      <a class="nav" href="#schools" data-page="schools">مدارس</a>
+      <a class="nav" href="#students" data-page="students">دانش‌آموزان</a>
+      <a class="nav" href="#drivers" data-page="drivers">رانندگان</a>
+      <a class="nav" href="#services" data-page="services">سرویس‌ها</a>
+      <a class="nav" href="#reports" data-page="reports">گزارش‌ها</a>
+      <a class="nav" href="#settings" data-page="settings">تنظیمات</a>
+    </nav>
+    <button id="logout" class="logout">خروج</button>
+  </aside>
+  <section class="main">
+    <header class="header">
+      <div><div class="eyebrow">سامانه مدیریت سرویس مدارس</div><h1 id="pageTitle">داشبورد</h1></div>
+      <div class="user"><span id="userName">کاربر</span><span class="avatar" id="avatar">ک</span></div>
+    </header>
+    <main id="content"></main>
+  </section>
+</div>
+<div id="login" class="login"><section class="login-card"><div class="logo">سرویس‌یار</div><h1>ورود به سامانه</h1><p>سامانه مدیریت سرویس مدارس</p><form id="loginForm"><label>نام کاربری<input id="username" required autocomplete="username"></label><label>رمز عبور<input id="password" type="password" required autocomplete="current-password"></label><button>ورود</button><div id="loginError" class="error" hidden></div></form></section></div>
 <script src="/assets/app.js" defer></script>
-</body>
-</html>
+</body></html>
