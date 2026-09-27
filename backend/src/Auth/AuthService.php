@@ -48,12 +48,13 @@ final class AuthService
         $pdo->prepare('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = :id')->execute(['id'=>$user['id']]);
         $this->audit((int)$user['id'], 'auth.login', 'user', (string)$user['id']);
 
-        return ['token'=>$rawToken, 'csrfToken'=>$csrf, 'expiresAt'=>$expires, 'user'=>$this->publicUser((int)$user['id'])];
+        setcookie('serviceyar_session', $rawToken, ['expires'=>strtotime($expires), 'path'=>'/', 'secure'=>config('APP_SECURE_COOKIE','0') === '1', 'httponly'=>true, 'samesite'=>'Lax']);
+        return ['csrfToken'=>$csrf, 'expiresAt'=>$expires, 'user'=>$this->publicUser((int)$user['id'])];
     }
 
     public function current(): array
     {
-        $raw = $this->bearerToken();
+        $raw = $this->sessionToken();
         if ($raw === null) {
             throw new AuthException(401, 'نشست معتبر نیست.', 'UNAUTHENTICATED');
         }
@@ -81,7 +82,7 @@ final class AuthService
 
     public function logout(): void
     {
-        $raw=$this->bearerToken();
+        $raw=$this->sessionToken();
         if ($raw===null) return;
         $hash=hash('sha256',$raw);
         $pdo=Connection::get();
@@ -90,6 +91,7 @@ final class AuthService
         $uid=$stmt->fetchColumn();
         $pdo->prepare('UPDATE user_sessions SET revoked_at=UTC_TIMESTAMP() WHERE token_hash=:token')->execute(['token'=>$hash]);
         if ($uid) $this->audit((int)$uid,'auth.logout',null,null);
+        setcookie('serviceyar_session','',['expires'=>1,'path'=>'/','secure'=>config('APP_SECURE_COOKIE','0') === '1','httponly'=>true,'samesite'=>'Lax']);
     }
 
     public function requireCsrf(array $session): void
@@ -102,10 +104,12 @@ final class AuthService
         }
     }
 
-    private function bearerToken(): ?string
+    private function sessionToken(): ?string
     {
+        $cookie=$_COOKIE['serviceyar_session'] ?? null;
+        if (is_string($cookie) && preg_match('/^[A-Fa-f0-9]{64}$/',$cookie)) return $cookie;
         $header=(string)($_SERVER['HTTP_AUTHORIZATION'] ?? '');
-        if (preg_match('/^Bearer\\s+([A-Za-z0-9]+)$/', $header, $m)) return $m[1];
+        if (preg_match('/^Bearer\\s+([A-Za-z0-9]+)$/',$header,$m)) return $m[1];
         return null;
     }
 
