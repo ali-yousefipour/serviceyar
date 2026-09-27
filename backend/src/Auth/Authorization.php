@@ -26,4 +26,13 @@ final class Authorization
             throw new AuthException(403,'برای انجام این عملیات مجوز ندارید.','FORBIDDEN');
         }
     }
+
+    public static function requireAgencyAccess(int $userId,int $agencyId): void
+    {
+        $s=Connection::get()->prepare('SELECT 1 FROM agency_users WHERE user_id=:uid AND agency_id=:aid LIMIT 1');
+        $s->execute(['uid'=>$userId,'aid'=>$agencyId]);
+        if (!$s->fetchColumn()) {
+            throw new AuthException(403,'دسترسی به این سازمان مجاز نیست.','SCOPE_FORBIDDEN');
+        }
+    }
 }
