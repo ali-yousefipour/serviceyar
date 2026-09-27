@@ -8,7 +8,7 @@ use PDO;
 
 final class AuthService
 {
-    private const SESSION_DAYS = 7;
+    private const DEFAULT_SESSION_LIFETIME = 604800;
 
     public function login(string $username, string $password): array
     {
@@ -43,7 +43,8 @@ final class AuthService
         $rawToken = bin2hex(random_bytes(32));
         $tokenHash = hash('sha256', $rawToken);
         $csrf = bin2hex(random_bytes(32));
-        $expires = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->modify('+' . self::SESSION_DAYS . ' days')->format('Y-m-d H:i:s');
+        $lifetime=max(300,(int)config('SESSION_LIFETIME',self::DEFAULT_SESSION_LIFETIME));
+        $expires = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->modify('+' . $lifetime . ' seconds')->format('Y-m-d H:i:s');
 
         $pdo->prepare('INSERT INTO user_sessions (user_id, token_hash, csrf_token, ip_address, user_agent, expires_at) VALUES (:uid,:token,:csrf,:ip,:ua,:expires)')
             ->execute([
