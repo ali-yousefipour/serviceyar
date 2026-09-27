@@ -86,6 +86,35 @@ foreach($checks as $route){
     }
 }
 
+$mutatingChecks=[
+ '/api/v1/auth/logout',
+ '/api/v1/agencies',
+ '/api/v1/settings',
+ '/api/v1/holidays',
+ '/api/v1/users',
+ '/api/v1/ai/conversations',
+ '/api/v1/services/',
+];
+foreach($mutatingChecks as $route){
+    $pos=strpos($index,$route);
+    if($pos===false)throw new RuntimeException("Missing mutating route family: $route");
+    $window=substr($index,max(0,$pos-250),900);
+    if(strpos($window,'requireCsrf')===false)throw new RuntimeException("Missing CSRF enforcement near: $route");
+}
+
+$domain=file_get_contents($root.'/backend/src/Domain/DomainService.php');
+if($domain===false)throw new RuntimeException('Cannot read DomainService.');
+foreach(['requirePermission','requireAgencyAccess','validateRelations','activity'] as $guard){
+    if(strpos($domain,$guard)===false)throw new RuntimeException("Domain security guard missing: $guard");
+}
+if(strpos($domain,"rowCount()<1")===false)throw new RuntimeException('Delete/assignment not-found guard missing.');
+
+$bootstrap=file_get_contents($root.'/backend/src/bootstrap.php');
+if($bootstrap===false)throw new RuntimeException('Cannot read bootstrap.');
+foreach(['Content-Security-Policy','Strict-Transport-Security','X-Content-Type-Options','X-Frame-Options','Referrer-Policy'] as $header){
+    if(strpos($bootstrap,$header)===false)throw new RuntimeException("Security header missing: $header");
+}
+
 $auth=file_get_contents($root.'/database/migrations/0007_auth_sessions.sql');
 if($auth===false || strpos($auth,'CREATE TABLE IF NOT EXISTS user_sessions')===false){
     throw new RuntimeException('Ordered auth migration does not create user_sessions.');
