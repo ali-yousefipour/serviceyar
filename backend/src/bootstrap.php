@@ -38,4 +38,5 @@ function config(string $key, mixed $default = null): mixed
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: strict-origin-when-cross-origin');
-header('Content-Security-Policy: default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none';');
+header("Content-Security-Policy: default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none';");
+header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
