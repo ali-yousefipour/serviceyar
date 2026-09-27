@@ -518,4 +518,6 @@ HTTP/API
 - Repository: serviceyar
 - Branch هدف: main
 - این سند: نقشه رسمی اجرای پروژه
-- مرحله بعد: Phase 0 — ایجاد اسکلت پروژه و زیرساخت پایه
+- Phase 0: تکمیل شده
+- Phase 1: زیرساخت Authentication & Authorization پیاده‌سازی شده
+- مرحله بعد: Phase 2 — Layout & Dashboard
