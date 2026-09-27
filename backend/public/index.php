@@ -28,6 +28,7 @@ try {
  if($method==='POST'&&$path==='/api/v1/users'){ $auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>UserService::save($s['id'],$aid,Request::json())],201); }
  if(preg_match('#^/api/v1/users/(\d+)$#',$path,$m)&&($method==='PUT'||$method==='PATCH')){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>UserService::save($s['id'],$aid,Request::json(),(int)$m[1])]);}
 
+ if($method==='GET'&&$path==='/api/v1/reports/export'){ExportService::xlsx($s['id'],$aid,(string)($_GET['resource']??'schools'));}
  if($method==='GET'&&$path==='/api/v1/reports/summary')Response::json(['ok'=>true,'data'=>ReportService::summary($s['id'],$aid)]);
  if($method==='GET'&&$path==='/api/v1/monitoring/activity')Response::json(['ok'=>true,'data'=>MonitoringService::activity($s['id'],$aid)]);
  if($method==='GET'&&preg_match('#^/api/v1/monitoring/services/(\\d+)/locations$#',$path,$mm))Response::json(['ok'=>true,'data'=>MonitoringService::locations($s['id'],$aid,(int)$mm[1])]);
