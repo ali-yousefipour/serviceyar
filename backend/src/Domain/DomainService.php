@@ -62,7 +62,8 @@ final class DomainService {
   }
  }
 
- private static function activity(\PDO $pdo,int $aid,int $uid,string $action,string $entity,int $entityId): void { try{$q=$pdo->prepare('INSERT INTO activity_logs(agency_id,user_id,action,entity_type,entity_id) VALUES(:a,:u,:x,:t,:i)');$q->execute(['a'=>$aid,'u'=>$uid,'x'=>$action,'t'=>$entity,'i'=>$entityId]);}catch(\Throwable $e){error_log($e->getMessage());} }\n public static function assignStudent(int $uid,int $aid,int $serviceId,int $studentId,?string $pickupAddress=null,?int $order=null): void {
+ private static function activity(\PDO $pdo,int $aid,int $uid,string $action,string $entity,int $entityId): void { try{$q=$pdo->prepare('INSERT INTO activity_logs(agency_id,user_id,action,entity_type,entity_id) VALUES(:a,:u,:x,:t,:i)');$q->execute(['a'=>$aid,'u'=>$uid,'x'=>$action,'t'=>$entity,'i'=>$entityId]);}catch(\Throwable $e){error_log($e->getMessage());} }
+ public static function assignStudent(int $uid,int $aid,int $serviceId,int $studentId,?string $pickupAddress=null,?int $order=null): void {
   Authorization::requirePermission($uid,'services.manage');Authorization::requireAgencyAccess($uid,$aid);$pdo=Connection::get();
   $q=$pdo->prepare('SELECT 1 FROM services WHERE id=:s AND agency_id=:a AND is_active=1');$q->execute(['s'=>$serviceId,'a'=>$aid]);if(!$q->fetchColumn())throw new AuthException(404,'سرویس پیدا نشد.','NOT_FOUND');
   $q=$pdo->prepare('SELECT 1 FROM students WHERE id=:s AND agency_id=:a AND is_active=1');$q->execute(['s'=>$studentId,'a'=>$aid]);if(!$q->fetchColumn())throw new AuthException(404,'دانش‌آموز پیدا نشد.','NOT_FOUND');
