@@ -16,4 +16,5 @@ jobs:
         shell: bash
         run: |
           set -e
-          find backend -name '*.php' -print0 | xargs -0 -n1 php -l
+          find backend tests -name '*.php' -print0 | xargs -0 -n1 php -l
+          php tests/static-smoke.php
