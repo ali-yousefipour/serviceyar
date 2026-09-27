@@ -47,7 +47,7 @@ final class DomainService {
   else{$sets=[];$params=['id'=>$id,'agency'=>$aid];foreach($data as $f=>$v){if($f==='agency_id'||$f==='uuid')continue;$sets[]="$f=:$f";$params[$f]=$v;}if(!$sets)throw new AuthException(422,'تغییری ارسال نشده است.','VALIDATION_ERROR');$pdo->prepare('UPDATE '.$c['table'].' SET '.implode(',',$sets).' WHERE id=:id AND agency_id=:agency')->execute($params);}
   $s=$pdo->prepare('SELECT * FROM '.$c['table'].' WHERE id=:id AND agency_id=:agency');$s->execute(['id'=>$id,'agency'=>$aid]);$row=$s->fetch();if(!$row)throw new AuthException(404,'رکورد پیدا نشد.','NOT_FOUND');return $row;
  }
- private static function validateRelations(\\PDO $pdo,int $aid,string $table,array $data): void {
+ private static function validateRelations(\PDO $pdo,int $aid,string $table,array $data): void {
   $relations=[
    'students'=>['school_id'=>'schools'],'drivers'=>['vehicle_id'=>'vehicles'],'services'=>['school_id'=>'schools','driver_id'=>'drivers'],
    'driver_work'=>['driver_id'=>'drivers','service_id'=>'services'],'driver_payments'=>['driver_id'=>'drivers'],
@@ -56,7 +56,7 @@ final class DomainService {
   foreach($relations[$table]??[] as $field=>$parent){
    if(!isset($data[$field])||$data[$field]===''||$data[$field]===null)continue;
    $q=$pdo->prepare("SELECT 1 FROM {$parent} WHERE id=:id AND agency_id=:a AND is_active=1 LIMIT 1");
-   try{$q->execute(['id'=>(int)$data[$field],'a'=>$aid]);}catch(\\PDOException $e){$q=$pdo->prepare("SELECT 1 FROM {$parent} WHERE id=:id AND agency_id=:a LIMIT 1");$q->execute(['id'=>(int)$data[$field],'a'=>$aid]);}
+   try{$q->execute(['id'=>(int)$data[$field],'a'=>$aid]);}catch(\PDOException $e){$q=$pdo->prepare("SELECT 1 FROM {$parent} WHERE id=:id AND agency_id=:a LIMIT 1");$q->execute(['id'=>(int)$data[$field],'a'=>$aid]);}
    if(!$q->fetchColumn())throw new AuthException(422,'ارتباط انتخاب‌شده خارج از محدوده سازمان است.','CROSS_SCOPE_REFERENCE');
   }
  }
