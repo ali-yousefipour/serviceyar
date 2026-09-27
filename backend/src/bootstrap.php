@@ -39,4 +39,21 @@ header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 header("Content-Security-Policy: default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none';");
-header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+if (config('APP_ENV','local') === 'production') {
+    ini_set('display_errors','0');
+    ini_set('log_errors','1');
+}
+
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+$allowedOrigins = array_values(array_filter(array_map('trim', explode(',', (string)config('CORS_ALLOWED_ORIGINS','')))));
+if ($origin !== '' && in_array($origin, $allowedOrigins, true)) {
+    header('Access-Control-Allow-Origin: '.$origin);
+    header('Access-Control-Allow-Credentials: true');
+    header('Access-Control-Allow-Headers: Content-Type, Accept, Authorization, X-CSRF-Token');
+    header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    header('Vary: Origin');
+}
+
+if (config('APP_ENV','local') === 'production' && config('APP_SECURE_COOKIE','0') === '1') {
+    header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+}
