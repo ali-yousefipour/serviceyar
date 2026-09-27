@@ -1,36 +1,18 @@
-const $ = id => document.getElementById(id);
-const health=$('health'), loginView=$('loginView'), appView=$('appView'), loginError=$('loginError');
-
-async function api(url, options={}) {
-  const response=await fetch(url,{credentials:'same-origin',headers:{Accept:'application/json',...(options.body?{'Content-Type':'application/json'}:{})},...options});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok || !data.ok) throw new Error(data?.error?.message || 'خطای سرور');
-  return data.data;
-}
-async function loadSession(){
-  try{
-    const data=await api('/api/v1/auth/me');
-    loginView.hidden=true; appView.hidden=false;
-    $('welcome').textContent=`خوش آمدید، ${[data.user.firstName,data.user.lastName].filter(Boolean).join(' ') || data.user.username}`;
-  }catch{ loginView.hidden=false; appView.hidden=true; }
-}
-$('loginForm').addEventListener('submit',async e=>{
-  e.preventDefault(); loginError.hidden=true;
-  try{
-    const data=await api('/api/v1/auth/login',{method:'POST',body:JSON.stringify({username:$('username').value,password:$('password').value})});
-    $('password').value='';
-    loginView.hidden=true; appView.hidden=false;
-    $('welcome').textContent=`خوش آمدید، ${[data.user.firstName,data.user.lastName].filter(Boolean).join(' ') || data.user.username}`;
-  }catch(err){loginError.textContent=err.message;loginError.hidden=false;}
-});
-$('logout').addEventListener('click',async()=>{
-  try{
-    const session=await api('/api/v1/auth/me');
-    await api('/api/v1/auth/logout',{method:'POST',headers:{'X-CSRF-Token':session.csrfToken}});
-  }finally{loginView.hidden=false;appView.hidden=true;}
-});
-fetch('/api/v1/health',{headers:{Accept:'application/json'}}).then(async r=>{
-  const d=await r.json(); if(!r.ok||!d.ok) throw 0;
-  health.textContent='وضعیت سرور: فعال — API آماده است.'; health.className='status ok';
-}).catch(()=>{health.textContent='اتصال به API برقرار نشد.';health.className='status error';});
-loadSession();
+const $=id=>document.getElementById(id);
+let session=null;
+const pages={
+ dashboard:{title:'داشبورد',html:()=>`<section class="welcome"><h2>نمای کلی سامانه</h2><p>در این بخش وضعیت عملیاتی سامانه نمایش داده می‌شود.</p></section><div class="stats"><article><span>مدارس</span><strong>—</strong><small>داده در انتظار اتصال ماژول مدارس</small></article><article><span>دانش‌آموزان</span><strong>—</strong><small>داده در انتظار اتصال ماژول دانش‌آموزان</small></article><article><span>رانندگان</span><strong>—</strong><small>داده در انتظار اتصال ماژول رانندگان</small></article><article><span>سرویس‌ها</span><strong>—</strong><small>داده در انتظار اتصال ماژول سرویس‌ها</small></article></div><section class="panel"><h3>وضعیت سامانه</h3><div class="rows"><div><span>API</span><b class="ok">فعال</b></div><div><span>نشست کاربر</span><b class="ok">معتبر</b></div><div><span>نسخه</span><b>۰.۲.۰</b></div></div></section>`,
+ schools:{title:'مدارس',html:()=>placeholder('مدارس','فهرست، جست‌وجو، موقعیت و مدیریت قرارداد مدارس')},
+ students:{title:'دانش‌آموزان',html:()=>placeholder('دانش‌آموزان','مدیریت دانش‌آموزان، اولیا و تخصیص سرویس')},
+ drivers:{title:'رانندگان',html:()=>placeholder('رانندگان','پرونده، مدارک، خودرو و وضعیت تأیید رانندگان')},
+ services:{title:'سرویس‌ها',html:()=>placeholder('سرویس‌ها','مدیریت سرویس، ظرفیت، راننده و دانش‌آموزان')},
+ reports:{title:'گزارش‌ها',html:()=>placeholder('گزارش‌ها','گزارش‌های عملیاتی و خروجی‌های سامانه')},
+ settings:{title:'تنظیمات',html:()=>placeholder('تنظیمات','تنظیمات سازمان، کاربران و پارامترهای سامانه')}
+};
+function placeholder(title,text){return `<section class="panel empty"><div class="empty-icon">◌</div><h2>${title}</h2><p>${text}</p><span>این ماژول در فاز بعدی توسعه فعال می‌شود.</span></section>`}
+function render(){let key=location.hash.slice(1)||'dashboard';if(!pages[key])key='dashboard';document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('active',x.dataset.page===key));$('pageTitle').textContent=pages[key].title;$('content').innerHTML=pages[key].html()}
+async function api(url,options={}){const r=await fetch(url,{credentials:'same-origin',headers:{Accept:'application/json',...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})},...options});const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d?.error?.message||'خطای سرور');return d.data}
+async function boot(){try{session=await api('/api/v1/auth/me');const u=session.user;$('userName').textContent=[u.firstName,u.lastName].filter(Boolean).join(' ')||u.username;$('avatar').textContent=($('userName').textContent||'ک').charAt(0);$('login').hidden=true;$('app').hidden=false;render()}catch{$('app').hidden=true;$('login').hidden=false}}
+$('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginError').hidden=true;try{const d=await api('/api/v1/auth/login',{method:'POST',body:JSON.stringify({username:$('username').value,password:$('password').value})});session={user:d.user,csrfToken:d.csrfToken};$('password').value='';$('login').hidden=true;$('app').hidden=false;const u=d.user;$('userName').textContent=[u.firstName,u.lastName].filter(Boolean).join(' ')||u.username;$('avatar').textContent=$('userName').textContent.charAt(0);render()}catch(e){$('loginError').textContent=e.message;$('loginError').hidden=false}});
+$('logout').addEventListener('click',async()=>{try{const d=session?.csrfToken?session:await api('/api/v1/auth/me');await api('/api/v1/auth/logout',{method:'POST',headers:{'X-CSRF-Token':d.csrfToken}})}finally{session=null;location.hash='dashboard';$('app').hidden=true;$('login').hidden=false}});
+addEventListener('hashchange',render);boot();
