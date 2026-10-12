@@ -116,7 +116,24 @@ jobs:
             set net:reconnect-interval-base 2;
             set ssl:verify-certificate no;
             mkdir -p ${STAGING_DIR};
-            mirror --reverse --verbose --overwrite --no-perms deploy-payload/ ${STAGING_DIR}/;
+            bye
+          "
+          # Protect the staging directory from public HTTP access. Keep the real
+          # production .htaccess under a different name until promotion.
+          cat > /tmp/serviceyar-staging-deny.htaccess <<'DENY'
+          Require all denied
+          DENY
+          lftp --user "${FTP_USER}" --password "${FTP_PASS}" "ftp://${FTP_HOST}:21" -e "
+            set ftp:ssl-force false;
+            set ftp:ssl-protect-data false;
+            set ftp:passive-mode true;
+            set ftp:prefer-epsv false;
+            set net:timeout 60;
+            set net:max-retries 5;
+            set ssl:verify-certificate no;
+            put -o ${STAGING_DIR}/.htaccess /tmp/serviceyar-staging-deny.htaccess;
+            mirror --reverse --verbose --overwrite --no-perms --exclude-glob .htaccess deploy-payload/ ${STAGING_DIR}/;
+            put -o ${STAGING_DIR}/.htaccess.new deploy-payload/.htaccess;
             bye
           "
 
@@ -137,6 +154,7 @@ jobs:
             set net:timeout 60;
             set ssl:verify-certificate no;
             get ${STAGING_DIR}/index.html -o /tmp/serviceyar-staged-index.html;
+            get ${STAGING_DIR}/.htaccess.new -o /tmp/serviceyar-staged-htaccess;
             get ${STAGING_DIR}/assets/app.js -o /tmp/serviceyar-staged-app.js;
             get ${STAGING_DIR}/assets/app.css -o /tmp/serviceyar-staged-css.css;
             get ${STAGING_DIR}/assets/Vazirmatn-Regular.woff2 -o /tmp/serviceyar-staged-font.woff2;
@@ -185,7 +203,7 @@ jobs:
             mv -f ${STAGING_DIR}/assets/app.css /public_html/assets/app.css;
             mv -f ${STAGING_DIR}/assets/Vazirmatn-Regular.woff2 /public_html/assets/Vazirmatn-Regular.woff2;
             mv -f ${STAGING_DIR}/assets/favicon.svg /public_html/assets/favicon.svg;
-            mv -f ${STAGING_DIR}/.htaccess /public_html/.htaccess;
+            mv -f ${STAGING_DIR}/.htaccess.new /public_html/.htaccess;
             mv -f ${STAGING_DIR}/index.html /public_html/index.html;
             bye
           "
