@@ -162,11 +162,12 @@ jobs:
           FTP_USER: ${{ secrets.SERVICEYAR_FTP_USERNAME }}
           FTP_PASS: ${{ secrets.SERVICEYAR_FTP_PASSWORD }}
           STAGING_DIR: /public_html/.serviceyar-staging-${{ github.sha }}
-          BACKUP_DIR: /public_html/.serviceyar-backup-${{ github.sha }}
         run: |
           set -euo pipefail
-          # Prepare destination directories, then update backend/database/storage
-          # only after the complete staging payload has been checked.
+          # The entire payload and all browser-critical assets were downloaded
+          # from staging and byte-compared before this step. Publish application
+          # directories only now; promote the static assets by FTP rename, and
+          # replace index.html last.
           lftp --user "${FTP_USER}" --password "${FTP_PASS}" "ftp://${FTP_HOST}:21" -e "
             set ftp:ssl-force false;
             set ftp:ssl-protect-data false;
@@ -174,37 +175,20 @@ jobs:
             set ftp:prefer-epsv false;
             set net:timeout 60;
             set net:max-retries 5;
+            set cmd:fail-exit yes;
             set ssl:verify-certificate no;
             mkdir -p /public_html/assets;
-            mkdir -p ${BACKUP_DIR}/assets;
             mirror --reverse --verbose --overwrite --no-perms ${STAGING_DIR}/backend/ /public_html/backend/;
             mirror --reverse --verbose --overwrite --no-perms ${STAGING_DIR}/database/ /public_html/database/;
             mirror --reverse --verbose --overwrite --no-perms ${STAGING_DIR}/storage/ /public_html/storage/;
-            get /public_html/.htaccess -o /tmp/serviceyar-old-htaccess;
+            mv -f ${STAGING_DIR}/assets/app.js /public_html/assets/app.js;
+            mv -f ${STAGING_DIR}/assets/app.css /public_html/assets/app.css;
+            mv -f ${STAGING_DIR}/assets/Vazirmatn-Regular.woff2 /public_html/assets/Vazirmatn-Regular.woff2;
+            mv -f ${STAGING_DIR}/assets/favicon.svg /public_html/assets/favicon.svg;
+            mv -f ${STAGING_DIR}/.htaccess /public_html/.htaccess;
+            mv -f ${STAGING_DIR}/index.html /public_html/index.html;
             bye
-          " || true
-          # Promote each public asset with a rollback copy. Existing files are
-          # moved aside before the staged file is renamed into its live location.
-          cat > /tmp/serviceyar-promote.lftp <<EOF
-          set ftp:ssl-force false
-          set ftp:ssl-protect-data false
-          set ftp:passive-mode true
-          set ftp:prefer-epsv false
-          set net:timeout 60
-          set net:max-retries 5
-          set ssl:verify-certificate no
-          mkdir -p ${BACKUP_DIR}/assets
-          EOF
-          for file in assets/app.js assets/app.css assets/Vazirmatn-Regular.woff2 assets/favicon.svg .htaccess index.html; do
-            parent="$(dirname "$file")"
-            if [[ "$parent" != "." ]]; then
-              printf 'mkdir -p %s/%s\n' "${BACKUP_DIR}" "$parent" >> /tmp/serviceyar-promote.lftp
-            fi
-            printf 'mv -f /public_html/%s %s/%s\n' "$file" "${BACKUP_DIR}" "$file" >> /tmp/serviceyar-promote.lftp
-            printf 'mv %s/%s /public_html/%s\n' "${STAGING_DIR}" "$file" "$file" >> /tmp/serviceyar-promote.lftp
-          done
-          printf 'bye\n' >> /tmp/serviceyar-promote.lftp
-          lftp --user "${FTP_USER}" --password "${FTP_PASS}" "ftp://${FTP_HOST}:21" -f /tmp/serviceyar-promote.lftp
+          "
 
       - name: Verify live files match repository
         shell: bash
