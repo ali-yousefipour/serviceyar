@@ -110,7 +110,7 @@ jobs:
             set net:reconnect-interval-base 2;
             set ssl:verify-certificate no;
             mkdir -p /public_html;
-            mirror --reverse --verbose --only-newer --no-perms deploy-payload/ /public_html/;
+            mirror --reverse --verbose --ignore-time --no-perms deploy-payload/ /public_html/;
             bye
           "
 
