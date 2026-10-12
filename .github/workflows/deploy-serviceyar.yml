@@ -171,8 +171,8 @@ jobs:
           test "$(wc -c < /tmp/serviceyar-staged-font.woff2)" -gt 40000
 
       # Publish non-static application data only after staging verification.
-      # Static assets are promoted via same-host FTP rename with backups; index.html
-      # is promoted last so it never points at assets that have not been promoted.
+      # Browser assets and index.html are promoted by same-host FTP rename;
+      # index.html is promoted last after its referenced assets.
       - name: Promote verified payload
         shell: bash
         env:
