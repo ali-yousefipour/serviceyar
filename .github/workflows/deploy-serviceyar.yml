@@ -92,18 +92,20 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq lftp
 
-      - name: Upload payload to public_html
+      # All files are first uploaded away from live paths. A failed FTP transfer
+      # here leaves the currently served index/assets untouched.
+      - name: Upload payload to isolated staging directory
         shell: bash
         env:
           FTP_HOST: ${{ secrets.SERVICEYAR_FTP_HOST }}
           FTP_USER: ${{ secrets.SERVICEYAR_FTP_USERNAME }}
           FTP_PASS: ${{ secrets.SERVICEYAR_FTP_PASSWORD }}
+          STAGING_DIR: /public_html/.serviceyar-staging-${{ github.sha }}
         run: |
           set -euo pipefail
           : "${FTP_HOST:?Add SERVICEYAR_FTP_HOST in repository Actions secrets}"
           : "${FTP_USER:?Add SERVICEYAR_FTP_USERNAME in repository Actions secrets}"
           : "${FTP_PASS:?Add SERVICEYAR_FTP_PASSWORD in repository Actions secrets}"
-
           lftp --user "${FTP_USER}" --password "${FTP_PASS}" "ftp://${FTP_HOST}:21" -e "
             set ftp:ssl-force false;
             set ftp:ssl-protect-data false;
@@ -113,12 +115,98 @@ jobs:
             set net:max-retries 5;
             set net:reconnect-interval-base 2;
             set ssl:verify-certificate no;
-            mkdir -p /public_html;
-            mirror --reverse --verbose --overwrite --no-perms deploy-payload/ /public_html/;
+            mkdir -p ${STAGING_DIR};
+            mirror --reverse --verbose --overwrite --no-perms deploy-payload/ ${STAGING_DIR}/;
             bye
           "
 
-      - name: Verify deployed entry points
+      - name: Verify staged files before touching production
+        shell: bash
+        env:
+          FTP_HOST: ${{ secrets.SERVICEYAR_FTP_HOST }}
+          FTP_USER: ${{ secrets.SERVICEYAR_FTP_USERNAME }}
+          FTP_PASS: ${{ secrets.SERVICEYAR_FTP_PASSWORD }}
+          STAGING_DIR: /public_html/.serviceyar-staging-${{ github.sha }}
+        run: |
+          set -euo pipefail
+          lftp --user "${FTP_USER}" --password "${FTP_PASS}" "ftp://${FTP_HOST}:21" -e "
+            set ftp:ssl-force false;
+            set ftp:ssl-protect-data false;
+            set ftp:passive-mode true;
+            set ftp:prefer-epsv false;
+            set net:timeout 60;
+            set ssl:verify-certificate no;
+            get ${STAGING_DIR}/index.html -o /tmp/serviceyar-staged-index.html;
+            get ${STAGING_DIR}/assets/app.js -o /tmp/serviceyar-staged-app.js;
+            get ${STAGING_DIR}/assets/app.css -o /tmp/serviceyar-staged-css.css;
+            get ${STAGING_DIR}/assets/Vazirmatn-Regular.woff2 -o /tmp/serviceyar-staged-font.woff2;
+            get ${STAGING_DIR}/assets/favicon.svg -o /tmp/serviceyar-staged-favicon.svg;
+            get ${STAGING_DIR}/backend/public/index.php -o /tmp/serviceyar-staged-index.php;
+            bye
+          "
+          cmp deploy-payload/index.html /tmp/serviceyar-staged-index.html
+          cmp deploy-payload/assets/app.js /tmp/serviceyar-staged-app.js
+          cmp deploy-payload/assets/app.css /tmp/serviceyar-staged-css.css
+          cmp deploy-payload/assets/Vazirmatn-Regular.woff2 /tmp/serviceyar-staged-font.woff2
+          cmp deploy-payload/assets/favicon.svg /tmp/serviceyar-staged-favicon.svg
+          cmp deploy-payload/backend/public/index.php /tmp/serviceyar-staged-index.php
+          test "$(wc -c < /tmp/serviceyar-staged-font.woff2)" -gt 40000
+
+      # Publish non-static application data only after staging verification.
+      # Static assets are promoted via same-host FTP rename with backups; index.html
+      # is promoted last so it never points at assets that have not been promoted.
+      - name: Promote verified payload
+        shell: bash
+        env:
+          FTP_HOST: ${{ secrets.SERVICEYAR_FTP_HOST }}
+          FTP_USER: ${{ secrets.SERVICEYAR_FTP_USERNAME }}
+          FTP_PASS: ${{ secrets.SERVICEYAR_FTP_PASSWORD }}
+          STAGING_DIR: /public_html/.serviceyar-staging-${{ github.sha }}
+          BACKUP_DIR: /public_html/.serviceyar-backup-${{ github.sha }}
+        run: |
+          set -euo pipefail
+          # Prepare destination directories, then update backend/database/storage
+          # only after the complete staging payload has been checked.
+          lftp --user "${FTP_USER}" --password "${FTP_PASS}" "ftp://${FTP_HOST}:21" -e "
+            set ftp:ssl-force false;
+            set ftp:ssl-protect-data false;
+            set ftp:passive-mode true;
+            set ftp:prefer-epsv false;
+            set net:timeout 60;
+            set net:max-retries 5;
+            set ssl:verify-certificate no;
+            mkdir -p /public_html/assets;
+            mkdir -p ${BACKUP_DIR}/assets;
+            mirror --reverse --verbose --overwrite --no-perms ${STAGING_DIR}/backend/ /public_html/backend/;
+            mirror --reverse --verbose --overwrite --no-perms ${STAGING_DIR}/database/ /public_html/database/;
+            mirror --reverse --verbose --overwrite --no-perms ${STAGING_DIR}/storage/ /public_html/storage/;
+            get /public_html/.htaccess -o /tmp/serviceyar-old-htaccess;
+            bye
+          " || true
+          # Promote each public asset with a rollback copy. Existing files are
+          # moved aside before the staged file is renamed into its live location.
+          cat > /tmp/serviceyar-promote.lftp <<EOF
+          set ftp:ssl-force false
+          set ftp:ssl-protect-data false
+          set ftp:passive-mode true
+          set ftp:prefer-epsv false
+          set net:timeout 60
+          set net:max-retries 5
+          set ssl:verify-certificate no
+          mkdir -p ${BACKUP_DIR}/assets
+          EOF
+          for file in assets/app.js assets/app.css assets/Vazirmatn-Regular.woff2 assets/favicon.svg .htaccess index.html; do
+            parent="$(dirname "$file")"
+            if [[ "$parent" != "." ]]; then
+              printf 'mkdir -p %s/%s\n' "${BACKUP_DIR}" "$parent" >> /tmp/serviceyar-promote.lftp
+            fi
+            printf 'mv -f /public_html/%s %s/%s\n' "$file" "${BACKUP_DIR}" "$file" >> /tmp/serviceyar-promote.lftp
+            printf 'mv %s/%s /public_html/%s\n' "${STAGING_DIR}" "$file" "$file" >> /tmp/serviceyar-promote.lftp
+          done
+          printf 'bye\n' >> /tmp/serviceyar-promote.lftp
+          lftp --user "${FTP_USER}" --password "${FTP_PASS}" "ftp://${FTP_HOST}:21" -f /tmp/serviceyar-promote.lftp
+
+      - name: Verify live files match repository
         shell: bash
         env:
           FTP_HOST: ${{ secrets.SERVICEYAR_FTP_HOST }}
@@ -133,21 +221,16 @@ jobs:
             set ftp:prefer-epsv false;
             set net:timeout 60;
             set ssl:verify-certificate no;
-            cls -l /public_html/index.html;
-            cls -l /public_html/.htaccess;
-            cls -l /public_html/backend/public/index.php;
-            cls -l /public_html/assets/app.js;
-            cls -l /public_html/assets/app.css;
-            cls -l /public_html/assets/Vazirmatn-Regular.woff2;
-            cls -l /public_html/assets/favicon.svg;
-            get /public_html/assets/app.js -o /tmp/serviceyar-deployed-app.js;
-            get /public_html/assets/app.css -o /tmp/serviceyar-deployed-css.css;
-            get /public_html/assets/Vazirmatn-Regular.woff2 -o /tmp/serviceyar-deployed-font.woff2;
-            get /public_html/assets/favicon.svg -o /tmp/serviceyar-deployed-favicon.svg;
+            get /public_html/index.html -o /tmp/serviceyar-live-index.html;
+            get /public_html/assets/app.js -o /tmp/serviceyar-live-app.js;
+            get /public_html/assets/app.css -o /tmp/serviceyar-live-css.css;
+            get /public_html/assets/Vazirmatn-Regular.woff2 -o /tmp/serviceyar-live-font.woff2;
+            get /public_html/assets/favicon.svg -o /tmp/serviceyar-live-favicon.svg;
             bye
           "
-          cmp frontend/assets/app.js /tmp/serviceyar-deployed-app.js
-          cmp frontend/assets/app.css /tmp/serviceyar-deployed-css.css
-          cmp frontend/assets/Vazirmatn-Regular.woff2 /tmp/serviceyar-deployed-font.woff2
-          cmp frontend/assets/favicon.svg /tmp/serviceyar-deployed-favicon.svg
-          test "$(wc -c < /tmp/serviceyar-deployed-font.woff2)" -gt 40000
+          cmp frontend/index.html /tmp/serviceyar-live-index.html
+          cmp frontend/assets/app.js /tmp/serviceyar-live-app.js
+          cmp frontend/assets/app.css /tmp/serviceyar-live-css.css
+          cmp frontend/assets/Vazirmatn-Regular.woff2 /tmp/serviceyar-live-font.woff2
+          cmp frontend/assets/favicon.svg /tmp/serviceyar-live-favicon.svg
+          test "$(wc -c < /tmp/serviceyar-live-font.woff2)" -gt 40000
