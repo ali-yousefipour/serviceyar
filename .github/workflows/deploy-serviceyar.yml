@@ -1,0 +1,132 @@
+name: Deploy ServiceYar to Challi Hosting
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'database/**'
+      - '.github/workflows/deploy-serviceyar.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: serviceyar-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate PHP and smoke tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql
+      - name: PHP syntax and static smoke tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          find backend tests -name '*.php' -print0 | xargs -0 -n1 php -l
+          php tests/static-smoke.php
+
+  deploy:
+    name: Upload website into public_html
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare public_html payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf deploy-payload
+          mkdir -p deploy-payload/assets deploy-payload/backend deploy-payload/database deploy-payload/storage
+          cp frontend/index.html deploy-payload/index.html
+          cp frontend/assets/* deploy-payload/assets/
+          cp -a backend/. deploy-payload/backend/
+          cp -a database/. deploy-payload/database/
+          cp -a storage/. deploy-payload/storage/
+          cat > deploy-payload/.htaccess <<'HTACCESS'
+          Options -Indexes
+          RewriteEngine On
+
+          # Route API requests to the PHP front controller.
+          RewriteRule ^api/?$ backend/public/index.php [QSA,L]
+          RewriteRule ^api/.*$ backend/public/index.php [QSA,L]
+
+          # Do not expose application internals, runtime data, or environment files.
+          RewriteRule ^(?:backend|database|storage)(?:/|$) - [F,L,NC]
+          <FilesMatch "^\.env(?:\..*)?$">
+            Require all denied
+          </FilesMatch>
+          <FilesMatch "\.(?:sql|log|ini|ya?ml|dist)$">
+            Require all denied
+          </FilesMatch>
+          HTACCESS
+          echo "Prepared files:"
+          find deploy-payload -type f -print | sort
+          test -f deploy-payload/index.html
+          test -f deploy-payload/assets/app.js
+          test -f deploy-payload/backend/public/index.php
+          test -f deploy-payload/database/migrations/0001_create_migrations_table.sql
+
+      - name: Install lftp
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lftp
+
+      - name: Upload payload to public_html
+        shell: bash
+        env:
+          FTP_HOST: ${{ secrets.SERVICEYAR_FTP_HOST }}
+          FTP_USER: ${{ secrets.SERVICEYAR_FTP_USERNAME }}
+          FTP_PASS: ${{ secrets.SERVICEYAR_FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          : "${FTP_HOST:?Add SERVICEYAR_FTP_HOST in repository Actions secrets}"
+          : "${FTP_USER:?Add SERVICEYAR_FTP_USERNAME in repository Actions secrets}"
+          : "${FTP_PASS:?Add SERVICEYAR_FTP_PASSWORD in repository Actions secrets}"
+
+          lftp --user "${FTP_USER}" --password "${FTP_PASS}" "ftp://${FTP_HOST}:21" -e "
+            set ftp:ssl-force false;
+            set ftp:ssl-protect-data false;
+            set ftp:passive-mode true;
+            set ftp:prefer-epsv false;
+            set net:timeout 60;
+            set net:max-retries 5;
+            set net:reconnect-interval-base 2;
+            set ssl:verify-certificate no;
+            mkdir -p /public_html;
+            mirror --reverse --verbose --only-newer --no-perms deploy-payload/ /public_html/;
+            bye
+          "
+
+      - name: Verify deployed entry points
+        shell: bash
+        env:
+          FTP_HOST: ${{ secrets.SERVICEYAR_FTP_HOST }}
+          FTP_USER: ${{ secrets.SERVICEYAR_FTP_USERNAME }}
+          FTP_PASS: ${{ secrets.SERVICEYAR_FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          lftp --user "${FTP_USER}" --password "${FTP_PASS}" "ftp://${FTP_HOST}:21" -e "
+            set ftp:ssl-force false;
+            set ftp:ssl-protect-data false;
+            set ftp:passive-mode true;
+            set ftp:prefer-epsv false;
+            set net:timeout 60;
+            set ssl:verify-certificate no;
+            cls -l /public_html/index.html;
+            cls -l /public_html/.htaccess;
+            cls -l /public_html/backend/public/index.php;
+            cls -l /public_html/assets/app.js;
+            bye
+          "
