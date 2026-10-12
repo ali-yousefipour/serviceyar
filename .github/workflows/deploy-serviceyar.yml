@@ -33,6 +33,9 @@ jobs:
           set -euo pipefail
           find backend tests -name '*.php' -print0 | xargs -0 -n1 php -l
           php tests/static-smoke.php
+          node --check frontend/assets/app.js
+          test -s frontend/assets/app.css
+          test -s frontend/assets/Vazirmatn-Regular.woff2
 
   deploy:
     name: Upload website into public_html
@@ -110,7 +113,7 @@ jobs:
             set net:reconnect-interval-base 2;
             set ssl:verify-certificate no;
             mkdir -p /public_html;
-            mirror --reverse --verbose --ignore-time --no-perms deploy-payload/ /public_html/;
+            mirror --reverse --verbose --overwrite --no-perms deploy-payload/ /public_html/;
             bye
           "
 
@@ -133,5 +136,14 @@ jobs:
             cls -l /public_html/.htaccess;
             cls -l /public_html/backend/public/index.php;
             cls -l /public_html/assets/app.js;
+            cls -l /public_html/assets/app.css;
+            cls -l /public_html/assets/Vazirmatn-Regular.woff2;
+            get /public_html/assets/app.js -o /tmp/serviceyar-deployed-app.js;
+            get /public_html/assets/app.css -o /tmp/serviceyar-deployed-css.css;
+            get /public_html/assets/Vazirmatn-Regular.woff2 -o /tmp/serviceyar-deployed-font.woff2;
             bye
           "
+          cmp frontend/assets/app.js /tmp/serviceyar-deployed-app.js
+          cmp frontend/assets/app.css /tmp/serviceyar-deployed-css.css
+          cmp frontend/assets/Vazirmatn-Regular.woff2 /tmp/serviceyar-deployed-font.woff2
+          test "$(wc -c < /tmp/serviceyar-deployed-font.woff2)" -gt 40000
