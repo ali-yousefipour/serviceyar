@@ -120,9 +120,10 @@ jobs:
           "
           # Protect the staging directory from public HTTP access. Keep the real
           # production .htaccess under a different name until promotion.
-          cat > /tmp/serviceyar-staging-deny.htaccess <<'DENY'
+          cat > /tmp/.htaccess <<'DENY'
           Require all denied
           DENY
+          cp deploy-payload/.htaccess /tmp/.htaccess.new
           lftp --user "${FTP_USER}" --password "${FTP_PASS}" "ftp://${FTP_HOST}:21" -e "
             set ftp:ssl-force false;
             set ftp:ssl-protect-data false;
@@ -131,9 +132,9 @@ jobs:
             set net:timeout 60;
             set net:max-retries 5;
             set ssl:verify-certificate no;
-            put -o ${STAGING_DIR}/.htaccess /tmp/serviceyar-staging-deny.htaccess;
+            put -O ${STAGING_DIR} /tmp/.htaccess;
             mirror --reverse --verbose --overwrite --no-perms --exclude-glob .htaccess deploy-payload/ ${STAGING_DIR}/;
-            put -o ${STAGING_DIR}/.htaccess.new deploy-payload/.htaccess;
+            put -O ${STAGING_DIR} /tmp/.htaccess.new;
             bye
           "
 
@@ -230,7 +231,7 @@ jobs:
             get /public_html/assets/favicon.svg -o /tmp/serviceyar-live-favicon.svg;
             bye
           "
-          cmp frontend/index.html /tmp/serviceyar-live-index.html
+          cmp deploy-payload/index.html /tmp/serviceyar-live-index.html
           cmp frontend/assets/app.js /tmp/serviceyar-live-app.js
           cmp frontend/assets/app.css /tmp/serviceyar-live-css.css
           cmp frontend/assets/Vazirmatn-Regular.woff2 /tmp/serviceyar-live-font.woff2
