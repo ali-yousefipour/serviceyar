@@ -8,26 +8,26 @@ use ServiceYar\Database\Connection;
 final class ExportService
 {
     private const SCHEMAS = [
-        'schools' => ['table'=>'schools','filename'=>'schools-report.xlsx','columns'=>[
+        'schools' => ['table'=>'schools','filename'=>'schools-report.xlsx','date_column'=>'created_at','columns'=>[
             'id'=>'شناسه','name'=>'نام مدرسه','code'=>'کد مدرسه','school_type'=>'نوع مدرسه',
             'manager_name'=>'نام مدیر','phone'=>'تلفن','region'=>'منطقه','is_active'=>'وضعیت فعال','created_at'=>'تاریخ ثبت']],
-        'students' => ['table'=>'students','filename'=>'students-report.xlsx','columns'=>[
+        'students' => ['table'=>'students','filename'=>'students-report.xlsx','date_column'=>'created_at','columns'=>[
             'id'=>'شناسه','first_name'=>'نام','last_name'=>'نام خانوادگی','national_code'=>'کد ملی',
             'grade'=>'پایه تحصیلی','mobile'=>'شماره همراه','school_id'=>'شناسه مدرسه','is_active'=>'وضعیت فعال','created_at'=>'تاریخ ثبت']],
-        'drivers' => ['table'=>'drivers','filename'=>'drivers-report.xlsx','columns'=>[
+        'drivers' => ['table'=>'drivers','filename'=>'drivers-report.xlsx','date_column'=>'created_at','columns'=>[
             'id'=>'شناسه','first_name'=>'نام','last_name'=>'نام خانوادگی','national_code'=>'کد ملی',
             'mobile'=>'شماره همراه','status'=>'وضعیت راننده','rating'=>'امتیاز','vehicle_id'=>'شناسه خودرو',
             'is_active'=>'وضعیت فعال','created_at'=>'تاریخ ثبت']],
-        'services' => ['table'=>'services','filename'=>'services-report.xlsx','columns'=>[
+        'services' => ['table'=>'services','filename'=>'services-report.xlsx','date_column'=>'created_at','columns'=>[
             'id'=>'شناسه','title'=>'عنوان سرویس','code'=>'کد سرویس','school_id'=>'شناسه مدرسه',
             'driver_id'=>'شناسه راننده','capacity'=>'ظرفیت','status'=>'وضعیت سرویس','is_active'=>'وضعیت فعال','created_at'=>'تاریخ ثبت']],
-        'invoices' => ['table'=>'invoices','filename'=>'invoices-report.xlsx','columns'=>[
+        'invoices' => ['table'=>'invoices','filename'=>'invoices-report.xlsx','date_column'=>'issue_date','columns'=>[
             'id'=>'شناسه','title'=>'عنوان فاکتور','party_type'=>'نوع طرف حساب','party_id'=>'شناسه طرف حساب',
             'amount'=>'مبلغ','status'=>'وضعیت','issue_date'=>'تاریخ صدور','due_date'=>'سررسید','created_at'=>'تاریخ ثبت']],
-        'payments' => ['table'=>'payments','filename'=>'payments-report.xlsx','columns'=>[
+        'payments' => ['table'=>'payments','filename'=>'payments-report.xlsx','date_column'=>'payment_date','columns'=>[
             'id'=>'شناسه','invoice_id'=>'شناسه فاکتور','amount'=>'مبلغ پرداخت','payment_date'=>'تاریخ پرداخت',
             'method'=>'روش پرداخت','reference_no'=>'شماره پیگیری','created_at'=>'تاریخ ثبت']],
-        'driver-work' => ['table'=>'driver_work','filename'=>'driver-work-report.xlsx','columns'=>[
+        'driver-work' => ['table'=>'driver_work','filename'=>'driver-work-report.xlsx','date_column'=>'work_date','columns':[
             'id'=>'شناسه','driver_id'=>'شناسه راننده','work_date'=>'تاریخ کارکرد','service_id'=>'شناسه سرویس',
             'amount'=>'مبلغ کارکرد','status'=>'وضعیت','note'=>'توضیحات','created_at'=>'تاریخ ثبت']],
     ];
@@ -43,10 +43,58 @@ final class ExportService
         $table = $schema['table'];
         $columns = $schema['columns'];
         $columnNames = array_keys($columns);
-        $select = implode(', ', $columnNames);
-        $statement = Connection::get()->prepare("SELECT {$select} FROM {$table} WHERE agency_id = :agency ORDER BY id DESC LIMIT 5000");
-        $statement->execute(['agency' => $aid]);
-        $rows = $statement->fetchAll(\PDO::FETCH_ASSOC);
+        $where = ['agency_id = :agency'];
+        $params = ['agency' => $aid];
+        $filters = [
+            'dateFrom' => ['column' => $schema['date_column'] ?? 'created_at', 'operator' => '>=', 'suffix' => ' 00:00:00'],
+            'dateTo' => ['column' => $schema['date_column'] ?? 'created_at', 'operator' => '<=', 'suffix' => ' 23:59:59'],
+        ];
+        foreach ($filters as $key => $filter) {
+            $value = trim((string)($_GET[$key] ?? ''));
+            $column = $filter['column'];
+            if ($value !== '' && in_array($column, $columnNames, true) && preg_match('/^\\d{4}-\\d{2}-\\d{2}$/', $value)) {
+                $param = $key === 'dateFrom' ? 'date_from' : 'date_to';
+                $where[] = $column . ' ' . $filter['operator'] . ' :' . $param;
+                $params[$param] = $value . $filter['suffix'];
+            }
+        }
+        $search = trim((string)($_GET['search'] ?? ''));
+        if ($search !== '') {
+            $parts = [];
+            foreach ($columnNames as $column) $parts[] = 'CAST(' . $column . ' AS CHAR) LIKE :search';
+            $where[] = '(' . implode(' OR ', $parts) . ')';
+            $params['search'] = '%' . str_replace(['\\\\', '%', '_'], ['\\\\\\\\', '\\%', '\\_'], $search) . '%';
+        }
+        foreach (['schoolId'=>'school_id', 'driverId'=>'driver_id', 'serviceId'=>'service_id'] as $key => $column) {
+            $value = trim((string)($_GET[$key] ?? ''));
+            if ($value !== '' && in_array($column, $columnNames, true) && ctype_digit($value) && (int)$value > 0) {
+                $param = lcfirst($key);
+                $where[] = $column . ' = :' . $param;
+                $params[$param] = (int)$value;
+            }
+        }
+        if (in_array('status', $columnNames, true) && trim((string)($_GET['status'] ?? '')) !== '') {
+            $where[] = 'status = :status';
+            $params['status'] = trim((string)$_GET['status']);
+        }
+        if (in_array('is_active', $columnNames, true) && in_array((string)($_GET['active'] ?? ''), ['0','1'], true)) {
+            $where[] = 'is_active = :active';
+            $params['active'] = (int)$_GET['active'];
+        }
+        if (in_array('amount', $columnNames, true)) {
+            foreach (['amountMin'=>'amount_min', 'amountMax'=>'amount_max'] as $key => $param) {
+                $value = trim((string)($_GET[$key] ?? ''));
+                if ($value !== '' && is_numeric($value) && (float)$value >= 0) {
+                    $where[] = 'amount ' . ($key === 'amountMin' ? '>=' : '<=') . ' :' . $param;
+                    $params[$param] = $value;
+                }
+            }
+        }
+        $sql = 'SELECT ' . implode(', ', $columnNames) . ' FROM ' . $table
+            . ' WHERE ' . implode(' AND ', $where) . ' ORDER BY id DESC LIMIT 5000';
+        $statement = Connection::get()->prepare($sql);
+        $statement->execute($params);
+        $rows = $statement->fetchAll(\\PDO::FETCH_ASSOC);
 
         $xml = static function (mixed $value): string {
             $text = (string)($value ?? '');
