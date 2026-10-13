@@ -53,6 +53,7 @@ jobs:
           rm -rf deploy-payload
           mkdir -p deploy-payload/assets deploy-payload/backend deploy-payload/database deploy-payload/storage
           cp frontend/index.html deploy-payload/index.html
+          sed -i "s/__BUILD_ID__/${GITHUB_SHA}/g" deploy-payload/index.html
           cp frontend/assets/* deploy-payload/assets/
           cp -a backend/. deploy-payload/backend/
           cp -a database/. deploy-payload/database/
