@@ -83,7 +83,7 @@ jobs:
             set net:timeout 30;
             set net:max-retries 2;
             set cmd:fail-exit yes;
-            get \"$REMOTE_LOG_PATH\" -o /tmp/serviceyar-host-error.log;
+            get $REMOTE_LOG_PATH -o /tmp/serviceyar-host-error.log;
             bye
           "
           chmod 600 /tmp/serviceyar-host-error.log
