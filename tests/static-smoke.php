@@ -122,12 +122,12 @@ if($auth===false || strpos($auth,'CREATE TABLE IF NOT EXISTS user_sessions')===f
 
 $export=file_get_contents($root.'/backend/src/Reports/ExportService.php');
 if($export===false)throw new RuntimeException('Cannot read Excel export service.');
-foreach(["'schools' =>","'students' =>","'drivers' =>","'services' =>","'invoices' =>","'payments' =>","'driver-work' =>","شناسه","نام مدرسه","autoFilter","inlineStr","LIMIT 5000","requirePermission","requireAgencyAccess"] as $token){
+foreach(["'schools' =>","'students' =>","'drivers' =>","'services' =>","'invoices' =>","'payments' =>","'driver-work' =>","شناسه","نام مدرسه","autoFilter","inlineStr","LIMIT 5000","requirePermission","requireAgencyAccess","dateFrom","dateTo","amountMin","amountMax","schoolId","driverId","serviceId"] as $token){
     if(strpos($export,$token)===false)throw new RuntimeException("Excel export schema or safety feature missing: $token");
 }
 $frontend=file_get_contents($root.'/frontend/assets/app.js');
 if($frontend===false)throw new RuntimeException('Cannot read frontend application.');
-foreach(["گزارش‌ها و خروجی Excel","data-export","downloadReport","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"] as $token){
+foreach(["گزارش‌ها و خروجی Excel","data-export","downloadReport","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","reportDateFrom","reportDateTo","reportSearch","reportStatus","reportActive","reportAmountMin","reportAmountMax","پاک کردن فیلترها"] as $token){
     if(strpos($frontend,$token)===false)throw new RuntimeException("Excel report UI feature missing: $token");
 }
 if(strpos($frontend,'در مسیر Phase 11 توسعه داده می‌شود')!==false){
