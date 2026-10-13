@@ -26,10 +26,15 @@ final class AuthService
         $stmt->execute(['username' => $username]);
         $user = $stmt->fetch();
 
-        if (!$user || !(bool)$user['is_active'] || !password_verify($password, $user['password_hash'])) {
+        if (!$user) {
             $pdo->prepare('INSERT INTO auth_login_attempts(username,ip_address,succeeded) VALUES(:u,:ip,0)')->execute(['u'=>$username,'ip'=>$ip]);
             $this->audit(null, 'auth.login_failed', null, null);
-            throw new AuthException(401, 'نام کاربری یا رمز عبور صحیح نیست.', 'INVALID_CREDENTIALS');
+            throw new AuthException(401, 'نام کاربری واردشده در سامانه ثبت نشده است.', 'INVALID_USERNAME');
+        }
+        if (!(bool)$user['is_active'] || !password_verify($password, $user['password_hash'])) {
+            $pdo->prepare('INSERT INTO auth_login_attempts(username,ip_address,succeeded) VALUES(:u,:ip,0)')->execute(['u'=>$username,'ip'=>$ip]);
+            $this->audit(null, 'auth.login_failed', null, null);
+            throw new AuthException(401, 'رمز عبور واردشده صحیح نیست یا حساب کاربری غیرفعال است.', 'INVALID_PASSWORD');
         }
 
         if (password_needs_rehash($user['password_hash'], PASSWORD_DEFAULT)) {
