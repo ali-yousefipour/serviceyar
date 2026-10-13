@@ -12,7 +12,7 @@ on:
         description: "Absolute FTP path to the hosting PHP error log"
         required: true
         type: string
-        default: "/public_html/error_log"
+        default: "/error_log"
       tail_lines:
         description: "Maximum recent lines to inspect when the request ID is not found (1–2000)"
         required: true
