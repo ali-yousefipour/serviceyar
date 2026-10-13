@@ -45,9 +45,14 @@ if (config('APP_ENV','local') === 'production') {
 }
 
 // Keep application errors separate from cPanel/Roundcube's unrelated PHP log.
-// The directory is deployed with the application; only redirect logging when it is writable.
-$appLogFile = dirname(__DIR__, 2) . '/storage/logs/serviceyar-error.log';
-if (is_dir(dirname($appLogFile)) && is_writable(dirname($appLogFile))) {
+// Create the private directory on first request as well: FTP mirrors can omit
+// hidden placeholder files, which otherwise leaves this directory absent.
+$appLogDirectory = dirname(__DIR__, 2) . '/storage/logs';
+if (!is_dir($appLogDirectory)) {
+    @mkdir($appLogDirectory, 0700, true);
+}
+$appLogFile = $appLogDirectory . '/serviceyar-error.log';
+if (is_dir($appLogDirectory) && is_writable($appLogDirectory)) {
     ini_set('error_log', $appLogFile);
 }
 
