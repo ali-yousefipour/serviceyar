@@ -61,9 +61,13 @@ final class ExportService
         $search = trim((string)($_GET['search'] ?? ''));
         if ($search !== '') {
             $parts = [];
-            foreach ($columnNames as $column) $parts[] = 'CAST(' . $column . ' AS CHAR) LIKE :search';
+            $escapedSearch = '%' . str_replace(['\\\\', '%', '_'], ['\\\\\\\\', '\\%', '\\_'], $search) . '%';
+            foreach ($columnNames as $index => $column) {
+                $param = 'search_' . $index;
+                $parts[] = 'CAST(' . $column . ' AS CHAR) LIKE :' . $param;
+                $params[$param] = $escapedSearch;
+            }
             $where[] = '(' . implode(' OR ', $parts) . ')';
-            $params['search'] = '%' . str_replace(['\\\\', '%', '_'], ['\\\\\\\\', '\\%', '\\_'], $search) . '%';
         }
         foreach (['schoolId'=>'school_id', 'driverId'=>'driver_id', 'serviceId'=>'service_id'] as $key => $column) {
             $value = trim((string)($_GET[$key] ?? ''));
