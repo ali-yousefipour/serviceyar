@@ -171,3 +171,19 @@ jobs:
             " 2>&1 || true
           } > report/ftp-directory-inventory.txt
           echo "FTP inventory collected using read-only directory listing commands."
+
+      - name: Show FTP directory inventory
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f report/ftp-directory-inventory.txt ]]; then
+            {
+              echo "## Read-only FTP directory inventory"
+              echo
+              echo 'This output contains directory listings only; no remote files were changed.'
+              echo
+              echo '~~~text'
+              cat report/ftp-directory-inventory.txt
+              echo '~~~'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
