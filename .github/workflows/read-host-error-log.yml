@@ -9,10 +9,10 @@ on:
         type: string
         default: "d153797f76bbc15e"
       remote_log_path:
-        description: "Absolute FTP path to the hosting PHP error log (cPanel default: /logs/.php.error.log)"
+        description: "Absolute FTP path to the ServiceYar application error log"
         required: true
         type: string
-        default: "/logs/.php.error.log"
+        default: "/public_html/storage/logs/serviceyar-error.log"
       tail_lines:
         description: "Maximum recent lines to inspect when the request ID is not found (1–2000)"
         required: true
