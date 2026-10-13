@@ -175,9 +175,10 @@ jobs:
           cmp deploy-payload/backend/public/index.php /tmp/serviceyar-staged-index.php
           test "$(wc -c < /tmp/serviceyar-staged-font.woff2)" -gt 40000
 
-      # Publish non-static application data only after staging verification.
-      # Browser assets and index.html are promoted by same-host FTP rename;
-      # index.html is promoted last after its referenced assets.
+      # Publish application directories from the verified local payload.
+      # FTP mirror --reverse requires local source paths; the staging directory
+      # is remote-only, so do not use it as a reverse-mirror source.
+      # Promote browser assets from staging by same-host FTP rename, with index last.
       - name: Promote verified payload
         shell: bash
         env:
@@ -202,9 +203,9 @@ jobs:
             set cmd:fail-exit yes;
             set ssl:verify-certificate no;
             mkdir -p /public_html/assets;
-            mirror --reverse --verbose --overwrite --no-perms ${STAGING_DIR}/backend/ /public_html/backend/;
-            mirror --reverse --verbose --overwrite --no-perms ${STAGING_DIR}/database/ /public_html/database/;
-            mirror --reverse --verbose --overwrite --no-perms ${STAGING_DIR}/storage/ /public_html/storage/;
+            mirror --reverse --verbose --overwrite --no-perms deploy-payload/backend/ /public_html/backend/;
+            mirror --reverse --verbose --overwrite --no-perms deploy-payload/database/ /public_html/database/;
+            mirror --reverse --verbose --overwrite --no-perms deploy-payload/storage/ /public_html/storage/;
             mv -f ${STAGING_DIR}/assets/app.js /public_html/assets/app.js;
             mv -f ${STAGING_DIR}/assets/app.css /public_html/assets/app.css;
             mv -f ${STAGING_DIR}/assets/Vazirmatn-Regular.woff2 /public_html/assets/Vazirmatn-Regular.woff2;
