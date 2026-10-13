@@ -69,20 +69,21 @@ jobs:
           TAIL_LINES: ${{ inputs.tail_lines }}
         run: |
           set -euo pipefail
-          : "\${FTP_HOST:?Missing SERVICEYAR_FTP_HOST secret}"
-          : "\${FTP_USER:?Missing SERVICEYAR_FTP_USERNAME secret}"
-          : "\${FTP_PASS:?Missing SERVICEYAR_FTP_PASSWORD secret}"
+          : "${FTP_HOST:?Missing SERVICEYAR_FTP_HOST secret}"
+          : "${FTP_USER:?Missing SERVICEYAR_FTP_USERNAME secret}"
+          : "${FTP_PASS:?Missing SERVICEYAR_FTP_PASSWORD secret}"
           mkdir -p report
           # Download only the selected log file. No remote write/delete commands are issued.
           lftp --user "$FTP_USER" --password "$FTP_PASS" "ftp://$FTP_HOST:21" -e "
             set ftp:ssl-force false;
+            set ssl:verify-certificate no;
             set ftp:ssl-protect-data false;
             set ftp:passive-mode true;
             set ftp:prefer-epsv false;
             set net:timeout 30;
             set net:max-retries 2;
             set cmd:fail-exit yes;
-            get \\"$REMOTE_LOG_PATH\\" -o /tmp/serviceyar-host-error.log;
+            get \"$REMOTE_LOG_PATH\" -o /tmp/serviceyar-host-error.log;
             bye
           "
           chmod 600 /tmp/serviceyar-host-error.log
