@@ -118,6 +118,15 @@ jobs:
           PY
           echo "Report prepared. Raw downloaded log will not be uploaded."
 
+      - name: Publish redacted report for diagnosis
+        if: always() && hashFiles('report/error-log-report.txt') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: serviceyar-redacted-error-log
+          path: report/error-log-report.txt
+          if-no-files-found: ignore
+          retention-days: 3
+
       - name: Show redacted report in run summary
         if: always()
         shell: bash
