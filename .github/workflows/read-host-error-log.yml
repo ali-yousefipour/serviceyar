@@ -1,0 +1,132 @@
+name: Read ServiceYar hosting error log
+
+on:
+  workflow_dispatch:
+    inputs:
+      request_id:
+        description: "Optional request/trace ID to find (for example d153797f76bbc15e)"
+        required: false
+        type: string
+        default: "d153797f76bbc15e"
+      remote_log_path:
+        description: "Absolute FTP path to the hosting PHP error log"
+        required: true
+        type: string
+        default: "/public_html/error_log"
+      tail_lines:
+        description: "Maximum recent lines to inspect when the request ID is not found (1–2000)"
+        required: true
+        type: number
+        default: 500
+
+permissions:
+  contents: read
+
+concurrency:
+  group: serviceyar-read-host-error-log
+  cancel-in-progress: false
+
+jobs:
+  read-error-log:
+    name: Read and redact hosting error log
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate inputs
+        shell: bash
+        env:
+          REQUEST_ID: \${{ inputs.request_id }}
+          REMOTE_LOG_PATH: \${{ inputs.remote_log_path }}
+          TAIL_LINES: \${{ inputs.tail_lines }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$REMOTE_LOG_PATH" =~ ^/[A-Za-z0-9._/-]+$ ]] || [[ "$REMOTE_LOG_PATH" == *".."* ]]; then
+            echo "::error::Invalid remote log path. Use an absolute FTP path without '..'."
+            exit 1
+          fi
+          if [[ ! "$TAIL_LINES" =~ ^[0-9]+$ ]] || (( TAIL_LINES < 1 || TAIL_LINES > 2000 )); then
+            echo "::error::tail_lines must be between 1 and 2000."
+            exit 1
+          fi
+          if [[ -n "$REQUEST_ID" && ! "$REQUEST_ID" =~ ^[A-Za-z0-9._:-]{1,128}$ ]]; then
+            echo "::error::Invalid request ID format."
+            exit 1
+          fi
+
+      - name: Install FTP client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lftp
+
+      - name: Download log read-only and create redacted report
+        shell: bash
+        env:
+          FTP_HOST: \${{ secrets.SERVICEYAR_FTP_HOST }}
+          FTP_USER: \${{ secrets.SERVICEYAR_FTP_USERNAME }}
+          FTP_PASS: \${{ secrets.SERVICEYAR_FTP_PASSWORD }}
+          REMOTE_LOG_PATH: \${{ inputs.remote_log_path }}
+          REQUEST_ID: \${{ inputs.request_id }}
+          TAIL_LINES: \${{ inputs.tail_lines }}
+        run: |
+          set -euo pipefail
+          : "\${FTP_HOST:?Missing SERVICEYAR_FTP_HOST secret}"
+          : "\${FTP_USER:?Missing SERVICEYAR_FTP_USERNAME secret}"
+          : "\${FTP_PASS:?Missing SERVICEYAR_FTP_PASSWORD secret}"
+          mkdir -p report
+          # Download only the selected log file. No remote write/delete commands are issued.
+          lftp --user "$FTP_USER" --password "$FTP_PASS" "ftp://$FTP_HOST:21" -e "
+            set ftp:ssl-force false;
+            set ftp:ssl-protect-data false;
+            set ftp:passive-mode true;
+            set ftp:prefer-epsv false;
+            set net:timeout 30;
+            set net:max-retries 2;
+            set cmd:fail-exit yes;
+            get \\"$REMOTE_LOG_PATH\\" -o /tmp/serviceyar-host-error.log;
+            bye
+          "
+          chmod 600 /tmp/serviceyar-host-error.log
+          if [[ ! -s /tmp/serviceyar-host-error.log ]]; then
+            echo "The selected error log is empty." > report/error-log-report.txt
+          else
+            if [[ -n "$REQUEST_ID" ]] && grep -Fq -- "$REQUEST_ID" /tmp/serviceyar-host-error.log; then
+              # Include matching lines and one neighboring line on each side for context.
+              grep -F -C 1 -- "$REQUEST_ID" /tmp/serviceyar-host-error.log > /tmp/relevant.log || true
+              printf 'Filtered error log report for request ID: %s\n\n' "$REQUEST_ID" > report/error-log-report.txt
+              cat /tmp/relevant.log >> report/error-log-report.txt
+            else
+              printf 'Request ID not found: %s\nShowing the last %s lines instead.\n\n' "$REQUEST_ID" "$TAIL_LINES" > report/error-log-report.txt
+              tail -n "$TAIL_LINES" /tmp/serviceyar-host-error.log >> report/error-log-report.txt
+            fi
+          fi
+          # Redact common credentials, tokens, cookies, connection strings, and authorization headers.
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path("report/error-log-report.txt")
+          s = p.read_text(errors="replace")
+          patterns = [
+              (r'(?i)(password|passwd|pwd|db_password|ftp_pass|secret|api[_-]?key|access[_-]?token|refresh[_-]?token|authorization|cookie|csrf[_-]?token)(\s*[=:]\s*)[^\s,;]+', r'\1\2[REDACTED]'),
+              (r'(?i)(mysql:\S+)', r'[REDACTED_DATABASE_DSN]'),
+              (r'(?i)(Bearer\s+)[A-Za-z0-9._~+/-]+=*', r'\1[REDACTED]'),
+              (r'(?i)(https?://)[^/@\s:]+:[^/@\s]+@', r'\1[REDACTED]@'),
+          ]
+          for pattern, replacement in patterns:
+              s = re.sub(pattern, replacement, s)
+          p.write_text(s)
+          PY
+          echo "Report prepared. Raw downloaded log will not be uploaded."
+
+      - name: Show redacted report in run summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f report/error-log-report.txt ]]; then
+            {
+              echo "## ServiceYar hosting error log (redacted)"
+              echo
+              echo "Sensitive fields are redacted. The raw log is not published as an artifact."
+              echo
+              cat report/error-log-report.txt
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
