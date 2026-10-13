@@ -131,3 +131,43 @@ jobs:
               cat report/error-log-report.txt
             } >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Inspect FTP directories when log path is missing
+        if: failure()
+        shell: bash
+        env:
+          FTP_HOST: ${{ secrets.SERVICEYAR_FTP_HOST }}
+          FTP_USER: ${{ secrets.SERVICEYAR_FTP_USERNAME }}
+          FTP_PASS: ${{ secrets.SERVICEYAR_FTP_PASSWORD }}
+        run: |
+          set -u
+          mkdir -p report
+          {
+            echo "Read-only FTP directory inventory"
+            echo "The requested log file could not be downloaded. These listings help identify the account's actual FTP root and visible log directories."
+            echo
+            lftp --user "$FTP_USER" --password "$FTP_PASS" "ftp://$FTP_HOST:21" -e "
+              set ftp:ssl-force false;
+              set ssl:verify-certificate no;
+              set ftp:ssl-protect-data false;
+              set ftp:passive-mode true;
+              set ftp:prefer-epsv false;
+              set net:timeout 20;
+              set net:max-retries 1;
+              set cmd:fail-exit no;
+              echo '--- FTP current directory ---';
+              pwd;
+              echo '--- Listing current directory ---';
+              cls -la;
+              echo '--- Listing / ---';
+              cls -la /;
+              echo '--- Listing /public_html ---';
+              cls -la /public_html;
+              echo '--- Listing /logs ---';
+              cls -la /logs;
+              echo '--- Listing /home ---';
+              cls -la /home;
+              bye
+            " 2>&1 || true
+          } > report/ftp-directory-inventory.txt
+          echo "FTP inventory collected using read-only directory listing commands."
