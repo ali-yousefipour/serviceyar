@@ -35,9 +35,9 @@ jobs:
       - name: Validate inputs
         shell: bash
         env:
-          REQUEST_ID: \${{ inputs.request_id }}
-          REMOTE_LOG_PATH: \${{ inputs.remote_log_path }}
-          TAIL_LINES: \${{ inputs.tail_lines }}
+          REQUEST_ID: ${{ inputs.request_id }}
+          REMOTE_LOG_PATH: ${{ inputs.remote_log_path }}
+          TAIL_LINES: ${{ inputs.tail_lines }}
         run: |
           set -euo pipefail
           if [[ ! "$REMOTE_LOG_PATH" =~ ^/[A-Za-z0-9._/-]+$ ]] || [[ "$REMOTE_LOG_PATH" == *".."* ]]; then
@@ -61,12 +61,12 @@ jobs:
       - name: Download log read-only and create redacted report
         shell: bash
         env:
-          FTP_HOST: \${{ secrets.SERVICEYAR_FTP_HOST }}
-          FTP_USER: \${{ secrets.SERVICEYAR_FTP_USERNAME }}
-          FTP_PASS: \${{ secrets.SERVICEYAR_FTP_PASSWORD }}
-          REMOTE_LOG_PATH: \${{ inputs.remote_log_path }}
-          REQUEST_ID: \${{ inputs.request_id }}
-          TAIL_LINES: \${{ inputs.tail_lines }}
+          FTP_HOST: ${{ secrets.SERVICEYAR_FTP_HOST }}
+          FTP_USER: ${{ secrets.SERVICEYAR_FTP_USERNAME }}
+          FTP_PASS: ${{ secrets.SERVICEYAR_FTP_PASSWORD }}
+          REMOTE_LOG_PATH: ${{ inputs.remote_log_path }}
+          REQUEST_ID: ${{ inputs.request_id }}
+          TAIL_LINES: ${{ inputs.tail_lines }}
         run: |
           set -euo pipefail
           : "\${FTP_HOST:?Missing SERVICEYAR_FTP_HOST secret}"
