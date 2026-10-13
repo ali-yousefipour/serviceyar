@@ -3,7 +3,7 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/src/bootstrap.php';
 use ServiceYar\Auth\AuthException; use ServiceYar\Auth\AuthService; use ServiceYar\Auth\Authorization; use ServiceYar\Http\Request; use ServiceYar\Http\Response; use ServiceYar\Agency\AgencyService; use ServiceYar\Settings\SettingsService; use ServiceYar\Holiday\HolidayService; use ServiceYar\Users\UserService; use ServiceYar\Domain\DomainService; use ServiceYar\Database\Connection;
 
-$method=$_SERVER['REQUEST_METHOD']??'GET';$path=parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)?:'/';
+$method=$_SERVER['REQUEST_METHOD']??'GET';$path=parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)?:'/';$requestId=bin2hex(random_bytes(8));header('X-Request-ID: '.$requestId);
 function agencyId(array $session): int { $raw=$_GET['agencyId']??null; $id=$raw!==null?(int)$raw:AgencyService::currentId($session['id']); if($id<1)throw new AuthException(422,'شناسه سازمان نامعتبر است.','VALIDATION_ERROR'); Authorization::requireAgencyAccess($session['id'],$id); return $id; }
 try {
  if($method==='OPTIONS'){http_response_code(204);exit;}
@@ -55,6 +55,6 @@ try {
   }
  }
  Response::json(['ok'=>false,'error'=>['code'=>'NOT_FOUND','message'=>'مسیر مورد نظر پیدا نشد.']],404);
-} catch(AuthException $e){Response::json(['ok'=>false,'error'=>['code'=>$e->codeName,'message'=>$e->getMessage()]],$e->status);}
-catch(\PDOException $e){error_log($e->getMessage());$message='خطای پایگاه داده.';$code='DATABASE_ERROR';if(str_contains($e->getMessage(),'auth_login_attempts')||str_contains($e->getMessage(),'user_sessions')){$message='ساختار ورود در دیتابیس کامل نیست؛ مهاجرت‌های 0006 و 0007 باید با پشتیبان‌گیری و به‌صورت کنترل‌شده اجرا شوند.';$code='AUTH_SCHEMA_MISSING';}Response::json(['ok'=>false,'error'=>['code'=>$code,'message'=>$message]],500);}
-catch(\Throwable $e){error_log($e->getMessage());Response::json(['ok'=>false,'error'=>['code'=>'INTERNAL_ERROR','message'=>'خطای داخلی سامانه.']],500);}
+ } catch(AuthException $e){Response::json(['ok'=>false,'error'=>['code'=>$e->codeName,'message'=>$e->getMessage()]],$e->status);}
+catch(\PDOException $e){error_log('[ServiceYar]['.$requestId.'] PDOException '.$method.' '.$path.' at '.$e->getFile().':'.$e->getLine().' '.$e->getMessage());$message='خطای پایگاه داده. شناسه پیگیری: '.$requestId;$code='DATABASE_ERROR';if(str_contains($e->getMessage(),'auth_login_attempts')||str_contains($e->getMessage(),'user_sessions')){$message='ساختار ورود در دیتابیس کامل نیست؛ مهاجرت‌های 0006 و 0007 باید با پشتیبان‌گیری و به‌صورت کنترل‌شده اجرا شوند. شناسه پیگیری: '.$requestId;$code='AUTH_SCHEMA_MISSING';}Response::json(['ok'=>false,'error'=>['code'=>$code,'message'=>$message,'requestId'=>$requestId]],500);}
+catch(\Throwable $e){error_log('[ServiceYar]['.$requestId.'] '.get_class($e).' '.$method.' '.$path.' at '.$e->getFile().':'.$e->getLine().' '.$e->getMessage().' TRACE '.$e->getTraceAsString());Response::json(['ok'=>false,'error'=>['code'=>'INTERNAL_ERROR','message'=>'خطای داخلی سامانه. شناسه پیگیری: '.$requestId,'requestId'=>$requestId]],500);}
