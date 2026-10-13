@@ -56,5 +56,5 @@ try {
  }
  Response::json(['ok'=>false,'error'=>['code'=>'NOT_FOUND','message'=>'مسیر مورد نظر پیدا نشد.']],404);
 } catch(AuthException $e){Response::json(['ok'=>false,'error'=>['code'=>$e->codeName,'message'=>$e->getMessage()]],$e->status);}
-catch(\PDOException $e){error_log($e->getMessage());Response::json(['ok'=>false,'error'=>['code'=>'DATABASE_ERROR','message'=>'خطای پایگاه داده.']],500);}
+catch(\PDOException $e){error_log($e->getMessage());$message='خطای پایگاه داده.';$code='DATABASE_ERROR';if(str_contains($e->getMessage(),'auth_login_attempts')||str_contains($e->getMessage(),'user_sessions')){$message='ساختار ورود در دیتابیس کامل نیست؛ مهاجرت‌های 0006 و 0007 باید با پشتیبان‌گیری و به‌صورت کنترل‌شده اجرا شوند.';$code='AUTH_SCHEMA_MISSING';}Response::json(['ok'=>false,'error'=>['code'=>$code,'message'=>$message]],500);}
 catch(\Throwable $e){error_log($e->getMessage());Response::json(['ok'=>false,'error'=>['code'=>'INTERNAL_ERROR','message'=>'خطای داخلی سامانه.']],500);}
