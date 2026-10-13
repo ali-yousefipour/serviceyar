@@ -118,7 +118,7 @@ final class AuthService
         $cookie=$_COOKIE['serviceyar_session'] ?? null;
         if (is_string($cookie) && preg_match('/^[A-Fa-f0-9]{64}$/',$cookie)) return $cookie;
         $header=(string)($_SERVER['HTTP_AUTHORIZATION'] ?? '');
-        if (preg_match('/^Bearer\\s+([A-Za-z0-9]+)$/',$header,$m)) return $m[1];
+        if (preg_match('/^Bearer\s+([A-Fa-f0-9]{64})$/', $header, $m)) return $m[1];
         return null;
     }
 
