@@ -98,7 +98,7 @@ final class ExportService
             . ' WHERE ' . implode(' AND ', $where) . ' ORDER BY id DESC LIMIT 5000';
         $statement = Connection::get()->prepare($sql);
         $statement->execute($params);
-        $rows = $statement->fetchAll(\\PDO::FETCH_ASSOC);
+        $rows = $statement->fetchAll(\PDO::FETCH_ASSOC);
 
         $xml = static function (mixed $value): string {
             $text = (string)($value ?? '');
