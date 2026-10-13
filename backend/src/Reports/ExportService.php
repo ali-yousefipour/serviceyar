@@ -114,7 +114,7 @@ final class ExportService
 
         while (ob_get_level() > 0) ob_end_clean();
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="' . $schema['filename'] . '"; filename*=UTF-8\\'\\'' . rawurlencode($schema['filename']));
+        header("Content-Disposition: attachment; filename=\"" . $schema['filename'] . "\"; filename*=UTF-8''" . rawurlencode($schema['filename']));
         header('Content-Length: ' . strlen($data));
         header('Cache-Control: no-store, no-cache, must-revalidate');
         header('X-Content-Type-Options: nosniff');
