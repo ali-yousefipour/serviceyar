@@ -44,6 +44,13 @@ if (config('APP_ENV','local') === 'production') {
     ini_set('log_errors','1');
 }
 
+// Keep application errors separate from cPanel/Roundcube's unrelated PHP log.
+// The directory is deployed with the application; only redirect logging when it is writable.
+$appLogFile = dirname(__DIR__, 2) . '/storage/logs/serviceyar-error.log';
+if (is_dir(dirname($appLogFile)) && is_writable(dirname($appLogFile))) {
+    ini_set('error_log', $appLogFile);
+}
+
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 $allowedOrigins = array_values(array_filter(array_map('trim', explode(',', (string)config('CORS_ALLOWED_ORIGINS','')))));
 if ($origin !== '' && in_array($origin, $allowedOrigins, true)) {
