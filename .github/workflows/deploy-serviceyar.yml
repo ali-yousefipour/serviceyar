@@ -206,12 +206,12 @@ jobs:
             mirror --reverse --verbose --overwrite --no-perms deploy-payload/backend/ /public_html/backend/;
             mirror --reverse --verbose --overwrite --no-perms deploy-payload/database/ /public_html/database/;
             mirror --reverse --verbose --overwrite --no-perms deploy-payload/storage/ /public_html/storage/;
-            mv -f ${STAGING_DIR}/assets/app.js /public_html/assets/app.js;
-            mv -f ${STAGING_DIR}/assets/app.css /public_html/assets/app.css;
-            mv -f ${STAGING_DIR}/assets/Vazirmatn-Regular.woff2 /public_html/assets/Vazirmatn-Regular.woff2;
-            mv -f ${STAGING_DIR}/assets/favicon.svg /public_html/assets/favicon.svg;
-            mv -f ${STAGING_DIR}/.htaccess.new /public_html/.htaccess;
-            mv -f ${STAGING_DIR}/index.html /public_html/index.html;
+            mv ${STAGING_DIR}/assets/app.js /public_html/assets/app.js;
+            mv ${STAGING_DIR}/assets/app.css /public_html/assets/app.css;
+            mv ${STAGING_DIR}/assets/Vazirmatn-Regular.woff2 /public_html/assets/Vazirmatn-Regular.woff2;
+            mv ${STAGING_DIR}/assets/favicon.svg /public_html/assets/favicon.svg;
+            mv ${STAGING_DIR}/.htaccess.new /public_html/.htaccess;
+            mv ${STAGING_DIR}/index.html /public_html/index.html;
             bye
           "
 
