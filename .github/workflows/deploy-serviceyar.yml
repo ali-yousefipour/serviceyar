@@ -113,6 +113,7 @@ jobs:
             set ftp:passive-mode true;
             set ftp:prefer-epsv false;
             set net:timeout 60;
+            set cmd:fail-exit yes;
             set net:max-retries 5;
             set net:reconnect-interval-base 2;
             set ssl:verify-certificate no;
@@ -131,6 +132,7 @@ jobs:
             set ftp:passive-mode true;
             set ftp:prefer-epsv false;
             set net:timeout 60;
+            set cmd:fail-exit yes;
             set net:max-retries 5;
             set ssl:verify-certificate no;
             put -O ${STAGING_DIR} /tmp/.htaccess;
@@ -154,6 +156,7 @@ jobs:
             set ftp:passive-mode true;
             set ftp:prefer-epsv false;
             set net:timeout 60;
+            set cmd:fail-exit yes;
             set ssl:verify-certificate no;
             get ${STAGING_DIR}/index.html -o /tmp/serviceyar-staged-index.html;
             get ${STAGING_DIR}/.htaccess.new -o /tmp/serviceyar-staged-htaccess;
@@ -194,6 +197,7 @@ jobs:
             set ftp:passive-mode true;
             set ftp:prefer-epsv false;
             set net:timeout 60;
+            set cmd:fail-exit yes;
             set net:max-retries 5;
             set cmd:fail-exit yes;
             set ssl:verify-certificate no;
@@ -224,6 +228,7 @@ jobs:
             set ftp:passive-mode true;
             set ftp:prefer-epsv false;
             set net:timeout 60;
+            set cmd:fail-exit yes;
             set ssl:verify-certificate no;
             get /public_html/index.html -o /tmp/serviceyar-live-index.html;
             get /public_html/assets/app.js -o /tmp/serviceyar-live-app.js;
