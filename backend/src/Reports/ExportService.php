@@ -27,7 +27,7 @@ final class ExportService
         'payments' => ['table'=>'payments','filename'=>'payments-report.xlsx','date_column'=>'payment_date','columns'=>[
             'id'=>'شناسه','invoice_id'=>'شناسه فاکتور','amount'=>'مبلغ پرداخت','payment_date'=>'تاریخ پرداخت',
             'method'=>'روش پرداخت','reference_no'=>'شماره پیگیری','created_at'=>'تاریخ ثبت']],
-        'driver-work' => ['table'=>'driver_work','filename'=>'driver-work-report.xlsx','date_column'=>'work_date','columns':[
+        'driver-work' => ['table'=>'driver_work','filename'=>'driver-work-report.xlsx','date_column'=>'work_date','columns'=>[
             'id'=>'شناسه','driver_id'=>'شناسه راننده','work_date'=>'تاریخ کارکرد','service_id'=>'شناسه سرویس',
             'amount'=>'مبلغ کارکرد','status'=>'وضعیت','note'=>'توضیحات','created_at'=>'تاریخ ثبت']],
     ];
