@@ -22,6 +22,19 @@ final class AgencyService {
   $ids=self::ids($userId); if(!$ids)return [];
   $in=implode(',',array_fill(0,count($ids),'?')); $s=Connection::get()->prepare("SELECT id,uuid,name,code,city_id,is_active,created_at,updated_at FROM agencies WHERE id IN ($in) ORDER BY name"); $s->execute($ids); return $s->fetchAll();
  }
+ public static function sessionList(int $userId): array {
+  // /auth/me must return the caller's own agency scope even when their role
+  // cannot manage or browse the agencies administration endpoint.
+  if (Authorization::isSuperAdmin($userId)) {
+   return Connection::get()->query('SELECT id,uuid,name,code,city_id,is_active,created_at,updated_at FROM agencies ORDER BY name')->fetchAll();
+  }
+  $ids=self::ids($userId);
+  if(!$ids)return [];
+  $in=implode(',',array_fill(0,count($ids),'?'));
+  $s=Connection::get()->prepare("SELECT id,uuid,name,code,city_id,is_active,created_at,updated_at FROM agencies WHERE id IN ($in) ORDER BY name");
+  $s->execute($ids);
+  return $s->fetchAll();
+ }
  public static function update(int $userId,int $id,array $b): array {
   Authorization::requirePermission($userId,'agencies.manage'); if(!Authorization::isSuperAdmin($userId)) Authorization::requireAgencyAccess($userId,$id);
   $name=trim((string)($b['name']??'')); if($name==='') throw new \ServiceYar\Auth\AuthException(422,'نام شرکت الزامی است.','VALIDATION_ERROR');
