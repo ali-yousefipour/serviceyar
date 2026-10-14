@@ -4,15 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       request_id:
-        description: "Optional request/trace ID to find (for example d153797f76bbc15e)"
+        description: "Optional request/trace ID to find"
         required: false
         type: string
-        default: "d153797f76bbc15e"
+        default: ""
       remote_log_path:
         description: "Absolute FTP path to the ServiceYar application error log"
         required: true
         type: string
-        default: "/public_html/storage/logs/serviceyar-error.log"
+        default: "/public_html/storage/serviceyar-error.log"
       tail_lines:
         description: "Maximum recent lines to inspect when the request ID is not found (1–2000)"
         required: true
@@ -73,7 +73,6 @@ jobs:
           : "${FTP_USER:?Missing SERVICEYAR_FTP_USERNAME secret}"
           : "${FTP_PASS:?Missing SERVICEYAR_FTP_PASSWORD secret}"
           mkdir -p report
-          # Download only the selected log file. No remote write/delete commands are issued.
           lftp --user "$FTP_USER" --password "$FTP_PASS" "ftp://$FTP_HOST:21" -e "
             set ftp:ssl-force false;
             set ssl:verify-certificate no;
@@ -89,18 +88,14 @@ jobs:
           chmod 600 /tmp/serviceyar-host-error.log
           if [[ ! -s /tmp/serviceyar-host-error.log ]]; then
             echo "The selected error log is empty." > report/error-log-report.txt
+          elif [[ -n "$REQUEST_ID" ]] && grep -Fq -- "$REQUEST_ID" /tmp/serviceyar-host-error.log; then
+            grep -F -C 1 -- "$REQUEST_ID" /tmp/serviceyar-host-error.log > /tmp/relevant.log || true
+            printf 'Filtered error log report for request ID: %s\n\n' "$REQUEST_ID" > report/error-log-report.txt
+            cat /tmp/relevant.log >> report/error-log-report.txt
           else
-            if [[ -n "$REQUEST_ID" ]] && grep -Fq -- "$REQUEST_ID" /tmp/serviceyar-host-error.log; then
-              # Include matching lines and one neighboring line on each side for context.
-              grep -F -C 1 -- "$REQUEST_ID" /tmp/serviceyar-host-error.log > /tmp/relevant.log || true
-              printf 'Filtered error log report for request ID: %s\n\n' "$REQUEST_ID" > report/error-log-report.txt
-              cat /tmp/relevant.log >> report/error-log-report.txt
-            else
-              printf 'Request ID not found: %s\nShowing the last %s lines instead.\n\n' "$REQUEST_ID" "$TAIL_LINES" > report/error-log-report.txt
-              tail -n "$TAIL_LINES" /tmp/serviceyar-host-error.log >> report/error-log-report.txt
-            fi
+            printf 'Request ID not found: %s\nShowing the last %s lines instead.\n\n' "$REQUEST_ID" "$TAIL_LINES" > report/error-log-report.txt
+            tail -n "$TAIL_LINES" /tmp/serviceyar-host-error.log >> report/error-log-report.txt
           fi
-          # Redact common credentials, tokens, cookies, connection strings, and authorization headers.
           python3 - <<'PY'
           from pathlib import Path
           import re
