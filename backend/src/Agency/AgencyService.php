@@ -30,7 +30,7 @@ final class AgencyService {
  }
  public static function create(int $userId,array $b): array {
   Authorization::requirePermission($userId,'agencies.manage'); $name=trim((string)($b['name']??'')); if($name==='') throw new \ServiceYar\Auth\AuthException(422,'نام شرکت الزامی است.','VALIDATION_ERROR');
-  $p=Connection::get()->prepare('INSERT INTO agencies(uuid,name,code,city_id) VALUES(:u,:n,:c,:city)'); $p->execute(['u'=>Uuid::v4(),'n'=>$name,'c'=>$b['code']??null,'city'=>isset($b['cityId'])?(int)$b['cityId']:null]);
+  $p=Connection::get()->prepare('INSERT INTO agencies(uuid,name,code,city_id) VALUES(:u,:n,:c,:city)'); $p->execute(['u'=>Uuid::v4(),'n'=>$name,'c'=>trim((string)($b['code']??''))!==''?$b['code']:null,'city'=>isset($b['cityId'])&&$b['cityId']!==''?(int)$b['cityId']:null]);
   $id=(int)Connection::get()->lastInsertId(); Connection::get()->prepare('INSERT IGNORE INTO agency_users(agency_id,user_id) VALUES(:a,:u)')->execute(['a'=>$id,'u'=>$userId]);
   return self::update($userId,$id,$b);
  }
