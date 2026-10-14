@@ -42,3 +42,18 @@ CORS_ALLOWED_ORIGINS=https://YOUR-DOMAIN
 
 ## کنترل نهایی
 Phase 17 زمانی کامل است که Deployment واقعی، HTTPS، Backup/Restore، Log Rotation، Monitoring و Rollback روی محیط مقصد اجرا و ثبت شده باشند.
+
+## تنظیم اتصال دیتابیس Challi (Production)
+
+برای نصب فعلی روی هاست اشتراکی، فایل `.env` باید در ریشه `public_html` باشد؛ کد آن را از همان مسیر می‌خواند. این فایل در مخزن نیست و نباید به Git اضافه شود.
+
+مقادیر اتصال روی هاست:
+```dotenv
+DB_HOST=localhost
+DB_PORT=3306
+DB_DATABASE=challi_ali
+DB_USERNAME=challi_ali
+DB_PASSWORD=رمز_دیتابیس
+```
+
+مقدار `DB_PASSWORD` باید مستقیماً در فایل `.env` روی هاست وارد شود. رمز دیتابیس عمداً در سورس‌کد، `.env.example`، لاگ‌ها یا commit ذخیره نمی‌شود. پس از ذخیره، مجوز فایل را تا حد امکان به مالک محدود کنید؛ قاعده منع دسترسی به فایل‌های `.env` در `.htaccess` حفظ شود.
