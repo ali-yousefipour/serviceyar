@@ -35,15 +35,12 @@ final class Connection
                 ]
             );
         } catch (\PDOException $e) {
-            // Log the actual MySQL/PDO reason without logging credentials or the DSN.
-            // The public API deliberately keeps returning a generic database error.
+            // Keep credentials and DSN out of logs and public API responses.
             $errorInfo = is_array($e->errorInfo ?? null) ? $e->errorInfo : [];
             $sqlState = (string) ($errorInfo[0] ?? $e->getCode() ?? 'unknown');
             $driverCode = isset($errorInfo[1]) ? (string) $errorInfo[1] : 'unknown';
             $driverMessage = isset($errorInfo[2]) ? (string) $errorInfo[2] : $e->getMessage();
 
-            // Guard against accidental credential disclosure if a driver embeds
-            // a username/password-like value in its error message.
             foreach ([$password, $username] as $sensitive) {
                 if ($sensitive !== '') {
                     $driverMessage = str_replace($sensitive, '[REDACTED]', $driverMessage);
@@ -51,8 +48,9 @@ final class Connection
             }
             $driverMessage = preg_replace('/[\r\n\t]+/', ' ', $driverMessage) ?? 'unavailable';
 
-            error_log(sprintf(
-                '[ServiceYar][DB_CONNECT] host=%s port=%s database=%s username=%s sqlstate=%s driver_code=%s message=%s',
+            $line = sprintf(
+                "[%s][ServiceYar][DB_CONNECT] host=%s port=%s database=%s username=%s sqlstate=%s driver_code=%s message=%s\n",
+                date('c'),
                 preg_replace('/[^A-Za-z0-9._:-]/', '?', $host) ?? '?',
                 preg_replace('/[^0-9]/', '', $port) ?? '',
                 preg_replace('/[^A-Za-z0-9_$-]/', '?', $database) ?? '?',
@@ -60,7 +58,16 @@ final class Connection
                 preg_replace('/[^A-Za-z0-9_-]/', '?', $sqlState) ?? 'unknown',
                 preg_replace('/[^0-9]/', '', $driverCode) ?? 'unknown',
                 $driverMessage
-            ));
+            );
+
+            // The deployment creates /public_html/storage. Write the diagnostic
+            // there because shared hosts may not expose PHP's configured error log
+            // over FTP. The root .htaccess denies HTTP access to /storage.
+            $storageLog = dirname(__DIR__, 3) . '/storage/serviceyar-error.log';
+            $written = @file_put_contents($storageLog, $line, FILE_APPEND | LOCK_EX);
+            if ($written === false) {
+                error_log(trim($line));
+            }
 
             throw new RuntimeException('Database connection failed.', 0, $e);
         }
