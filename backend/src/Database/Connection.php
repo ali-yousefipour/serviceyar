@@ -19,8 +19,8 @@ final class Connection
 
         $host = config('DB_HOST', '127.0.0.1');
         $port = config('DB_PORT', '3306');
-        $database = config('DB_DATABASE', 'serviceyar');
-        $username = config('DB_USERNAME', 'serviceyar');
+        $database = config('DB_DATABASE', 'challi_ali');
+        $username = config('DB_USERNAME', $database);
         $password = config('DB_PASSWORD', '');
 
         try {
