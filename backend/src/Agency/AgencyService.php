@@ -6,6 +6,10 @@ use ServiceYar\Database\Connection;
 use ServiceYar\Support\Uuid;
 final class AgencyService {
  public static function ids(int $userId): array {
+  if (Authorization::isSuperAdmin($userId)) {
+   $s=Connection::get()->query('SELECT id FROM agencies WHERE is_active=1 ORDER BY id');
+   return array_map('intval',$s->fetchAll(\PDO::FETCH_COLUMN));
+  }
   $s=Connection::get()->prepare('SELECT a.id FROM agencies a JOIN agency_users au ON au.agency_id=a.id WHERE au.user_id=:u AND a.is_active=1 ORDER BY a.id');
   $s->execute(['u'=>$userId]); return array_map('intval',$s->fetchAll(\PDO::FETCH_COLUMN));
  }
@@ -13,7 +17,9 @@ final class AgencyService {
   $ids=self::ids($userId); if(!$ids) throw new \ServiceYar\Auth\AuthException(403,'کاربر به هیچ سازمان فعالی دسترسی ندارد.','NO_AGENCY_SCOPE'); return $ids[0];
  }
  public static function list(int $userId): array {
-  Authorization::requirePermission($userId,'agencies.view'); $ids=self::ids($userId); if(!$ids)return [];
+  Authorization::requirePermission($userId,'agencies.view');
+  if (Authorization::isSuperAdmin($userId)) return Connection::get()->query('SELECT id,uuid,name,code,city_id,is_active,created_at,updated_at FROM agencies ORDER BY name')->fetchAll();
+  $ids=self::ids($userId); if(!$ids)return [];
   $in=implode(',',array_fill(0,count($ids),'?')); $s=Connection::get()->prepare("SELECT id,uuid,name,code,city_id,is_active,created_at,updated_at FROM agencies WHERE id IN ($in) ORDER BY name"); $s->execute($ids); return $s->fetchAll();
  }
  public static function update(int $userId,int $id,array $b): array {
