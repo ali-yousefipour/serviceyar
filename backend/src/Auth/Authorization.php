@@ -20,6 +20,13 @@ final class Authorization
         return $s->fetchAll(\PDO::FETCH_COLUMN);
     }
 
+    public static function isSuperAdmin(int $userId): bool
+    {
+        $s = Connection::get()->prepare("SELECT 1 FROM user_roles ur JOIN roles r ON r.id=ur.role_id JOIN users u ON u.id=ur.user_id WHERE ur.user_id=:uid AND r.name='super_admin' AND u.is_active=1 LIMIT 1");
+        $s->execute(['uid'=>$userId]);
+        return (bool)$s->fetchColumn();
+    }
+
     public static function requirePermission(int $userId,string $permission): void
     {
         if (!in_array($permission,self::permissions($userId),true)) {
@@ -29,6 +36,7 @@ final class Authorization
 
     public static function requireAgencyAccess(int $userId,int $agencyId): void
     {
+        if (self::isSuperAdmin($userId)) return;
         $s=Connection::get()->prepare('SELECT 1 FROM agency_users WHERE user_id=:uid AND agency_id=:aid LIMIT 1');
         $s->execute(['uid'=>$userId,'aid'=>$agencyId]);
         if (!$s->fetchColumn()) {
