@@ -17,7 +17,7 @@ final class Connection
             return self::$pdo;
         }
 
-        $host = config('DB_HOST', '127.0.0.1');
+        $host = config('DB_HOST', 'localhost');
         $port = config('DB_PORT', '3306');
         $database = config('DB_DATABASE', 'challi_ali');
         $username = config('DB_USERNAME', $database);
