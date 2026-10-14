@@ -4,7 +4,7 @@ require dirname(__DIR__) . '/src/bootstrap.php';
 use ServiceYar\Auth\AuthException; use ServiceYar\Auth\AuthService; use ServiceYar\Auth\Authorization; use ServiceYar\Http\Request; use ServiceYar\Http\Response; use ServiceYar\Agency\AgencyService; use ServiceYar\Settings\SettingsService; use ServiceYar\Holiday\HolidayService; use ServiceYar\Users\UserService; use ServiceYar\Domain\DomainService; use ServiceYar\Database\Connection;
 
 $method=$_SERVER['REQUEST_METHOD']??'GET';$path=parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)?:'/';$requestId=bin2hex(random_bytes(8));header('X-Request-ID: '.$requestId);
-function agencyId(array $session): int { $raw=$_GET['agencyId']??null; $id=$raw!==null?(int)$raw:AgencyService::currentId($session['id']); if($id<1)throw new AuthException(422,'شناسه سازمان نامعتبر است.','VALIDATION_ERROR'); Authorization::requireAgencyAccess($session['id'],$id); return $id; }
+function agencyId(array $session): int { $raw=$_GET['agencyId']??null; $id=$raw!==null?(int)$raw:AgencyService::currentId($session['id']); if($id<1)throw new AuthException(422,'شناسه شرکت نامعتبر است.','VALIDATION_ERROR'); Authorization::requireAgencyAccess($session['id'],$id); return $id; }
 try {
  if($method==='OPTIONS'){http_response_code(204);exit;}
  if($method==='GET'&&($path==='/api/health'||$path==='/api/v1/health'))Response::json(['ok'=>true,'service'=>config('APP_NAME','ServiceYar'),'environment'=>config('APP_ENV','local'),'version'=>'0.3.0','time'=>gmdate('c')]);
@@ -19,6 +19,8 @@ try {
  if($method==='GET'&&$path==='/api/v1/agencies')Response::json(['ok'=>true,'data'=>AgencyService::list($s['id'])]);
  if($method==='POST'&&$path==='/api/v1/agencies'){ $auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>AgencyService::create($s['id'],Request::json())],201); }
  if(preg_match('#^/api/v1/agencies/(\d+)$#',$path,$m)){ $id=(int)$m[1];if($method==='PUT'||$method==='PATCH'){ $auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>AgencyService::update($s['id'],$id,Request::json())]);} }
+ if(preg_match('#^/api/v1/agencies/(\d+)/users$#',$path,$m)){ $id=(int)$m[1];if($method==='GET')Response::json(['ok'=>true,'data'=>AgencyService::users($s['id'],$id)]);if($method==='PUT'){ $auth->requireCsrf($s);$b=Request::json();Response::json(['ok'=>true,'data'=>AgencyService::assignUsers($s['id'],$id,is_array($b['userIds']??null)?$b['userIds']:[])]);} }
+ if(preg_match('#^/api/v1/agencies/(\d+)$#',$path,$m)&&$method==='DELETE'){ $auth->requireCsrf($s);AgencyService::deactivate($s['id'],(int)$m[1]);Response::json(['ok'=>true,'data'=>['deactivated'=>true]]);}
 
  if($method==='GET'&&$path==='/api/v1/admin/overview'){
   if(!Authorization::isSuperAdmin($s['id'])) throw new AuthException(403,'این بخش فقط برای مدیر کل سامانه است.','SUPER_ADMIN_REQUIRED');
