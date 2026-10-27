@@ -5,6 +5,7 @@ use ServiceYar\Auth\AuthException; use ServiceYar\Auth\AuthService; use ServiceY
 use ServiceYar\Domain\OperationsService;
 use ServiceYar\Domain\StudentImport;
 use ServiceYar\Domain\PayrollDocuments;
+use ServiceYar\Domain\AccountingJournal;
 use ServiceYar\Reports\ExportService;
 use ServiceYar\Reports\ReportService;
 use ServiceYar\Monitoring\MonitoringService;
@@ -45,6 +46,12 @@ try {
   Response::json(['ok'=>true,'data'=>['counts'=>$counts,'roles'=>$roles,'permissions'=>$permissions,'agencies'=>AgencyService::list($s['id']),'users'=>$users]]);
  }
  $aid=agencyId($s);
+ if(preg_match('#^/api/v1/accounting/journal/(\d+)(?:/(approve))?$#',$path,$m)){
+  if($method==='GET'&&empty($m[2]))Response::json(['ok'=>true,'data'=>AccountingJournal::get($s['id'],$aid,(int)$m[1])]);
+  if($method==='PUT'&&empty($m[2])){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>AccountingJournal::save($s['id'],$aid,Request::json(),(int)$m[1])]);}
+  if($method==='POST'&&($m[2]??'')==='approve'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>AccountingJournal::approve($s['id'],$aid,(int)$m[1])]);}
+ }
+ if($method==='POST'&&$path==='/api/v1/accounting/journal'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>AccountingJournal::save($s['id'],$aid,Request::json())],201);}
  if(preg_match('#^/api/v1/services/(\d+)/schools$#',$path,$m)){
   if($method==='GET')Response::json(['ok'=>true,'data'=>OperationsService::serviceSchools($s['id'],$aid,(int)$m[1])]);
   if($method==='PUT'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>OperationsService::setServiceSchools($s['id'],$aid,(int)$m[1],Request::json())]);}

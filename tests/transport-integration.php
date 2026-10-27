@@ -11,6 +11,7 @@ use ServiceYar\Integrations\BaleClient;
 use ServiceYar\Integrations\BalePaymentService;
 use ServiceYar\Integrations\NeginSms;
 use ServiceYar\Domain\PayrollDocuments;
+use ServiceYar\Domain\AccountingJournal as J;
 
 final class TestBaleClient extends BaleClient {
  public array $calls=[];public array $proof=[];
@@ -110,5 +111,27 @@ try{
  check(count(\ServiceYar\Integrations\MapService::points($uid,$a,(int)$multi['id'])['schools'])===2,'Map includes all service schools');
  D::delete($uid,$a,'students',(int)$secondStudent['id']);check(count(D::serviceStudents($uid,$a,(int)$multi['id']))===0,'Deactivating a student releases occupied capacity');
  D::save($uid,$a,'students',['isActive'=>1],(int)$secondStudent['id']);check(count(D::serviceStudents($uid,$a,(int)$multi['id']))===0,'Restoring a student does not silently reassign a route');
+ $cash=D::save($uid,$a,'accounts',['code'=>'TEST-1','title'=>'صندوق آزمایشی']);
+ $income=D::save($uid,$a,'accounts',['code'=>'TEST-2','title'=>'درآمد آزمایشی']);
+ $alien=D::save($uid,$b,'accounts',['code'=>'TEST-1','title'=>'شرکت دیگر']);
+ $journal=['documentNo'=>'J-'.$tag,'documentDate'=>'2026-10-27','description'=>'سند نمونه','lines'=>[
+  ['accountId'=>$cash['id'],'debit'=>'0.30','credit'=>'0','description'=>'دریافت','trackingNo'=>'TEST'],
+  ['accountId'=>$income['id'],'debit'=>'0','credit'=>'0.10'],
+  ['accountId'=>$income['id'],'debit'=>'0','credit'=>'0.20']]];
+ $bad=$journal;$bad['lines'][1]['credit']='0.11';rejected(fn()=>J::save($uid,$a,$bad),'UNBALANCED_JOURNAL');
+ $bad=$journal;$bad['lines'][0]['accountId']=$alien['id'];rejected(fn()=>J::save($uid,$a,$bad),'CROSS_SCOPE_REFERENCE');
+ $bad=$journal;$bad['lines'][0]['credit']='1';rejected(fn()=>J::save($uid,$a,$bad),'VALIDATION_ERROR');
+ $bad=$journal;$bad['lines'][0]['debit']='1e4';rejected(fn()=>J::save($uid,$a,$bad),'VALIDATION_ERROR');
+ $doc=J::save($uid,$a,$journal);check(count($doc['lines'])===3&&$doc['total_amount']==='0.30','Exact decimal journal balances and persists lines');
+ rejected(fn()=>J::save($uid,$a,$journal),'DOCUMENT_EXISTS');
+ rejected(fn()=>J::get($uid,$b,(int)$doc['id']),'NOT_FOUND');
+ $journal['description']='شرح اصلاح‌شده';J::save($uid,$a,$journal,(int)$doc['id']);check(J::get($uid,$a,(int)$doc['id'])['description']===$journal['description'],'Draft journal can be edited');
+ $bad=$journal;$bad['lines'][1]['credit']='0.11';rejected(fn()=>J::save($uid,$a,$bad,(int)$doc['id']),'UNBALANCED_JOURNAL');check(count(J::get($uid,$a,(int)$doc['id'])['lines'])===3,'Failed draft edit preserves all original lines');
+ check(J::approve($uid,$a,(int)$doc['id'])['status']==='approved','Balanced journal can be approved');
+ rejected(fn()=>J::save($uid,$a,$journal,(int)$doc['id']),'JOURNAL_LOCKED');
+ rejected(fn()=>D::save($uid,$a,'accounting-documents',['totalAmount'=>999,'status'=>'draft'],(int)$doc['id']),'JOURNAL_LOCKED');
+ rejected(fn()=>J::approve($uid,$a,(int)$doc['id']),'JOURNAL_LOCKED');
+ $legacy=insertFixture('accounting_documents',['agency_id'=>$a,'document_no'=>'LEGACY-'.$tag,'document_date'=>'2026-10-27']);rejected(fn()=>J::approve($uid,$a,$legacy),'UNBALANCED_JOURNAL');
+ D::delete($uid,$a,'accounts',(int)$cash['id']);$journal['documentNo'].='-inactive';rejected(fn()=>J::save($uid,$a,$journal),'CROSS_SCOPE_REFERENCE');
  echo "Transport integration: $checks checks passed. All fixtures rolled back.\n";
 }finally{if($p->inTransaction())$p->rollBack();}

@@ -68,6 +68,7 @@ final class DomainService {
   $row=$s->fetch();if(!$row)throw new AuthException(404,'رکورد پیدا نشد.','NOT_FOUND');return $row;
  }
  public static function save(int $uid,int $aid,string $resource,array $b,?int $id=null): array {
+  if($resource==='accounting-documents')return AccountingJournal::save($uid,$aid,$b,$id);
   return OperationsService::transaction(fn()=>self::saveRecord($uid,$aid,$resource,$b,$id));
  }
  private static function saveRecord(int $uid,int $aid,string $resource,array $b,?int $id=null): array {

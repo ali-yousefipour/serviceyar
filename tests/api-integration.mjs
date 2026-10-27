@@ -37,5 +37,18 @@ await request(scoped('/api/v1/maps/route'),{method:'POST',body:{studentId:studen
 await request(scoped(`/api/v1/services/${service.id}/map`));
 await request(scoped('/api/v1/operations/payroll-documents'),{method:'POST',body:{lines:[]},status:422});
 await request(scoped('/api/v1/operations/payroll-documents/0/bank'),{status:404});
+const tag=Date.now().toString();
+const cash=(await request(scoped('/api/v1/accounts'),{method:'POST',body:{code:'C-'+tag,title:'صندوق HTTP'},status:201})).data;
+const income=(await request(scoped('/api/v1/accounts'),{method:'POST',body:{code:'I-'+tag,title:'درآمد HTTP'},status:201})).data;
+const journal={documentNo:'HTTP-'+tag,documentDate:'2026-10-27',description:'سند آزمایشی HTTP',lines:[{accountId:cash.id,debit:'100.25',credit:'0'},{accountId:income.id,debit:'0',credit:'100.25'}]};
+await request(scoped('/api/v1/accounting/journal'),{method:'POST',body:journal,token:false,status:419});
+await request(scoped('/api/v1/accounting-documents'),{method:'POST',body:{documentNo:'INVALID-'+tag,documentDate:'2026-10-27',status:'approved',totalAmount:999},status:422});
+const journalDoc=(await request(scoped('/api/v1/accounting/journal'),{method:'POST',body:journal,status:201})).data;
+assert.equal(journalDoc.lines.length,2);checks++;
+await request(scoped('/api/v1/accounting/journal/'+journalDoc.id));
+await request(scoped('/api/v1/accounting/journal/'+journalDoc.id),{method:'PUT',body:{...journal,description:'شرح اصلاح‌شده'}});
+await request(scoped('/api/v1/accounting/journal/'+journalDoc.id+'/approve'),{method:'POST',body:{},token:false,status:419});
+await request(scoped('/api/v1/accounting/journal/'+journalDoc.id+'/approve'),{method:'POST',body:{}});
+await request(scoped('/api/v1/accounting-documents/'+journalDoc.id),{method:'PUT',body:{status:'draft',totalAmount:1},status:409});
 await request('/api/v1/auth/logout',{method:'POST'});await request(scoped('/api/v1/students'),{status:401});
 console.log(`API integration: ${checks} checks passed. No external provider calls were made.`);
