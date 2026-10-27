@@ -143,5 +143,22 @@ try{
  rejected(fn()=>\ServiceYar\Domain\FinancialRules::calculate($rules,['days'=>23]),'VALIDATION_ERROR');
  rejected(fn()=>\ServiceYar\Domain\FinancialRules::calculate($rules,['distanceKm'=>-1]),'VALIDATION_ERROR');
  check(\ServiceYar\Domain\FinancialRules::calculate($rules,['days'=>0])['driverNet']===0,'Zero workdays never create a negative payment');
+ $newUser=\ServiceYar\Users\UserService::save($uid,$a,['username'=>'managed_'.$tag,'password'=>'Temporary-Only-123','role'=>'operator','firstName'=>'کاربر']);
+ check(isset($newUser['id'])&&!isset($newUser['password_hash']),'User management never returns password hash');
+ \ServiceYar\Users\UserService::save($uid,$a,['username'=>$newUser['username'],'firstName'=>'ویرایش‌شده'],(int)$newUser['id']);check(\ServiceYar\Users\UserService::find($uid,$a,(int)$newUser['id'])['first_name']==='ویرایش‌شده','User editing persists');
+ rejected(fn()=>\ServiceYar\Users\UserService::save($uid,$b,['username'=>'alien'],(int)$newUser['id']),'NOT_FOUND');
+ rejected(fn()=>\ServiceYar\Users\UserService::save($uid,$a,['username'=>'badrole_'.$tag,'password'=>'Temporary-Only-123','role'=>'unknown']),'VALIDATION_ERROR');
+ $q=$p->prepare('SELECT COUNT(*) FROM users WHERE username=?');$q->execute(['badrole_'.$tag]);check((int)$q->fetchColumn()===0,'Invalid role leaves no partial user');
+ rejected(fn()=>\ServiceYar\Users\UserService::save($uid,0,['isActive'=>0],$uid),'SELF_PROTECTION');
+ insertFixture('user_sessions',['user_id'=>$newUser['id'],'token_hash'=>hash('sha256',random_bytes(32)),'csrf_token'=>bin2hex(random_bytes(32)),'expires_at'=>'2030-01-01 00:00:00']);
+ rejected(fn()=>\ServiceYar\Users\UserService::changePassword((int)$newUser['id'],$a,(int)$newUser['id'],['password'=>'Replacement-Only-123','passwordConfirmation'=>'Replacement-Only-123','currentPassword'=>'wrong']),'CURRENT_PASSWORD_INVALID');
+ \ServiceYar\Users\UserService::changePassword($uid,$a,(int)$newUser['id'],['password'=>'Replacement-Only-123','passwordConfirmation'=>'Replacement-Only-123']);$q=$p->prepare('SELECT password_hash FROM users WHERE id=?');$q->execute([$newUser['id']]);check(password_verify('Replacement-Only-123',$q->fetchColumn()),'Password reset hashes the new password');
+ $q=$p->prepare('SELECT COUNT(*) FROM user_sessions WHERE user_id=? AND revoked_at IS NULL');$q->execute([$newUser['id']]);check((int)$q->fetchColumn()===0,'Password reset revokes previous sessions');
+ rejected(fn()=>\ServiceYar\Users\UserService::changePassword($uid,$a,(int)$newUser['id'],['password'=>'Another-Password','passwordConfirmation'=>'different']),'VALIDATION_ERROR');
+ \ServiceYar\Users\UserService::changePassword((int)$newUser['id'],$a,(int)$newUser['id'],['password'=>'Self-Replacement-123','passwordConfirmation'=>'Self-Replacement-123','currentPassword'=>'Replacement-Only-123']);check(true,'Self password change verifies current password');
+ $manager=insertFixture('users',['uuid'=>Uuid::v4(),'username'=>'manager_'.$tag,'password_hash'=>'unused']);$p->prepare('INSERT INTO agency_users(agency_id,user_id) VALUES(?,?)')->execute([$a,$manager]);$adminRole=(int)$p->query("SELECT id FROM roles WHERE name='agency_admin'")->fetchColumn();$p->prepare('INSERT INTO user_roles(user_id,role_id) VALUES(?,?)')->execute([$manager,$adminRole]);$p->prepare("INSERT IGNORE INTO role_permissions(role_id,permission_id) SELECT ?,id FROM permissions WHERE name='users.manage'")->execute([$adminRole]);
+ rejected(fn()=>\ServiceYar\Users\UserService::save($manager,$a,['username'=>'escalate_'.$tag,'password'=>'Temporary-Only-123','role'=>'super_admin']),'FORBIDDEN');
+ $p->prepare('INSERT INTO agency_users(agency_id,user_id) VALUES(?,?)')->execute([$b,$newUser['id']]);rejected(fn()=>\ServiceYar\Users\UserService::changePassword($manager,$a,(int)$newUser['id'],['password'=>'Reset-Password-123','passwordConfirmation'=>'Reset-Password-123']),'PROTECTED_USER');
+ rejected(fn()=>\ServiceYar\Agency\AgencyService::update($manager,$a,['name'=>'شرکت','isActive'=>0]),'FORBIDDEN');
  echo "Transport integration: $checks checks passed. All fixtures rolled back.\n";
 }finally{if($p->inTransaction())$p->rollBack();}

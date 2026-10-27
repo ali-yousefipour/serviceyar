@@ -58,5 +58,17 @@ await request(scoped('/api/v1/accounting/journal/'+journalDoc.id),{method:'PUT',
 await request(scoped('/api/v1/accounting/journal/'+journalDoc.id+'/approve'),{method:'POST',body:{},token:false,status:419});
 await request(scoped('/api/v1/accounting/journal/'+journalDoc.id+'/approve'),{method:'POST',body:{}});
 await request(scoped('/api/v1/accounting-documents/'+journalDoc.id),{method:'PUT',body:{status:'draft',totalAmount:1},status:409});
+const managed=(await request(scoped('/api/v1/users'),{method:'POST',body:{username:'managed_'+tag,password:'Temporary-Only-123',role:'operator',firstName:'نمونه'},status:201})).data;
+await request('/api/v1/admin/users/'+managed.id);
+await request('/api/v1/admin/users/'+managed.id,{method:'PUT',body:{username:managed.username,firstName:'ویرایش‌شده',isActive:1}});
+await request('/api/v1/admin/users/'+managed.id+'/password',{method:'POST',body:{password:'Replacement-Only-123',passwordConfirmation:'Replacement-Only-123'},token:false,status:419});
+await request('/api/v1/admin/users/'+managed.id+'/password',{method:'POST',body:{password:'Replacement-Only-123',passwordConfirmation:'Replacement-Only-123'}});
+await request('/api/v1/auth/password',{method:'POST',body:{currentPassword:'wrong',password:'Never-Applied-123',passwordConfirmation:'Never-Applied-123'},status:422});
 await request('/api/v1/auth/logout',{method:'POST'});await request(scoped('/api/v1/students'),{status:401});
+await request('/api/v1/auth/login',{method:'POST',body:{username:managed.username,password:'Temporary-Only-123'},status:401});
+await request('/api/v1/auth/login',{method:'POST',body:{username:managed.username,password:'Replacement-Only-123'}});
+csrf=(await request('/api/v1/auth/me')).data.csrfToken;
+await request('/api/v1/admin/users',{status:403});
+await request('/api/v1/auth/password',{method:'POST',body:{currentPassword:'Replacement-Only-123',password:'Self-Replacement-123',passwordConfirmation:'Self-Replacement-123'}});
+await request('/api/v1/auth/me',{status:401});
 console.log(`API integration: ${checks} checks passed. No external provider calls were made.`);

@@ -20,6 +20,7 @@ jobs:
           php tests/static-smoke.php
           node --check frontend/assets/app.js
           node --check frontend/assets/operations.js
+          node tests/solar-date.cjs
   transport-integration:
     runs-on: ubuntu-latest
     services:
