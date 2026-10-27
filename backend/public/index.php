@@ -46,7 +46,15 @@ try {
   $users=$pdo->query('SELECT u.id,u.username,u.first_name,u.last_name,u.is_active,u.last_login_at,GROUP_CONCAT(DISTINCT r.title ORDER BY r.id SEPARATOR ", ") roles,GROUP_CONCAT(DISTINCT a.name ORDER BY a.name SEPARATOR ", ") agencies FROM users u LEFT JOIN user_roles ur ON ur.user_id=u.id LEFT JOIN roles r ON r.id=ur.role_id LEFT JOIN agency_users au ON au.user_id=u.id LEFT JOIN agencies a ON a.id=au.agency_id GROUP BY u.id ORDER BY u.id DESC LIMIT 100')->fetchAll();
   Response::json(['ok'=>true,'data'=>['counts'=>$counts,'roles'=>$roles,'permissions'=>$permissions,'agencies'=>AgencyService::list($s['id']),'users'=>$users]]);
  }
+ if($method==='POST'&&$path==='/api/v1/auth/password'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>UserService::changePassword($s['id'],0,$s['id'],Request::json())]);}
+ if(preg_match('#^/api/v1/admin/users(?:/(\d+)(?:/(password))?)?$#',$path,$m)){
+  if(!Authorization::isSuperAdmin($s['id']))throw new AuthException(403,'فقط مدیر کل مجاز است.','FORBIDDEN');
+  if($method==='GET')Response::json(['ok'=>true,'data'=>empty($m[1])?UserService::list($s['id'],0):UserService::find($s['id'],0,(int)$m[1])]);
+  $auth->requireCsrf($s);if(($m[2]??'')==='password'&&$method==='POST')Response::json(['ok'=>true,'data'=>UserService::changePassword($s['id'],0,(int)$m[1],Request::json())]);
+  if($method==='PUT'&&!empty($m[1]))Response::json(['ok'=>true,'data'=>UserService::save($s['id'],0,Request::json(),(int)$m[1])]);
+ }
  $aid=agencyId($s);
+ if(preg_match('#^/api/v1/users/(\d+)/(password)$#',$path,$m)&&$method==='POST'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>UserService::changePassword($s['id'],$aid,(int)$m[1],Request::json())]);}
  if($method==='POST'&&$path==='/api/v1/operations/financial-preview'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>FinancialRules::preview($s['id'],$aid,Request::json())]);}
  if(preg_match('#^/api/v1/accounting/journal/(\d+)(?:/(approve))?$#',$path,$m)){
   if($method==='GET'&&empty($m[2]))Response::json(['ok'=>true,'data'=>AccountingJournal::get($s['id'],$aid,(int)$m[1])]);

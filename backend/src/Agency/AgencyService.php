@@ -37,8 +37,11 @@ final class AgencyService {
  }
  public static function update(int $userId,int $id,array $b): array {
   Authorization::requirePermission($userId,'agencies.manage'); if(!Authorization::isSuperAdmin($userId)) Authorization::requireAgencyAccess($userId,$id);
+  $q=Connection::get()->prepare('SELECT is_active FROM agencies WHERE id=?');$q->execute([$id]);$old=$q->fetchColumn();if($old===false)throw new \ServiceYar\Auth\AuthException(404,'شرکت پیدا نشد.','NOT_FOUND');
+  if(isset($b['isActive'])&&!in_array($b['isActive'],[0,1,'0','1'],true))throw new \ServiceYar\Auth\AuthException(422,'وضعیت نامعتبر است.','VALIDATION_ERROR');
+  if(isset($b['isActive'])&&(int)$b['isActive']!==(int)$old&&!Authorization::isSuperAdmin($userId))throw new \ServiceYar\Auth\AuthException(403,'فقط مدیر کل می‌تواند وضعیت شرکت را تغییر دهد.','FORBIDDEN');
   $name=trim((string)($b['name']??'')); if($name==='') throw new \ServiceYar\Auth\AuthException(422,'نام شرکت الزامی است.','VALIDATION_ERROR');
-  $p=Connection::get()->prepare('UPDATE agencies SET name=:n,code=:c,city_id=:city,is_active=:active WHERE id=:id'); $p->execute(['n'=>$name,'c'=>trim((string)($b['code']??''))!==''?$b['code']:null, 'city'=>isset($b['cityId'])&&$b['cityId']!==''?(int)$b['cityId']:null,'active'=>isset($b['isActive'])?(int)(bool)$b['isActive']:1,'id'=>$id]);
+  $p=Connection::get()->prepare('UPDATE agencies SET name=:n,code=:c,city_id=:city,is_active=:active WHERE id=:id'); $p->execute(['n'=>$name,'c'=>trim((string)($b['code']??''))!==''?$b['code']:null, 'city'=>isset($b['cityId'])&&$b['cityId']!==''?(int)$b['cityId']:null,'active'=>isset($b['isActive'])?(int)$b['isActive']:(int)$old,'id'=>$id]);
   $s=Connection::get()->prepare('SELECT id,uuid,name,code,city_id,is_active,created_at,updated_at FROM agencies WHERE id=:id'); $s->execute(['id'=>$id]); return $s->fetch() ?: [];
  }
  public static function create(int $userId,array $b): array {

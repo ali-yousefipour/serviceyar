@@ -35,6 +35,7 @@ jobs:
           php tests/static-smoke.php
           node --check frontend/assets/app.js
           node --check frontend/assets/operations.js
+          node tests/solar-date.cjs
           test -s frontend/assets/app.css
           test -s frontend/assets/operations.css
           test -s frontend/assets/Vazirmatn-Regular.woff2
@@ -162,6 +163,8 @@ jobs:
             set ssl:verify-certificate no;
             get ${STAGING_DIR}/index.html -o /tmp/serviceyar-staged-index.html;
             get ${STAGING_DIR}/.htaccess.new -o /tmp/serviceyar-staged-htaccess;
+            get ${STAGING_DIR}/assets/solar-date.js -o /tmp/serviceyar-staged-solar-date.js;
+            get ${STAGING_DIR}/assets/logo.svg -o /tmp/serviceyar-staged-logo.svg;
             get ${STAGING_DIR}/assets/app.js -o /tmp/serviceyar-staged-app.js;
             get ${STAGING_DIR}/assets/operations.js -o /tmp/serviceyar-staged-operations.js;
             get ${STAGING_DIR}/assets/leaflet-LICENSE.txt -o /tmp/serviceyar-staged-leaflet-LICENSE.txt;
@@ -175,6 +178,8 @@ jobs:
             bye
           "
           cmp deploy-payload/index.html /tmp/serviceyar-staged-index.html
+          cmp deploy-payload/assets/solar-date.js /tmp/serviceyar-staged-solar-date.js
+          cmp deploy-payload/assets/logo.svg /tmp/serviceyar-staged-logo.svg
           cmp deploy-payload/assets/app.js /tmp/serviceyar-staged-app.js
           cmp deploy-payload/assets/operations.js /tmp/serviceyar-staged-operations.js
           cmp deploy-payload/assets/leaflet-LICENSE.txt /tmp/serviceyar-staged-leaflet-LICENSE.txt
@@ -218,6 +223,8 @@ jobs:
             mirror --reverse --verbose --overwrite --no-perms deploy-payload/backend/ /public_html/backend/;
             mirror --reverse --verbose --overwrite --no-perms deploy-payload/database/ /public_html/database/;
             mirror --reverse --verbose --overwrite --no-perms deploy-payload/storage/ /public_html/storage/;
+            mv ${STAGING_DIR}/assets/solar-date.js /public_html/assets/solar-date.js;
+            mv ${STAGING_DIR}/assets/logo.svg /public_html/assets/logo.svg;
             mv ${STAGING_DIR}/assets/app.js /public_html/assets/app.js;
             mv ${STAGING_DIR}/assets/operations.js /public_html/assets/operations.js;
             mv ${STAGING_DIR}/assets/leaflet-LICENSE.txt /public_html/assets/leaflet-LICENSE.txt;
@@ -249,6 +256,8 @@ jobs:
             set cmd:fail-exit yes;
             set ssl:verify-certificate no;
             get /public_html/index.html -o /tmp/serviceyar-live-index.html;
+            get /public_html/assets/solar-date.js -o /tmp/serviceyar-live-solar-date.js;
+            get /public_html/assets/logo.svg -o /tmp/serviceyar-live-logo.svg;
             get /public_html/assets/app.js -o /tmp/serviceyar-live-app.js;
             get /public_html/assets/operations.js -o /tmp/serviceyar-live-operations.js;
             get /public_html/assets/leaflet-LICENSE.txt -o /tmp/serviceyar-live-leaflet-LICENSE.txt;
@@ -261,6 +270,8 @@ jobs:
             bye
           "
           cmp deploy-payload/index.html /tmp/serviceyar-live-index.html
+          cmp frontend/assets/solar-date.js /tmp/serviceyar-live-solar-date.js
+          cmp frontend/assets/logo.svg /tmp/serviceyar-live-logo.svg
           cmp frontend/assets/app.js /tmp/serviceyar-live-app.js
           cmp frontend/assets/operations.js /tmp/serviceyar-live-operations.js
           cmp frontend/assets/leaflet-LICENSE.txt /tmp/serviceyar-live-leaflet-LICENSE.txt
