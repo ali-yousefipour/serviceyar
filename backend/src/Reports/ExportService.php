@@ -13,7 +13,7 @@ final class ExportService
             'manager_name'=>'نام مدیر','phone'=>'تلفن','region'=>'منطقه','is_active'=>'وضعیت فعال','created_at'=>'تاریخ ثبت']],
         'students' => ['table'=>'students','filename'=>'students-report.xlsx','date_column'=>'created_at','columns'=>[
             'id'=>'شناسه','first_name'=>'نام','last_name'=>'نام خانوادگی','national_code'=>'کد ملی',
-            'grade'=>'پایه تحصیلی','mobile'=>'شماره همراه','school_id'=>'شناسه مدرسه','is_active'=>'وضعیت فعال','created_at'=>'تاریخ ثبت']],
+            'grade'=>'پایه تحصیلی','mobile'=>'شماره همراه','school_id'=>'شناسه مدرسه','academic_year'=>'سال تحصیلی','service_status'=>'وضعیت سرویس','monthly_fee'=>'ماهیانه','is_active'=>'وضعیت فعال','created_at'=>'تاریخ ثبت']],
         'drivers' => ['table'=>'drivers','filename'=>'drivers-report.xlsx','date_column'=>'created_at','columns'=>[
             'id'=>'شناسه','first_name'=>'نام','last_name'=>'نام خانوادگی','national_code'=>'کد ملی',
             'mobile'=>'شماره همراه','status'=>'وضعیت راننده','rating'=>'امتیاز','vehicle_id'=>'شناسه خودرو',
@@ -27,6 +27,8 @@ final class ExportService
         'payments' => ['table'=>'payments','filename'=>'payments-report.xlsx','date_column'=>'payment_date','columns'=>[
             'id'=>'شناسه','invoice_id'=>'شناسه فاکتور','amount'=>'مبلغ پرداخت','payment_date'=>'تاریخ پرداخت',
             'method'=>'روش پرداخت','reference_no'=>'شماره پیگیری','created_at'=>'تاریخ ثبت']],
+        'ledger' => ['table'=>'ledger_entries','filename'=>'ledger-report.xlsx','date_column'=>'entry_date','columns'=>['id'=>'شناسه','party_type'=>'طرف حساب','party_id'=>'شناسه طرف حساب','direction'=>'نوع عملیات','amount'=>'مبلغ','entry_date'=>'تاریخ','reference_no'=>'شماره پیگیری','is_active'=>'فعال']],
+        'driver-payments' => ['table'=>'driver_payments','filename'=>'driver-payments-report.xlsx','date_column'=>'payment_date','columns'=>['id'=>'شناسه','driver_id'=>'راننده','payment_date'=>'تاریخ پرداخت','amount'=>'مبلغ','reference_no'=>'شماره پیگیری','note'=>'توضیحات']],
         'driver-work' => ['table'=>'driver_work','filename'=>'driver-work-report.xlsx','date_column'=>'work_date','columns'=>[
             'id'=>'شناسه','driver_id'=>'شناسه راننده','work_date'=>'تاریخ کارکرد','service_id'=>'شناسه سرویس',
             'amount'=>'مبلغ کارکرد','status'=>'وضعیت','note'=>'توضیحات','created_at'=>'تاریخ ثبت']],
@@ -37,6 +39,8 @@ final class ExportService
         Authorization::requirePermission($uid, 'reports.view');
         Authorization::requireAgencyAccess($uid, $aid);
         if (!isset(self::SCHEMAS[$resource])) self::jsonError(422, 'VALIDATION_ERROR', 'گزارش انتخاب‌شده قابل خروجی نیست.');
+        $permission=['schools'=>'schools','students'=>'students','drivers'=>'drivers','services'=>'services'][$resource]??'finance';
+        Authorization::requirePermission($uid,$permission.'.view');
         if (!class_exists(\ZipArchive::class)) self::jsonError(500, 'EXPORT_DEPENDENCY_MISSING', 'امکان ساخت فایل Excel روی سرور فعال نیست.');
 
         $schema = self::SCHEMAS[$resource];
@@ -80,6 +84,9 @@ final class ExportService
         if (in_array('status', $columnNames, true) && trim((string)($_GET['status'] ?? '')) !== '') {
             $where[] = 'status = :status';
             $params['status'] = trim((string)$_GET['status']);
+        }
+        foreach(['serviceStatus'=>'service_status','academicYear'=>'academic_year','mobile'=>'mobile'] as $key=>$column){
+            if(in_array($column,$columnNames,true)&&isset($_GET[$key])&&$_GET[$key]!==''){$where[]=$column.' = :extra_'.$column;$params['extra_'.$column]=(string)$_GET[$key];}
         }
         if (in_array('is_active', $columnNames, true) && in_array((string)($_GET['active'] ?? ''), ['0','1'], true)) {
             $where[] = 'is_active = :active';

@@ -39,11 +39,11 @@ foreach ($files as $file) {
     echo "APPLY {$name}\n";
 
     try {
-        $pdo->beginTransaction();
+        // MySQL commits DDL implicitly. Only mark a migration after every
+        // statement succeeds; wrapping DDL in a PDO transaction is misleading.
         $pdo->exec($sql);
         $statement = $pdo->prepare('INSERT INTO migrations (migration) VALUES (:migration)');
         $statement->execute(['migration' => $name]);
-        $pdo->commit();
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();

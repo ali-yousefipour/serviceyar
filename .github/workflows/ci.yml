@@ -18,3 +18,49 @@ jobs:
           set -e
           find backend tests -name '*.php' -print0 | xargs -0 -n1 php -l
           php tests/static-smoke.php
+          node --check frontend/assets/app.js
+          node --check frontend/assets/operations.js
+  transport-integration:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: serviceyar-local-test
+          MARIADB_DATABASE: serviceyar_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: serviceyar_test
+      DB_USERNAME: root
+      DB_PASSWORD: serviceyar-local-test
+      SERVICEYAR_TEST_DATABASE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql,zip,curl,soap
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Migration and transport integration
+        run: |
+          php backend/bin/migrate.php
+          php backend/bin/migrate.php
+          php tests/transport-integration.php
+          php tests/seed-preview.php
+      - name: HTTP contracts and CSRF
+        run: |
+          php -S 127.0.0.1:8080 backend/bin/dev-router.php > /tmp/serviceyar-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          for attempt in $(seq 1 20); do
+            if curl --silent --fail http://127.0.0.1:8080/api/v1/health > /dev/null; then break; fi
+            sleep 1
+          done
+          node tests/api-integration.mjs

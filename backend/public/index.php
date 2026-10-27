@@ -2,11 +2,24 @@
 declare(strict_types=1);
 require dirname(__DIR__) . '/src/bootstrap.php';
 use ServiceYar\Auth\AuthException; use ServiceYar\Auth\AuthService; use ServiceYar\Auth\Authorization; use ServiceYar\Http\Request; use ServiceYar\Http\Response; use ServiceYar\Agency\AgencyService; use ServiceYar\Settings\SettingsService; use ServiceYar\Holiday\HolidayService; use ServiceYar\Users\UserService; use ServiceYar\Domain\DomainService; use ServiceYar\Database\Connection;
+use ServiceYar\Domain\OperationsService;
+use ServiceYar\Domain\StudentImport;
+use ServiceYar\Domain\PayrollDocuments;
+use ServiceYar\Reports\ExportService;
+use ServiceYar\Reports\ReportService;
+use ServiceYar\Monitoring\MonitoringService;
+use ServiceYar\AI\AiService;
+use ServiceYar\Integrations\BalePaymentService;
+use ServiceYar\Integrations\MapService;
 
 $method=$_SERVER['REQUEST_METHOD']??'GET';$path=parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)?:'/';$requestId=bin2hex(random_bytes(8));header('X-Request-ID: '.$requestId);
 function agencyId(array $session): int { $raw=$_GET['agencyId']??null; $id=$raw!==null?(int)$raw:AgencyService::currentId($session['id']); if($id<1)throw new AuthException(422,'شناسه شرکت نامعتبر است.','VALIDATION_ERROR'); Authorization::requireAgencyAccess($session['id'],$id); return $id; }
 try {
  if($method==='OPTIONS'){http_response_code(204);exit;}
+ if($method==='POST'&&preg_match('#^/api/v1/integrations/bale/webhook/([a-zA-Z0-9_-]+)$#',$path,$m)){
+  $secret=(string)config('BALE_WEBHOOK_SECRET','');if(strlen($secret)<32||!hash_equals($secret,$m[1]))throw new AuthException(403,'وب‌هوک مجاز نیست.','FORBIDDEN');
+  Response::json(['ok'=>true,'data'=>BalePaymentService::webhook(Request::json())]);
+ }
  if($method==='GET'&&($path==='/api/health'||$path==='/api/v1/health'))Response::json(['ok'=>true,'service'=>config('APP_NAME','ServiceYar'),'environment'=>config('APP_ENV','local'),'version'=>'0.3.0','time'=>gmdate('c')]);
  if($method==='GET'&&$path==='/api/v1/health/ready'){try{Connection::get()->query('SELECT 1');Response::json(['ok'=>true,'data'=>['api'=>true,'database'=>true,'time'=>gmdate('c')]]);}catch(\Throwable $e){Response::json(['ok'=>false,'error'=>['code'=>'NOT_READY','message'=>'پایگاه داده آماده نیست.']],503);}}
  $auth=new AuthService();
@@ -32,6 +45,40 @@ try {
   Response::json(['ok'=>true,'data'=>['counts'=>$counts,'roles'=>$roles,'permissions'=>$permissions,'agencies'=>AgencyService::list($s['id']),'users'=>$users]]);
  }
  $aid=agencyId($s);
+ if(preg_match('#^/api/v1/services/(\d+)/schools$#',$path,$m)){
+  if($method==='GET')Response::json(['ok'=>true,'data'=>OperationsService::serviceSchools($s['id'],$aid,(int)$m[1])]);
+  if($method==='PUT'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>OperationsService::setServiceSchools($s['id'],$aid,(int)$m[1],Request::json())]);}
+ }
+ if($method==='GET'&&$path==='/api/v1/operations/payroll-documents')Response::json(['ok'=>true,'data'=>PayrollDocuments::list($s['id'],$aid,$_GET)]);
+ if($method==='POST'&&$path==='/api/v1/operations/payroll-documents'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>PayrollDocuments::create($s['id'],$aid,Request::json())],201);}
+ if(preg_match('#^/api/v1/operations/payroll-documents/(\d+)(?:/(approve|bank))?$#',$path,$m)){
+  if($method==='GET'&&($m[2]??'')==='bank')PayrollDocuments::bankCsv($s['id'],$aid,(int)$m[1]);
+  if($method==='GET')Response::json(['ok'=>true,'data'=>PayrollDocuments::get($s['id'],$aid,(int)$m[1])]);
+  if($method==='PUT'&&empty($m[2])){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>PayrollDocuments::update($s['id'],$aid,(int)$m[1],Request::json())]);}
+  if($method==='POST'&&($m[2]??'')==='approve'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>PayrollDocuments::approve($s['id'],$aid,(int)$m[1])]);}
+ }
+ if($method==='GET'&&$path==='/api/v1/integrations/status'){Authorization::requirePermission($s['id'],'settings.view');Response::json(['ok'=>true,'data'=>['sms'=>\ServiceYar\Integrations\NeginSms::configured(),'bale'=>\ServiceYar\Integrations\BaleClient::configured(),'google'=>config('GOOGLE_MAPS_SERVER_KEY','')!=='','osm'=>true]]);}
+ if($method==='POST'&&$path==='/api/v1/maps/route'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>MapService::route($s['id'],$aid,Request::json())]);}
+ if($method==='GET'&&preg_match('#^/api/v1/services/(\d+)/map$#',$path,$m))Response::json(['ok'=>true,'data'=>MapService::points($s['id'],$aid,(int)$m[1])]);
+ if($method==='POST'&&$path==='/api/v1/integrations/bale/invoices'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>BalePaymentService::create($s['id'],$aid,Request::json())],201);}
+ if($method==='GET'&&$path==='/api/v1/integrations/bale/invoices')Response::json(['ok'=>true,'data'=>BalePaymentService::status($s['id'],$aid)]);
+ if(preg_match('#^/api/v1/drivers/(\d+)/documents(?:/(\d+))?$#',$path,$m)){
+  if($method==='GET')Response::json(['ok'=>true,'data'=>OperationsService::documents($s['id'],$aid,(int)$m[1])]);
+  if($method==='POST'||$method==='PUT'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>OperationsService::saveDocument($s['id'],$aid,(int)$m[1],Request::json(),isset($m[2])?(int)$m[2]:null)]);}
+ }
+ if($method==='GET'&&$path==='/api/v1/monitoring/users')Response::json(['ok'=>true,'data'=>MonitoringService::users($s['id'],$aid)]);
+ if($method==='GET'&&$path==='/api/v1/operations/dashboard')Response::json(['ok'=>true,'data'=>OperationsService::summary($s['id'],$aid)]);
+ if($method==='GET'&&$path==='/api/v1/operations/schools')Response::json(['ok'=>true,'data'=>OperationsService::schoolReport($s['id'],$aid)]);
+ if($method==='GET'&&$path==='/api/v1/operations/payroll')Response::json(['ok'=>true,'data'=>OperationsService::payroll($s['id'],$aid,$_GET)]);
+ if($method==='GET'&&$path==='/api/v1/operations/ledger')Response::json(['ok'=>true,'data'=>OperationsService::ledgerReport($s['id'],$aid,$_GET)]);
+ if($method==='GET'&&$path==='/api/v1/operations/grouping')Response::json(['ok'=>true,'data'=>OperationsService::grouping($s['id'],$aid,$_GET)]);
+ if($method==='GET'&&$path==='/api/v1/operations/distances')Response::json(['ok'=>true,'data'=>OperationsService::distances($s['id'],$aid,$_GET)]);
+ if($method==='POST'&&$path==='/api/v1/operations/fees'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>OperationsService::bulkFees($s['id'],$aid,Request::json())]);}
+ if($method==='POST'&&$path==='/api/v1/operations/groups'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>OperationsService::createGroup($s['id'],$aid,Request::json())],201);}
+ if($method==='POST'&&$path==='/api/v1/operations/messages'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>OperationsService::queueMessages($s['id'],$aid,Request::json())],201);}
+ if($method==='POST'&&$path==='/api/v1/operations/import/preview'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>StudentImport::preview($s['id'],$aid,$_FILES['file']??[])]);}
+ if($method==='POST'&&$path==='/api/v1/operations/import'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>StudentImport::commit($s['id'],$aid,Request::json())],201);}
+ if($method==='POST'&&preg_match('#^/api/v1/operations/driver-changes/(\d+)/review$#',$path,$m)){$auth->requireCsrf($s);$b=Request::json();Response::json(['ok'=>true,'data'=>OperationsService::changeDriver($s['id'],$aid,(int)$m[1],(string)($b['status']??''))]);}
  if($method==='GET'&&$path==='/api/v1/settings')Response::json(['ok'=>true,'data'=>SettingsService::get($s['id'],$aid)]);
  if(($method==='PUT'||$method==='PATCH')&&$path==='/api/v1/settings'){ $auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>SettingsService::put($s['id'],$aid,Request::json())]); }
  if($method==='GET'&&$path==='/api/v1/holidays')Response::json(['ok'=>true,'data'=>HolidayService::list($s['id'],$aid)]);
@@ -55,13 +102,14 @@ try {
  }
 
  if(preg_match('#^/api/v1/services/(\\d+)/students$#',$path,$mm)){ $serviceId=(int)$mm[1]; if($method==='GET')Response::json(['ok'=>true,'data'=>DomainService::serviceStudents($s['id'],$aid,$serviceId)]); if($method==='POST'){ $auth->requireCsrf($s);$b=Request::json();DomainService::assignStudent($s['id'],$aid,$serviceId,(int)($b['studentId']??0),isset($b['pickupAddress'])?(string)$b['pickupAddress']:null,isset($b['pickupOrder'])?(int)$b['pickupOrder']:null);Response::json(['ok'=>true,'data'=>['assigned'=>true]],201);} if($method==='DELETE'){ $auth->requireCsrf($s);$studentId=(int)($_GET['studentId']??0);DomainService::removeStudent($s['id'],$aid,$serviceId,$studentId);Response::json(['ok'=>true,'data'=>['removed'=>true]]);} }
- $domainMap=['schools','students','drivers','vehicles','services','packs','contracts','driver-work','driver-payments','school-charges','service-charges','invoices','payments','accounts','accounting-documents','wallets','messages','driver-changes'];
+ $domainMap=['schools','students','drivers','vehicles','services','packs','contracts','driver-work','driver-payments','school-charges','service-charges','invoices','payments','accounts','accounting-documents','wallets','messages','driver-changes','ledger','driver-ratings','parent-reports'];
  foreach($domainMap as $resource){
   $base='/api/v1/'.$resource;
   if($path===$base&&$method==='GET')Response::json(['ok'=>true,'data'=>DomainService::list($s['id'],$aid,$resource,$_GET)]);
   if($path===$base&&$method==='POST'){ $auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>DomainService::save($s['id'],$aid,$resource,Request::json())],201); }
   if(preg_match('#^'.preg_quote($base,'#').'/(\d+)$#',$path,$m)){
    $id=(int)$m[1];if($method==='PUT'||$method==='PATCH'){ $auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>DomainService::save($s['id'],$aid,$resource,Request::json(),$id)]);}
+   if($method==='GET')Response::json(['ok'=>true,'data'=>DomainService::get($s['id'],$aid,$resource,$id)]);
    if($method==='DELETE'){ $auth->requireCsrf($s);DomainService::delete($s['id'],$aid,$resource,$id);Response::json(['ok'=>true,'data'=>['deleted'=>true]]);}
   }
  }

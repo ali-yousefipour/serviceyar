@@ -34,7 +34,9 @@ jobs:
           find backend tests -name '*.php' -print0 | xargs -0 -n1 php -l
           php tests/static-smoke.php
           node --check frontend/assets/app.js
+          node --check frontend/assets/operations.js
           test -s frontend/assets/app.css
+          test -s frontend/assets/operations.css
           test -s frontend/assets/Vazirmatn-Regular.woff2
           test -s frontend/assets/favicon.svg
 
@@ -161,7 +163,12 @@ jobs:
             get ${STAGING_DIR}/index.html -o /tmp/serviceyar-staged-index.html;
             get ${STAGING_DIR}/.htaccess.new -o /tmp/serviceyar-staged-htaccess;
             get ${STAGING_DIR}/assets/app.js -o /tmp/serviceyar-staged-app.js;
+            get ${STAGING_DIR}/assets/operations.js -o /tmp/serviceyar-staged-operations.js;
+            get ${STAGING_DIR}/assets/leaflet-LICENSE.txt -o /tmp/serviceyar-staged-leaflet-LICENSE.txt;
+            get ${STAGING_DIR}/assets/leaflet.css -o /tmp/serviceyar-staged-leaflet.css;
+            get ${STAGING_DIR}/assets/leaflet.js -o /tmp/serviceyar-staged-leaflet.js;
             get ${STAGING_DIR}/assets/app.css -o /tmp/serviceyar-staged-css.css;
+            get ${STAGING_DIR}/assets/operations.css -o /tmp/serviceyar-staged-operations.css;
             get ${STAGING_DIR}/assets/Vazirmatn-Regular.woff2 -o /tmp/serviceyar-staged-font.woff2;
             get ${STAGING_DIR}/assets/favicon.svg -o /tmp/serviceyar-staged-favicon.svg;
             get ${STAGING_DIR}/backend/public/index.php -o /tmp/serviceyar-staged-index.php;
@@ -169,7 +176,12 @@ jobs:
           "
           cmp deploy-payload/index.html /tmp/serviceyar-staged-index.html
           cmp deploy-payload/assets/app.js /tmp/serviceyar-staged-app.js
+          cmp deploy-payload/assets/operations.js /tmp/serviceyar-staged-operations.js
+          cmp deploy-payload/assets/leaflet-LICENSE.txt /tmp/serviceyar-staged-leaflet-LICENSE.txt
+          cmp deploy-payload/assets/leaflet.css /tmp/serviceyar-staged-leaflet.css
+          cmp deploy-payload/assets/leaflet.js /tmp/serviceyar-staged-leaflet.js
           cmp deploy-payload/assets/app.css /tmp/serviceyar-staged-css.css
+          cmp deploy-payload/assets/operations.css /tmp/serviceyar-staged-operations.css
           cmp deploy-payload/assets/Vazirmatn-Regular.woff2 /tmp/serviceyar-staged-font.woff2
           cmp deploy-payload/assets/favicon.svg /tmp/serviceyar-staged-favicon.svg
           cmp deploy-payload/backend/public/index.php /tmp/serviceyar-staged-index.php
@@ -207,6 +219,11 @@ jobs:
             mirror --reverse --verbose --overwrite --no-perms deploy-payload/database/ /public_html/database/;
             mirror --reverse --verbose --overwrite --no-perms deploy-payload/storage/ /public_html/storage/;
             mv ${STAGING_DIR}/assets/app.js /public_html/assets/app.js;
+            mv ${STAGING_DIR}/assets/operations.js /public_html/assets/operations.js;
+            mv ${STAGING_DIR}/assets/leaflet-LICENSE.txt /public_html/assets/leaflet-LICENSE.txt;
+            mv ${STAGING_DIR}/assets/leaflet.css /public_html/assets/leaflet.css;
+            mv ${STAGING_DIR}/assets/leaflet.js /public_html/assets/leaflet.js;
+            mv ${STAGING_DIR}/assets/operations.css /public_html/assets/operations.css;
             mv ${STAGING_DIR}/assets/app.css /public_html/assets/app.css;
             mv ${STAGING_DIR}/assets/Vazirmatn-Regular.woff2 /public_html/assets/Vazirmatn-Regular.woff2;
             mv ${STAGING_DIR}/assets/favicon.svg /public_html/assets/favicon.svg;
@@ -233,14 +250,24 @@ jobs:
             set ssl:verify-certificate no;
             get /public_html/index.html -o /tmp/serviceyar-live-index.html;
             get /public_html/assets/app.js -o /tmp/serviceyar-live-app.js;
+            get /public_html/assets/operations.js -o /tmp/serviceyar-live-operations.js;
+            get /public_html/assets/leaflet-LICENSE.txt -o /tmp/serviceyar-live-leaflet-LICENSE.txt;
+            get /public_html/assets/leaflet.css -o /tmp/serviceyar-live-leaflet.css;
+            get /public_html/assets/leaflet.js -o /tmp/serviceyar-live-leaflet.js;
             get /public_html/assets/app.css -o /tmp/serviceyar-live-css.css;
+            get /public_html/assets/operations.css -o /tmp/serviceyar-live-operations.css;
             get /public_html/assets/Vazirmatn-Regular.woff2 -o /tmp/serviceyar-live-font.woff2;
             get /public_html/assets/favicon.svg -o /tmp/serviceyar-live-favicon.svg;
             bye
           "
           cmp deploy-payload/index.html /tmp/serviceyar-live-index.html
           cmp frontend/assets/app.js /tmp/serviceyar-live-app.js
+          cmp frontend/assets/operations.js /tmp/serviceyar-live-operations.js
+          cmp frontend/assets/leaflet-LICENSE.txt /tmp/serviceyar-live-leaflet-LICENSE.txt
+          cmp frontend/assets/leaflet.css /tmp/serviceyar-live-leaflet.css
+          cmp frontend/assets/leaflet.js /tmp/serviceyar-live-leaflet.js
           cmp frontend/assets/app.css /tmp/serviceyar-live-css.css
+          cmp frontend/assets/operations.css /tmp/serviceyar-live-operations.css
           cmp frontend/assets/Vazirmatn-Regular.woff2 /tmp/serviceyar-live-font.woff2
           cmp frontend/assets/favicon.svg /tmp/serviceyar-live-favicon.svg
           test "$(wc -c < /tmp/serviceyar-live-font.woff2)" -gt 40000
