@@ -37,6 +37,14 @@ await request(scoped('/api/v1/maps/route'),{method:'POST',body:{studentId:studen
 await request(scoped(`/api/v1/services/${service.id}/map`));
 await request(scoped('/api/v1/operations/payroll-documents'),{method:'POST',body:{lines:[]},status:422});
 await request(scoped('/api/v1/operations/payroll-documents/0/bank'),{status:404});
+const settingsBefore=(await request(scoped('/api/v1/settings'))).data;
+const financialRules={mode:'monthly_distance',baseAmount:100000,perKm:20000,includedKm:2,driverPercent:80};
+await request(scoped('/api/v1/settings'),{method:'PUT',body:{finance_rules:{driverPercent:101}},status:422});
+await request(scoped('/api/v1/operations/financial-preview'),{method:'POST',body:{rules:financialRules,input:{distanceKm:5}},token:false,status:419});
+const unsavedQuote=(await request(scoped('/api/v1/operations/financial-preview'),{method:'POST',body:{rules:financialRules,input:{distanceKm:5}}})).data;assert.equal(unsavedQuote.monthlyFee,160000);checks++;
+await request(scoped('/api/v1/settings'),{method:'PUT',body:{finance_rules:financialRules}});
+const storedQuote=(await request(scoped('/api/v1/operations/financial-preview'),{method:'POST',body:{input:{distanceKm:5}}})).data;assert.equal(storedQuote.driverNet,128000);checks++;
+await request(scoped('/api/v1/settings'),{method:'PUT',body:{finance_rules:settingsBefore.finance_rules||{mode:'monthly_distance'}}});
 const tag=Date.now().toString();
 const cash=(await request(scoped('/api/v1/accounts'),{method:'POST',body:{code:'C-'+tag,title:'صندوق HTTP'},status:201})).data;
 const income=(await request(scoped('/api/v1/accounts'),{method:'POST',body:{code:'I-'+tag,title:'درآمد HTTP'},status:201})).data;

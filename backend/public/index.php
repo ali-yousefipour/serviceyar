@@ -6,6 +6,7 @@ use ServiceYar\Domain\OperationsService;
 use ServiceYar\Domain\StudentImport;
 use ServiceYar\Domain\PayrollDocuments;
 use ServiceYar\Domain\AccountingJournal;
+use ServiceYar\Domain\FinancialRules;
 use ServiceYar\Reports\ExportService;
 use ServiceYar\Reports\ReportService;
 use ServiceYar\Monitoring\MonitoringService;
@@ -46,6 +47,7 @@ try {
   Response::json(['ok'=>true,'data'=>['counts'=>$counts,'roles'=>$roles,'permissions'=>$permissions,'agencies'=>AgencyService::list($s['id']),'users'=>$users]]);
  }
  $aid=agencyId($s);
+ if($method==='POST'&&$path==='/api/v1/operations/financial-preview'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>FinancialRules::preview($s['id'],$aid,Request::json())]);}
  if(preg_match('#^/api/v1/accounting/journal/(\d+)(?:/(approve))?$#',$path,$m)){
   if($method==='GET'&&empty($m[2]))Response::json(['ok'=>true,'data'=>AccountingJournal::get($s['id'],$aid,(int)$m[1])]);
   if($method==='PUT'&&empty($m[2])){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>AccountingJournal::save($s['id'],$aid,Request::json(),(int)$m[1])]);}

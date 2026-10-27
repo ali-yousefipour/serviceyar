@@ -133,5 +133,15 @@ try{
  rejected(fn()=>J::approve($uid,$a,(int)$doc['id']),'JOURNAL_LOCKED');
  $legacy=insertFixture('accounting_documents',['agency_id'=>$a,'document_no'=>'LEGACY-'.$tag,'document_date'=>'2026-10-27']);rejected(fn()=>J::approve($uid,$a,$legacy),'UNBALANCED_JOURNAL');
  D::delete($uid,$a,'accounts',(int)$cash['id']);$journal['documentNo'].='-inactive';rejected(fn()=>J::save($uid,$a,$journal),'CROSS_SCOPE_REFERENCE');
+ $rules=\ServiceYar\Domain\FinancialRules::defaults();$rules=array_merge($rules,['baseAmount'=>100000,'perKm'=>20000,'includedKm'=>2,'driverPercent'=>80,'deductionPercent'=>10,'fixedDeduction'=>1000]);
+ $quote=\ServiceYar\Domain\FinancialRules::calculate($rules,['distanceKm'=>5,'days'=>22]);check($quote['monthlyFee']===160000&&$quote['driverNet']===114200,'Configurable distance tariff and driver deductions');
+ $half=\ServiceYar\Domain\FinancialRules::calculate($rules,['distanceKm'=>5,'days'=>11]);check($half['monthlyFee']===80000&&$half['driverNet']===57100,'Workday proration includes fixed deductions');
+ $daily=\ServiceYar\Domain\FinancialRules::calculate(array_merge($rules,['mode'=>'daily_distance']),['distanceKm'=>5,'days'=>22,'tripsPerDay'=>2]);check($daily['monthlyFee']===2740000,'Daily distance tariff counts trips and workdays');
+ $fixed=\ServiceYar\Domain\FinancialRules::calculate(array_merge($rules,['mode'=>'fixed','discountPercent'=>5,'rounding'=>10000]),['distanceKm'=>5]);check($fixed['monthlyFee']===100000,'Fixed tariff ignores distance and rounds half up');
+ rejected(fn()=>\ServiceYar\Domain\FinancialRules::validate(['driverPercent'=>101]),'VALIDATION_ERROR');
+ rejected(fn()=>\ServiceYar\Domain\FinancialRules::validate(['mode'=>'eval(1)']),'VALIDATION_ERROR');
+ rejected(fn()=>\ServiceYar\Domain\FinancialRules::calculate($rules,['days'=>23]),'VALIDATION_ERROR');
+ rejected(fn()=>\ServiceYar\Domain\FinancialRules::calculate($rules,['distanceKm'=>-1]),'VALIDATION_ERROR');
+ check(\ServiceYar\Domain\FinancialRules::calculate($rules,['days'=>0])['driverNet']===0,'Zero workdays never create a negative payment');
  echo "Transport integration: $checks checks passed. All fixtures rolled back.\n";
 }finally{if($p->inTransaction())$p->rollBack();}
