@@ -132,7 +132,16 @@ try{
  rejected(fn()=>D::save($uid,$a,'accounting-documents',['totalAmount'=>999,'status'=>'draft'],(int)$doc['id']),'JOURNAL_LOCKED');
  rejected(fn()=>J::approve($uid,$a,(int)$doc['id']),'JOURNAL_LOCKED');
  $legacy=insertFixture('accounting_documents',['agency_id'=>$a,'document_no'=>'LEGACY-'.$tag,'document_date'=>'2026-10-27']);rejected(fn()=>J::approve($uid,$a,$legacy),'UNBALANCED_JOURNAL');
- D::delete($uid,$a,'accounts',(int)$cash['id']);$journal['documentNo'].='-inactive';rejected(fn()=>J::save($uid,$a,$journal),'CROSS_SCOPE_REFERENCE');
+ $statement=\ServiceYar\Domain\AccountStatement::report($uid,$a,['accountId'=>$cash['id']]);check($statement['closing']==='0.30'&&count($statement['items'])===1,'Statement includes approved exact decimal movement');
+ $statement=\ServiceYar\Domain\AccountStatement::report($uid,$a,['accountId'=>$income['id'],'from'=>'2026-10-28']);check($statement['opening']==='-0.30'&&$statement['closing']==='-0.30'&&!count($statement['items']),'Opening credit balance survives empty date range');
+ rejected(fn()=>\ServiceYar\Domain\AccountStatement::report($uid,$a,['accountId'=>$alien['id']]),'NOT_FOUND');
+ rejected(fn()=>\ServiceYar\Domain\AccountStatement::report($uid,$a,['accountId'=>$cash['id'],'from'=>'2026-02-30']),'VALIDATION_ERROR');
+ rejected(fn()=>\ServiceYar\Domain\AccountStatement::report($uid,$a,['accountId'=>$cash['id'],'from'=>'2026-11-01','to'=>'2026-10-01']),'VALIDATION_ERROR');
+ $draft=$journal;$draft['documentNo']='DRAFT-'.$tag;J::save($uid,$a,$draft);
+ check(\ServiceYar\Domain\AccountStatement::report($uid,$a,['accountId'=>$cash['id']])['pagination']['total']===1,'Drafts do not affect account statements');
+ for($i=0;$i<26;$i++){$extra=$journal;$extra['documentNo']='PAGE-'.$tag.'-'.$i;$saved=J::save($uid,$a,$extra);J::approve($uid,$a,(int)$saved['id']);}
+ $statement=\ServiceYar\Domain\AccountStatement::report($uid,$a,['accountId'=>$cash['id'],'page'=>2]);check($statement['pagination']['total']===27&&$statement['items'][0]['balance']==='7.80'&&$statement['items'][1]['balance']==='8.10','Running balance continues across pages in stable date order');
+ D::delete($uid,$a,'accounts',(int)$cash['id']);check(\ServiceYar\Domain\AccountStatement::report($uid,$a,['accountId'=>$cash['id']])['closing']==='8.10','Inactive account retains historical statement');$journal['documentNo'].='-inactive';rejected(fn()=>J::save($uid,$a,$journal),'CROSS_SCOPE_REFERENCE');
  $rules=\ServiceYar\Domain\FinancialRules::defaults();$rules=array_merge($rules,['baseAmount'=>100000,'perKm'=>20000,'includedKm'=>2,'driverPercent'=>80,'deductionPercent'=>10,'fixedDeduction'=>1000]);
  $quote=\ServiceYar\Domain\FinancialRules::calculate($rules,['distanceKm'=>5,'days'=>22]);check($quote['monthlyFee']===160000&&$quote['driverNet']===114200,'Configurable distance tariff and driver deductions');
  $half=\ServiceYar\Domain\FinancialRules::calculate($rules,['distanceKm'=>5,'days'=>11]);check($half['monthlyFee']===80000&&$half['driverNet']===57100,'Workday proration includes fixed deductions');
