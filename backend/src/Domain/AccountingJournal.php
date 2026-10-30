@@ -9,6 +9,27 @@ use ServiceYar\Database\Connection;
 
 final class AccountingJournal
 {
+    public static function quick(int $uid,int $aid,array $body): array
+    {
+        Authorization::requirePermission($uid,'finance.manage');Authorization::requireAgencyAccess($uid,$aid);
+        $type=$body['partyType']??'';$rows=$body['rows']??null;$side=$body['side']??'';$counter=$body['counterAccountId']??null;
+        if(!in_array($type,['students','drivers'],true)||!in_array($side,['debit','credit'],true)||!is_array($rows)||count($rows)<1||count($rows)>199||!is_scalar($counter)||!ctype_digit((string)$counter))throw new AuthException(422,'نوع شخص، حساب مقابل و بین ۱ تا ۱۹۹ ردیف معتبر لازم است.','VALIDATION_ERROR');
+        return OperationsService::transaction(function(PDO $p)use($uid,$aid,$body,$type,$rows,$side,$counter){
+            $lines=[];$seen=[];$total=0;
+            foreach($rows as $row){
+                if(!is_array($row)||!is_scalar($row['partyId']??null)||!ctype_digit((string)$row['partyId'])||!is_scalar($row['accountId']??null)||!ctype_digit((string)$row['accountId'])||(int)$row['accountId']===(int)$counter)throw new AuthException(422,'شخص و حساب متفاوت از حساب مقابل انتخاب کنید.','VALIDATION_ERROR');
+                $id=(int)$row['partyId'];if(isset($seen[$id]))throw new AuthException(422,'شخص تکراری است.','VALIDATION_ERROR');$seen[$id]=true;
+                $person=DomainService::get($uid,$aid,$type,$id);if(!(int)$person['is_active'])throw new AuthException(422,'شخص غیرفعال است.','VALIDATION_ERROR');
+                $amount=self::cents($row['amount']??0);if($amount===0)throw new AuthException(422,'مبلغ ردیف باید بیشتر از صفر باشد.','VALIDATION_ERROR');$total+=$amount;
+                $description=$row['description']??'';if(!is_string($description)||strlen($description)>700)throw new AuthException(422,'شرح ردیف نامعتبر است.','VALIDATION_ERROR');
+                $text=($type==='students'?'دانش‌آموز':'راننده').' #'.$id.' · '.$person['first_name'].' '.$person['last_name'].' · '.$description;
+                $lines[]=['accountId'=>$row['accountId'],'description'=>$text,'trackingNo'=>$body['trackingNo']??'','debit'=>$side==='debit'?self::decimal($amount):'0','credit'=>$side==='credit'?self::decimal($amount):'0'];
+            }
+            $lines[]=['accountId'=>$counter,'description'=>'طرف مقابل سند سریع','trackingNo'=>$body['trackingNo']??'','debit'=>$side==='credit'?self::decimal($total):'0','credit'=>$side==='debit'?self::decimal($total):'0'];
+            return self::save($uid,$aid,['documentNo'=>$body['documentNo']??'','documentDate'=>$body['documentDate']??'','description'=>$body['description']??'سند سریع','lines'=>$lines]);
+        });
+    }
+
     public static function get(int $uid,int $aid,int $id): array
     {
         $doc=DomainService::get($uid,$aid,'accounting-documents',$id);

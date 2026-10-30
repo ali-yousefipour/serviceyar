@@ -58,6 +58,15 @@ await request(scoped('/api/v1/accounting/journal/'+journalDoc.id),{method:'PUT',
 await request(scoped('/api/v1/accounting/journal/'+journalDoc.id+'/approve'),{method:'POST',body:{},token:false,status:419});
 await request(scoped('/api/v1/accounting/journal/'+journalDoc.id+'/approve'),{method:'POST',body:{}});
 await request(scoped('/api/v1/accounting-documents/'+journalDoc.id),{method:'PUT',body:{status:'draft',totalAmount:1},status:409});
+const statement=(await request(scoped('/api/v1/accounting/statement?accountId='+cash.id))).data;
+assert.equal(statement.closing,'100.25');assert.equal(statement.items.length,1);checks+=2;
+await request(scoped('/api/v1/accounting/statement?accountId='+cash.id+'&from=2026-02-30'),{status:422});
+await request(scoped('/api/v1/accounting/statement?accountId=0'),{status:422});
+const statementExcel=await request(scoped('/api/v1/accounting/statement/export?accountId='+cash.id),{raw:true});assert.equal(String.fromCharCode(...statementExcel.data.slice(0,2)),'PK');checks++;
+const quickBody={documentNo:'QHTTP-'+tag,documentDate:'2026-10-30',partyType:'students',side:'debit',counterAccountId:income.id,rows:[{partyId:student.id,accountId:cash.id,amount:'15.25'}]};
+await request(scoped('/api/v1/accounting/quick'),{method:'POST',body:quickBody,token:false,status:419});
+const quickDoc=(await request(scoped('/api/v1/accounting/quick'),{method:'POST',body:quickBody,status:201})).data;assert.equal(quickDoc.total_amount,'15.25');assert.equal(quickDoc.status,'draft');checks+=2;
+await request(scoped('/api/v1/accounting/quick'),{method:'POST',body:{...quickBody,documentNo:'QBAD-'+tag,rows:[]},status:422});
 const managed=(await request(scoped('/api/v1/users'),{method:'POST',body:{username:'managed_'+tag,password:'Temporary-Only-123',role:'operator',firstName:'نمونه'},status:201})).data;
 await request('/api/v1/admin/users/'+managed.id);
 await request('/api/v1/admin/users/'+managed.id,{method:'PUT',body:{username:managed.username,firstName:'ویرایش‌شده',isActive:1}});

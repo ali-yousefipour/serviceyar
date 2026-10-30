@@ -107,6 +107,23 @@ final class ExportService
         $statement->execute($params);
         $rows = $statement->fetchAll(\PDO::FETCH_ASSOC);
 
+        self::downloadRows($columns,$rows,$schema['filename']);
+    }
+
+    public static function accountStatement(int $uid,int $aid,array $filter): never
+    {
+        Authorization::requirePermission($uid,'reports.view');
+        $d=\ServiceYar\Domain\AccountStatement::report($uid,$aid,$filter,true);
+        $rows=[['description'=>'مانده ابتدای بازه','balance'=>$d['opening']]];
+        foreach($d['items'] as $row)$rows[]=$row;
+        $rows[]=['description'=>'جمع بازه / مانده پایان','debit'=>$d['debit'],'credit'=>$d['credit'],'balance'=>$d['closing']];
+        self::downloadRows(['document_date'=>'تاریخ میلادی','document_no'=>'شماره سند','row_no'=>'ردیف','description'=>'شرح','tracking_no'=>'پیگیری','debit'=>'بدهکار · ریال','credit'=>'بستانکار · ریال','balance'=>'مانده بدهکار · ریال'],$rows,'account-statement.xlsx');
+    }
+
+    private static function downloadRows(array $columns,array $rows,string $filename): never
+    {
+        if (!class_exists(\ZipArchive::class)) self::jsonError(500,'EXPORT_DEPENDENCY_MISSING','امکان ساخت فایل Excel روی سرور فعال نیست.');
+        $columnNames=array_keys($columns);
         $xml = static function (mixed $value): string {
             $text = (string)($value ?? '');
             $text = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/u', '', $text) ?? '';
@@ -173,7 +190,7 @@ final class ExportService
 
         while (ob_get_level() > 0) ob_end_clean();
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header("Content-Disposition: attachment; filename=\"" . $schema['filename'] . "\"; filename*=UTF-8''" . rawurlencode($schema['filename']));
+        header("Content-Disposition: attachment; filename=\"" . $filename . "\"; filename*=UTF-8''" . rawurlencode($filename));
         header('Content-Length: ' . strlen($data));
         header('Cache-Control: no-store, no-cache, must-revalidate');
         header('X-Content-Type-Options: nosniff');
