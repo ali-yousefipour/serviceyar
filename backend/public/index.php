@@ -63,6 +63,7 @@ try {
  }
  if($method==='GET'&&$path==='/api/v1/accounting/statement')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\AccountStatement::report($s['id'],$aid,$_GET)]);
  if($method==='GET'&&$path==='/api/v1/accounting/statement/export')ExportService::accountStatement($s['id'],$aid,$_GET);
+ if($method==='POST'&&$path==='/api/v1/accounting/quick'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>AccountingJournal::quick($s['id'],$aid,Request::json())],201);}
  if($method==='POST'&&$path==='/api/v1/accounting/journal'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>AccountingJournal::save($s['id'],$aid,Request::json())],201);}
  if(preg_match('#^/api/v1/services/(\d+)/schools$#',$path,$m)){
   if($method==='GET')Response::json(['ok'=>true,'data'=>OperationsService::serviceSchools($s['id'],$aid,(int)$m[1])]);

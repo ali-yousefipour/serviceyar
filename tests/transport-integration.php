@@ -141,6 +141,15 @@ try{
  check(\ServiceYar\Domain\AccountStatement::report($uid,$a,['accountId'=>$cash['id']])['pagination']['total']===1,'Drafts do not affect account statements');
  for($i=0;$i<26;$i++){$extra=$journal;$extra['documentNo']='PAGE-'.$tag.'-'.$i;$saved=J::save($uid,$a,$extra);J::approve($uid,$a,(int)$saved['id']);}
  $statement=\ServiceYar\Domain\AccountStatement::report($uid,$a,['accountId'=>$cash['id'],'page'=>2]);check($statement['pagination']['total']===27&&$statement['items'][0]['balance']==='7.80'&&$statement['items'][1]['balance']==='8.10','Running balance continues across pages in stable date order');
+ $quick=['documentNo'=>'QUICK-'.$tag,'documentDate'=>'2026-10-30','partyType'=>'students','side'=>'debit','counterAccountId'=>$income['id'],'trackingNo'=>'Q-TEST','rows'=>[['partyId'=>$s1['id'],'accountId'=>$cash['id'],'amount'=>'12.34'],['partyId'=>$s2['id'],'accountId'=>$cash['id'],'amount'=>'0.66']]];
+ $qd=J::quick($uid,$a,$quick);check($qd['total_amount']==='13.00'&&count($qd['lines'])===3&&$qd['status']==='draft','Quick journal creates exact balanced draft with counter entry');
+ check(str_contains($qd['lines'][0]['description'],'#'.$s1['id'])&&$qd['lines'][0]['tracking_no']==='Q-TEST','Quick journal records verified party reference and tracking');
+ $bad=$quick;$bad['rows'][]=$bad['rows'][0];rejected(fn()=>J::quick($uid,$a,$bad),'VALIDATION_ERROR');
+ $bad=$quick;$bad['documentNo']='QUICK-BAD-'.$tag;$bad['rows'][1]['accountId']=$alien['id'];rejected(fn()=>J::quick($uid,$a,$bad),'CROSS_SCOPE_REFERENCE');
+ $bad=$quick;$bad['rows'][0]['accountId']=$income['id'];rejected(fn()=>J::quick($uid,$a,$bad),'VALIDATION_ERROR');
+ $bad=$quick;$bad['rows'][0]['amount']='0';rejected(fn()=>J::quick($uid,$a,$bad),'VALIDATION_ERROR');
+ $bad=$quick;$bad['rows'][1]['partyId']=999999999;rejected(fn()=>J::quick($uid,$a,$bad),'NOT_FOUND');
+ $quick['documentNo'].='-C';$quick['partyType']='drivers';$quick['side']='credit';$quick['rows']=[['partyId'=>$driver['id'],'accountId'=>$cash['id'],'amount'=>'20']];$qd=J::quick($uid,$a,$quick);check($qd['lines'][0]['credit']==='20.00'&&$qd['lines'][1]['debit']==='20.00','Driver quick journal reverses counter entry for credit side');
  D::delete($uid,$a,'accounts',(int)$cash['id']);check(\ServiceYar\Domain\AccountStatement::report($uid,$a,['accountId'=>$cash['id']])['closing']==='8.10','Inactive account retains historical statement');$journal['documentNo'].='-inactive';rejected(fn()=>J::save($uid,$a,$journal),'CROSS_SCOPE_REFERENCE');
  $rules=\ServiceYar\Domain\FinancialRules::defaults();$rules=array_merge($rules,['baseAmount'=>100000,'perKm'=>20000,'includedKm'=>2,'driverPercent'=>80,'deductionPercent'=>10,'fixedDeduction'=>1000]);
  $quote=\ServiceYar\Domain\FinancialRules::calculate($rules,['distanceKm'=>5,'days'=>22]);check($quote['monthlyFee']===160000&&$quote['driverNet']===114200,'Configurable distance tariff and driver deductions');
