@@ -8,6 +8,7 @@ use ServiceYar\Database\Connection;
 final class ExportService
 {
     private const SCHEMAS = [
+        'cheques'=>['table'=>'cheque_receipts','filename'=>'cheque-receipts.xlsx','date_column'=>'due_date','columns'=>['serial_no'=>'شماره چک','bank_name'=>'بانک','branch_name'=>'شعبه','bank_account'=>'شماره حساب','received_from'=>'دریافت از','received_date'=>'تاریخ دریافت میلادی','due_date'=>'سررسید میلادی','amount'=>'مبلغ ریال','status'=>'وضعیت','description'=>'بابت']],
         'schools' => ['table'=>'schools','filename'=>'schools-report.xlsx','date_column'=>'created_at','columns'=>[
             'id'=>'شناسه','name'=>'نام مدرسه','code'=>'کد مدرسه','school_type'=>'نوع مدرسه',
             'manager_name'=>'نام مدیر','phone'=>'تلفن','region'=>'منطقه','is_active'=>'وضعیت فعال','created_at'=>'تاریخ ثبت']],

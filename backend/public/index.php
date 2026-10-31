@@ -63,6 +63,15 @@ try {
  }
  if($method==='GET'&&$path==='/api/v1/accounting/statement')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\AccountStatement::report($s['id'],$aid,$_GET)]);
  if($method==='GET'&&$path==='/api/v1/accounting/statement/export')ExportService::accountStatement($s['id'],$aid,$_GET);
+ if($path==='/api/v1/accounting/cheques'&&$method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ChequeReceipts::list($s['id'],$aid,$_GET)]);
+ if($path==='/api/v1/accounting/cheques'&&$method==='POST'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ChequeReceipts::save($s['id'],$aid,Request::json())],201);}
+ if(preg_match('#^/api/v1/accounting/cheques/(\d+)(?:/(transition))?$#',$path,$m)){
+  if($method==='GET'&&empty($m[2]))Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ChequeReceipts::get($s['id'],$aid,(int)$m[1])]);
+  if($method==='PUT'&&empty($m[2])){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ChequeReceipts::save($s['id'],$aid,Request::json(),(int)$m[1])]);}
+  if($method==='POST'&&($m[2]??'')==='transition'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ChequeReceipts::transition($s['id'],$aid,(int)$m[1],Request::json())]);}
+ }
+ if($method==='GET'&&$path==='/api/v1/accounting/defaults')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\FinancialAccounts::get($s['id'],$aid)]);
+ if($method==='PUT'&&$path==='/api/v1/accounting/defaults'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\FinancialAccounts::save($s['id'],$aid,Request::json())]);}
  if($method==='POST'&&$path==='/api/v1/accounting/quick'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>AccountingJournal::quick($s['id'],$aid,Request::json())],201);}
  if($method==='POST'&&$path==='/api/v1/accounting/journal'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>AccountingJournal::save($s['id'],$aid,Request::json())],201);}
  if(preg_match('#^/api/v1/services/(\d+)/schools$#',$path,$m)){
