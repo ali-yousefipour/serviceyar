@@ -56,6 +56,7 @@ try {
  $aid=agencyId($s);
  if(preg_match('#^/api/v1/users/(\d+)/(password)$#',$path,$m)&&$method==='POST'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>UserService::changePassword($s['id'],$aid,(int)$m[1],Request::json())]);}
  if($method==='POST'&&$path==='/api/v1/operations/financial-preview'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>FinancialRules::preview($s['id'],$aid,Request::json())]);}
+ if($method==='GET'&&$path==='/api/v1/operations/imported-school-statement')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolServiceStatement::importedReport($s['id'],$aid,(string)($_GET['period']??'Mehr'))]);
  if(preg_match('#^/api/v1/accounting/journal/(\d+)(?:/(approve))?$#',$path,$m)){
   if($method==='GET'&&empty($m[2]))Response::json(['ok'=>true,'data'=>AccountingJournal::get($s['id'],$aid,(int)$m[1])]);
   if($method==='PUT'&&empty($m[2])){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>AccountingJournal::save($s['id'],$aid,Request::json(),(int)$m[1])]);}
