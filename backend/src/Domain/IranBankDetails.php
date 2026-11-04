@@ -20,7 +20,10 @@ final class IranBankDetails
 
     public static function normalize(string $value): string
     {
-        $value = strtr($value, '۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩', '01234567890123456789');
+        $value = strtr($value, array_combine(
+            preg_split('//u', '۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩', -1, PREG_SPLIT_NO_EMPTY),
+            str_split('01234567890123456789')
+        ));
         return strtoupper((string)preg_replace('/[\s\x{200C}\-]+/u', '', $value));
     }
 
