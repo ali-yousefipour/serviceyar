@@ -2,9 +2,22 @@
 declare(strict_types=1);
 namespace ServiceYar\Domain;
 
+use ServiceYar\Auth\Authorization;
+use ServiceYar\Database\Connection;
+
 /** Calculation from the 1405 school transport workbook, amounts in IRR. */
 final class SchoolServiceStatement
 {
+    /** Source-backed, read-only preview; imported fees are not settled transactions. */
+    public static function importedReport(int $userId, int $agencyId, string $period = 'Mehr'): array
+    {
+        Authorization::requirePermission($userId, 'finance.view');
+        Authorization::requireAgencyAccess($userId, $agencyId);
+        if (!in_array($period, ['Mehr'], true)) throw new \InvalidArgumentException('Unsupported source period');
+        $query=Connection::get()->prepare('SELECT COUNT(*) AS student_count,COALESCE(SUM(driver_fee),0) AS driver_fee,COALESCE(SUM(oversight_fee),0) AS oversight_fee,COALESCE(SUM(municipality_fee),0) AS municipality_fee,COALESCE(SUM(municipality_vat),0) AS municipality_vat,COALESCE(SUM(road_police_fee),0) AS road_police_fee,COALESCE(SUM(education_fee),0) AS education_fee,COALESCE(SUM(company_fee),0) AS company_fee,COALESCE(SUM(certificate_fee),0) AS certificate_fee,COALESCE(SUM(insurance_fee),0) AS insurance_fee,COALESCE(SUM(parent_total),0) AS parent_total,COALESCE(SUM(statement_total),0) AS statement_total FROM school_service_import_fees WHERE agency_id=:agency AND academic_year=:year AND period=:period');
+        $query->execute(['agency'=>$agencyId,'year'=>'1405-1406','period'=>$period]);
+        return ['period'=>$period,'academicYear'=>'1405-1406','source'=>'workbook','isActualPayment'=>false,'totals'=>$query->fetch()];
+    }
     public static function calculate(string $driverFee, string $certificateFee = '0', string $insuranceFee = '0'): array
     {
         foreach ([$driverFee, $certificateFee, $insuranceFee] as $value) {
