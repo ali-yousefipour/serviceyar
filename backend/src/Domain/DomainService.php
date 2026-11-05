@@ -80,6 +80,13 @@ final class DomainService {
   if($id&&$resource==='messages'&&$existing['status']!=='queued')throw new AuthException(409,'پیام پردازش‌شده قابل ویرایش یا ارسال مجدد از این فرم نیست.','MESSAGE_LOCKED');
   if($id&&$resource==='payments'&&$existing['method']==='bale')throw new AuthException(409,'پرداخت استعلام‌شده بله قابل ویرایش نیست.','VERIFIED_PAYMENT_LOCKED');
   foreach($data as $f=>&$v){if($v==='')$v=null;}unset($v);
+  if($resource==='drivers'&&array_key_exists('iban',$data)&&$data['iban']!==null){
+   $data['iban']=IranBankDetails::normalize((string)$data['iban']);
+   if(!PayrollDocuments::validIban($data['iban']))throw new AuthException(422,'شماره شبای راننده معتبر نیست.','INVALID_BANK_DETAILS');
+   $bank=IranBankDetails::bankName($data['iban']);
+   if($bank!==null)$data['bank_name']=$bank;
+   // The 19-digit BBAN is bank-specific; do not fabricate a deposit account number.
+  }
   $defaults=['students'=>['nationality'=>'iranian','service_status'=>'no_request','monthly_fee'=>0],'drivers'=>['status'=>'pending','is_representative'=>0],'services'=>['capacity'=>4,'status'=>'draft','monthly_fee'=>0,'agreed_amount'=>0],'packs'=>['status'=>'draft','capacity'=>0],'contracts'=>['status'=>'draft','amount'=>0],'invoices'=>['status'=>'open','amount'=>0],'driver-work'=>['status'=>'pending','amount'=>0],'school-charges'=>['status'=>'open','amount'=>0],'service-charges'=>['status'=>'open','amount'=>0],'messages'=>['status'=>'queued','channel'=>'internal'],'driver-changes'=>['status'=>'pending'],'wallets'=>['balance'=>0],'accounting-documents'=>['status'=>'draft','total_amount'=>0]];
   foreach($defaults[$resource]??[] as $f=>$default)if(array_key_exists($f,$data)&&$data[$f]===null)$data[$f]=$default;
   $required=['schools'=>['name'],'students'=>['school_id','first_name','last_name','mobile'],'drivers'=>['first_name','last_name'],'vehicles'=>['plate'],'services'=>['title'],'packs'=>['title'],'contracts'=>['title','party_type'],'driver-work'=>['driver_id','work_date'],'driver-payments'=>['driver_id','payment_date','amount'],'school-charges'=>['school_id','title'],'service-charges'=>['service_id','title'],'invoices'=>['title'],'payments'=>['payment_date','amount'],'accounts'=>['code','title'],'accounting-documents'=>['document_no','document_date'],'wallets'=>['owner_type'],'messages'=>['body'],'driver-changes'=>['service_id','new_driver_id'],'ledger'=>['party_type','party_id','direction','amount','entry_date'],'driver-ratings'=>['driver_id','score'],'parent-reports'=>['student_id','subject','body']];
