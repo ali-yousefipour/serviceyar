@@ -257,6 +257,12 @@ try{
  rejected(fn()=>\ServiceYar\Users\UserService::save($manager,$a,['username'=>'escalate_'.$tag,'password'=>'Temporary-Only-123','role'=>'super_admin']),'FORBIDDEN');
  $p->prepare('INSERT INTO agency_users(agency_id,user_id) VALUES(?,?)')->execute([$b,$newUser['id']]);rejected(fn()=>\ServiceYar\Users\UserService::changePassword($manager,$a,(int)$newUser['id'],['password'=>'Reset-Password-123','passwordConfirmation'=>'Reset-Password-123']),'PROTECTED_USER');
  rejected(fn()=>\ServiceYar\Agency\AgencyService::update($manager,$a,['name'=>'شرکت','isActive'=>0]),'FORBIDDEN');
+ $planBody=['studentId'=>$s1['id'],'requestKey'=>'installments-test-'.$tag,'total'=>'100','advance'=>'10','count'=>3,'issueDate'=>'2026-10-01','dates'=>['2026-11-01','2026-12-01','2027-01-01']];
+ $plan=\ServiceYar\Domain\InstallmentPlan::create($uid,$a,$planBody);check(count($plan['invoiceIds'])===4,'Installments create advance and three invoice debts');
+ $again=\ServiceYar\Domain\InstallmentPlan::create($uid,$a,$planBody);check($again===$plan,'Retry does not create duplicate invoices');
+ rejected(fn()=>\ServiceYar\Domain\InstallmentPlan::create($uid,$a,array_merge($planBody,['total'=>'101'])),'REQUEST_CONFLICT');
+ rejected(fn()=>\ServiceYar\Domain\InstallmentPlan::create($uid,$b,$planBody),'NOT_FOUND');
+ $q=$p->prepare('SELECT SUM(amount) FROM invoices WHERE id IN ('.implode(',',array_fill(0,count($plan['invoiceIds']),'?')).')');$q->execute($plan['invoiceIds']);check((int)$q->fetchColumn()===100,'Installment invoice total equals agreement');
  echo "Transport integration: $checks checks passed. All fixtures rolled back.\n";
 }finally{if($p->inTransaction())$p->rollBack();}
 
