@@ -5,6 +5,7 @@
 
 # Runtime
 storage/logs/*
+storage/*.log
 storage/cache/*
 storage/uploads/*
 !storage/logs/.gitkeep

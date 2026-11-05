@@ -32,6 +32,17 @@ try{
  $a=insertFixture('agencies',['uuid'=>Uuid::v4(),'name'=>'شرکت آزمایشی الف']);$b=insertFixture('agencies',['uuid'=>Uuid::v4(),'name'=>'شرکت آزمایشی ب']);
  $operator=(int)$p->query("SELECT id FROM roles WHERE name='operator'")->fetchColumn();$p->prepare('INSERT INTO user_roles(user_id,role_id) VALUES(?,?)')->execute([$viewer,$operator]);$p->prepare('INSERT INTO agency_users(agency_id,user_id) VALUES(?,?)')->execute([$a,$viewer]);
  $school=D::save($uid,$a,'schools',['name'=>'مدرسه الف']);$otherSchool=D::save($uid,$b,'schools',['name'=>'مدرسه ب']);
+ $plan=[['name'=>'شیفت یک','pattern'=>'odd_weeks','start'=>'07:10','end'=>'12:30','holidays'=>[6]]];
+ check(\ServiceYar\Domain\SchoolShifts::save($uid,$a,(int)$school['id'],['shifts'=>$plan])===$plan,'School shift schedule round trips');
+ rejected(fn()=>\ServiceYar\Domain\SchoolShifts::save($viewer,$a,(int)$school['id'],['shifts'=>[]]),'FORBIDDEN');
+ rejected(fn()=>\ServiceYar\Domain\SchoolShifts::get($uid,$a,(int)$otherSchool['id']),'NOT_FOUND');
+ $calendar=\ServiceYar\Domain\SchoolShifts::onDate($uid,$a,(int)$school['id'],['date'=>'2026-11-01']);check(count($calendar['needsWeekAnchor'])===1,'Weekly calendar requires explicit anchor');
+ $calendar=\ServiceYar\Domain\SchoolShifts::onDate($uid,$a,(int)$school['id'],['date'=>'2026-11-01','weekAnchor'=>'2026-10-31']);check(count($calendar['shifts'])===1&&$calendar['weekNumber']===1,'First anchored odd week matches');
+ $calendar=\ServiceYar\Domain\SchoolShifts::onDate($uid,$a,(int)$school['id'],['date'=>'2026-11-08','weekAnchor'=>'2026-10-31']);check(count($calendar['shifts'])===0,'Even week excludes odd-week shift');
+ $calendar=\ServiceYar\Domain\SchoolShifts::onDate($uid,$a,(int)$school['id'],['date'=>'2026-11-06','weekAnchor'=>'2026-10-31']);check(count($calendar['shifts'])===0,'Holiday excludes matching week');
+ rejected(fn()=>\ServiceYar\Domain\SchoolShifts::onDate($uid,$a,(int)$school['id'],['date'=>'2026-11-01','weekAnchor'=>'2026-11-01']),'VALIDATION_ERROR');
+ $badPlan=$plan;$badPlan[0]['end']='06:00';rejected(fn()=>\ServiceYar\Domain\SchoolShifts::save($uid,$a,(int)$school['id'],['shifts'=>$badPlan]),'VALIDATION_ERROR');
+ check(\ServiceYar\Domain\SchoolShifts::get($uid,$a,(int)$school['id'])===$plan,'Invalid shift update preserves saved plan');
  $s1=D::save($uid,$a,'students',['schoolId'=>$school['id'],'firstName'=>'آرمان','lastName'=>'آزمایشی','mobile'=>'09120000001','monthlyFee'=>'1000','latitude'=>36.2,'longitude'=>59.5]);
  $s2=D::save($uid,$a,'students',['schoolId'=>$school['id'],'firstName'=>'مینا','lastName'=>'آزمایشی','mobile'=>'09120000002','monthlyFee'=>'2000']);
  $foreign=D::save($uid,$b,'students',['schoolId'=>$otherSchool['id'],'firstName'=>'دانش','lastName'=>'دیگر','mobile'=>'09120000003']);
@@ -39,6 +50,13 @@ try{
  rejected(fn()=>D::save($uid,$a,'students',['schoolId'=>$otherSchool['id'],'firstName'=>'x','lastName'=>'x','mobile'=>'09120000000']),'CROSS_SCOPE_REFERENCE');
  rejected(fn()=>D::save($viewer,$a,'students',['schoolId'=>$school['id'],'firstName'=>'x','lastName'=>'x','mobile'=>'09120000000']),'FORBIDDEN');
  rejected(fn()=>D::get($viewer,$b,'students',(int)$foreign['id']),'SCOPE_FORBIDDEN');
+ $av=D::save($uid,$a,'vehicles',['plate'=>'QA-'.$tag,'capacity'=>4]);$ad=D::save($uid,$a,'drivers',['firstName'=>'تخصیص','lastName'=>'آزمون','status'=>'active','vehicleId'=>$av['id']]);$as=D::save($uid,$a,'services',['title'=>'بدون راننده','schoolId'=>$school['id'],'capacity'=>4]);
+ $proposal=\ServiceYar\Domain\DriverAssignment::preview($uid,$a);check(count($proposal['items'])===1,'Assignment proposes available capacity');
+ $assignment=['items'=>[['serviceId'=>(int)$as['id'],'driverId'=>(int)$ad['id']]]];
+ rejected(fn()=>\ServiceYar\Domain\DriverAssignment::apply($viewer,$a,$assignment),'FORBIDDEN');
+ check(\ServiceYar\Domain\DriverAssignment::apply($uid,$a,$assignment)['assigned']===1,'Selected assignment persists');
+ rejected(fn()=>\ServiceYar\Domain\DriverAssignment::apply($uid,$a,$assignment),'ASSIGNMENT_CONFLICT');
+ check((int)D::get($uid,$a,'services',(int)$as['id'])['driver_id']===(int)$ad['id'],'Driver remains assigned after rejected duplicate');
  $driver=D::save($uid,$a,'drivers',['firstName'=>'راننده','lastName'=>'یک']);$replacement=D::save($uid,$a,'drivers',['firstName'=>'راننده','lastName'=>'دو']);
  $service=D::save($uid,$a,'services',['title'=>'صبح','schoolId'=>$school['id'],'driverId'=>$driver['id'],'capacity'=>1]);
  D::assignStudent($uid,$a,(int)$service['id'],(int)$s1['id']);check(D::get($uid,$a,'students',(int)$s1['id'])['service_status']==='assigned','Assignment updates service status');
@@ -122,7 +140,8 @@ try{
  $bad=$journal;$bad['lines'][0]['accountId']=$alien['id'];rejected(fn()=>J::save($uid,$a,$bad),'CROSS_SCOPE_REFERENCE');
  $bad=$journal;$bad['lines'][0]['credit']='1';rejected(fn()=>J::save($uid,$a,$bad),'VALIDATION_ERROR');
  $bad=$journal;$bad['lines'][0]['debit']='1e4';rejected(fn()=>J::save($uid,$a,$bad),'VALIDATION_ERROR');
- $doc=J::save($uid,$a,$journal);check(count($doc['lines'])===3&&$doc['total_amount']==='0.30','Exact decimal journal balances and persists lines');
+ $journal['referenceNo']='REF-001';$journal['subsidiaryNo']='SUB-002';$bad=$journal;$bad['referenceNo']=str_repeat('x',101);rejected(fn()=>J::save($uid,$a,$bad),'VALIDATION_ERROR');
+ $doc=J::save($uid,$a,$journal);check($doc['reference_no']==='REF-001'&&$doc['subsidiary_no']==='SUB-002','Journal reference and subsidiary numbers round trip');check(count($doc['lines'])===3&&$doc['total_amount']==='0.30','Exact decimal journal balances and persists lines');
  rejected(fn()=>J::save($uid,$a,$journal),'DOCUMENT_EXISTS');
  rejected(fn()=>J::get($uid,$b,(int)$doc['id']),'NOT_FOUND');
  $journal['description']='شرح اصلاح‌شده';J::save($uid,$a,$journal,(int)$doc['id']);check(J::get($uid,$a,(int)$doc['id'])['description']===$journal['description'],'Draft journal can be edited');
@@ -169,9 +188,48 @@ try{
  $receipt=\ServiceYar\Domain\ChequeReceipts::transition($uid,$a,$cid,['status'=>'collected','date'=>'2026-11-01','note'=>'ثبت آزمایشی وصول']);check($receipt['status']==='collected'&&count($receipt['events'])===3,'Cheque collection records actor and event exactly once');
  rejected(fn()=>\ServiceYar\Domain\ChequeReceipts::transition($uid,$a,$cid,['status'=>'bounced','date'=>'2026-11-02','note'=>'تکراری']),'CHEQUE_LOCKED');
  rejected(fn()=>\ServiceYar\Domain\ChequeReceipts::save($uid,$a,$cheque,$cid),'CHEQUE_LOCKED');
- $list=\ServiceYar\Domain\ChequeReceipts::list($uid,$a,['status'=>'collected','search'=>'CH-'.$tag]);check($list['pagination']['total']===1&&$list['amount']==='1234.50','Cheque filters and totals remain scoped');
+ $auto=$cheque;$auto['serialNo'].='-journal';$autoReceipt=\ServiceYar\Domain\ChequeReceipts::save($uid,$a,$auto);$autoId=(int)$autoReceipt['id'];
+ rejected(fn()=>\ServiceYar\Domain\ChequeReceipts::transition($uid,$a,$autoId,['status'=>'collected','date'=>'2026-11-01','note'=>'scope','bankAccountId'=>$alien['id']]),'CROSS_SCOPE_REFERENCE');
+ check(\ServiceYar\Domain\ChequeReceipts::get($uid,$a,$autoId)['status']==='received','Failed journal rolls back cheque transition');
+ $counter=D::save($uid,$a,'accounts',['code'=>'CHQ-'.$tag,'title'=>'بانک آزمون']);
+ $autoReceipt=\ServiceYar\Domain\ChequeReceipts::transition($uid,$a,$autoId,['status'=>'collected','date'=>'2026-11-01','note'=>'وصول با سند','bankAccountId'=>$counter['id']]);
+ $autoDoc=J::get($uid,$a,(int)$autoReceipt['collection_document_id']);
+ check($autoDoc['status']==='approved'&&$autoDoc['total_amount']==='1234.50'&&count($autoDoc['lines'])===2,'Cheque collection creates approved balanced journal with exact money');
+ rejected(fn()=>\ServiceYar\Domain\ChequeReceipts::transition($uid,$a,$autoId,['status'=>'collected','date'=>'2026-11-01','note'=>'duplicate','bankAccountId'=>$counter['id']]),'CHEQUE_LOCKED');
+ $posted=$cheque;$posted['serialNo']='POST-'.$tag;$posted['counterAccountId']=$counter['id'];
+ $postedReceipt=\ServiceYar\Domain\ChequeReceipts::save($uid,$a,$posted);$postedId=(int)$postedReceipt['id'];
+ check(J::get($uid,$a,(int)$postedReceipt['receipt_document_id'])['status']==='approved','Receipt creates approved journal');
+ rejected(fn()=>\ServiceYar\Domain\ChequeReceipts::save($uid,$a,$posted,$postedId),'CHEQUE_LOCKED');
+ $reversed=\ServiceYar\Domain\ChequeReceipts::transition($uid,$a,$postedId,['status'=>'bounced','date'=>'2026-11-01','note'=>'برگشت آزمایشی']);
+ $reverse=J::get($uid,$a,(int)$reversed['reversal_document_id']);check($reverse['status']==='approved'&&$reverse['lines'][0]['credit']==='1234.50','Bounce reverses receipt journal exactly');
+ $postDebit=D::save($uid,$a,'accounts',['code'=>'POST-D-'.$tag,'title'=>'حساب دریافت']);$postCredit=D::save($uid,$a,'accounts',['code'=>'POST-C-'.$tag,'title'=>'طرف مقابل']);
+ $source=D::save($uid,$a,'ledger',['partyType'=>'student','partyId'=>$s1['id'],'direction'=>'receipt','amount'=>'51.25','entryDate'=>'2026-11-01']);
+ $postingBody=['debitAccountId'=>$postDebit['id'],'creditAccountId'=>$postCredit['id']];
+ rejected(fn()=>\ServiceYar\Domain\FinancialPosting::post($viewer,$a,'ledger',(int)$source['id'],$postingBody),'FORBIDDEN');
+ rejected(fn()=>\ServiceYar\Domain\FinancialPosting::post($uid,$b,'ledger',(int)$source['id'],$postingBody),'NOT_FOUND');
+ $badPosting=$postingBody;$badPosting['creditAccountId']=$alien['id'];rejected(fn()=>\ServiceYar\Domain\FinancialPosting::post($uid,$a,'ledger',(int)$source['id'],$badPosting),'CROSS_SCOPE_REFERENCE');
+ $postedFinancial=\ServiceYar\Domain\FinancialPosting::post($uid,$a,'ledger',(int)$source['id'],$postingBody);
+ $postedDoc=J::get($uid,$a,$postedFinancial['documentId']);check($postedDoc['status']==='approved'&&$postedDoc['total_amount']==='51.25','Financial posting creates exact approved journal');
+ $postedAgain=\ServiceYar\Domain\FinancialPosting::post($uid,$a,'ledger',(int)$source['id'],$postingBody);check($postedAgain['alreadyPosted']&&$postedAgain['documentId']===$postedFinancial['documentId'],'Financial posting is idempotent');
+ rejected(fn()=>D::save($uid,$a,'ledger',['amount'=>'99'],(int)$source['id']),'FINANCIAL_SOURCE_LOCKED');
+ rejected(fn()=>D::delete($uid,$a,'ledger',(int)$source['id']),'FINANCIAL_SOURCE_LOCKED');
+ foreach(['driver-payments'=>['driverId'=>$driver['id'],'paymentDate'=>'2026-11-01','amount'=>'22.50'],'payments'=>['paymentDate'=>'2026-11-01','amount'=>'13.75','method'=>'cash']] as $sourceType=>$sourceBody){
+  $financialSource=D::save($uid,$a,$sourceType,$sourceBody);$financialDoc=\ServiceYar\Domain\FinancialPosting::post($uid,$a,$sourceType,(int)$financialSource['id'],$postingBody);
+  check(J::get($uid,$a,$financialDoc['documentId'])['total_amount']===$sourceBody['amount'],'Posting supports '.$sourceType);
+  rejected(fn()=>D::save($uid,$a,$sourceType,['amount'=>'90'],(int)$financialSource['id']),'FINANCIAL_SOURCE_LOCKED');
+ }
+ $scheduleA=D::save($uid,$a,'services',['title'=>'برنامه الف','schoolId'=>$school['id'],'driverId'=>$replacement['id'],'shift'=>'شیفت یک','capacity'=>4]);
+ $scheduleB=D::save($uid,$a,'services',['title'=>'برنامه ب','schoolId'=>$school['id'],'driverId'=>$replacement['id'],'shift'=>'شیفت یک','capacity'=>4]);
+ $daily=\ServiceYar\Domain\DailySchedule::report($uid,$a,['date'=>'2026-11-01','weekAnchor'=>'2026-10-31']);check(count($daily['conflicts'])>=1,'Daily schedule detects overlapping driver shifts');
+ check(count(array_filter($daily['items'],fn($r)=>$r['serviceId']===(int)$scheduleA['id']))===1,'Daily schedule resolves exact school shift');
+ $dailyHoliday=\ServiceYar\Domain\DailySchedule::report($uid,$a,['date'=>'2026-11-06','weekAnchor'=>'2026-10-31']);check(count($dailyHoliday['items'])===0,'Daily schedule excludes weekly holidays');
+ rejected(fn()=>\ServiceYar\Domain\DailySchedule::report($uid,$a,['date'=>'invalid']),'VALIDATION_ERROR');
+ $p->prepare('INSERT INTO agency_settings(agency_id,setting_key,setting_value,is_secret) VALUES(?,?,?,1)')->execute([$a,'neshan_service_key','service.test-secret-000000000000']);
+ check(!array_key_exists('neshan_service_key',\ServiceYar\Settings\SettingsService::get($uid,$a)),'Neshan service key is excluded from settings responses');
+ $mapConfig=\ServiceYar\Integrations\Neshan::config($a);check($mapConfig['provider']==='neshan'&&$mapConfig['serviceConfigured']&&!isset($mapConfig['serviceKey']),'Neshan is default and map config hides service secret');
+ $list=\ServiceYar\Domain\ChequeReceipts::list($uid,$a,['status'=>'collected','search'=>'CH-'.$tag]);check($list['pagination']['total']===2&&$list['amount']==='2469.00','Cheque filters and totals remain scoped');
  rejected(fn()=>\ServiceYar\Domain\ChequeReceipts::list($uid,$a,['from'=>'2026-12-01','to'=>'2026-11-01']),'VALIDATION_ERROR');
- D::delete($uid,$a,'accounts',(int)$cash['id']);check(\ServiceYar\Domain\AccountStatement::report($uid,$a,['accountId'=>$cash['id']])['closing']==='8.10','Inactive account retains historical statement');$journal['documentNo'].='-inactive';rejected(fn()=>J::save($uid,$a,$journal),'CROSS_SCOPE_REFERENCE');
+ D::delete($uid,$a,'accounts',(int)$cash['id']);check(\ServiceYar\Domain\AccountStatement::report($uid,$a,['accountId'=>$cash['id']])['closing']==='-1226.40','Inactive account retains historical statement');$journal['documentNo'].='-inactive';rejected(fn()=>J::save($uid,$a,$journal),'CROSS_SCOPE_REFERENCE');
  $rules=\ServiceYar\Domain\FinancialRules::defaults();$rules=array_merge($rules,['baseAmount'=>100000,'perKm'=>20000,'includedKm'=>2,'driverPercent'=>80,'deductionPercent'=>10,'fixedDeduction'=>1000]);
  $quote=\ServiceYar\Domain\FinancialRules::calculate($rules,['distanceKm'=>5,'days'=>22]);check($quote['monthlyFee']===160000&&$quote['driverNet']===114200,'Configurable distance tariff and driver deductions');
  $half=\ServiceYar\Domain\FinancialRules::calculate($rules,['distanceKm'=>5,'days'=>11]);check($half['monthlyFee']===80000&&$half['driverNet']===57100,'Workday proration includes fixed deductions');
@@ -201,3 +259,4 @@ try{
  rejected(fn()=>\ServiceYar\Agency\AgencyService::update($manager,$a,['name'=>'شرکت','isActive'=>0]),'FORBIDDEN');
  echo "Transport integration: $checks checks passed. All fixtures rolled back.\n";
 }finally{if($p->inTransaction())$p->rollBack();}
+

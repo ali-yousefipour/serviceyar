@@ -59,6 +59,8 @@ final class AccountingJournal
             $no=$body['documentNo']??'';$date=$body['documentDate']??'';$description=$body['description']??'';$lines=$body['lines']??null;
             if(!is_string($no)||trim($no)===''||strlen($no)>100||!is_string($date)||!OperationsService::validDate($date)||!is_string($description)||strlen($description)>10000||!is_array($lines)||count($lines)<2||count($lines)>200)throw new AuthException(422,'شماره، تاریخ و بین ۲ تا ۲۰۰ ردیف سند لازم است.','VALIDATION_ERROR');
             $q=$p->prepare('SELECT id FROM accounting_documents WHERE agency_id=? AND document_no=? AND id<>?');$q->execute([$aid,trim($no),$id??0]);if($q->fetchColumn())throw new AuthException(409,'شماره سند تکراری است.','DOCUMENT_EXISTS');
+            $references=[];
+            foreach(['referenceNo','subsidiaryNo'] as $field){$value=$body[$field]??'';if(!is_string($value)||strlen($value)>100)throw new AuthException(422,'شماره مرجع و فرعی باید متن حداکثر ۱۰۰ بایت باشند.','VALIDATION_ERROR');$references[]=trim($value);}
             $debit=0;$credit=0;$rows=[];
             foreach($lines as $line){
                 if(!is_array($line))throw new AuthException(422,'ردیف سند نامعتبر است.','VALIDATION_ERROR');
@@ -73,6 +75,7 @@ final class AccountingJournal
             if($debit!==$credit)throw new AuthException(422,'جمع بدهکار و بستانکار برابر نیست.','UNBALANCED_JOURNAL');
             if($id){$p->prepare('UPDATE accounting_documents SET document_no=?,document_date=?,description=?,total_amount=? WHERE id=? AND agency_id=?')->execute([trim($no),$date,$description,self::decimal($debit),$id,$aid]);$p->prepare('DELETE FROM accounting_document_lines WHERE document_id=?')->execute([$id]);}
             else{$p->prepare("INSERT INTO accounting_documents(agency_id,document_no,document_date,description,total_amount,status) VALUES(?,?,?,?,?,'draft')")->execute([$aid,trim($no),$date,$description,self::decimal($debit)]);$id=(int)$p->lastInsertId();}
+            $p->prepare('UPDATE accounting_documents SET reference_no=?,subsidiary_no=? WHERE id=? AND agency_id=?')->execute([...$references,$id,$aid]);
             $q=$p->prepare('INSERT INTO accounting_document_lines(document_id,account_id,description,tracking_no,debit,credit) VALUES(?,?,?,?,?,?)');foreach($rows as $row)$q->execute(array_merge([$id],$row));
             OperationsService::audit($uid,$aid,'save_journal','accounting_documents',$id);return self::get($uid,$aid,$id);
         });

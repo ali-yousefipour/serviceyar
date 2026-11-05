@@ -38,7 +38,7 @@ function config(string $key, mixed $default = null): mixed
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: strict-origin-when-cross-origin');
-header("Content-Security-Policy: default-src 'self'; img-src 'self' data: https://tile.openstreetmap.org; style-src 'self'; style-src-attr 'unsafe-inline'; base-uri 'self'; frame-ancestors 'none'; object-src 'none';");
+header("Content-Security-Policy: default-src 'self'; img-src 'self' data: https://tile.openstreetmap.org https://*.neshan.org; script-src 'self' https://static.neshan.org; connect-src 'self' https://*.neshan.org; style-src 'self' https://static.neshan.org; style-src-attr 'unsafe-inline'; base-uri 'self'; frame-ancestors 'none'; object-src 'none';");
 if (config('APP_ENV','local') === 'production') {
     ini_set('display_errors','0');
     ini_set('log_errors','1');

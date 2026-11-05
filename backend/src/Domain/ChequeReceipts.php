@@ -35,7 +35,7 @@ final class ChequeReceipts
     {
         self::scope($uid,$aid,true);
         return OperationsService::transaction(function(PDO $p)use($uid,$aid,$body,$id){
-            if($id){$q=$p->prepare('SELECT status FROM cheque_receipts WHERE id=? AND agency_id=? FOR UPDATE');$q->execute([$id,$aid]);$status=$q->fetchColumn();if($status===false)throw new AuthException(404,'چک پیدا نشد.','NOT_FOUND');if($status!=='received')throw new AuthException(409,'چک دارای عملیات نهایی قابل ویرایش نیست.','CHEQUE_LOCKED');}
+            if($id){$q=$p->prepare("SELECT CASE WHEN receipt_document_id IS NOT NULL THEN 'posted' ELSE status END FROM cheque_receipts WHERE id=? AND agency_id=? FOR UPDATE");$q->execute([$id,$aid]);$status=$q->fetchColumn();if($status===false)throw new AuthException(404,'چک پیدا نشد.','NOT_FOUND');if($status!=='received')throw new AuthException(409,'چک دارای عملیات نهایی قابل ویرایش نیست.','CHEQUE_LOCKED');}
             $data=[];foreach(['bankName'=>100,'branchName'=>100,'serialNo'=>100,'bankAccount'=>100,'receivedFrom'=>200,'description'=>1000] as $key=>$max){$value=$body[$key]??'';if(!is_string($value)||preg_match_all('/./us',$value)>$max)throw new AuthException(422,'متن مشخصات چک نامعتبر است.','VALIDATION_ERROR');$data[$key]=trim($value);}
             foreach(['bankName','serialNo','receivedFrom'] as $key)if($data[$key]==='')throw new AuthException(422,'بانک، شماره چک و نام پرداخت‌کننده لازم است.','VALIDATION_ERROR');
             $amount=$body['amount']??'';if(!is_scalar($amount)||!preg_match('/^\d{1,12}(?:\.\d{1,2})?$/D',(string)$amount)||(float)$amount<=0)throw new AuthException(422,'مبلغ مثبت با حداکثر دو رقم اعشار وارد کنید.','VALIDATION_ERROR');
@@ -44,6 +44,15 @@ final class ChequeReceipts
             $q=$p->prepare('SELECT id FROM cheque_receipts WHERE agency_id=? AND bank_name=? AND serial_no=? AND id<>? FOR UPDATE');$q->execute([$aid,$data['bankName'],$data['serialNo'],$id??0]);if($q->fetchColumn())throw new AuthException(409,'این شماره چک برای همین بانک ثبت شده است.','CHEQUE_EXISTS');
             $values=[$data['bankName'],$data['branchName'],$data['serialNo'],$data['bankAccount'],$data['receivedFrom'],(int)$account,(string)$amount,$received,$due,$data['description']];
             try{if($id)$p->prepare('UPDATE cheque_receipts SET bank_name=?,branch_name=?,serial_no=?,bank_account=?,received_from=?,account_id=?,amount=?,received_date=?,due_date=?,description=? WHERE id=? AND agency_id=?')->execute([...$values,$id,$aid]);else{$p->prepare('INSERT INTO cheque_receipts(bank_name,branch_name,serial_no,bank_account,received_from,account_id,amount,received_date,due_date,description,agency_id,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)')->execute([...$values,$aid,$uid]);$id=(int)$p->lastInsertId();}}catch(\PDOException $e){if(($e->errorInfo[1]??0)===1062)throw new AuthException(409,'چک تکراری است.','CHEQUE_EXISTS');throw $e;}
+            if(!empty($body['counterAccountId'])){
+                $counter=$body['counterAccountId'];
+                if(!is_scalar($counter)||!ctype_digit((string)$counter)||(int)$counter===(int)$account)throw new AuthException(422,'حساب مقابل باید با حساب چک متفاوت باشد.','VALIDATION_ERROR');
+                $journal=AccountingJournal::save($uid,$aid,['documentNo'=>'CHQ-RECEIVE-'.$id,'documentDate'=>$received,'description'=>'دریافت چک '.$data['serialNo'],'lines'=>[
+                    ['accountId'=>$account,'debit'=>(string)$amount,'credit'=>'0','trackingNo'=>$data['serialNo']],
+                    ['accountId'=>$counter,'credit'=>(string)$amount,'debit'=>'0','trackingNo'=>$data['serialNo']]
+                ]]);AccountingJournal::approve($uid,$aid,(int)$journal['id']);
+                $p->prepare('UPDATE cheque_receipts SET receipt_document_id=? WHERE id=? AND agency_id=?')->execute([$journal['id'],$id,$aid]);
+            }
             $p->prepare('INSERT INTO cheque_events(cheque_id,actor_id,event_type,event_date,note) VALUES(?,?,?,?,?)')->execute([$id,$uid,'saved',$received,$data['description']]);OperationsService::audit($uid,$aid,'save_cheque','cheque_receipts',$id);return self::get($uid,$aid,$id);
         });
     }
@@ -51,6 +60,29 @@ final class ChequeReceipts
     {
         self::scope($uid,$aid,true);$state=$body['status']??'';$date=$body['date']??'';$note=$body['note']??'';
         if(!in_array($state,['collected','bounced','cancelled'],true)||!is_string($date)||!OperationsService::validDate($date)||!is_string($note)||trim($note)===''||preg_match_all('/./us',$note)>1000)throw new AuthException(422,'نوع عملیات، تاریخ و شرح لازم است.','VALIDATION_ERROR');
-        return OperationsService::transaction(function(PDO $p)use($uid,$aid,$id,$state,$date,$note){$q=$p->prepare('SELECT status,received_date FROM cheque_receipts WHERE id=? AND agency_id=? FOR UPDATE');$q->execute([$id,$aid]);$row=$q->fetch();if(!$row)throw new AuthException(404,'چک پیدا نشد.','NOT_FOUND');if($row['status']!=='received')throw new AuthException(409,'عملیات این چک قبلاً نهایی شده است.','CHEQUE_LOCKED');if($date<$row['received_date'])throw new AuthException(422,'تاریخ عملیات نباید قبل از دریافت باشد.','VALIDATION_ERROR');$p->prepare('UPDATE cheque_receipts SET status=? WHERE id=? AND agency_id=?')->execute([$state,$id,$aid]);$p->prepare('INSERT INTO cheque_events(cheque_id,actor_id,event_type,event_date,note) VALUES(?,?,?,?,?)')->execute([$id,$uid,$state,$date,trim($note)]);OperationsService::audit($uid,$aid,'cheque_'.$state,'cheque_receipts',$id);return self::get($uid,$aid,$id);});
+        return OperationsService::transaction(function(PDO $p)use($uid,$aid,$id,$state,$date,$note,$body){$q=$p->prepare('SELECT * FROM cheque_receipts WHERE id=? AND agency_id=? FOR UPDATE');$q->execute([$id,$aid]);$row=$q->fetch();if(!$row)throw new AuthException(404,'چک پیدا نشد.','NOT_FOUND');if($row['status']!=='received')throw new AuthException(409,'عملیات این چک قبلاً نهایی شده است.','CHEQUE_LOCKED');if($date<$row['received_date'])throw new AuthException(422,'تاریخ عملیات نباید قبل از دریافت باشد.','VALIDATION_ERROR');if($state!=='collected' && !empty($body['bankAccountId']))throw new AuthException(422,'حساب بانک فقط برای وصول چک مجاز است.','VALIDATION_ERROR');
+            $journalId=null;
+            if($state==='collected' && !empty($body['bankAccountId'])) {
+                $bank=$body['bankAccountId'];
+                if(!is_scalar($bank)||!ctype_digit((string)$bank)||(int)$bank===(int)$row['account_id'])throw new AuthException(422,'حساب بانک باید با حساب چک متفاوت باشد.','VALIDATION_ERROR');
+                $journal=AccountingJournal::save($uid,$aid,[
+                    'documentNo'=>'CHQ-COLLECT-'.$id,'documentDate'=>$date,'description'=>'وصول چک '.$row['serial_no'],
+                    'lines'=>[
+                        ['accountId'=>$bank,'debit'=>$row['amount'],'credit'=>'0','description'=>trim($note),'trackingNo'=>$row['serial_no']],
+                        ['accountId'=>$row['account_id'],'debit'=>'0','credit'=>$row['amount'],'description'=>trim($note),'trackingNo'=>$row['serial_no']]
+                    ]
+                ]);
+                AccountingJournal::approve($uid,$aid,(int)$journal['id']);
+                $journalId=(int)$journal['id'];
+                $p->prepare('UPDATE cheque_receipts SET collection_document_id=? WHERE id=? AND agency_id=?')->execute([$journalId,$id,$aid]);
+            }
+            if(in_array($state,['bounced','cancelled'],true)&&$row['receipt_document_id']){
+                $original=AccountingJournal::get($uid,$aid,(int)$row['receipt_document_id']);$lines=[];
+                foreach($original['lines'] as $line)$lines[]=['accountId'=>$line['account_id'],'debit'=>$line['credit'],'credit'=>$line['debit'],'trackingNo'=>$row['serial_no'],'description'=>trim($note)];
+                $reverse=AccountingJournal::save($uid,$aid,['documentNo'=>'CHQ-REVERSE-'.$id,'documentDate'=>$date,'description'=>'برگشت ثبت دریافت چک '.$row['serial_no'],'lines'=>$lines]);
+                AccountingJournal::approve($uid,$aid,(int)$reverse['id']);
+                $p->prepare('UPDATE cheque_receipts SET reversal_document_id=? WHERE id=? AND agency_id=?')->execute([$reverse['id'],$id,$aid]);
+            }
+            $p->prepare('UPDATE cheque_receipts SET status=? WHERE id=? AND agency_id=?')->execute([$state,$id,$aid]);$p->prepare('INSERT INTO cheque_events(cheque_id,actor_id,event_type,event_date,note) VALUES(?,?,?,?,?)')->execute([$id,$uid,$state,$date,trim($note)]);OperationsService::audit($uid,$aid,'cheque_'.$state,'cheque_receipts',$id);return self::get($uid,$aid,$id);});
     }
 }

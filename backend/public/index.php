@@ -74,6 +74,18 @@ try {
  if($method==='PUT'&&$path==='/api/v1/accounting/defaults'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\FinancialAccounts::save($s['id'],$aid,Request::json())]);}
  if($method==='POST'&&$path==='/api/v1/accounting/quick'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>AccountingJournal::quick($s['id'],$aid,Request::json())],201);}
  if($method==='POST'&&$path==='/api/v1/accounting/journal'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>AccountingJournal::save($s['id'],$aid,Request::json())],201);}
+ if($method==='POST'&&preg_match('#^/api/v1/accounting/post/(ledger|payments|driver-payments)/(\d+)$#',$path,$m)){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\FinancialPosting::post($s['id'],$aid,$m[1],(int)$m[2],Request::json())]);}
+ if($method==='POST'&&$path==='/api/v1/operations/school-statement/preview'){$auth->requireCsrf($s);Authorization::requireAgencyAccess($s['id'],$aid);Authorization::requirePermission($s['id'],'finance.view');Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolStatement::calculate(Request::json())]);}
+ if($method==='GET'&&$path==='/api/v1/operations/daily-schedule')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\DailySchedule::report($s['id'],$aid,$_GET)]);
+ if($path==='/api/v1/operations/driver-assignment'){
+  if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\DriverAssignment::preview($s['id'],$aid)]);
+  if($method==='POST'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\DriverAssignment::apply($s['id'],$aid,Request::json())]);}
+ }
+ if($method==='GET'&&preg_match('#^/api/v1/schools/(\d+)/shifts/calendar$#',$path,$m))Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolShifts::onDate($s['id'],$aid,(int)$m[1],$_GET)]);
+ if(preg_match('#^/api/v1/schools/(\d+)/shifts$#',$path,$m)){
+  if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolShifts::get($s['id'],$aid,(int)$m[1])]);
+  if($method==='PUT'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolShifts::save($s['id'],$aid,(int)$m[1],Request::json())]);}
+ }
  if(preg_match('#^/api/v1/services/(\d+)/schools$#',$path,$m)){
   if($method==='GET')Response::json(['ok'=>true,'data'=>OperationsService::serviceSchools($s['id'],$aid,(int)$m[1])]);
   if($method==='PUT'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>OperationsService::setServiceSchools($s['id'],$aid,(int)$m[1],Request::json())]);}
@@ -86,6 +98,7 @@ try {
   if($method==='PUT'&&empty($m[2])){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>PayrollDocuments::update($s['id'],$aid,(int)$m[1],Request::json())]);}
   if($method==='POST'&&($m[2]??'')==='approve'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>PayrollDocuments::approve($s['id'],$aid,(int)$m[1])]);}
  }
+ if($method==='GET'&&$path==='/api/v1/maps/config'){Authorization::requireAgencyAccess($s['id'],$aid);Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\Neshan::config($aid)]);}
  if($method==='GET'&&$path==='/api/v1/integrations/status'){Authorization::requirePermission($s['id'],'settings.view');Response::json(['ok'=>true,'data'=>['sms'=>\ServiceYar\Integrations\NeginSms::configured(),'bale'=>\ServiceYar\Integrations\BaleClient::configured(),'google'=>config('GOOGLE_MAPS_SERVER_KEY','')!=='','osm'=>true]]);}
  if($method==='POST'&&$path==='/api/v1/maps/route'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>MapService::route($s['id'],$aid,Request::json())]);}
  if($method==='GET'&&preg_match('#^/api/v1/services/(\d+)/map$#',$path,$m))Response::json(['ok'=>true,'data'=>MapService::points($s['id'],$aid,(int)$m[1])]);

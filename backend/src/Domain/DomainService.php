@@ -75,6 +75,7 @@ final class DomainService {
   $c=self::cfg($resource); Authorization::requirePermission($uid,$c['permission'].'.manage'); Authorization::requireAgencyAccess($uid,$aid);
   $pdo=Connection::get();$data=[];foreach($c['fields'] as $f){$camel=preg_replace_callback('/_([a-z])/',fn($m)=>strtoupper($m[1]),$f);if(array_key_exists($camel,$b))$data[$f]=$b[$camel];elseif(array_key_exists($f,$b))$data[$f]=$b[$f];}
   foreach($data as $f=>$v){if(is_array($v)||is_object($v))throw new AuthException(422,'مقدار ورودی نامعتبر است.','VALIDATION_ERROR');}
+  if($id)FinancialPosting::assertEditable($aid,$resource,$id);
   $existing=$id?self::get($uid,$aid,$resource,$id):[];
   if($id&&$resource==='messages'&&$existing['status']!=='queued')throw new AuthException(409,'پیام پردازش‌شده قابل ویرایش یا ارسال مجدد از این فرم نیست.','MESSAGE_LOCKED');
   if($id&&$resource==='payments'&&$existing['method']==='bale')throw new AuthException(409,'پرداخت استعلام‌شده بله قابل ویرایش نیست.','VERIFIED_PAYMENT_LOCKED');
@@ -177,7 +178,7 @@ final class DomainService {
  public static function delete(int $uid,int $aid,string $resource,int $id): void {
   $c=self::cfg($resource);Authorization::requirePermission($uid,$c['permission'].'.manage');Authorization::requireAgencyAccess($uid,$aid);self::get($uid,$aid,$resource,$id);$pdo=Connection::get();$columns=thisColumns($c['table'],$pdo);
   if(!in_array('is_active',$columns,true))throw new AuthException(422,'این سابقه قابل غیرفعال‌سازی نیست؛ وضعیت آن را ویرایش کنید.','DELETE_UNSUPPORTED');
-  OperationsService::transaction(function(\PDO $pdo)use($c,$id,$aid,$resource,$uid){$pdo->prepare("UPDATE {$c['table']} SET is_active=0 WHERE id=:id AND agency_id=:agency")->execute(['id'=>$id,'agency'=>$aid]);if($resource==='services')self::syncStudentStatus($pdo,$aid,$id,false);if($resource==='students')self::releaseStudent($pdo,$uid,$aid,$id);});self::activity($pdo,$aid,$uid,'deactivate',$c['table'],$id);
+  OperationsService::transaction(function(\PDO $pdo)use($c,$id,$aid,$resource,$uid){FinancialPosting::assertEditable($aid,$resource,$id);$pdo->prepare("UPDATE {$c['table']} SET is_active=0 WHERE id=:id AND agency_id=:agency")->execute(['id'=>$id,'agency'=>$aid]);if($resource==='services')self::syncStudentStatus($pdo,$aid,$id,false);if($resource==='students')self::releaseStudent($pdo,$uid,$aid,$id);});self::activity($pdo,$aid,$uid,'deactivate',$c['table'],$id);
  }
  private static function releaseStudent(\PDO $pdo,int $uid,int $aid,int $id): void {
   $q=$pdo->prepare('SELECT ss.service_id FROM service_students ss JOIN services s ON s.id=ss.service_id WHERE ss.student_id=:id AND s.agency_id=:a');$q->execute(['id'=>$id,'a'=>$aid]);$services=$q->fetchAll(\PDO::FETCH_COLUMN);

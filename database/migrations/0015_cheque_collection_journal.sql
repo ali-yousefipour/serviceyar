@@ -1,0 +1,1 @@
+ALTER TABLE cheque_receipts ADD COLUMN collection_document_id BIGINT UNSIGNED NULL, ADD CONSTRAINT fk_cheque_collection_document FOREIGN KEY (collection_document_id) REFERENCES accounting_documents(id);

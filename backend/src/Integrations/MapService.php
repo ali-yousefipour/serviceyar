@@ -22,6 +22,7 @@ final class MapService
         $start=self::coordinate($student);$end=self::coordinate($school);
         $startText=$start['latitude'].','.$start['longitude'];$endText=$end['latitude'].','.$end['longitude'];
         $links=['google'=>'https://www.google.com/maps/dir/?'.http_build_query(['api'=>1,'origin'=>$startText,'destination'=>$endText,'travelmode'=>'driving']),'osm'=>'https://www.openstreetmap.org/directions?'.http_build_query(['engine'=>'fossgis_osrm_car','route'=>$startText.';'.$endText])];
+        if(Neshan::config($aid)['provider']==='neshan'){if(Neshan::key($aid)==='')return ['links'=>$links,'provider'=>'neshan','calculated'=>false,'reason'=>'neshan_key_not_configured'];return array_merge(Neshan::route($aid,$startText,$endText),['links'=>$links]);}
         $key=(string)config('GOOGLE_MAPS_SERVER_KEY','');
         if($key==='')return ['links'=>$links,'calculated'=>false,'reason'=>'google_key_not_configured'];
         $response=JsonHttp::post('https://routes.googleapis.com/directions/v2:computeRoutes',['origin'=>['location'=>['latLng'=>$start]],'destination'=>['location'=>['latLng'=>$end]],'travelMode'=>'DRIVE','routingPreference'=>'TRAFFIC_UNAWARE','units'=>'METRIC'],['X-Goog-Api-Key: '.$key,'X-Goog-FieldMask: routes.distanceMeters,routes.duration']);
