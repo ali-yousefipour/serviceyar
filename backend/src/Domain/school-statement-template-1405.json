@@ -1,0 +1,26 @@
+{
+  "sourceSha256": "9668dd57155b35c2b90565010acfa6ce5d8109895edb2e1ff83730abc346aa53",
+  "sheet": "صورت وضعیت نهایی8",
+  "columns": [
+    "ردیف",
+    "نام و نام خانوادگی راننده",
+    "شماره شبا",
+    " حق الزحمه راننده برای مدت ارائه خدمات در این ماه",
+    " هزینه های مدیریت،نظارت و بازرسی  (3% بهای خدمات راننده)",
+    " هزینه های اطلاع رسانی و هماهنگی (1% بهای خدمات راننده)",
+    " بالاسری سهم شرکت (7% بهای خدمات راننده)",
+    "  جمع کل صورت وضعیت\n(بدون گواهی صلاحیت و بیمه)"
+  ],
+  "currency": "IRR",
+  "rules": {
+    "managementPercent": 3,
+    "coordinationPercent": 1,
+    "companyPercent": 7,
+    "municipalityPercent": 2.75,
+    "municipalityVatPercent": 10,
+    "policePercent": 0.25,
+    "qualificationRial": 115741,
+    "insurancePercent": 7.8,
+    "monthDays": 30
+  }
+}

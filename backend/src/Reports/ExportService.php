@@ -121,6 +121,17 @@ final class ExportService
         self::downloadRows(['document_date'=>'تاریخ میلادی','document_no'=>'شماره سند','row_no'=>'ردیف','description'=>'شرح','tracking_no'=>'پیگیری','debit'=>'بدهکار · ریال','credit'=>'بستانکار · ریال','balance'=>'مانده بدهکار · ریال'],$rows,'account-statement.xlsx');
     }
 
+    public static function schoolWorkbook(int $uid,int $aid,string $period): never {
+        Authorization::requirePermission($uid,'reports.view');Authorization::requirePermission($uid,'drivers.view');
+        $d=\ServiceYar\Domain\SchoolServiceStatement::importedReport($uid,$aid,$period);
+        $schema=json_decode(file_get_contents(__DIR__.'/../Domain/school-statement-template-1405.json'),true,512,JSON_THROW_ON_ERROR);
+        $q=Connection::get()->prepare("SELECT CONCAT(first_name,' ',last_name) name,iban FROM drivers WHERE agency_id=? AND is_active=1");$q->execute([$aid]);$banks=[];foreach($q as $driver)$banks[trim($driver['name'])][]=$driver['iban'];
+        $group=[];foreach($d['items'] as $r){$name=trim($r['driver_name']);if(!isset($group[$name]))$group[$name]=['name'=>$name,'work'=>0,'management'=>0,'coordination'=>0,'company'=>0,'total'=>0];foreach(['work'=>'driver_fee','management'=>'oversight_fee','coordination'=>'education_fee','company'=>'company_fee','total'=>'statement_total'] as $to=>$from)$group[$name][$to]+=(float)$r[$from];}
+        $rows=[];$number=0;foreach($group as $name=>$r){$ibans=array_values(array_unique(array_filter($banks[$name]??[])));if(count($ibans)!==1||!\ServiceYar\Domain\PayrollDocuments::validIban($ibans[0]))throw new \ServiceYar\Auth\AuthException(422,'برای خروجی، نام و شبای یکتای معتبر تمام رانندگان باید تکمیل شود.','BANK_DETAILS_REQUIRED');$rows[]=['n'=>++$number,'name'=>$name,'iban'=>$ibans[0],'work'=>$r['work'],'management'=>$r['management'],'coordination'=>$r['coordination'],'company'=>$r['company'],'total'=>$r['total']];}
+        if(!$rows)throw new \ServiceYar\Auth\AuthException(422,'صورت‌وضعیت واردشده برای این دوره موجود نیست.','STATEMENT_EMPTY');
+        self::downloadRows(array_combine(['n','name','iban','work','management','coordination','company','total'],$schema['columns']),$rows,'school-workbook-statement-1405.xlsx');
+    }
+
     private static function downloadRows(array $columns,array $rows,string $filename): never
     {
         if (!class_exists(\ZipArchive::class)) self::jsonError(500,'EXPORT_DEPENDENCY_MISSING','امکان ساخت فایل Excel روی سرور فعال نیست.');
