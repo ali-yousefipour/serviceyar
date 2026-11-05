@@ -56,7 +56,7 @@ foreach($expected as $name){
     }
 }
 
-if(isset($prefixes['0020']) || is_file($root.'/database/migrations/002_auth_sessions.sql')){
+if(($prefixes['0020']??'')==='0020_auth_sessions.sql' || is_file($root.'/database/migrations/002_auth_sessions.sql')){
     throw new RuntimeException('Legacy unordered auth migration is still present.');
 }
 
