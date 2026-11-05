@@ -10,5 +10,5 @@ if(!$file||!str_starts_with($file,$frontend.DIRECTORY_SEPARATOR)||!is_file($file
 $type=['html'=>'text/html; charset=utf-8','js'=>'application/javascript; charset=utf-8','css'=>'text/css; charset=utf-8','png'=>'image/png','svg'=>'image/svg+xml','woff2'=>'font/woff2'][pathinfo($file,PATHINFO_EXTENSION)]??null;
 if(!$type){http_response_code(404);return;}
 header('Content-Type: '.$type);header('X-Content-Type-Options: nosniff');
-header("Content-Security-Policy: default-src 'self'; img-src 'self' data: https://tile.openstreetmap.org; style-src 'self'; style-src-attr 'unsafe-inline'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'");
+header("Content-Security-Policy: default-src 'self'; img-src 'self' data: https://tile.openstreetmap.org https://*.neshan.org; script-src 'self' https://static.neshan.org; connect-src 'self' https://*.neshan.org; style-src 'self' https://static.neshan.org; style-src-attr 'unsafe-inline'; base-uri 'self'; frame-ancestors 'none'; object-src 'none';");
 readfile($file);

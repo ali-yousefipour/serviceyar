@@ -18,19 +18,14 @@ final class MapService
     public static function route(int $uid,int $aid,array $body): array
     {
         Authorization::requirePermission($uid,'students.view');Authorization::requirePermission($uid,'schools.view');Authorization::requireAgencyAccess($uid,$aid);
-        $student=DomainService::get($uid,$aid,'students',(int)($body['studentId']??0));$school=DomainService::get($uid,$aid,'schools',(int)$student['school_id']);
+        if(!empty($body['studentId'])){$student=DomainService::get($uid,$aid,'students',(int)$body['studentId']);$schoolId=(int)$student['school_id'];}else{Authorization::requirePermission($uid,'students.manage');$student=['latitude'=>$body['latitude']??null,'longitude'=>$body['longitude']??null];$schoolId=(int)($body['schoolId']??0);}$school=DomainService::get($uid,$aid,'schools',$schoolId);
         $start=self::coordinate($student);$end=self::coordinate($school);
         $startText=$start['latitude'].','.$start['longitude'];$endText=$end['latitude'].','.$end['longitude'];
-        $links=['google'=>'https://www.google.com/maps/dir/?'.http_build_query(['api'=>1,'origin'=>$startText,'destination'=>$endText,'travelmode'=>'driving']),'osm'=>'https://www.openstreetmap.org/directions?'.http_build_query(['engine'=>'fossgis_osrm_car','route'=>$startText.';'.$endText])];
-        if(Neshan::config($aid)['provider']==='neshan'){if(Neshan::key($aid)==='')return ['links'=>$links,'provider'=>'neshan','calculated'=>false,'reason'=>'neshan_key_not_configured'];return array_merge(Neshan::route($aid,$startText,$endText),['links'=>$links]);}
-        $key=(string)config('GOOGLE_MAPS_SERVER_KEY','');
-        if($key==='')return ['links'=>$links,'calculated'=>false,'reason'=>'google_key_not_configured'];
-        $response=JsonHttp::post('https://routes.googleapis.com/directions/v2:computeRoutes',['origin'=>['location'=>['latLng'=>$start]],'destination'=>['location'=>['latLng'=>$end]],'travelMode'=>'DRIVE','routingPreference'=>'TRAFFIC_UNAWARE','units'=>'METRIC'],['X-Goog-Api-Key: '.$key,'X-Goog-FieldMask: routes.distanceMeters,routes.duration']);
-        $route=$response['routes'][0]??null;if(!$route)throw new AuthException(422,'مسیر جاده‌ای پیدا نشد.','ROUTE_NOT_FOUND');return ['links'=>$links,'calculated'=>true,'distanceMeters'=>$route['distanceMeters']??null,'duration'=>$route['duration']??null];
+        return Neshan::route($aid,$startText,$endText);
     }
 
     private static function coordinate(array $row): array
     {
-        if($row['latitude']===null||$row['longitude']===null)throw new AuthException(422,'مختصات دانش‌آموز و مدرسه باید ثبت شده باشد.','LOCATION_REQUIRED');return ['latitude'=>(float)$row['latitude'],'longitude'=>(float)$row['longitude']];
+        return Neshan::coordinate($row['latitude']??null,$row['longitude']??null);
     }
 }

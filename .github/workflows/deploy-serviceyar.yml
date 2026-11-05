@@ -64,6 +64,9 @@ jobs:
           cat > deploy-payload/.htaccess <<'HTACCESS'
           Options -Indexes
           RewriteEngine On
+          <IfModule mod_headers.c>
+          Header always set Content-Security-Policy "default-src 'self'; img-src 'self' data: https://tile.openstreetmap.org https://*.neshan.org; script-src 'self' https://static.neshan.org; connect-src 'self' https://*.neshan.org; style-src 'self' https://static.neshan.org; style-src-attr 'unsafe-inline'; base-uri 'self'; frame-ancestors 'none'; object-src 'none';"
+          </IfModule>
 
           # Route API requests to the PHP front controller.
           RewriteRule ^api/?$ backend/public/index.php [QSA,L]
