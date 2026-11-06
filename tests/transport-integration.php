@@ -263,6 +263,10 @@ try{
  rejected(fn()=>\ServiceYar\Domain\InstallmentPlan::create($uid,$a,array_merge($planBody,['total'=>'101'])),'REQUEST_CONFLICT');
  rejected(fn()=>\ServiceYar\Domain\InstallmentPlan::create($uid,$b,$planBody),'NOT_FOUND');
  $q=$p->prepare('SELECT SUM(amount) FROM invoices WHERE id IN ('.implode(',',array_fill(0,count($plan['invoiceIds']),'?')).')');$q->execute($plan['invoiceIds']);check((int)$q->fetchColumn()===100,'Installment invoice total equals agreement');
+ \ServiceYar\Settings\SettingsService::put($uid,$a,['company_location'=>['latitude'=>36.3,'longitude'=>59.6]]);
+ $office=\ServiceYar\Integrations\Neshan::config($a)['companyLocation'];check((float)$office['latitude']===36.3&& (float)$office['longitude']===59.6,'Company map location persists in agency settings');
+ check(\ServiceYar\Integrations\Neshan::config($b)['companyLocation']===null,'Company map location is isolated by agency');
+ rejected(fn()=>\ServiceYar\Settings\SettingsService::put($uid,$a,['company_location'=>['latitude'=>91,'longitude'=>59.6]]),'LOCATION_REQUIRED');
  echo "Transport integration: $checks checks passed. All fixtures rolled back.\n";
 }finally{if($p->inTransaction())$p->rollBack();}
 
