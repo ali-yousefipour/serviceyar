@@ -80,6 +80,8 @@ try {
  if($method==='POST'&&$path==='/api/v1/accounting/journal'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>AccountingJournal::save($s['id'],$aid,Request::json())],201);}
  if($method==='POST'&&preg_match('#^/api/v1/accounting/post/(ledger|payments|driver-payments)/(\d+)$#',$path,$m)){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\FinancialPosting::post($s['id'],$aid,$m[1],(int)$m[2],Request::json())]);}
  if($method==='POST'&&$path==='/api/v1/operations/school-statement/preview'){$auth->requireCsrf($s);Authorization::requireAgencyAccess($s['id'],$aid);Authorization::requirePermission($s['id'],'finance.view');Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolStatement::calculate(Request::json())]);}
+ if($method==='POST'&&$path==='/api/v1/operations/tariffs/seed-arta'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\AgencySchoolTariffs::seedArta($s['id'],$aid)]);}
+ if($method==='POST'&&$path==='/api/v1/operations/tariffs/recalculate'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\AgencySchoolTariffs::recalculate($s['id'],$aid)]);}
  if($method==='GET'&&$path==='/api/v1/operations/daily-schedule')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\DailySchedule::report($s['id'],$aid,$_GET)]);
  if($path==='/api/v1/operations/driver-assignment'){
   if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\DriverAssignment::preview($s['id'],$aid)]);
