@@ -36,7 +36,7 @@ final class DomainService {
   if(!$c)throw new AuthException(404,'ماژول مورد نظر پیدا نشد.','RESOURCE_NOT_FOUND');
   $fields=[
    'schools'=>['gender','shift','education_levels'],
-   'students'=>['guardian_first_name','guardian_last_name','guardian_national_code','guardian_relation','father_name','gender','nationality','health_status','emergency_phone','return_address','academic_year','shift','service_status','monthly_fee'],
+   'students'=>['guardian_first_name','guardian_last_name','guardian_national_code','guardian_relation','father_name','gender','nationality','health_status','emergency_phone','return_address','academic_year','shift','service_status','monthly_fee','tariff_distance_km','tariff_vehicle_class'],
    'drivers'=>['is_representative','bank_name','bank_account','iban'],
    'services'=>['pack_id','shift','monthly_fee','agreed_amount']
   ];
@@ -91,6 +91,13 @@ final class DomainService {
   foreach($defaults[$resource]??[] as $f=>$default)if(array_key_exists($f,$data)&&$data[$f]===null)$data[$f]=$default;
   $required=['schools'=>['name'],'students'=>['school_id','first_name','last_name','mobile'],'drivers'=>['first_name','last_name'],'vehicles'=>['plate'],'services'=>['title'],'packs'=>['title'],'contracts'=>['title','party_type'],'driver-work'=>['driver_id','work_date'],'driver-payments'=>['driver_id','payment_date','amount'],'school-charges'=>['school_id','title'],'service-charges'=>['service_id','title'],'invoices'=>['title'],'payments'=>['payment_date','amount'],'accounts'=>['code','title'],'accounting-documents'=>['document_no','document_date'],'wallets'=>['owner_type'],'messages'=>['body'],'driver-changes'=>['service_id','new_driver_id'],'ledger'=>['party_type','party_id','direction','amount','entry_date'],'driver-ratings'=>['driver_id','score'],'parent-reports'=>['student_id','subject','body']];
   $merged=array_merge($existing,$data);
+  if($resource==='students' && (array_key_exists('tariff_distance_km',$data)||array_key_exists('tariff_vehicle_class',$data)||array_key_exists('school_id',$data)||array_key_exists('academic_year',$data))){
+   $distance=$merged['tariff_distance_km']??null;$class=$merged['tariff_vehicle_class']??null;
+   if($distance!==null&&(!is_numeric($distance)||(float)$distance<=0||(float)$distance>1000))throw new AuthException(422,'مسافت تعرفه نامعتبر است.','VALIDATION_ERROR');
+   if($class!==null&&!in_array((string)$class,['1','2','3'],true))throw new AuthException(422,'کلاس تعرفه نامعتبر است.','VALIDATION_ERROR');
+   $fee=AgencySchoolTariffs::quote($pdo,$aid,(int)($merged['school_id']??0),(string)($merged['academic_year']?:AgencySchoolTariffs::YEAR),$distance,$class);
+   if($fee!==null){$data['monthly_fee']=$fee;$data['tariff_calculated_at']=date('Y-m-d H:i:s');}
+  }
   if($resource==='payments'&&($data['method']??'')==='bale')throw new AuthException(422,'پرداخت بله فقط پس از استعلام سرویس ثبت می‌شود.','WORKFLOW_REQUIRED');
   if($resource==='services'&&($data['status']??'')==='cancelled')$data['is_active']=0;
   if($resource==='services'&&($data['is_active']??null)==1&&($existing['status']??'')==='cancelled'&&!isset($data['status']))$data['status']='draft';
