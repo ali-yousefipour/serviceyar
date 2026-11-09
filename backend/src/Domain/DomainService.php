@@ -95,7 +95,7 @@ final class DomainService {
    $distance=$merged['tariff_distance_km']??null;$class=$merged['tariff_vehicle_class']??null;
    if($distance!==null&&(!is_numeric($distance)||(float)$distance<=0||(float)$distance>1000))throw new AuthException(422,'مسافت تعرفه نامعتبر است.','VALIDATION_ERROR');
    if($class!==null&&!in_array((string)$class,['1','2','3'],true))throw new AuthException(422,'کلاس تعرفه نامعتبر است.','VALIDATION_ERROR');
-   $fee=AgencySchoolTariffs::quote($pdo,$aid,(int)($merged['school_id']??0),(string)($merged['academic_year']?:AgencySchoolTariffs::YEAR),$distance,$class);
+   $fee=AgencySchoolTariffs::quote($pdo,$aid,(int)($merged['school_id']??0),(string)(($merged['academic_year']??null) ?: AgencySchoolTariffs::YEAR),$distance,$class);
    if($fee!==null){$data['monthly_fee']=$fee;$data['tariff_calculated_at']=date('Y-m-d H:i:s');}
   }
   if($resource==='payments'&&($data['method']??'')==='bale')throw new AuthException(422,'پرداخت بله فقط پس از استعلام سرویس ثبت می‌شود.','WORKFLOW_REQUIRED');
