@@ -258,7 +258,7 @@ async function loadResource(key){
   $('serviceFilterSummary').textContent=number(d.pagination.total)+' سرویس'+(applied?' · '+number(applied)+' فیلتر اعمال شده':'');
  }
  const display=(row,f)=>{if(f==='fullName')return person(row);if(f==='paymentStatus')return Number(row.invoice_total)===0?'فاقد فاکتور':Number(row.paid_total)>=Number(row.invoice_total)?'تسویه':'دارای مانده';const v=val(row,f);if(f==='driverName'&&!v&&row.mehr_driver_name)return row.mehr_driver_name+' (سابقه مهر)';if(f==='plate')return String(v||'—');if(f==='vehicleId'){const vehicle=maps.vehicles?.find(x=>String(x.id)===String(v));return vehicle?.plate||v||'—';}if(relations[f])return person(maps[relations[f]]?.find(x=>String(x.id)===String(v))||{id:v||'—'});if(['status','serviceStatus'].includes(f))return statuses[v]||v;if(f==='mobile')return persianDigits(v||'—');if(/Date$/.test(f))return dateText(v);if(/amount|fee|balance|capacity|rating|score/i.test(f))return number(v);return v||'—';};
- $('table').innerHTML=`<div class="table-wrap"><table><thead><tr><th><input type="checkbox" id="selectPage" aria-label="انتخاب همه موارد این صفحه"></th><th>ردیف</th>${fields.map(f=>`<th>${labels[f]||esc(f)}</th>`).join('')}<th>عملیات</th></tr></thead><tbody>${d.items.map((r,i)=>`<tr><td><input type="checkbox" data-select="${r.id}" aria-label="انتخاب ${esc(person(r))}" ${state.selected.has(Number(r.id))?'checked':''}></td><td>${number((state.page-1)*state.limit+i+1)}</td>${fields.map(f=>`<td>${f==='plate'||f==='vehicleId'?iranPlate(display(r,f)):esc(display(r,f))}${key==='drivers'&&f==='lastName'&&canConfigureDriverService()&&Number(r.is_active)===1&&r.status==='active'?`<button class="driver-service-action" data-driver-service="${r.id}" aria-label="تخصیص دانش‌آموز و تنظیم سرویس ${esc(person(r))}">تخصیص دانش‌آموز و تنظیم سرویس</button>`:''}</td>`).join('')}<td class="row-actions"><button data-view="${r.id}">جزئیات</button>${can(key,'manage')?`<button data-edit="${r.id}">ویرایش</button>${['schools','students','drivers','vehicles','services','accounts','ledger','driver-ratings','parent-reports'].includes(key)?`<button class="danger" data-del="${r.id}">${Number(r.is_active)===0?'بازیابی':'غیرفعال'}</button>`:''}`:''}${['ledger','payments','driver-payments'].includes(key)&&can(key,'manage')?`<button data-post-financial="${r.id}">ثبت / مشاهده سند حسابداری</button>`:''}${key==='schools'?`<button data-school-shifts="${r.id}">شیفت، ساعت و تعطیلی</button>`:''}${key==='drivers'?`<button data-documents="${r.id}">مدارک</button>`:''}${key==='services'?`<button data-service-schools="${r.id}">مدارس سرویس</button><button data-members="${r.id}">دانش‌آموزان سرویس</button><button data-service-map="${r.id}">نقشه سرویس</button>`:''}${key==='driver-changes'&&r.status==='pending'&&can(key,'manage')?`<button data-review="${r.id}" data-status="approved">تأیید</button><button data-review="${r.id}" data-status="rejected">رد</button>`:''}</td></tr>`).join('')||`<tr><td colspan="${fields.length+3}" class="empty">رکوردی یافت نشد.</td></tr>`}</tbody></table></div><div class="pager"><button id="prevPage" ${state.page<=1?'disabled':''}>قبلی</button><span>صفحه ${number(state.page)} از ${number(Math.max(1,d.pagination.pages))} · ${number(d.pagination.total)} مورد</span><button id="nextPage" ${state.page>=d.pagination.pages?'disabled':''}>بعدی</button><select id="pageSize" aria-label="تعداد در صفحه">${[25,50,100,200].map(n=>`<option ${state.limit===n?'selected':''}>${n}</option>`).join('')}</select></div>`;
+ $('table').innerHTML=`<div class="table-wrap"><table><thead><tr><th><input type="checkbox" id="selectPage" aria-label="انتخاب همه موارد این صفحه"></th><th>ردیف</th>${fields.map(f=>`<th>${labels[f]||esc(f)}</th>`).join('')}<th>عملیات</th></tr></thead><tbody>${d.items.map((r,i)=>`<tr><td><input type="checkbox" data-select="${r.id}" aria-label="انتخاب ${esc(person(r))}" ${state.selected.has(Number(r.id))?'checked':''}></td><td>${number((state.page-1)*state.limit+i+1)}</td>${fields.map(f=>`<td>${f==='plate'||f==='vehicleId'?iranPlate(display(r,f)):esc(display(r,f))}${key==='drivers'&&f==='lastName'&&canConfigureDriverService()?`<button class="driver-service-action" data-driver-service="${r.id}" aria-label="تخصیص دانش‌آموز و تنظیم سرویس ${esc(person(r))}">تخصیص دانش‌آموز و تنظیم سرویس</button>`:''}</td>`).join('')}<td class="row-actions"><button data-view="${r.id}">جزئیات</button>${can(key,'manage')?`<button data-edit="${r.id}">ویرایش</button>${['schools','students','drivers','vehicles','services','accounts','ledger','driver-ratings','parent-reports'].includes(key)?`<button class="danger" data-del="${r.id}">${Number(r.is_active)===0?'بازیابی':'غیرفعال'}</button>`:''}`:''}${['ledger','payments','driver-payments'].includes(key)&&can(key,'manage')?`<button data-post-financial="${r.id}">ثبت / مشاهده سند حسابداری</button>`:''}${key==='schools'?`<button data-school-shifts="${r.id}">شیفت، ساعت و تعطیلی</button>`:''}${key==='drivers'?`<button data-documents="${r.id}">مدارک</button>`:''}${key==='services'?`<button data-service-schools="${r.id}">مدارس سرویس</button><button data-members="${r.id}">دانش‌آموزان سرویس</button><button data-service-map="${r.id}">نقشه سرویس</button>`:''}${key==='driver-changes'&&r.status==='pending'&&can(key,'manage')?`<button data-review="${r.id}" data-status="approved">تأیید</button><button data-review="${r.id}" data-status="rejected">رد</button>`:''}</td></tr>`).join('')||`<tr><td colspan="${fields.length+3}" class="empty">رکوردی یافت نشد.</td></tr>`}</tbody></table></div><div class="pager"><button id="prevPage" ${state.page<=1?'disabled':''}>قبلی</button><span>صفحه ${number(state.page)} از ${number(Math.max(1,d.pagination.pages))} · ${number(d.pagination.total)} مورد</span><button id="nextPage" ${state.page>=d.pagination.pages?'disabled':''}>بعدی</button><select id="pageSize" aria-label="تعداد در صفحه">${[25,50,100,200].map(n=>`<option ${state.limit===n?'selected':''}>${n}</option>`).join('')}</select></div>`;
  const selected=()=>$('selectedCount').textContent=number(state.selected.size)+' مورد انتخاب شده';selected();$('table').querySelectorAll('[data-select]').forEach(b=>b.onchange=()=>{b.checked?state.selected.add(Number(b.dataset.select)):state.selected.delete(Number(b.dataset.select));selected();});$('selectPage').onchange=e=>{$('table').querySelectorAll('[data-select]').forEach(b=>{b.checked=e.target.checked;b.onchange();});};
  $('prevPage').onclick=()=>{state.page--;loadResource(key);};$('nextPage').onclick=()=>{state.page++;loadResource(key);};$('pageSize').onchange=e=>{state.limit=Number(e.target.value);state.page=1;loadResource(key);};
  $('table').querySelectorAll('[data-driver-service]').forEach(button=>button.onclick=()=>driverServiceDialog(d.items.find(row=>String(row.id)===button.dataset.driverService)));
@@ -321,27 +321,41 @@ function bulkFeeDialog(){if(!gridState?.selected.size){notify('دانش‌آمو
 function bulkMessageDialog(){if(!gridState?.selected.size){notify('گیرندگان را انتخاب کنید.',true);return;}dialog('پیامک به انتخاب‌شده‌ها',`<form id="messageForm"><p>پیام برای ${number(gridState.selected.size)} گیرنده در صف قرار می‌گیرد؛ تحویل نیازمند اتصال سرویس پیامک است.</p><label>متن پیام<textarea name="body" required maxlength="2000"></textarea></label><button class="primary">ثبت در صف پیامک</button></form>`);$('messageForm').onsubmit=async e=>{e.preventDefault();const button=e.target.querySelector('button');button.disabled=true;try{await write('/api/v1/operations/messages',{ids:[...gridState.selected],recipientType:gridState.key==='students'?'student':'driver',body:e.target.body.value});closeDialog();notify('پیام‌ها در صف ثبت شدند.');}catch(err){$('formError').textContent=err.message;$('formError').hidden=false;button.disabled=false;}};}
 async function serviceMembers(id,back){
  const token=pageToken;
+ const previousDialog=$('modal')?.querySelector('.modal');
  try{
   const [service,rows]=await Promise.all([api(scoped('/api/v1/services/'+id)),api(scoped('/api/v1/services/'+id+'/students'))]);
-  if(token!==pageToken)return;
+  if(token!==pageToken||(previousDialog&&!previousDialog.isConnected))return;
   const canAssign=can('services','manage')&&can('students')&&Number(service.is_active)===1&&service.status!=='cancelled';
-  dialog('دانش‌آموزان سرویس '+service.title,`<p>ظرفیت ${number(service.capacity)} · تخصیص ${number(rows.length)}</p>
+  const free=Math.max(0,Number(service.capacity)-rows.length);
+  const monthlyTotal=rows.reduce((total,row)=>total+Number(row.monthly_fee||0),0);
+  dialog('دانش‌آموزان سرویس '+service.title,`<p>ظرفیت ${number(service.capacity)} · تخصیص ${number(rows.length)} · جای خالی ${number(free)}</p>
+   <p>جمع ماهانه دانش‌آموزان: ${number(monthlyTotal)} ریال</p>
    ${back?'<button type="button" id="backToDriverServices">بازگشت به سرویس‌های راننده</button>':''}
    ${simpleTable(['نام','مسافت تعرفه','ماهیانه · ریال','ترتیب توقف','نشانی'],rows.map(r=>[person(r),r.tariff_distance_km??'—',number(r.monthly_fee),r.pickup_order,r.pickup_address]))}
    ${canAssign?`<div class="member-actions">${rows.map(r=>`<button type="button" data-remove-member="${r.id}">حذف تخصیص ${esc(person(r))}</button>`).join('')}</div>
+   ${free?`
    <form id="assignForm">
     <label>جست‌وجوی دانش‌آموز<input type="search" id="memberSearch" placeholder="نام یا کد ملی" maxlength="200"></label>
     <label>دانش‌آموز<select name="studentId" required></select></label>
     <p id="memberSearchStatus" role="status"></p>
+    <p id="memberQuote" role="status"></p>
     <div class="pager" id="memberPager"></div>
     <label>ترتیب توقف<input type="number" name="pickupOrder" min="1"></label>
     <label>نشانی سوار شدن<input name="pickupAddress"></label>
     <button class="primary" disabled>افزودن به سرویس</button>
-   </form>`:''}`);
+   </form>`:'<p>ظرفیت این سرویس تکمیل است.</p>'}`:''}`);
   if(back)$('backToDriverServices').onclick=back;
+  $('modal').querySelectorAll('[data-remove-member]').forEach(button=>button.onclick=async()=>{
+   button.disabled=true;
+   try{
+    await api(scoped('/api/v1/services/'+id+'/students?studentId='+button.dataset.removeMember),{method:'DELETE',headers:{'X-CSRF-Token':session.csrfToken}});
+    lookupCache={};if(button.isConnected)await serviceMembers(id,back);
+   }catch(err){if(button.isConnected){button.disabled=false;notify(err.message,true);}}
+  });
   const form=$('assignForm');if(!form)return;
   const search=$('memberSearch'),status=$('memberSearchStatus'),pager=$('memberPager');
   const select=form.elements.studentId,submit=form.querySelector('[type=submit],.primary');
+  const quote=$('memberQuote');
   let revision=0,timer,saving=false;
   const sync=()=>{submit.disabled=saving||!select.value;};
   const load=async(page,version)=>{
@@ -366,10 +380,23 @@ async function serviceMembers(id,back){
    clearTimeout(timer);
    const version=++revision;
    select.replaceChildren(new Option('در حال جست‌وجو…',''));
+   quote.textContent='';
    pager.replaceChildren();status.textContent='در حال جست‌وجو…';sync();
    timer=setTimeout(()=>load(page,version),delay);
   };
-  search.oninput=()=>refresh(1,250);select.onchange=sync;refresh();
+  search.oninput=()=>refresh(1,250);
+  select.onchange=async()=>{
+   sync();
+   const studentId=select.value;
+   if(!studentId){quote.textContent='';return;}
+   quote.textContent='در حال دریافت مبلغ ماهانه…';
+   const current=()=>form.isConnected&&select.value===studentId;
+   try{
+    const rate=await write('/api/v1/operations/tariffs/quote',{studentId});
+    if(current())quote.textContent=rate.monthlyFee===null?'برای این دانش‌آموز نرخ قابل محاسبه پیدا نشد.':'مبلغ ماهانه: '+number(rate.monthlyFee)+' ریال';
+   }catch(err){if(current())quote.textContent=err.message;}
+  };
+  refresh();
   form.onsubmit=async e=>{
    e.preventDefault();if(submit.disabled)return;
    const body=Object.fromEntries(new FormData(form));
@@ -381,13 +408,6 @@ async function serviceMembers(id,back){
    }catch(err){if(form.isConnected){$('formError').textContent=err.message;$('formError').hidden=false;}}
    finally{saving=false;if(form.isConnected)sync();}
   };
-  $('modal').querySelectorAll('[data-remove-member]').forEach(button=>button.onclick=async()=>{
-   button.disabled=true;
-   try{
-    await api(scoped('/api/v1/services/'+id+'/students?studentId='+button.dataset.removeMember),{method:'DELETE',headers:{'X-CSRF-Token':session.csrfToken}});
-    lookupCache={};if(form.isConnected)await serviceMembers(id,back);
-   }catch(err){if(form.isConnected){button.disabled=false;notify(err.message,true);}}
-  });
  }catch(err){if(token===pageToken)notify(err.message,true);}
 }
 async function downloadFile(url,name){try{const response=await fetch(scoped(url),{credentials:'same-origin'});if(!response.ok){const d=await response.json();throw new Error(d?.error?.message||'دریافت فایل انجام نشد.');}const blob=await response.blob(),link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000);}catch(e){notify(e.message,true);}}
@@ -703,23 +723,25 @@ function driverServiceDialog(driver){
  dialog('سرویس‌های '+person(driver),`
   <div class="driver-service-intro">
    <p>برای تخصیص دانش‌آموز، یک سرویس موجود را انتخاب کنید یا سرویس جدید بسازید.</p>
-   <a class="route-link" href="#services/new/${driver.id}">ساخت سرویس برای این راننده</a>
+   ${Number(driver.is_active)===1&&driver.status==='active'
+    ?`<a class="route-link" href="#services/new/${driver.id}">ساخت سرویس برای این راننده</a>`
+    :'<p class="muted">برای ساخت سرویس، راننده باید فعال و تأیید شده باشد.</p>'}
   </div>
   <div id="driverServiceList" aria-live="polite"></div>`);
  const list=$('driverServiceList');
  const load=async(page=1)=>{
   list.textContent='در حال دریافت سرویس‌ها…';
   try{
-   const data=await api(scoped('/api/v1/services?'+new URLSearchParams({driverId:driver.id,active:1,page,limit:25})));
+   const data=await api(scoped('/api/v1/services?'+new URLSearchParams({driverId:driver.id,page,limit:25})));
    if(token!==pageToken||!list.isConnected)return;
    list.innerHTML=data.items.length?`<div class="driver-service-list">${data.items.map(row=>`
     <section class="driver-service-item">
-     <div><strong>${esc(row.title)}</strong><p>ظرفیت ${number(row.capacity)} · ${esc(statuses[row.status]||row.status)}</p></div>
+     <div><strong>${esc(row.title)}</strong><p>ظرفیت ${number(row.capacity)} · ${esc(statuses[row.status]||row.status)}${Number(row.is_active)===0?' · غیرفعال':''}</p></div>
      <div class="member-actions">
-      <button type="button" class="primary" data-driver-members="${row.id}" ${row.status==='cancelled'?'disabled':''}>تخصیص دانش‌آموز</button>
+      <button type="button" ${Number(row.is_active)===1&&row.status!=='cancelled'?'class="primary"':''} data-driver-members="${row.id}">${Number(row.is_active)===1&&row.status!=='cancelled'?'تخصیص دانش‌آموز':'مشاهده دانش‌آموزان'}</button>
       <button type="button" data-driver-edit-service="${row.id}">تنظیم سرویس</button>
      </div>
-    </section>`).join('')}</div>`:'<p class="empty">برای این راننده هنوز سرویس فعالی ثبت نشده است.</p>';
+    </section>`).join('')}</div>`:'<p class="empty">برای این راننده هنوز سرویسی ثبت نشده است.</p>';
    if(data.pagination.pages>1){
     list.insertAdjacentHTML('beforeend',`<div class="pager"><button type="button" data-driver-page="${page-1}" ${page===1?'disabled':''}>قبلی</button><span>صفحه ${number(page)} از ${number(data.pagination.pages)}</span><button type="button" data-driver-page="${page+1}" ${page>=data.pagination.pages?'disabled':''}>بعدی</button></div>`);
    }
@@ -818,10 +840,9 @@ async function newServicePage(token,initialDriverId){
     }
     if(!current())return;
     const distance=s.tariff_distance_km;
-    const saved=Number(s.monthly_fee);
-    const rate=saved>0?{monthlyFee:saved}:distance>0?await write('/api/v1/operations/tariffs/quote',{schoolId:s.school_id,academicYear:s.academic_year||year(),distanceKm:distance,vehicleClass:s.tariff_vehicle_class}):{monthlyFee:null};
+    const rate=await write('/api/v1/operations/tariffs/quote',{studentId:s.id});
     if(rate.monthlyFee===null)missing++;else total+=Number(rate.monthlyFee);
-    lines.push([person(s),distance??'—',routeText,rate.monthlyFee===null?'نرخ ثبت نشده':number(rate.monthlyFee),rate.monthlyFee===null?'—':number(Number(rate.monthlyFee)*months),saved>0?'مبلغ ثبت‌شده':rate.monthlyFee===null?'—':can('students','manage')?'نرخ‌نامه · ذخیره با ثبت سرویس':'نرخ‌نامه · پیش‌نمایش']);
+    lines.push([person(s),distance??'—',routeText,rate.monthlyFee===null?'نرخ ثبت نشده':number(rate.monthlyFee),rate.monthlyFee===null?'—':number(Number(rate.monthlyFee)*months),rate.saved?'مبلغ ثبت‌شده':rate.monthlyFee===null?'—':can('students','manage')?'نرخ‌نامه · ذخیره با ثبت سرویس':'نرخ‌نامه · پیش‌نمایش']);
    }
    if(!current())return;
    result.innerHTML=simpleTable(['دانش‌آموز','کیلومتر تعرفه','مسیر نشان','ماهیانه · ریال','برآورد سالانه · ریال','مبنای مبلغ'],lines)+'<p>جمع ماهانه: '+number(total)+' ریال · برآورد '+number(months)+' ماه: '+number(total*months)+' ریال · بدون نرخ: '+number(missing)+'</p>'+(routes.length?'<div class="service-map" id="serviceQuoteMap" aria-label="نقشه مسیرهای نشان"></div>':'');

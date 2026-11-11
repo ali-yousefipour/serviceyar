@@ -85,6 +85,13 @@ try {
  if($method==='POST'&&$path==='/api/v1/operations/school-statement/preview'){$auth->requireCsrf($s);Authorization::requireAgencyAccess($s['id'],$aid);Authorization::requirePermission($s['id'],'finance.view');Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolStatement::calculate(Request::json())]);}
  if($method==='POST'&&$path==='/api/v1/operations/tariffs/quote'){
   $auth->requireCsrf($s);Authorization::requirePermission($s['id'],'students.view');$b=Request::json();
+  if(isset($b['studentId'])){
+   $student=DomainService::get($s['id'],$aid,'students',(int)$b['studentId']);
+   $saved=(float)$student['monthly_fee'];
+   $fee=$saved>0?$saved:\ServiceYar\Domain\AgencySchoolTariffs::quote(Connection::get(),$aid,(int)$student['school_id'],
+    (string)($student['academic_year']?:\ServiceYar\Domain\AgencySchoolTariffs::YEAR),$student['tariff_distance_km'],$student['tariff_vehicle_class']);
+   Response::json(['ok'=>true,'data'=>['monthlyFee'=>$fee,'saved'=>$saved>0,'currency'=>'IRR']]);
+  }
   $fee=\ServiceYar\Domain\AgencySchoolTariffs::quote(Connection::get(),$aid,(int)($b['schoolId']??0),(string)($b['academicYear']??''),$b['distanceKm']??null,$b['vehicleClass']??null);
   Response::json(['ok'=>true,'data'=>['monthlyFee'=>$fee,'currency'=>'IRR']]);
  }

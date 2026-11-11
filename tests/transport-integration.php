@@ -161,6 +161,8 @@ try{
  O::assign($uid,$a,(int)$multi['id'],(int)$secondStudent['id']);check(D::get($uid,$a,'students',(int)$secondStudent['id'])['service_status']==='assigned','Secondary-school student can be assigned');
  rejected(fn()=>O::setServiceSchools($uid,$a,(int)$multi['id'],['schoolIds'=>[$school['id']]]),'SCHOOL_MISMATCH');
  $eligible=D::list($uid,$a,'students',['eligibleServiceId'=>$multi['id']]);check(!in_array($foreign['id'],array_column($eligible['items'],'id')),'Multi-school eligibility remains tenant-scoped');
+ $matched=D::list($uid,$a,'students',['eligibleServiceId'=>$multi['id'],'search'=>'دانش‌مدرسه دوم']);
+ check(in_array((int)$secondStudent['id'],array_map('intval',array_column($matched['items'],'id')),true),'Student search matches a joined name across a half-space in a secondary school');
  check(count(\ServiceYar\Integrations\MapService::points($uid,$a,(int)$multi['id'])['schools'])===2,'Map includes all service schools');
  D::delete($uid,$a,'students',(int)$secondStudent['id']);check(count(D::serviceStudents($uid,$a,(int)$multi['id']))===0,'Deactivating a student releases occupied capacity');
  D::save($uid,$a,'students',['isActive'=>1],(int)$secondStudent['id']);check(count(D::serviceStudents($uid,$a,(int)$multi['id']))===0,'Restoring a student does not silently reassign a route');

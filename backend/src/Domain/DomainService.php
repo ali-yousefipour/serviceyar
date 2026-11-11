@@ -50,6 +50,12 @@ final class DomainService {
    [$clauses,$serviceParams]=self::serviceFilters($q,$uid);
    foreach($clauses as $clause)$where.=' AND '.$clause;
    $params+=$serviceParams;
+  }elseif($resource==='students'&&!empty($q['eligibleServiceId'])&&is_string($q['search']??null)){
+   $term=preg_replace('/[\s\x{200c}\x{200d}]+/u','',strtr($q['search'],['ي'=>'ی','ى'=>'ی','ك'=>'ک']));
+   if($term!==null&&$term!==''){
+    $where.=" AND (REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(CONCAT_WS('',first_name,last_name),'ي','ی'),'ى','ی'),'ك','ک'),' ',''),'‌',''),'‍','') LIKE :member_name ESCAPE '!' OR national_code LIKE :member_code ESCAPE '!')";
+    $params['member_name']=$params['member_code']='%'.strtr($term,['!'=>'!!','%'=>'!%','_'=>'!_']).'%';
+   }
   }elseif(isset($q['search'])&&trim((string)$q['search'])!==''){ $parts=[];foreach($c['search'] as $i=>$f){$k='s'.$i;$parts[]="$f LIKE :$k";$params[$k]='%'.trim((string)$q['search']).'%';}if(in_array($resource,['students','drivers'],true)){$parts[]="CONCAT(first_name,' ',last_name) LIKE :full_name";$params['full_name']='%'.trim((string)$q['search']).'%';}$where.=' AND ('.implode(' OR ',$parts).')';}
   foreach($resource==='services'?[]:['schoolId'=>'school_id','driverId'=>'driver_id','packId'=>'pack_id','status'=>'status','serviceStatus'=>'service_status','academicYear'=>'academic_year','schoolType'=>'school_type','active'=>'is_active','mobile'=>'mobile'] as $key=>$column){
    if(isset($q[$key]) && $q[$key]!=='' && in_array($column,$c['fields'],true)){$where.=" AND $column=:filter_$column";$params['filter_'.$column]=(string)$q[$key];}
@@ -60,7 +66,7 @@ final class DomainService {
    $params+=$workParams;
   }
   if($resource==='students' && ($q['unassigned']??'')==='1')$where.=' AND NOT EXISTS (SELECT 1 FROM service_students ss JOIN services sv ON sv.id=ss.service_id WHERE ss.student_id=students.id AND sv.agency_id=students.agency_id AND sv.is_active=1)';
-  if($resource==='students'&&!empty($q['eligibleServiceId'])){self::get($uid,$aid,'services',(int)$q['eligibleServiceId']);$where.=' AND EXISTS(SELECT 1 FROM services sv LEFT JOIN service_schools ss ON ss.service_id=sv.id WHERE sv.id=:eligible_service AND sv.agency_id=students.agency_id AND (sv.school_id=students.school_id OR ss.school_id=students.school_id))';$params['eligible_service']=(int)$q['eligibleServiceId'];}
+  if($resource==='students'&&!empty($q['eligibleServiceId'])){self::get($uid,$aid,'services',(int)$q['eligibleServiceId']);$where.=" AND students.service_status<>'cancelled' AND EXISTS(SELECT 1 FROM services sv LEFT JOIN service_schools ss ON ss.service_id=sv.id WHERE sv.id=:eligible_service AND sv.agency_id=students.agency_id AND (sv.school_id=students.school_id OR ss.school_id=students.school_id))";$params['eligible_service']=(int)$q['eligibleServiceId'];}
   $limit=min(max((int)($q['limit']??50),1),200);$page=max((int)($q['page']??1),1);$off=($page-1)*$limit;
   $pdo=Connection::get();$count=$pdo->prepare("SELECT COUNT(*) FROM {$c['table']} WHERE $where");$count->execute($params);
   $select='*';
