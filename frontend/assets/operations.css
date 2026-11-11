@@ -70,12 +70,14 @@ body.has-modal{overflow:hidden}.modal-backdrop{padding:24px;overflow:auto;align-
 
 .company-map-pin{display:grid;place-items:center;background:var(--brand-green,#005b35);color:white;border:3px solid white;border-radius:16px 16px 16px 3px;box-shadow:0 3px 10px #153b3040}.company-map-pin svg{width:26px;height:26px}.nav-group>summary svg,.sidebar .nav svg{stroke-width:1.8}.nav-group>summary:focus-visible{outline:2px solid #f6ca44;outline-offset:3px}.dashboard-stat svg{stroke-width:1.8}
 
-/* Navigation palette and filled silhouettes follow the Samar reference. */
-.sidebar{--menu-navy:#283256;--menu-accent:#e45231;background:var(--menu-navy);border-color:var(--menu-navy)}
-.sidebar .nav-popup{background:var(--menu-navy);color:white;border-color:var(--menu-navy);border-radius:20px;padding:10px}
+/* Share the ServiceYar brand palette across the menu and its popups. */
+.sidebar{background:var(--brand-green);border-color:var(--brand-green)}
+.sidebar .nav-popup{background:var(--brand-green);color:white;border-color:var(--brand-green);border-radius:20px;padding:10px}
 .sidebar .nav-popup a{color:white;min-height:44px;display:flex;align-items:center;gap:10px}
 .sidebar .nav-popup a svg{width:22px;height:22px;flex:none}
-.sidebar .nav-popup a:hover,.sidebar .nav-popup a:focus-visible,.sidebar .nav-popup a.active,.sidebar .nav.active,.sidebar .nav-group.current-group>summary{background:white;color:var(--menu-accent)}
+.sidebar .nav-popup a:hover,.sidebar .nav-popup a:focus-visible,.sidebar .nav-group>summary:hover,.sidebar .nav-group[open]>summary{background:var(--brand-soft);color:var(--brand-green)}
+.sidebar .nav-popup a[aria-current=page],.sidebar .nav-popup a.active,.sidebar .nav.active,.sidebar .nav-group.current-group>summary{background:var(--brand-gold);color:#003b25}
 .sidebar .nav-group>summary,.sidebar .nav{min-width:44px;min-height:44px}
+#navigationToggle{color:var(--brand-green)}
 
 .service-picker-list{display:grid;gap:8px;max-height:280px;overflow:auto;padding:8px}.service-picker-list label{display:flex;align-items:center;gap:10px;min-height:44px}.service-picker-list input[type=checkbox]{width:auto;flex:none}#newServiceSetup>.toolbar{justify-content:flex-start;flex-wrap:wrap;gap:10px}

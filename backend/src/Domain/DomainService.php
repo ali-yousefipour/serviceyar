@@ -175,6 +175,21 @@ final class DomainService {
    if(isset($data['capacity'])&&(int)$data['capacity']<$count)throw new AuthException(409,'ظرفیت از دانش‌آموزان تخصیص‌یافته کمتر است.','CAPACITY_EXCEEDED');
    if($count&&isset($data['school_id'])&&(int)$data['school_id']!==(int)$existing['school_id'])throw new AuthException(409,'ابتدا تخصیص دانش‌آموزان سرویس را حذف کنید.','SCHOOL_MISMATCH');
    if(isset($data['is_active'])&&(int)$data['is_active']===1&&(int)$existing['is_active']===0){
+    if(str_starts_with((string)$existing['code'],'mehr1405-d')){
+     $q=$pdo->prepare("SELECT v.capacity FROM drivers d JOIN vehicles v ON v.id=d.vehicle_id AND v.agency_id=d.agency_id AND v.is_active=1
+      WHERE d.id=? AND d.agency_id=? AND d.is_active=1 AND d.status='active' FOR UPDATE");
+     $q->execute([(int)$merged['driver_id'],$aid]);$vehicleCapacity=$q->fetchColumn();
+     if($vehicleCapacity===false)throw new AuthException(422,'برای فعال‌سازی پیش‌نویس مهر، راننده تأییدشده و خودروی فعال لازم است.','DRIVER_NOT_ELIGIBLE');
+     if((int)$merged['capacity']>(int)$vehicleCapacity||$count>(int)$merged['capacity'])
+      throw new AuthException(409,'ظرفیت سرویس یا تعداد اعضا با ظرفیت خودرو سازگار نیست.','CAPACITY_EXCEEDED');
+     $q=$pdo->prepare('SELECT s.agency_id,s.school_id,s.is_active,s.service_status FROM service_students ss JOIN students s ON s.id=ss.student_id WHERE ss.service_id=? ORDER BY s.id FOR UPDATE');
+     $q->execute([$id]);
+     foreach($q->fetchAll() as $student){
+      if((int)$student['agency_id']!==$aid||(int)$student['school_id']!==(int)$merged['school_id']||!(int)$student['is_active']||$student['service_status']==='cancelled')
+       throw new AuthException(409,'مدرسه یا وضعیت یکی از دانش‌آموزان پیش‌نویس تغییر کرده است.','ASSIGNMENT_CONFLICT');
+     }
+     $data['status']='active';
+    }
     $q=$pdo->prepare('SELECT COUNT(*) FROM service_students old JOIN service_students other ON other.student_id=old.student_id AND other.service_id<>old.service_id JOIN services sv ON sv.id=other.service_id WHERE old.service_id=:id AND sv.agency_id=:a AND sv.is_active=1');$q->execute(['id'=>$id,'a'=>$aid]);if((int)$q->fetchColumn()>0)throw new AuthException(409,'برخی دانش‌آموزان سرویس فعال دیگری دارند.','ALREADY_ASSIGNED');
    }
   }

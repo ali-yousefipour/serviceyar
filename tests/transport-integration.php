@@ -285,6 +285,15 @@ try{
  check((int)D::get($uid,$a,'students',(int)$tariffStudent['id'])['monthly_fee']===18852524,'Service creation saves a missing student fee from the stored tariff inputs');
  rejected(fn()=>D::save($uid,$a,'services',['title'=>'rollback-service-'.$tag,'capacity'=>2,'driverId'=>$ad['id'],'schoolIds'=>[$school['id']],'studentIds'=>[$secondStudent['id']]]),'SCHOOL_MISMATCH');
  $q=$p->prepare('SELECT COUNT(*) FROM services WHERE agency_id=? AND title=?');$q->execute([$a,'rollback-service-'.$tag]);check((int)$q->fetchColumn()===0,'Failed member assignment rolls back service creation');
+ $draftStudent=D::save($uid,$a,'students',['schoolId'=>$school['id'],'firstName'=>'آزمون','lastName'=>'مهر','mobile'=>'09120000982']);
+ $draft=D::save($uid,$a,'services',['title'=>'پیش‌نویس مهر','code'=>'mehr1405-d'.$tag,'schoolId'=>$school['id'],'driverId'=>$ad['id'],'capacity'=>4,'status'=>'draft','isActive'=>0]);
+ insertFixture('service_students',['service_id'=>$draft['id'],'student_id'=>$draftStudent['id']]);
+ D::save($uid,$a,'drivers',['status'=>'pending'],(int)$ad['id']);
+ rejected(fn()=>D::save($uid,$a,'services',['isActive'=>1],(int)$draft['id']),'DRIVER_NOT_ELIGIBLE');
+ D::save($uid,$a,'drivers',['status'=>'active'],(int)$ad['id']);
+ rejected(fn()=>D::save($uid,$a,'services',['isActive'=>1,'capacity'=>5],(int)$draft['id']),'CAPACITY_EXCEEDED');
+ $activated=D::save($uid,$a,'services',['isActive'=>1],(int)$draft['id']);
+ check($activated['status']==='active'&&D::get($uid,$a,'students',(int)$draftStudent['id'])['service_status']==='assigned','Reviewed Mehr draft becomes active and assigns its members');
  echo "Transport integration: $checks checks passed. All fixtures rolled back.\n";
 }finally{if($p->inTransaction())$p->rollBack();}
 
