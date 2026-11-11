@@ -474,10 +474,13 @@ function attachStudentTariff(form){
 async function newServicePage(token){
  if(!can('services','manage')||!can('students')||!can('schools')||!can('drivers'))throw new Error('برای ثبت سرویس به مجوز مدرسه، راننده و دانش‌آموز نیاز است.');
  $('pageTitle').textContent='ثبت سرویس';
- const [schools,drivers,students]=await Promise.all(['schools','drivers','students'].map(lookup));if(token!==pageToken)return;
+ const [schools,drivers,students,vehicles]=await Promise.all(['schools','drivers','students','vehicles'].map(lookup));if(token!==pageToken)return;
  $('content').innerHTML=`<form id="newServiceSetup"><div class="toolbar"><button type="button" id="showServiceStudents" disabled>افزودن دانش‌آموز</button><button type="button" id="quoteServiceStudents" disabled>دریافت قیمت و مسیر</button></div><div class="dashboard-grid"><section class="panel"><h2>مدرسه سرویس</h2><p id="serviceSchoolSummary">برای شروع، مدرسه یا مدارس سرویس را انتخاب کنید.</p><button type="button" id="pickServiceSchools">انتخاب مدرسه</button></section><section class="panel"><h2>راننده سرویس</h2><p id="serviceDriverSummary">راننده را انتخاب کنید تا قیمت‌ها محاسبه شوند.</p><button type="button" id="pickServiceDriver">انتخاب راننده</button></section></div><section class="panel" id="serviceStudentSelection" hidden><h2>دانش‌آموزان سرویس</h2><p id="selectedServiceStudents"></p></section><section class="panel" id="serviceSetupDetails" hidden><h2>مشخصات و هزینه سرویس</h2><div class="form-grid"><label>عنوان سرویس<input name="title" maxlength="200" required></label><label>ظرفیت<input name="capacity" type="number" min="1" max="200" value="4" required></label><label>شیفت<input name="shift" maxlength="50"></label><label>مبلغ توافقی راننده · ریال<input name="agreedAmount" type="number" min="0" step="1" value="0"></label></div><div id="serviceQuoteResult" role="status" aria-live="polite"></div><button class="primary" id="createService" disabled>ثبت سرویس</button></section></form>`;
  const form=$('newServiceSetup'),chosen=new Set(),show=$('showServiceStudents'),quote=$('quoteServiceStudents'),result=$('serviceQuoteResult'),save=$('createService');
  let selectedSchools=[],driverId=null,revision=0,saving=false;
+ const vehicleFor=driver=>vehicles.find(v=>Number(v.id)===Number(driver.vehicle_id));
+ const driverCaption=driver=>[person(driver),vehicleFor(driver)?.model].filter(Boolean).join(' · ');
+ const hasMehrDriver=student=>Number(student.mehr_driver_id)===Number(driverId);
  const schoolIds=()=>selectedSchools;
  const sync=()=>{
   for(const s of students)if(!selectedSchools.includes(Number(s.school_id)))chosen.delete(s.id);
@@ -500,15 +503,25 @@ async function newServicePage(token){
  $('pickServiceDriver').onclick=()=>{
   dialog('انتخاب راننده','<p>رانندگان تأییدشده و فعال نمایش داده می‌شوند.</p><label>جست‌وجوی راننده<input type="search" id="driverPickerSearch"></label><div class="service-picker-list" id="driverPickerRows"></div>');
   const search=$('driverPickerSearch'),rows=$('driverPickerRows');
-  const render=()=>{rows.innerHTML=drivers.filter(d=>d.status==='active'&&[person(d),d.mobile].some(v=>matches(v,search.value))).map(d=>`<button type="button" data-driver="${d.id}">${esc(person(d))}</button>`).join('')||'<p class="empty">راننده واجد شرایط پیدا نشد.</p>';};
-  search.oninput=render;rows.onclick=e=>{const button=e.target.closest('[data-driver]');if(!button)return;const driver=drivers.find(d=>String(d.id)===button.dataset.driver);driverId=driver.id;$('serviceDriverSummary').textContent=person(driver);$('pickServiceDriver').textContent='تغییر راننده';closeDialog();sync();};render();search.focus();
+  const render=()=>{rows.innerHTML=drivers.filter(d=>d.status==='active'&&[driverCaption(d),d.mobile].some(v=>matches(v,search.value))).map(d=>`<button type="button" data-driver="${d.id}">${esc(driverCaption(d))}</button>`).join('')||'<p class="empty">راننده واجد شرایط پیدا نشد.</p>';};
+  search.oninput=render;
+  rows.onclick=e=>{
+   const button=e.target.closest('[data-driver]');if(!button)return;
+   const driver=drivers.find(d=>String(d.id)===button.dataset.driver),vehicle=vehicleFor(driver);
+   driverId=driver.id;
+   form.elements.capacity.max=vehicle?Math.min(200,Number(vehicle.capacity)):200;
+   form.elements.capacity.value=vehicle?Math.min(200,Number(vehicle.capacity)):4;
+   $('serviceDriverSummary').textContent=driverCaption(driver)+(vehicle?' · ظرفیت '+number(vehicle.capacity):' · ظرفیت خودرو ثبت نشده');
+   $('pickServiceDriver').textContent='تغییر راننده';closeDialog();sync();
+  };render();search.focus();
  };
  show.onclick=()=>{
   const pending=new Set([...chosen].map(Number));
-  dialog('افزودن دانش‌آموز','<div class="form-grid"><label>جست‌وجو نام یا کد<input type="search" id="studentPickerName"></label><label>جست‌وجو آدرس<input type="search" id="studentPickerAddress"></label></div><p id="studentPickerCount" role="status"></p><div class="service-picker-list" id="studentPickerRows"></div><button type="button" class="primary" id="confirmStudents">تأیید</button>');
+  dialog('افزودن دانش‌آموز','<div class="form-grid"><label>جست‌وجو نام یا کد<input type="search" id="studentPickerName"></label><label>جست‌وجو آدرس<input type="search" id="studentPickerAddress"></label></div><label><input type="checkbox" id="studentPickerMehr"> فقط سابقه مهر این راننده</label><p id="studentPickerCount" role="status"></p><div class="service-picker-list" id="studentPickerRows"></div><button type="button" class="primary" id="confirmStudents">تأیید</button>');
   const name=$('studentPickerName'),address=$('studentPickerAddress'),rows=$('studentPickerRows');
-  const render=()=>{const filtered=students.filter(s=>selectedSchools.includes(Number(s.school_id))&&s.service_status!=='assigned'&&s.service_status!=='cancelled'&&[person(s),s.national_code].some(v=>matches(v,name.value))&&matches(s.address,address.value));rows.innerHTML=checklist(filtered,pending,s=>person(s)+' · '+(s.address||'نشانی ثبت نشده'));$('studentPickerCount').textContent='تعداد نتایج: '+number(filtered.length)+' · انتخاب‌شده: '+number(pending.size);};
-  name.oninput=address.oninput=render;rows.onchange=e=>{togglePick(e,pending);$('studentPickerCount').textContent='انتخاب‌شده: '+number(pending.size);};
+  const history=$('studentPickerMehr');
+  const render=()=>{const filtered=students.filter(s=>selectedSchools.includes(Number(s.school_id))&&s.service_status!=='assigned'&&s.service_status!=='cancelled'&&(!history.checked||hasMehrDriver(s))&&[person(s),s.national_code].some(v=>matches(v,name.value))&&matches(s.address,address.value));rows.innerHTML=checklist(filtered,pending,s=>person(s)+' · '+(s.address||'نشانی ثبت نشده')+(hasMehrDriver(s)?' · سابقه مهر':'') );$('studentPickerCount').textContent='تعداد نتایج: '+number(filtered.length)+' · انتخاب‌شده: '+number(pending.size);};
+  name.oninput=address.oninput=history.onchange=render;rows.onchange=e=>{togglePick(e,pending);$('studentPickerCount').textContent='انتخاب‌شده: '+number(pending.size);};
   $('confirmStudents').onclick=()=>{chosen.clear();for(const s of students)if(pending.has(Number(s.id)))chosen.add(s.id);closeDialog();sync();};render();name.focus();
  };
  quote.onclick=async()=>{
@@ -527,11 +540,11 @@ async function newServicePage(token){
      try{route=await write('/api/v1/maps/route',{studentId:s.id});routeText=number(route.distanceMeters/1000)+' کیلومتر';if(route.geometry?.length)routes.push(route.geometry);}catch(e){routeText=e.message;}
     }
     if(!current())return;
-    const distance=s.tariff_distance_km??(route?route.distanceMeters/1000:null);
+    const distance=s.tariff_distance_km;
     const saved=Number(s.monthly_fee);
     const rate=saved>0?{monthlyFee:saved}:distance>0?await write('/api/v1/operations/tariffs/quote',{schoolId:s.school_id,academicYear:s.academic_year||year(),distanceKm:distance,vehicleClass:s.tariff_vehicle_class}):{monthlyFee:null};
     if(rate.monthlyFee===null)missing++;else total+=Number(rate.monthlyFee);
-    lines.push([person(s),distance??'—',routeText,rate.monthlyFee===null?'نرخ ثبت نشده':number(rate.monthlyFee),saved>0?'مبلغ ثبت‌شده':rate.monthlyFee===null?'—':'نرخ‌نامه']);
+    lines.push([person(s),distance??'—',routeText,rate.monthlyFee===null?'نرخ ثبت نشده':number(rate.monthlyFee),saved>0?'مبلغ ثبت‌شده':rate.monthlyFee===null?'—':can('students','manage')?'نرخ‌نامه · ذخیره با ثبت سرویس':'نرخ‌نامه · پیش‌نمایش']);
    }
    if(!current())return;
    result.innerHTML=simpleTable(['دانش‌آموز','کیلومتر تعرفه','مسیر نشان','ماهیانه · ریال','مبنای مبلغ'],lines)+'<p>جمع مبالغ موجود: '+number(total)+' ریال · بدون نرخ: '+number(missing)+'</p>'+(routes.length?'<div class="service-map" id="serviceQuoteMap" aria-label="نقشه مسیرهای نشان"></div>':'');

@@ -60,6 +60,9 @@ final class DomainService {
    (SELECT CONCAT(d.first_name,' ',d.last_name) FROM school_service_import_fees f JOIN drivers d ON d.id=f.driver_id AND d.agency_id=f.agency_id
     WHERE f.agency_id=students.agency_id AND f.student_national_code=students.national_code AND f.period='Mehr'
       AND f.academic_year=COALESCE(NULLIF(REPLACE(students.academic_year,'/','-'),''),'1405-1406') LIMIT 1) mehr_driver_name,
+   (SELECT f.driver_id FROM school_service_import_fees f
+    WHERE f.agency_id=students.agency_id AND f.student_national_code=students.national_code AND f.period='Mehr'
+      AND f.academic_year=COALESCE(NULLIF(REPLACE(students.academic_year,'/','-'),''),'1405-1406') LIMIT 1) mehr_driver_id,
    (SELECT COALESCE(SUM(i.amount),0) FROM invoices i WHERE i.party_type='student' AND i.party_id=students.id AND i.agency_id=students.agency_id AND i.status<>'cancelled') invoice_total,
    (SELECT COALESCE(SUM(p.amount),0) FROM payments p JOIN invoices i ON i.id=p.invoice_id AND i.agency_id=p.agency_id WHERE i.party_type='student' AND i.party_id=students.id AND p.agency_id=students.agency_id) paid_total";
   $s=$pdo->prepare("SELECT $select FROM {$c['table']} WHERE $where ORDER BY id DESC LIMIT $limit OFFSET $off");$s->execute($params);
@@ -79,13 +82,28 @@ final class DomainService {
    Authorization::requireAgencyAccess($uid,$aid);
    $schools=OperationsService::ids($b['schoolIds']);$students=OperationsService::ids($b['studentIds']??[]);
    $driverId=OperationsService::ids([$b['driverId']??null])[0];
-   $driver=Connection::get()->prepare("SELECT id FROM drivers WHERE id=? AND agency_id=? AND is_active=1 AND status='active' FOR UPDATE");
+   $pdo=Connection::get();
+   $driver=$pdo->prepare("SELECT v.capacity FROM drivers d LEFT JOIN vehicles v ON v.id=d.vehicle_id AND v.agency_id=d.agency_id AND v.is_active=1
+    WHERE d.id=? AND d.agency_id=? AND d.is_active=1 AND d.status='active' FOR UPDATE");
    $driver->execute([$driverId,$aid]);
-   if(!$driver->fetchColumn())throw new AuthException(422,'راننده تأییدشده و فعال را انتخاب کنید.','DRIVER_NOT_ELIGIBLE');
+   $vehicleCapacity=$driver->fetchColumn();
+   if($vehicleCapacity===false)throw new AuthException(422,'راننده تأییدشده و فعال را انتخاب کنید.','DRIVER_NOT_ELIGIBLE');
+   if($vehicleCapacity!==null&&(int)($b['capacity']??4)>(int)$vehicleCapacity)
+    throw new AuthException(422,'ظرفیت سرویس از ظرفیت ثبت‌شده خودرو بیشتر است.','CAPACITY_EXCEEDED');
    $b['schoolId']=$schools[0];$b['status']='active';
    $service=self::saveRecord($uid,$aid,$resource,$b,null);
    OperationsService::setServiceSchools($uid,$aid,(int)$service['id'],['schoolIds'=>$schools]);
    sort($students);foreach($students as $student)self::assignStudent($uid,$aid,(int)$service['id'],$student);
+   if(in_array('students.manage',Authorization::permissions($uid),true)){
+    $missing=$pdo->prepare('SELECT school_id,academic_year,tariff_distance_km,tariff_vehicle_class FROM students WHERE id=? AND agency_id=? AND monthly_fee=0');
+    $update=$pdo->prepare('UPDATE students SET monthly_fee=?,tariff_calculated_at=NOW() WHERE id=? AND agency_id=? AND monthly_fee=0');
+    foreach($students as $student){
+     $missing->execute([$student,$aid]);$row=$missing->fetch();
+     if(!$row)continue;
+     $fee=AgencySchoolTariffs::quote($pdo,$aid,(int)$row['school_id'],(string)($row['academic_year']?:AgencySchoolTariffs::YEAR),$row['tariff_distance_km'],$row['tariff_vehicle_class']);
+     if($fee!==null)$update->execute([$fee,$student,$aid]);
+    }
+   }
    return $service;
   });
  }

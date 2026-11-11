@@ -274,12 +274,15 @@ try{
  $p->prepare('UPDATE students SET national_code=? WHERE id=?')->execute([$tag,$tariffStudent['id']]);
  insertFixture('school_service_import_fees',['agency_id'=>$a,'academic_year'=>'1405-1406','period'=>'Mehr','student_national_code'=>$tag,'driver_id'=>$ad['id']]);
  $historical=D::list($uid,$a,'students',['search'=>$tag])['items'][0];
- check($historical['mehr_driver_name']==='تخصیص آزمون'&&$historical['driver_name']===null,'Imported driver history is separate from active assignment');
+ check($historical['mehr_driver_name']==='تخصیص آزمون'&&(int)$historical['mehr_driver_id']===(int)$ad['id']&&$historical['driver_name']===null,'Imported driver history is separate from active assignment');
  $wizard=['title'=>'سرویس چند مدرسه','capacity'=>2,'schoolIds'=>[$school['id'],$secondSchool['id']],'studentIds'=>[$tariffStudent['id'],$secondStudent['id']]];
  rejected(fn()=>D::save($uid,$a,'services',$wizard),'VALIDATION_ERROR');
+ rejected(fn()=>D::save($uid,$a,'services',['capacity'=>5,'driverId'=>$ad['id']]+$wizard),'CAPACITY_EXCEEDED');
+ $p->prepare('UPDATE students SET monthly_fee=0 WHERE id=?')->execute([$tariffStudent['id']]);
  $newService=D::save($uid,$a,'services',$wizard+['driverId'=>$ad['id']]);
  check((int)$newService['driver_id']===(int)$ad['id'],'New service retains the selected driver');
  check(count(D::serviceStudents($uid,$a,(int)$newService['id']))===2,'New service saves selected schools and students together');
+ check((int)D::get($uid,$a,'students',(int)$tariffStudent['id'])['monthly_fee']===18852524,'Service creation saves a missing student fee from the stored tariff inputs');
  rejected(fn()=>D::save($uid,$a,'services',['title'=>'rollback-service-'.$tag,'capacity'=>2,'driverId'=>$ad['id'],'schoolIds'=>[$school['id']],'studentIds'=>[$secondStudent['id']]]),'SCHOOL_MISMATCH');
  $q=$p->prepare('SELECT COUNT(*) FROM services WHERE agency_id=? AND title=?');$q->execute([$a,'rollback-service-'.$tag]);check((int)$q->fetchColumn()===0,'Failed member assignment rolls back service creation');
  echo "Transport integration: $checks checks passed. All fixtures rolled back.\n";
