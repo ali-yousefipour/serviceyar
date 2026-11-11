@@ -143,7 +143,125 @@ final class ExportService
         $group=[];foreach($d['items'] as $r){$name=trim($r['driver_name']);if(!isset($group[$name]))$group[$name]=['name'=>$name,'work'=>0,'management'=>0,'coordination'=>0,'company'=>0,'total'=>0];foreach(['work'=>'driver_fee','management'=>'oversight_fee','coordination'=>'education_fee','company'=>'company_fee','total'=>'statement_total'] as $to=>$from)$group[$name][$to]+=(float)$r[$from];}
         $rows=[];$number=0;foreach($group as $name=>$r){$ibans=array_values(array_unique(array_filter($banks[$name]??[])));if(count($ibans)!==1||!\ServiceYar\Domain\PayrollDocuments::validIban($ibans[0]))throw new \ServiceYar\Auth\AuthException(422,'برای خروجی، نام و شبای یکتای معتبر تمام رانندگان باید تکمیل شود.','BANK_DETAILS_REQUIRED');$rows[]=['n'=>++$number,'name'=>$name,'iban'=>$ibans[0],'work'=>$r['work'],'management'=>$r['management'],'coordination'=>$r['coordination'],'company'=>$r['company'],'total'=>$r['total']];}
         if(!$rows)throw new \ServiceYar\Auth\AuthException(422,'صورت‌وضعیت واردشده برای این دوره موجود نیست.','STATEMENT_EMPTY');
-        self::downloadRows(array_combine(['n','name','iban','work','management','coordination','company','total'],$schema['columns']),$rows,'school-workbook-statement-1405.xlsx');
+        self::downloadSchoolStatement($rows,$d['items'],$schema,$period,$aid);
+    }
+
+    /**
+     * The 1405 reference has two separate reports, not a generic flat "گزارش".
+     * Keep numeric cells numeric and use formula-driven totals; no personally
+     * identifiable data from the source workbook is embedded in the template.
+     */
+    private static function downloadSchoolStatement(array $drivers,array $students,array $schema,string $period,int $aid): never
+    {
+        if(!class_exists(\ZipArchive::class))self::jsonError(500,'EXPORT_DEPENDENCY_MISSING','امکان ساخت فایل اکسل فعال نیست.');
+        $pdo=Connection::get();
+        $agency=$pdo->prepare('SELECT name FROM agencies WHERE id=?');$agency->execute([$aid]);
+        $agencyName=(string)$agency->fetchColumn();
+        $titles=[
+          'drivers'=>'صورت وضعیت '.$period.' شرکت '.$agencyName.' سرویس مدارس ۱۴۰۵-۱۴۰۶ (کلیه ارقام به ریال)',
+          'students'=>'بهای خدمات به اولیا: '.$period.' شرکت '.$agencyName.' سرویس مدارس ۱۴۰۵-۱۴۰۶'
+        ];
+        $studentHeaders=[
+          'ردیف','نام و نام خانوادگی دانش‌آموز','کد ملی','نام مدرسه','ناحیه آموزش و پرورش',
+          'نام و نام خانوادگی راننده','نوع خودرو سرویس مدرسه','میانگین فاصله مبدأ تا مقصد (کیلومتر)',
+          'حق‌الزحمه مبنای راننده بر اساس نرخنامه (ریال)','مدت ارائه خدمات در این ماه (به روز)',
+          'حق‌الزحمه راننده برای مدت ارائه خدمات در این ماه',
+          'هزینه‌های مدیریت، نظارت و بازرسی (۳٪ بهای خدمات راننده)','سهم شهرداری (۲٫۷۵٪)',
+          'ارزش افزوده سهم شهرداری (۱۰٪)','سهم راهور (۰٫۲۵٪)',
+          'هزینه‌های اطلاع‌رسانی و هماهنگی (۱٪ بهای خدمات راننده)',
+          'بالاسری سهم شرکت (۷٪ بهای خدمات راننده)','گواهی صلاحیت رانندگان',
+          'جمع سهم‌ها','هزینه بیمه (۷٫۸٪)','جمع کل بهای خدمات برای اولیا',
+          'جمع کل صورت وضعیت (بدون گواهی صلاحیت و بیمه)','شماره شبا'
+        ];
+        $driverIban=[];foreach($drivers as $r)$driverIban[$r['name']]=$r['iban'];
+        $schoolRegions=[];
+        $q=$pdo->prepare('SELECT name,region FROM schools WHERE agency_id=?');$q->execute([$aid]);
+        foreach($q as $r)$schoolRegions[trim((string)$r['name'])]=(string)$r['region'];
+        $studentRows=[];
+        foreach($students as $i=>$r){
+          $name=trim((string)$r['driver_name']);
+          $base=(float)$r['driver_fee'];
+          $days=(float)$r['service_days'];
+          $rate=$days>0?$base*30/$days:0;
+          $studentRows[]=[
+            $i+1,(string)$r['student_name'],(string)$r['student_national_code'],
+            (string)$r['school_name'],$schoolRegions[trim((string)$r['school_name'])]??'',
+            $name,'',(float)$r['distance_km'],$rate,$days,$base,
+            (float)$r['oversight_fee'],(float)$r['municipality_fee'],
+            (float)$r['municipality_vat'],(float)$r['road_police_fee'],
+            (float)$r['education_fee'],(float)$r['company_fee'],
+            (float)$r['certificate_fee'],
+            (float)$r['oversight_fee']+(float)$r['municipality_fee']+(float)$r['municipality_vat']+(float)$r['road_police_fee']+(float)$r['education_fee']+(float)$r['company_fee'],
+            (float)$r['insurance_fee'],(float)$r['parent_total'],(float)$r['statement_total'],
+            $driverIban[$name]??''
+          ];
+        }
+        $driverRows=array_map(static fn($r)=>array_values($r),$drivers);
+        $esc=static fn($v)=>htmlspecialchars((string)$v,ENT_XML1|ENT_QUOTES,'UTF-8');
+        $col=static function(int $n): string {$s='';while($n>0){$n--; $s=chr(65+$n%26).$s;$n=intdiv($n,26);}return $s;};
+        $cell=static function(string $ref,mixed $value,int $style=2,?string $formula=null)use($esc): string{
+          if($formula!==null)return '<c r="'.$ref.'" s="'.$style.'"><f>'.$esc($formula).'</f><v>'.$esc($value).'</v></c>';
+          if(is_int($value)||is_float($value))return '<c r="'.$ref.'" s="'.$style.'"><v>'.$esc($value).'</v></c>';
+          return '<c r="'.$ref.'" s="'.$style.'" t="inlineStr"><is><t xml:space="preserve">'.$esc($value).'</t></is></c>';
+        };
+        $build=static function(string $title,array $headers,array $data,int $headerRow,int $totalFrom,int $numericStart)use($cell,$col,$esc): string{
+          $lastCol=$col(count($headers));$rowCount=count($data);$end=$headerRow+$rowCount;
+          $xml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+          $xml.='<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
+          $xml.='<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:'.$lastCol.($end+1).'"/>';
+          $xml.='<sheetViews><sheetView workbookViewId="0" rightToLeft="1"><pane ySplit="'.$headerRow.'" topLeftCell="A'.($headerRow+1).'" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>';
+          $xml.='<sheetFormatPr defaultRowHeight="22"/><cols>';
+          foreach($headers as $i=>$label){$n=$i+1;$width=$n===1?9:($n===2?34:($n===3?30:($n<=$numericStart?22:24)));$xml.='<col min="'.$n.'" max="'.$n.'" width="'.$width.'" customWidth="1"/>';}
+          $xml.='</cols><sheetData><row r="1" ht="37" customHeight="1">'.$cell('A1',$title,1).'</row>';
+          if($headerRow===3)$xml.='<row r="2" ht="22" customHeight="1">'.$cell('A2','صورت وضعیت رانندگان | ارقام به ریال',4).'</row>';
+          $xml.='<row r="'.$headerRow.'" ht="78" customHeight="1">';
+          foreach($headers as $i=>$label)$xml.=$cell($col($i+1).$headerRow,$label,1);
+          $xml.='</row>';
+          foreach($data as $i=>$record){
+            $r=$headerRow+$i+1;$xml.='<row r="'.$r.'" ht="26" customHeight="1">';
+            foreach($record as $j=>$value)$xml.=$cell($col($j+1).$r,$value,($j+1)>=$numericStart?3:2);
+            $xml.='</row>';
+          }
+          $totalRow=$end+1;$xml.='<row r="'.$totalRow.'" ht="32" customHeight="1">'.$cell('A'.$totalRow,'جمع کل',4);
+          for($j=$numericStart;$j<=count($headers);$j++){
+            if($j===count($headers)&&count($headers)===23)continue;
+            $letter=$col($j);$formula='SUM('.$letter.($headerRow+1).':'.$letter.$end.')';
+            $xml.=$cell($letter.$totalRow,array_sum(array_map(static fn($r)=>(float)($r[$j-1]??0),$data)),5,$formula);
+          }
+          $xml.='</row></sheetData><mergeCells count="1"><mergeCell ref="A1:'.$lastCol.'1"/></mergeCells>';
+          $xml.='<autoFilter ref="A'.$headerRow.':'.$lastCol.$end.'"/>';
+          $xml.='<pageMargins left="0.25" right="0.25" top="0.5" bottom="0.5" header="0.2" footer="0.2"/><pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0" paperSize="9"/>';
+          return $xml.'</worksheet>';
+        };
+        $driverSheet=$build($titles['drivers'],$schema['columns'],$driverRows,3,4,4);
+        $studentSheet=$build($titles['students'],$studentHeaders,$studentRows,2,3,8);
+        $styles='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+          .'<fonts count="3"><font><sz val="11"/><name val="Vazirmatn"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Vazirmatn"/></font><font><b/><sz val="11"/><color rgb="FF123A50"/><name val="Vazirmatn"/></font></fonts>'
+          .'<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF123A50"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE8F3F6"/><bgColor indexed="64"/></patternFill></fill></fills>'
+          .'<borders count="2"><border/><border><left style="thin"><color rgb="FFD0DCE2"/></left><right style="thin"><color rgb="FFD0DCE2"/></right><top style="thin"><color rgb="FFD0DCE2"/></top><bottom style="thin"><color rgb="FFD0DCE2"/></bottom></border></borders>'
+          .'<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+          .'<cellXfs count="6"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="3" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="2" fillId="3" borderId="1" xfId="0"/><xf numFmtId="3" fontId="2" fillId="3" borderId="1" xfId="0" applyNumberFormat="1"/></cellXfs></styleSheet>';
+        $parts=[
+          '[Content_Types].xml'=>'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',
+          '_rels/.rels'=>'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+          'xl/workbook.xml'=>'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="صورت وضعیت نهایی8" sheetId="1" r:id="rId1"/><sheet name="بهای خدمات اولیا5" sheetId="2" r:id="rId2"/></sheets></workbook>',
+          'xl/_rels/workbook.xml.rels'=>'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
+          'xl/styles.xml'=>$styles,'xl/worksheets/sheet1.xml'=>$driverSheet,'xl/worksheets/sheet2.xml'=>$studentSheet
+        ];
+        $tmp=tempnam(sys_get_temp_dir(),'sy-statement-');
+        if($tmp===false)self::jsonError(500,'EXPORT_TEMP_FAILED','ساخت فایل ممکن نیست.');
+        $zip=new \ZipArchive();
+        try{
+          if($zip->open($tmp,\ZipArchive::CREATE|\ZipArchive::OVERWRITE)!==true)throw new \RuntimeException('Cannot create statement workbook');
+          foreach($parts as $name=>$xml)if(!$zip->addFromString($name,$xml))throw new \RuntimeException('Cannot write '.$name);
+          if(!$zip->close())throw new \RuntimeException('Cannot close statement workbook');
+          while(ob_get_level()>0)ob_end_clean();
+          header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+          header('Content-Disposition: attachment; filename="school-statement-1405.xlsx"');
+          header('Cache-Control: no-store');header('X-Content-Type-Options: nosniff');
+          readfile($tmp);
+        }finally{@unlink($tmp);}
+        exit;
     }
 
     public static function serviceFinance(int $uid, int $aid, array $filter): never
