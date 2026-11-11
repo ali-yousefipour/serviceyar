@@ -4,7 +4,7 @@ const resources={
  schools:['مدارس',['name','code','schoolType','managerName','phone','region']],
  students:['دانش‌آموزان',['firstName','lastName','nationalCode','grade','mobile','schoolId']],
  drivers:['رانندگان',['firstName','lastName','nationalCode','mobile','status','rating','vehicleId']],
- vehicles:['خودروها',['plate','model','capacity']],
+ vehicles:['خودروها',['plate','ownerName','model','capacity']],
  services:['سرویس‌ها',['title','code','schoolId','driverId','capacity','status']],
  packs:['بسته‌ها',['title','status','capacity']], contracts:['قراردادها',['title','contractNo','partyType','amount','status']],
  'driver-work':['کارکرد رانندگان',['driverId','workDate','serviceId','amount','status']],
