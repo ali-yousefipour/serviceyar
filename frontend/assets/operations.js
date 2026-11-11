@@ -168,8 +168,8 @@ function serviceFilterForm(schoolFilter){
  return `<form id="gridFilters" class="service-filters" aria-label="جست‌وجو و فیلتر سرویس‌ها">
   <div class="service-filter-search">
    <label>جست‌وجوی سرویس<input name="search" id="search" type="search" maxlength="200" placeholder="عنوان، کد، مدرسه یا نام راننده" value="${esc(initialSearch)}"></label>
-   <button class="primary">اعمال فیلترها</button>
-   <button type="reset">پاک کردن فیلترها</button>
+   <button type="submit" class="primary service-filter-submit">جست‌وجو و اعمال فیلتر</button>
+   <button type="reset" class="service-filter-reset">حذف فیلترها</button>
   </div>
   <div class="service-filter-fields">
    ${schoolFilter?relation('schoolId','مدرسه','همه مدارس'):''}
@@ -201,7 +201,7 @@ async function resourcePage(key,token=pageToken,options={}){
  if(key==='services')state.appliedFilters=new URLSearchParams(new FormData(filterForm));
  initialSearch='';$('addBtn')?.addEventListener('click',()=>{if(key==='services')location.hash='services/new';else formResource(key,null);});
  filterForm.onsubmit=e=>{e.preventDefault();applyFilters();};
- filterForm.onreset=()=>setTimeout(()=>{if(key==='services')filterForm.elements.search.value='';applyFilters();},0);
+ filterForm.onreset=()=>setTimeout(()=>{if(key==='services'){filterForm.elements.search.value='';const driverSearch=$('serviceDriverSearch');if(driverSearch){driverSearch.value='';driverSearch.dispatchEvent(new Event('input'));}}applyFilters();},0);
  $('studentStatuses')?.querySelectorAll('button').forEach(b=>b.onclick=()=>{$('gridFilters').elements.serviceStatus.value=b.dataset.status;$('studentStatuses').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));gridState.page=1;loadResource(key);});
  $('bulkServiceStatus')?.addEventListener('click',bulkServiceStatusDialog);$('bulkDriverStatus')?.addEventListener('click',bulkDriverStatusDialog);$('bulkFees')?.addEventListener('click',bulkFeeDialog);$('bulkMessage')?.addEventListener('click',bulkMessageDialog);$('printGrid').onclick=()=>window.print();
  $('gridExport')?.addEventListener('click',()=>{const query=gridQuery();query.set('resource',key);downloadFile('/api/v1/reports/export?'+query,'گزارش-'+key+'.xlsx');});
@@ -780,7 +780,7 @@ function driverServiceDialog(driver){
 async function newServicePage(token,initialDriverId){
  if(!canConfigureDriverService())throw new Error('برای ثبت سرویس به مجوز مدرسه، راننده و دانش‌آموز نیاز است.');
  $('pageTitle').textContent='ثبت سرویس';
- const [schools,drivers,students,vehicles]=await Promise.all(['schools','drivers','students','vehicles'].map(lookup));if(token!==pageToken)return;
+ const [schools,drivers,students,vehicles]=await Promise.all(['schools','drivers','students','vehicles'].map(key=>lookup(key,key==='students')));if(token!==pageToken)return;
  $('content').innerHTML=`<form id="newServiceSetup"><div class="toolbar"><button type="button" id="showServiceStudents" disabled>افزودن دانش‌آموز</button><button type="button" id="quoteServiceStudents" disabled>دریافت قیمت و مسیر</button></div><div class="dashboard-grid"><section class="panel"><h2>مدرسه سرویس</h2><p id="serviceSchoolSummary">برای شروع، مدرسه یا مدارس سرویس را انتخاب کنید.</p><button type="button" id="pickServiceSchools">انتخاب مدرسه</button></section><section class="panel"><h2>راننده سرویس</h2><p id="serviceDriverSummary">راننده را انتخاب کنید تا قیمت‌ها محاسبه شوند.</p><button type="button" id="pickServiceDriver">انتخاب راننده</button></section></div><section class="panel" id="serviceStudentSelection" hidden><h2>دانش‌آموزان سرویس</h2><p id="selectedServiceStudents"></p></section><section class="panel" id="serviceSetupDetails" hidden><h2>مشخصات و هزینه سرویس</h2><div class="form-grid"><label>عنوان سرویس<input name="title" maxlength="200" required></label><label>ظرفیت<input name="capacity" type="number" min="1" max="200" value="4" required></label><label>شیفت<input name="shift" maxlength="50"></label><label>مبلغ توافقی راننده · ریال<input name="agreedAmount" type="number" min="0" step="1" value="0"></label><label>ماه خدمت برای برآورد سالانه<input id="serviceQuoteMonths" type="number" min="1" max="12" value="9" required></label></div><div id="serviceQuoteResult" role="status" aria-live="polite"></div><button class="primary" id="createService" disabled>ثبت سرویس</button></section></form>`;
  if(initialDriverId){const back=document.createElement('a');back.href='#drivers';back.className='route-link';back.textContent='بازگشت به مدیریت رانندگان';$('newServiceSetup').before(back);}
  const form=$('newServiceSetup'),chosen=new Set(),show=$('showServiceStudents'),quote=$('quoteServiceStudents'),result=$('serviceQuoteResult'),save=$('createService');
@@ -793,11 +793,11 @@ async function newServicePage(token,initialDriverId){
  const canSubmit=()=>Boolean(driverId&&selectedSchools.length&&chosen.size&&!saving&&form.elements.title.value.trim()&&form.elements.capacity.checkValidity()&&chosen.size<=Number(form.elements.capacity.value)&&form.elements.agreedAmount.checkValidity());
  const refreshSave=()=>{save.disabled=!canSubmit();};
  const sync=()=>{
-  for(const s of students)if(!selectedSchools.includes(Number(s.school_id)))chosen.delete(s.id);
+  for(const s of students)if(!selectedSchools.includes(Number(s.school_id)))chosen.delete(Number(s.id));
   if(!form.elements.title.value.trim()&&driverId&&selectedSchools.length){const driver=drivers.find(d=>Number(d.id)===driverId);const school=schools.find(sc=>Number(sc.id)===selectedSchools[0]);form.elements.title.value=['سرویس',school?.name,driver?person(driver):''].filter(Boolean).join(' - ').slice(0,200);}
   show.disabled=!selectedSchools.length||!driverId;quote.disabled=show.disabled||!chosen.size;refreshSave();
   $('serviceStudentSelection').hidden=show.disabled;$('serviceSetupDetails').hidden=!chosen.size;
-  $('selectedServiceStudents').textContent=chosen.size?students.filter(s=>chosen.has(s.id)).map(person).join('، '):'دانش‌آموزان این سرویس را انتخاب کنید.';
+  $('selectedServiceStudents').textContent=chosen.size?students.filter(s=>chosen.has(Number(s.id))).map(person).join('، '):'دانش‌آموزان این سرویس را انتخاب کنید.';
   revision++;result.textContent='برای مشاهده برآورد هزینه و مسیر، «دریافت قیمت و مسیر» را انتخاب کنید. ثبت سرویس بدون دریافت پیش‌نمایش نیز امکان‌پذیر است.';
  };
  const matches=(value,term)=>normalizeServiceSearch(value).includes(normalizeServiceSearch(term));
@@ -838,12 +838,15 @@ async function newServicePage(token,initialDriverId){
  };
  show.onclick=()=>{
   const pending=new Set([...chosen].map(Number));
-  dialog('افزودن دانش‌آموز','<div class="form-grid"><label>جست‌وجو نام یا کد<input type="search" id="studentPickerName"></label><label>جست‌وجو آدرس<input type="search" id="studentPickerAddress"></label></div><label><input type="checkbox" id="studentPickerMehr"> فقط سابقه مهر این راننده</label><p id="studentPickerCount" role="status"></p><div class="service-picker-list" id="studentPickerRows"></div><button type="button" class="primary" id="confirmStudents">تأیید</button>');
+  dialog('افزودن دانش‌آموز','<div class="service-picker-tools"><label>نام یا کد ملی<input type="search" id="studentPickerName" placeholder="جست‌وجوی دانش‌آموز"></label><label>نشانی منزل<input type="search" id="studentPickerAddress" placeholder="جست‌وجوی نشانی"></label><label>وضعیت تخصیص<select id="studentPickerStatus"><option value="available">همه دانش‌آموزان به‌جز لغوشده</option><option value="unassigned">فقط تخصیص‌نیافته</option><option value="all">تمام وضعیت‌ها</option></select></label></div><label class="service-picker-toggle"><input type="checkbox" id="studentPickerMehr"> فقط دارای سابقه مهر این راننده</label><p id="studentPickerCount" role="status"></p><div class="service-picker-list" id="studentPickerRows"></div><div class="service-picker-actions"><button type="button" id="studentPickerSelectAll">انتخاب نتایج</button><button type="button" id="studentPickerClear">لغو انتخاب‌ها</button><button type="button" class="primary" id="confirmStudents">تأیید انتخاب</button></div>');
   const name=$('studentPickerName'),address=$('studentPickerAddress'),rows=$('studentPickerRows');
-  const history=$('studentPickerMehr');
-  const render=()=>{const filtered=students.filter(s=>selectedSchools.includes(Number(s.school_id))&&s.service_status!=='assigned'&&s.service_status!=='cancelled'&&(!history.checked||hasMehrDriver(s))&&[person(s),s.national_code].some(v=>matches(v,name.value))&&matches(s.address,address.value));rows.innerHTML=checklist(filtered,pending,s=>person(s)+' · '+(s.address||'نشانی ثبت نشده')+(hasMehrDriver(s)?' · سابقه مهر':'') );$('studentPickerCount').textContent='تعداد نتایج: '+number(filtered.length)+' · انتخاب‌شده: '+number(pending.size);};
-  name.oninput=address.oninput=history.onchange=render;rows.onchange=e=>{togglePick(e,pending);$('studentPickerCount').textContent='انتخاب‌شده: '+number(pending.size);};
-  $('confirmStudents').onclick=()=>{chosen.clear();for(const s of students)if(pending.has(Number(s.id)))chosen.add(s.id);closeDialog();sync();};render();name.focus();
+  const history=$('studentPickerMehr'),status=$('studentPickerStatus');
+  const matching=()=>students.filter(s=>selectedSchools.includes(Number(s.school_id))&&(status.value==='all'||(status.value==='available'?s.service_status!=='cancelled':s.service_status!=='assigned'&&s.service_status!=='cancelled'))&&(!history.checked||hasMehrDriver(s))&&[person(s),s.national_code].some(v=>matches(v,name.value))&&matches(s.address,address.value));
+  const render=()=>{const filtered=matching();rows.innerHTML=checklist(filtered,pending,s=>person(s)+' · '+(s.address||'نشانی ثبت نشده')+(s.service_status==='assigned'?' · دارای تخصیص قبلی':'')+(hasMehrDriver(s)?' · سابقه مهر':''));$('studentPickerCount').textContent='دانش‌آموزان مدرسه: '+number(students.filter(s=>selectedSchools.includes(Number(s.school_id))).length)+' · نتایج: '+number(filtered.length)+' · انتخاب‌شده: '+number(pending.size);if(!filtered.length)rows.innerHTML='<p class="empty">دانش‌آموزی با این فیلترها یافت نشد. وضعیت تخصیص و جست‌وجو را بررسی کنید.</p>';};
+  name.oninput=address.oninput=history.onchange=status.onchange=render;rows.onchange=e=>{togglePick(e,pending);render();};
+  $('studentPickerSelectAll').onclick=()=>{matching().forEach(s=>pending.add(Number(s.id)));render();};
+  $('studentPickerClear').onclick=()=>{pending.clear();render();};
+  $('confirmStudents').onclick=()=>{chosen.clear();for(const s of students)if(pending.has(Number(s.id)))chosen.add(Number(s.id));closeDialog();sync();};render();name.focus();
  };
  form.elements.title.addEventListener('input',refreshSave);
  form.elements.agreedAmount.addEventListener('input',refreshSave);
@@ -852,7 +855,7 @@ async function newServicePage(token,initialDriverId){
  quote.onclick=async()=>{
   const months=Number(quoteMonths.value);
   if(!Number.isInteger(months)||months<1||months>12){result.textContent='تعداد ماه خدمت باید بین ۱ تا ۱۲ باشد.';return;}
-  const version=++revision,rows=students.filter(s=>chosen.has(s.id));
+  const version=++revision,rows=students.filter(s=>chosen.has(Number(s.id)));
   refreshSave();
   if(!form.elements.capacity.reportValidity()){result.textContent='ظرفیت معتبر وارد کنید.';return;}
   if(rows.length>Number(form.elements.capacity.value)){result.textContent='تعداد دانش‌آموزان از ظرفیت بیشتر است.';return;}
