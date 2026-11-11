@@ -178,6 +178,7 @@ jobs:
             get ${STAGING_DIR}/assets/operations.css -o /tmp/serviceyar-staged-operations.css;
             get ${STAGING_DIR}/assets/Vazirmatn-Regular.woff2 -o /tmp/serviceyar-staged-font.woff2;
             get ${STAGING_DIR}/assets/favicon.svg -o /tmp/serviceyar-staged-favicon.svg;
+            get ${STAGING_DIR}/assets/serviceyar-guide.pdf -o /tmp/serviceyar-staged-guide.pdf;
             get ${STAGING_DIR}/backend/public/index.php -o /tmp/serviceyar-staged-index.php;
             bye
           "
@@ -194,6 +195,7 @@ jobs:
           cmp deploy-payload/assets/operations.css /tmp/serviceyar-staged-operations.css
           cmp deploy-payload/assets/Vazirmatn-Regular.woff2 /tmp/serviceyar-staged-font.woff2
           cmp deploy-payload/assets/favicon.svg /tmp/serviceyar-staged-favicon.svg
+          cmp deploy-payload/assets/serviceyar-guide.pdf /tmp/serviceyar-staged-guide.pdf
           cmp deploy-payload/backend/public/index.php /tmp/serviceyar-staged-index.php
           test "$(wc -c < /tmp/serviceyar-staged-font.woff2)" -gt 40000
 
@@ -240,6 +242,7 @@ jobs:
             mv ${STAGING_DIR}/assets/app.css /public_html/assets/app.css;
             mv ${STAGING_DIR}/assets/Vazirmatn-Regular.woff2 /public_html/assets/Vazirmatn-Regular.woff2;
             mv ${STAGING_DIR}/assets/favicon.svg /public_html/assets/favicon.svg;
+            mv ${STAGING_DIR}/assets/serviceyar-guide.pdf /public_html/assets/serviceyar-guide.pdf;
             mv ${STAGING_DIR}/.htaccess.new /public_html/.htaccess;
             mv ${STAGING_DIR}/index.html /public_html/index.html;
             bye
@@ -274,6 +277,7 @@ jobs:
             get /public_html/assets/operations.css -o /tmp/serviceyar-live-operations.css;
             get /public_html/assets/Vazirmatn-Regular.woff2 -o /tmp/serviceyar-live-font.woff2;
             get /public_html/assets/favicon.svg -o /tmp/serviceyar-live-favicon.svg;
+            get /public_html/assets/serviceyar-guide.pdf -o /tmp/serviceyar-live-guide.pdf;
             bye
           "
           cmp deploy-payload/index.html /tmp/serviceyar-live-index.html
@@ -289,4 +293,5 @@ jobs:
           cmp frontend/assets/operations.css /tmp/serviceyar-live-operations.css
           cmp frontend/assets/Vazirmatn-Regular.woff2 /tmp/serviceyar-live-font.woff2
           cmp frontend/assets/favicon.svg /tmp/serviceyar-live-favicon.svg
+          cmp frontend/assets/serviceyar-guide.pdf /tmp/serviceyar-live-guide.pdf
           test "$(wc -c < /tmp/serviceyar-live-font.woff2)" -gt 40000
