@@ -184,7 +184,7 @@ function bulkDriverStatusDialog(){
   $(id).onclick=async()=>{
    if(!confirm('آیا از '+(active?'فعال‌سازی':'غیرفعال‌سازی')+' '+number(ids.length)+' راننده اطمینان دارید؟'))return;
    const buttons=$('modal').querySelectorAll('.bulk-driver-actions button');buttons.forEach(b=>b.disabled=true);
-   try{const result=await write('/api/v1/drivers/bulk-status',{ids,active});closeDialog();gridState.selected.clear();lookupCache={};await loadResource('drivers');notify(number(result.changed)+' راننده با موفقیت تغییر وضعیت یافت.');}
+   try{const result=await write('/api/v1/drivers/bulk-status',{ids,active});if(result.active!==active||result.selected!==ids.length)throw new Error('پاسخ عملیات گروهی با درخواست مطابقت ندارد.');closeDialog();gridState.selected.clear();lookupCache={};const activeFilter=$('gridFilters')?.querySelector('[name="active"]');if(activeFilter)activeFilter.value=active?'1':'0';gridState.page=1;await loadResource('drivers');notify(number(result.changed)+' راننده تغییر وضعیت یافت؛ فهرست بر اساس وضعیت جدید نمایش داده شد.');}
    catch(e){buttons.forEach(b=>b.disabled=false);notify(e.message,true)}
   };
  }
