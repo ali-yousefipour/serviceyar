@@ -427,3 +427,35 @@ body.has-modal{overflow:hidden}.modal-backdrop{padding:24px;overflow:auto;align-
 body.sy-menu-palette-open{overflow:hidden}
 @media(max-width:600px){.sy-menu-palette{align-items:flex-end;padding:0}.sy-menu-palette-dialog{width:100%;max-height:88dvh;border-radius:20px 20px 0 0;padding:16px;padding-bottom:max(16px,env(safe-area-inset-bottom))}.sy-menu-palette-results{max-height:60dvh}}
 @media print{.sy-menu-palette,.sy-menu-search-trigger{display:none!important}}
+
+/* Shared report/operations page language — responsive, RTL and accessible */
+.sy-operation-page{padding:0!important;overflow:hidden;border:1px solid #e1e8f0;border-radius:20px;background:#fff}
+.sy-operation-header{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:24px 26px;background:linear-gradient(120deg,#eaf3f9,#f9fcfe);border-bottom:1px solid #e0eaf2}
+.sy-operation-kicker{display:block;color:#3c6984;font-size:11px;font-weight:800;letter-spacing:.1px;margin-bottom:7px}
+.sy-operation-header h2{font-size:clamp(20px,2vw,26px);color:#263f5c;margin:0 0 6px;font-weight:850}
+.sy-operation-header p{margin:0;font-size:12px;color:#6c7e8e;line-height:1.9}
+.sy-operation-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.sy-operation-actions button{min-height:44px;padding:10px 17px;border:1px solid #bcd2de;border-radius:12px;background:#fff;color:#2b526c;font:inherit;font-weight:700}
+.sy-operation-actions button:disabled{opacity:.5;cursor:not-allowed}
+.sy-operation-filters{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px;padding:19px 24px;background:#fff;border-bottom:1px solid #edf1f5}
+.sy-operation-filters>label{display:grid;gap:7px;flex:1 1 170px;max-width:290px;font-size:12px;font-weight:700;color:#425b6c}
+.sy-operation-filters :is(input,select){min-width:0;width:100%;min-height:45px;padding:9px 12px;border:1px solid #d1dfe8;border-radius:11px;background:#fff;font:inherit;color:#2b4155}
+.sy-operation-filters :is(input,select,button):focus-visible{outline:3px solid #d5ae53;outline-offset:2px}
+.sy-operation-filters button.primary{min-height:45px;padding:10px 24px;border-radius:11px;flex:0 0 auto}
+.sy-operation-result-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:17px 24px 12px}
+.sy-operation-result-head h3{font-size:15px;color:#2c4760;margin:0}
+.sy-operation-result-head span{font-size:11px;color:#698095}
+.sy-operation-result{padding:0 24px 24px;min-height:120px;min-width:0}
+.sy-operation-result .table-wrap{max-height:min(65vh,650px);overflow:auto;scrollbar-width:thin;border:1px solid #e4ebf0;border-radius:12px}
+.sy-operation-result .table-wrap thead{position:sticky;top:0;z-index:2;background:#eaf1f7}
+.sy-operation-result .table-wrap th{white-space:nowrap;background:#eaf1f7}
+.sy-operation-result .table-wrap td{vertical-align:middle}
+.sy-operation-loading{min-height:170px;display:flex;align-items:center;justify-content:center;gap:13px;color:#667d90;font-size:13px}
+.sy-operation-spinner{width:23px;height:23px;border:3px solid #dce9ee;border-top-color:#238b83;border-radius:50%;animation:sy-operation-spin .9s linear infinite}
+@keyframes sy-operation-spin{to{transform:rotate(360deg)}}
+.sy-operation-error{padding:25px;background:#fff8f7;border:1px solid #f0d5d2;border-radius:13px;color:#813c3a}
+.sy-operation-error strong{font-size:15px}.sy-operation-error p{font-size:12px;line-height:1.8}
+.sy-operation-error button{min-height:43px;padding:9px 18px;border-radius:10px;background:#fff;border:1px solid #cfa7a0;color:#873f37}
+@media(max-width:720px){.sy-operation-header{flex-direction:column;align-items:stretch;padding:18px}.sy-operation-actions button{width:100%}.sy-operation-filters{padding:15px;gap:11px}.sy-operation-filters>label{max-width:none;flex:1 1 100%}.sy-operation-filters button.primary{width:100%}.sy-operation-result-head{padding:15px;align-items:flex-start;flex-direction:column}.sy-operation-result{padding:0 12px 16px}.sy-operation-result .table-wrap{max-height:58vh}}
+@media(prefers-reduced-motion:reduce){.sy-operation-spinner{animation:none}}
+@media print{.sy-operation-header{background:none;padding:12px}.sy-operation-actions,.sy-operation-filters{display:none!important}.sy-operation-result .table-wrap{max-height:none;overflow:visible}.sy-operation-result{padding:0}.sy-operation-page{border:0}}
