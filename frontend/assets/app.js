@@ -70,8 +70,57 @@ async function dashboard(){
   $('content').innerHTML='<section class="welcome"><h2>نمای کلی شرکت '+esc(currentAgency?.name||'')+'</h2><p>آمار عملیاتی در محدوده دسترسی فعلی.</p></section><div class="stats">'+[['schools','مدارس'],['students','دانش‌آموزان'],['drivers','رانندگان'],['services','سرویس‌ها']].map(([k,t])=>'<article><span>'+t+'</span><strong>'+Number(d.counts?.[k]??0).toLocaleString('fa-IR')+'</strong><small>تعداد فعال</small></article>').join('')+'</div><section class="panel"><h2>خلاصه عملیاتی</h2><div class="rows"><div><span>شرکت فعال</span><b>'+esc(currentAgency?.name||'—')+'</b></div><div><span>وضعیت نشست</span><b class="ok">معتبر</b></div></div></section>';
  }catch(e){$('content').innerHTML='<div class="error">'+esc(e.message)+'</div>'}
 }
-async function resourcePage(key){if(!currentAgency){$('content').innerHTML='<div class="error">ابتدا از بخش «مدیریت کل» یک شرکت ایجاد کنید یا شرکت فعالی را انتخاب کنید.</div>';return}const [title,fields]=resources[key];$('content').innerHTML=`<section class="toolbar"><div><h2>${title}</h2><p>فهرست، جست‌وجو و مدیریت داده‌ها با Scope سمت سرور.</p></div><button class="primary" id="addBtn">ثبت جدید</button></section><section class="panel"><div class="filters"><input id="search" placeholder="جست‌وجو..." autocomplete="off"><button id="searchBtn">جست‌وجو</button></div><div id="table"><div class="loading">در حال دریافت...</div></div></section><div id="modal"></div>`;document.getElementById('searchBtn').onclick=()=>loadResource(key);document.getElementById('search').onkeydown=e=>{if(e.key==='Enter')loadResource(key)};document.getElementById('addBtn').onclick=()=>formResource(key,null);await loadResource(key)}
-async function loadResource(key){try{const d=await api('/api/v1/'+key+'?agencyId='+currentAgency.id+'&search='+encodeURIComponent($('search')?.value||''));const [title,fields]=resources[key];$('table').innerHTML=d.items.length?`<div class="table-wrap"><table><thead><tr><th>#</th>${fields.map(f=>`<th>${esc(f)}</th>`).join('')}<th>عملیات</th></tr></thead><tbody>${d.items.map(row=>`<tr><td>${row.id}</td>${fields.map(f=>`<td>${esc(val(row,f))}</td>`).join('')}<td><button class="link" data-edit="${row.id}">ویرایش</button><button class="link danger" data-del="${row.id}">غیرفعال</button></td></tr>`).join('')}</tbody></table></div><div class="pager">صفحه ${d.pagination.page} از ${d.pagination.pages} — ${d.pagination.total} رکورد</div>`:'<div class="empty">رکوردی یافت نشد.</div>';document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>formResource(key,Number(b.dataset.edit)));document.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{if(!confirm('این رکورد غیرفعال شود؟'))return;await api('/api/v1/'+key+'/'+b.dataset.del+'?agencyId='+currentAgency.id,{method:'DELETE',headers:{'X-CSRF-Token':session.csrfToken}});loadResource(key)})}catch(e){$('table').innerHTML='<div class="error">'+esc(e.message)+'</div>'}}
+const driverSelections=new Set();
+async function resourcePage(key){
+ if(!currentAgency){$('content').innerHTML='<div class="error">ابتدا شرکت فعال را انتخاب کنید.</div>';return}
+ const [title]=resources[key];
+ if(key==='drivers')driverSelections.clear();
+ $('content').innerHTML=`<section class="toolbar"><div><h2>${title}</h2><p>فهرست، جست‌وجو و مدیریت اطلاعات شرکت.</p></div><div class="filters"><button class="primary" id="addBtn">ثبت جدید</button>${key==='drivers'?'<button id="bulkDriversBtn" type="button">عملیات گروهی</button>':''}</div></section><section class="panel"><div class="filters"><input id="search" placeholder="جست‌وجو..." autocomplete="off"><button id="searchBtn">جست‌وجو</button></div>${key==='drivers'?'<div id="driverSelectionCount" aria-live="polite"></div>':''}<div id="table"><div class="loading">در حال دریافت...</div></div></section><div id="modal"></div>`;
+ $('searchBtn').onkeydown=e=>{if(e.key==='Enter')loadResource(key)};
+ $('searchBtn').onclick=()=>loadResource(key);
+ $('addBtn').onclick=()=>formResource(key,null);
+ if(key==='drivers')$('bulkDriversBtn').onclick=bulkDriverDialog;
+ await loadResource(key);
+}
+function driverSelectionLabel(){
+ const el=$('driverSelectionCount');
+ if(el)el.textContent=driverSelections.size.toLocaleString('fa-IR')+' راننده انتخاب شده (انتخاب‌ها هنگام جست‌وجو و تغییر صفحه حفظ می‌شوند)';
+}
+function bulkDriverDialog(){
+ if(!driverSelections.size){alert('ابتدا رانندگان موردنظر را انتخاب کنید.');return}
+ $('modal').innerHTML=`<div class="modal-backdrop"><div class="modal-card" role="dialog" aria-modal="true" aria-label="عملیات گروهی رانندگان"><h2>عملیات گروهی رانندگان</h2><p>${driverSelections.size.toLocaleString('fa-IR')} راننده انتخاب شده است.</p><div class="filters"><button type="button" id="bulkEnable" class="primary">فعال‌سازی گروهی</button><button type="button" id="bulkDisable" class="danger">غیرفعال‌سازی گروهی</button><button type="button" id="bulkClose">انصراف</button></div></div></div>`;
+ $('bulkClose').onclick=()=>$('modal').innerHTML='';
+ $('bulkEnable').onclick=()=>applyDriverBulk(true);
+ $('bulkDisable').onclick=()=>applyDriverBulk(false);
+}
+async function applyDriverBulk(active){
+ const ids=[...driverSelections];
+ if(!ids.length)return;
+ if(!confirm(`آیا از ${active?'فعال‌سازی':'غیرفعال‌سازی'} ${ids.length.toLocaleString('fa-IR')} راننده اطمینان دارید؟`))return;
+ const enable=$('bulkEnable'),disable=$('bulkDisable');enable.disabled=true;disable.disabled=true;
+ try{
+  const result=await api('/api/v1/drivers/bulk-status?agencyId='+currentAgency.id,{method:'POST',headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify({ids,active})});
+  driverSelections.clear();$('modal').innerHTML='';
+  await loadResource('drivers');
+  alert(`عملیات انجام شد. ${Number(result.changed).toLocaleString('fa-IR')} راننده تغییر وضعیت یافت.`);
+ }catch(e){alert(e.message);enable.disabled=false;disable.disabled=false}
+}
+async function loadResource(key){
+ try{
+  const d=await api('/api/v1/'+key+'?agencyId='+currentAgency.id+'&search='+encodeURIComponent($('search')?.value||''));
+  const [,fields]=resources[key],drivers=key==='drivers';
+  $('table').innerHTML=d.items.length?`<div class="table-wrap"><table><thead><tr>${drivers?'<th><input type="checkbox" id="driverSelectAll" aria-label="انتخاب همه رانندگان این صفحه"></th>':''}<th>#</th>${fields.map(f=>`<th>${esc(f)}</th>`).join('')}${drivers?'<th>وضعیت</th>':''}<th>عملیات</th></tr></thead><tbody>${d.items.map(row=>`<tr>${drivers?`<td><input type="checkbox" class="driver-select" data-id="${Number(row.id)}" aria-label="انتخاب راننده ${esc(val(row,'firstName'))} ${esc(val(row,'lastName'))}" ${driverSelections.has(Number(row.id))?'checked':''}></td>`:''}<td>${row.id}</td>${fields.map(f=>`<td>${esc(val(row,f))}</td>`).join('')}${drivers?`<td>${Number(val(row,'isActive'))===1?'فعال':'غیرفعال'}</td>`:''}<td><button class="link" data-edit="${row.id}">ویرایش</button><button class="link danger" data-del="${row.id}">غیرفعال</button></td></tr>`).join('')}</tbody></table></div><div class="pager">صفحه ${d.pagination.page} از ${d.pagination.pages} — ${d.pagination.total} رکورد</div>`:'<div class="empty">رکوردی یافت نشد.</div>';
+  document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>formResource(key,Number(b.dataset.edit)));
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{if(!confirm('این رکورد غیرفعال شود؟'))return;try{await api('/api/v1/'+key+'/'+b.dataset.del+'?agencyId='+currentAgency.id,{method:'DELETE',headers:{'X-CSRF-Token':session.csrfToken}});driverSelections.delete(Number(b.dataset.del));await loadResource(key)}catch(e){alert(e.message)}});
+  if(drivers){
+   const boxes=[...document.querySelectorAll('.driver-select')],all=$('driverSelectAll');
+   boxes.forEach(b=>b.onchange=()=>{const id=Number(b.dataset.id);b.checked?driverSelections.add(id):driverSelections.delete(id);all.checked=boxes.every(x=>x.checked);driverSelectionLabel()});
+   all.checked=boxes.every(b=>b.checked);
+   all.onchange=()=>{boxes.forEach(b=>{b.checked=all.checked;const id=Number(b.dataset.id);all.checked?driverSelections.add(id):driverSelections.delete(id)});driverSelectionLabel()};
+   driverSelectionLabel();
+  }
+ }catch(e){$('table').innerHTML='<div class="error">'+esc(e.message)+'</div>'}
+}
 async function formResource(key,id){const [title,fields]=resources[key];let row={};if(id){const d=await api('/api/v1/'+key+'?agencyId='+currentAgency.id);row=d.items.find(x=>Number(x.id)===id)||{}}$('modal').innerHTML=`<div class="modal-backdrop"><form class="modal" id="editForm"><div class="modal-head"><h3>${id?'ویرایش':'ثبت'} ${title}</h3><button type="button" id="closeModal">×</button></div><div class="form-grid">${fields.map(f=>`<label>${f}<input name="${f}" value="${esc(val(row,f))}"></label>`).join('')}</div><button class="primary">ذخیره</button><div id="formError" class="error" hidden></div></form></div>`;$('closeModal').onclick=()=>$('modal').innerHTML='';$('editForm').onsubmit=async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(e.target).entries());try{await api('/api/v1/'+key+(id?'/'+id:''),{method:id?'PUT':'POST',headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify(b)});$('modal').innerHTML='';loadResource(key)}catch(x){$('formError').textContent=x.message;$('formError').hidden=false}}}
 
 async function companiesPage(){
