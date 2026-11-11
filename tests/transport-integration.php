@@ -336,6 +336,20 @@ try{
  rejected(fn()=>D::save($uid,$a,'services',['isActive'=>1,'capacity'=>5],(int)$draft['id']),'CAPACITY_EXCEEDED');
  $activated=D::save($uid,$a,'services',['isActive'=>1],(int)$draft['id']);
  check($activated['status']==='active'&&D::get($uid,$a,'students',(int)$draftStudent['id'])['service_status']==='assigned','Reviewed Mehr draft becomes active and assigns its members');
+ // Vehicle page regression: owner is persisted independently from the linked driver.
+ $vehicleRecord=D::save($uid,$a,'vehicles',['plate'=>'12ب34567','model'=>'خودروی آزمایشی','capacity'=>4,'ownerName'=>'مالک خودروی تست']);
+ $vehicleDriver=D::save($uid,$a,'drivers',['firstName'=>'یاسین','lastName'=>'خودرو','status'=>'active','vehicleId'=>$vehicleRecord['id']]);
+ check($vehicleRecord['owner_name']==='مالک خودروی تست','Vehicle owner name persists independently from the driver');
+ $ownerMatches=D::list($uid,$a,'vehicles',['search'=>'مالک خودروی تست']);
+ check(in_array((int)$vehicleRecord['id'],array_map('intval',array_column($ownerMatches['items'],'id')),true),'Vehicles are searchable by owner name');
+ $driverMatches=D::list($uid,$a,'vehicles',['driverSearch'=>'یاسین خودرو']);
+ check(count($driverMatches['items'])===1 && (int)$driverMatches['items'][0]['id']===(int)$vehicleRecord['id'] && str_contains($driverMatches['items'][0]['driver_name'],'یاسین خودرو'),'Vehicle search resolves the assigned driver within the company');
+ $plateMatches=D::list($uid,$a,'vehicles',['plateFirst'=>'۱۲','plateLetter'=>'ب','plateMiddle'=>'۳۴۵','plateRegion'=>'۶۷']);
+ check(count($plateMatches['items'])===1 && (int)$plateMatches['items'][0]['id']===(int)$vehicleRecord['id'],'Iranian plate segmented filters normalize Persian numerals');
+ check(D::list($uid,$a,'vehicles',['plateRegion'=>'۹۹'])['pagination']['total']===0,'Plate region limits results independently');
+ rejected(fn()=>D::list($uid,$a,'vehicles',['plateLetter'=>'@']),'INVALID_PLATE_FILTER');
+ D::save($uid,$a,'vehicles',['ownerName'=>'مالک اصلاح شده'],(int)$vehicleRecord['id']);
+ check(D::get($uid,$a,'vehicles',(int)$vehicleRecord['id'])['owner_name']==='مالک اصلاح شده','Vehicle owner edit retains linked driver');
  echo "Transport integration: $checks checks passed. All fixtures rolled back.\n";
 }finally{if($p->inTransaction())$p->rollBack();}
 
