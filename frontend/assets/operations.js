@@ -209,25 +209,24 @@ function resourceName(key){return titles[key]||key;}
 async function lookup(key,includeInactive=false){const agencyId=currentAgency.id,cacheKey=agencyId+':'+key+(includeInactive?':all':'');if(lookupCache[cacheKey])return lookupCache[cacheKey];const rows=[];let page=1;while(true){const d=await api('/api/v1/'+key+'?limit=200&active='+(includeInactive?'':'1')+'&page='+page+'&agencyId='+encodeURIComponent(agencyId));if(String(currentAgency?.id)!==String(agencyId))throw new Error('شرکت فعال تغییر کرده است؛ دوباره تلاش کنید.');rows.push(...d.items);if(page>=d.pagination.pages)break;page++;}return lookupCache[cacheKey]=rows;}
 function serviceFilterForm(schoolFilter){
  const relation=(name,label,all)=>`<label>${label}<select name="${name}" disabled><option value="">${all}</option></select></label>`;
- return `<form id="gridFilters" class="service-filters" aria-label="جست‌وجو و فیلتر سرویس‌ها">
+ return `<form id="gridFilters" class="service-filters service-filters-v2" aria-label="جست‌وجو و فیلتر سرویس‌ها">
+  <div class="service-filter-top"><div><span class="service-filter-eyebrow">جست‌وجوی پیشرفته</span><h3>پیدا کردن سرویس</h3><p>نام، کد سرویس یا مشخصات راننده و مدرسه را وارد کنید.</p></div><span class="service-filter-result" id="serviceFilterSummary" role="status" aria-live="polite">در حال دریافت سرویس‌ها…</span></div>
   <div class="service-filter-search">
-   <label>جست‌وجوی سرویس<input name="search" id="search" type="search" maxlength="200" placeholder="عنوان، کد، مدرسه یا نام راننده" value="${esc(initialSearch)}"></label>
-   <button type="submit" class="primary service-filter-submit">جست‌وجو و اعمال فیلتر</button>
-   <button type="reset" class="service-filter-reset">حذف فیلترها</button>
+   <label class="service-primary-search">جست‌وجوی کلی<input name="search" id="search" type="search" maxlength="200" autocomplete="off" placeholder="عنوان یا کد سرویس، نام راننده یا مدرسه…" value="${esc(initialSearch)}"></label>
+   <button type="submit" class="primary service-filter-submit">نمایش نتایج</button>
+   <button type="reset" class="service-filter-reset">پاک کردن</button>
   </div>
-  <div class="service-filter-fields">
+  <div class="service-filter-fields service-filter-main">
    ${schoolFilter?relation('schoolId','مدرسه','همه مدارس'):''}
-   ${can('drivers')?`<div class="service-driver-filter">
-    <label>جست‌وجوی راننده<input id="serviceDriverSearch" type="search" placeholder="بخشی از نام یا نام خانوادگی" autocomplete="off" maxlength="200" disabled></label>
-    ${relation('driverId','راننده','همه رانندگان')}
-   </div>`:''}
-   ${can('students')?'<label>جست‌وجوی دانش‌آموز<input name="studentSearch" type="search" placeholder="نام، نام خانوادگی یا کد ملی" maxlength="200"></label>':''}
-   ${can('packs')?relation('packId','پک سرویس','همه پک‌ها'):''}
+   ${can('drivers')?`<div class="service-driver-filter"><label>جست‌وجوی راننده<input id="serviceDriverSearch" type="search" placeholder="نام راننده را تایپ کنید…" autocomplete="off" maxlength="200" disabled></label>${relation('driverId','انتخاب راننده','همه رانندگان')}</div>`:''}
    <label>وضعیت سرویس<select name="status"><option value="">همه وضعیت‌ها</option>${fieldOptions('services','status').map(([key,label])=>`<option value="${key}">${label}</option>`).join('')}</select></label>
+  </div>
+  <details class="service-filter-advanced"><summary>فیلترهای بیشتر <span>دانش‌آموز، پک، شیفت و سوابق</span></summary><div class="service-filter-fields">
+   ${can('students')?'<label>دانش‌آموز<input name="studentSearch" type="search" placeholder="نام، نام خانوادگی یا کد ملی" maxlength="200"></label>':''}
+   ${can('packs')?relation('packId','پک سرویس','همه پک‌ها'):''}
    <label>فعال بودن<select name="active"><option value="">همه سوابق</option><option value="1">فعال</option><option value="0">غیرفعال</option></select></label>
    <label>شیفت<input name="shift" maxlength="50" placeholder="نام یا شماره شیفت"></label>
-  </div>
-  <p id="serviceFilterSummary" role="status"></p>
+  </div></details>
  </form>`;
 }
 async function resourcePage(key,token=pageToken,options={}){
@@ -257,6 +256,12 @@ async function resourcePage(key,token=pageToken,options={}){
   filterForm.elements.plateLetter?.addEventListener('change',scheduleSearch);
  }
 
+ if(key==='services'){
+  let serviceFilterTimer;
+  const schedule=()=>{clearTimeout(serviceFilterTimer);serviceFilterTimer=setTimeout(()=>{if(filterForm.isConnected&&gridState===state)applyFilters();},450);};
+  ['search','studentSearch','shift'].forEach(name=>filterForm.elements[name]?.addEventListener('input',schedule));
+  ['schoolId','driverId','packId','status','active'].forEach(name=>filterForm.elements[name]?.addEventListener('change',schedule));
+ }
  const applyFilters=()=>{
   if(gridState!==state||token!==pageToken)return;
   state.page=1;state.selected.clear();
@@ -266,7 +271,7 @@ async function resourcePage(key,token=pageToken,options={}){
  state.appliedFilters=new URLSearchParams(new FormData(filterForm));
  initialSearch='';$('addBtn')?.addEventListener('click',()=>{if(key==='services')location.hash='services/new';else formResource(key,null);});
  filterForm.onsubmit=e=>{e.preventDefault();applyFilters();};
- filterForm.onreset=()=>setTimeout(()=>{if(key==='students'){$('studentStatuses')?.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.status===''));}if(key==='services'){filterForm.elements.search.value='';const driverSearch=$('serviceDriverSearch');if(driverSearch){driverSearch.value='';driverSearch.dispatchEvent(new Event('input'));}}applyFilters();},0);
+ filterForm.onreset=()=>setTimeout(()=>{if(key==='students'){$('studentStatuses')?.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.status===''));}if(key==='services'){filterForm.elements.search.value='';const driverSearch=$('serviceDriverSearch');if(driverSearch){driverSearch.value='';driverSearch.dispatchEvent(new Event('input'));}filterForm.querySelector('.service-filter-advanced')?.removeAttribute('open');}applyFilters();},0);
  $('studentStatuses')?.querySelectorAll('button').forEach(b=>b.onclick=()=>{$('gridFilters').elements.serviceStatus.value=b.dataset.status;$('studentStatuses').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));applyFilters();});
  $('bulkServiceStatus')?.addEventListener('click',bulkServiceStatusDialog);$('bulkDriverStatus')?.addEventListener('click',bulkDriverStatusDialog);$('bulkFees')?.addEventListener('click',bulkFeeDialog);$('bulkMessage')?.addEventListener('click',bulkMessageDialog);$('printGrid').onclick=()=>window.print();
  $('gridExport')?.addEventListener('click',()=>{const query=gridQuery();query.set('resource',key);downloadFile('/api/v1/reports/export?'+query,'گزارش-'+key+'.xlsx');});
@@ -282,7 +287,7 @@ async function resourcePage(key,token=pageToken,options={}){
      const drivers=sorted.map(row=>({id:row.id,label:person(row),searchName:normalize(person(row))}));
      const update=()=>{
       const selected=select.value,term=normalize(search.value);
-      const matches=drivers.filter(driver=>driver.searchName.includes(term));
+      const matches=drivers.filter(driver=>driver.searchName.includes(term)||String(driver.id)===String(selected));
       select.replaceChildren(new Option(matches.length||!term?'همه رانندگان':'راننده‌ای پیدا نشد',''));
       for(const driver of matches)select.add(new Option(driver.label,driver.id));
       if(matches.some(driver=>String(driver.id)===selected))select.value=selected;
@@ -343,7 +348,7 @@ async function loadResource(key){
  try{const d=await api('/api/v1/'+key+'?'+gridQuery());if(state!==gridState||state.token!==pageToken||request!==state.request)return;state.rows=d.items;const fields=columns[key]||resources[key][1].slice(0,7),refs=[...new Set(fields.filter(f=>relations[f]).map(f=>relations[f]))];const maps={};await Promise.all(refs.map(async r=>{try{maps[r]=await lookup(r,key==='services');}catch{maps[r]=[];}}));if(state!==gridState||state.token!==pageToken||request!==state.request)return;
  $('table').setAttribute('aria-busy','false');
  if(key==='services'){
-  const applied=[...state.appliedFilters.values()].filter(value=>value.trim()!=='').length;
+  const applied=[...state.appliedFilters.entries()].filter(([name,value])=>!['page','limit','agencyId'].includes(name)&&value.trim()!=='').length;
   $('serviceFilterSummary').textContent=number(d.pagination.total)+' سرویس'+(applied?' · '+number(applied)+' فیلتر اعمال شده':'');
  }
  const display=(row,f)=>{if(key==='ledger'&&f==='direction')return row.direction==='receipt'?'دریافت':row.direction==='payment'?'پرداخت':persianDigits(row.direction||'—');if(key==='ledger'&&f==='partyType')return ({student:'دانش‌آموز',driver:'راننده',school:'مدرسه',agency:'شرکت'})[row.party_type]||persianDigits(row.party_type||'—');if(key==='ledger'&&f==='method')return ({cash:'نقدی',card:'کارتخوان',bank:'انتقال بانکی',transfer:'حواله',cheque:'چک',wallet:'کیف پول'})[row.method]||persianDigits(row.method||'—');if(f==='fullName')return person(row);if(f==='paymentStatus')return Number(row.invoice_total)===0?'فاقد فاکتور':Number(row.paid_total)>=Number(row.invoice_total)?'تسویه':'دارای مانده';const v=val(row,f);if(f==='driverName'&&!v&&row.mehr_driver_name)return row.mehr_driver_name+' (سابقه مهر)';if(f==='plate')return String(v||'—');if(key==='vehicles'&&f==='ownerName')return v||'ثبت نشده';if(key==='vehicles'&&f==='driverName')return v||'راننده‌ای تخصیص نیافته';if(f==='vehicleId'){const vehicle=maps.vehicles?.find(x=>String(x.id)===String(v));return vehicle?.plate||v||'—';}if(relations[f])return person(maps[relations[f]]?.find(x=>String(x.id)===String(v))||{id:v||'—'});if(['status','serviceStatus'].includes(f))return statuses[v]||v;if(f==='mobile')return persianDigits(v||'—');if(/Date$/.test(f))return dateText(v);if(/amount|fee|balance|capacity|rating|score/i.test(f))return number(v);return key==='ledger'?persianDigits(v||'—'):v||'—';};
