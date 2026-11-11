@@ -223,6 +223,14 @@ async function resourcePage(key,token=pageToken,options={}){
    });
 
   });
+  const driverInput=filterForm.elements.driverSearch;
+  let vehicleSearchTimer;
+  const scheduleSearch=()=>{
+    clearTimeout(vehicleSearchTimer);
+    vehicleSearchTimer=setTimeout(()=>{if(filterForm.isConnected&&gridState===state)applyFilters();},400);
+  };
+  [...segments,driverInput,filterForm.elements.search].forEach(input=>input?.addEventListener('input',scheduleSearch));
+  filterForm.elements.plateLetter?.addEventListener('change',scheduleSearch);
  }
 
  const applyFilters=()=>{

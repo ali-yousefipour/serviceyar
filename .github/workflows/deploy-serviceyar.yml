@@ -36,6 +36,7 @@ jobs:
           php tests/static-smoke.php
           node --check frontend/assets/app.js
           node --check frontend/assets/operations.js
+          python3 -m py_compile tools/deploy_serviceyar.py
           node tests/solar-date.cjs
           test -s frontend/assets/app.css
           test -s frontend/assets/operations.css
@@ -80,6 +81,9 @@ jobs:
           RewriteRule ^database(?:/|$) - [F,L,NC]
           RewriteCond %{THE_REQUEST} \s/+storage(?:/|\s) [NC]
           RewriteRule ^storage(?:/|$) - [F,L,NC]
+          <FilesMatch "^\.serviceyar-">
+            Require all denied
+          </FilesMatch>
           <FilesMatch "^\.env(?:\..*)?$">
             Require all denied
           </FilesMatch>

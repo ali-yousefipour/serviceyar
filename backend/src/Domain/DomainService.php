@@ -56,14 +56,16 @@ final class DomainService {
     $where.=" AND (REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(CONCAT_WS('',first_name,last_name),'ي','ی'),'ى','ی'),'ك','ک'),' ',''),'‌',''),'‍','') LIKE :member_name ESCAPE '!' OR national_code LIKE :member_code ESCAPE '!')";
     $params['member_name']=$params['member_code']='%'.strtr($term,['!'=>'!!','%'=>'!%','_'=>'!_']).'%';
    }
-  }elseif(isset($q['search'])&&trim((string)$q['search'])!==''){ $parts=[];foreach($c['search'] as $i=>$f){$k='s'.$i;$parts[]="$f LIKE :$k";$params[$k]='%'.trim((string)$q['search']).'%';}if(in_array($resource,['students','drivers'],true)){$parts[]="CONCAT(first_name,' ',last_name) LIKE :full_name";$params['full_name']='%'.trim((string)$q['search']).'%';}$where.=' AND ('.implode(' OR ',$parts).')';}
+  }elseif(isset($q['search'])&&trim((string)$q['search'])!==''){ $parts=[];foreach($c['search'] as $i=>$f){if($resource==='vehicles'&&$f==='owner_name'&&!in_array('owner_name',thisColumns('vehicles',Connection::get()),true))continue;$k='s'.$i;$parts[]="$f LIKE :$k";$params[$k]='%'.trim((string)$q['search']).'%';}if(in_array($resource,['students','drivers'],true)){$parts[]="CONCAT(first_name,' ',last_name) LIKE :full_name";$params['full_name']='%'.trim((string)$q['search']).'%';}$where.=' AND ('.implode(' OR ',$parts).')';}
   foreach($resource==='services'?[]:['schoolId'=>'school_id','driverId'=>'driver_id','packId'=>'pack_id','status'=>'status','serviceStatus'=>'service_status','academicYear'=>'academic_year','schoolType'=>'school_type','active'=>'is_active','mobile'=>'mobile'] as $key=>$column){
    if(isset($q[$key]) && $q[$key]!=='' && in_array($column,$c['fields'],true)){$where.=" AND $column=:filter_$column";$params['filter_'.$column]=(string)$q[$key];}
   }
   if($resource==='vehicles'){
    $driverSearch=trim((string)($q['driverSearch']??''));
+   $driverSearch=preg_replace('/[\s\x{200c}\x{200d}]+/u',' ',$driverSearch)??$driverSearch;
+   $driverSearch=strtr($driverSearch,['ي'=>'ی','ك'=>'ک']);
    if($driverSearch!==''){
-    $where.=" AND EXISTS (SELECT 1 FROM drivers vd WHERE vd.vehicle_id=vehicles.id AND vd.agency_id=vehicles.agency_id AND CONCAT_WS(' ',vd.first_name,vd.last_name) LIKE :vehicle_driver_name)";
+    $where.=" AND EXISTS (SELECT 1 FROM drivers vd WHERE vd.vehicle_id=vehicles.id AND vd.agency_id=vehicles.agency_id AND REPLACE(REPLACE(CONCAT_WS(' ',vd.first_name,vd.last_name),'ي','ی'),'ك','ک') LIKE :vehicle_driver_name)";
     $params['vehicle_driver_name']='%'.$driverSearch.'%';
    }
    $parts=['plateFirst'=>2,'plateLetter'=>1,'plateMiddle'=>3,'plateRegion'=>2];
@@ -198,6 +200,8 @@ final class DomainService {
   $c=self::cfg($resource); Authorization::requirePermission($uid,$c['permission'].'.manage'); Authorization::requireAgencyAccess($uid,$aid);
   $pdo=Connection::get();$data=[];foreach($c['fields'] as $f){$camel=preg_replace_callback('/_([a-z])/',fn($m)=>strtoupper($m[1]),$f);if(array_key_exists($camel,$b))$data[$f]=$b[$camel];elseif(array_key_exists($f,$b))$data[$f]=$b[$f];}
   foreach($data as $f=>$v){if(is_array($v)||is_object($v))throw new AuthException(422,'مقدار ورودی نامعتبر است.','VALIDATION_ERROR');}
+  if($resource==='vehicles'&&!in_array('owner_name',thisColumns('vehicles',$pdo),true))
+   throw new AuthException(503,'برای ثبت یا ویرایش مالک خودرو، مهاجرت دیتابیس 0029_vehicle_owner_name.sql باید اجرا شود.','VEHICLE_SCHEMA_UPDATE_REQUIRED');
   if($id)FinancialPosting::assertEditable($aid,$resource,$id);
   $existing=$id?self::get($uid,$aid,$resource,$id):[];
   if($id&&$resource==='messages'&&$existing['status']!=='queued')throw new AuthException(409,'پیام پردازش‌شده قابل ویرایش یا ارسال مجدد از این فرم نیست.','MESSAGE_LOCKED');
