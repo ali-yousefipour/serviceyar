@@ -215,21 +215,13 @@ async function resourcePage(key,token=pageToken,options={}){
  if(isVehicles){
   const toAscii=value=>String(value).replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
   const segments=[...filterForm.querySelectorAll('.vehicle-plate-entry input')];
-  segments.forEach((input,index)=>{
+  segments.forEach(input=>{
    input.addEventListener('input',()=>{
     const cleaned=toAscii(input.value).replace(/\D/g,'').slice(0,Number(input.maxLength));
     input.value=cleaned;
     input.setCustomValidity('');
    });
-   input.addEventListener('paste',event=>{
-    const raw=toAscii(event.clipboardData?.getData('text')||'').replace(/\D/g,'');
-    if(raw.length===8&&input.name==='plateFirst'){
-     event.preventDefault();
-     filterForm.elements.plateFirst.value=raw.slice(0,2);
-     filterForm.elements.plateMiddle.value=raw.slice(2,5);
-     filterForm.elements.plateRegion.value=raw.slice(5,7);
-    }
-   });
+
   });
  }
 
