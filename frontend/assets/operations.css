@@ -172,3 +172,25 @@ body.has-modal{overflow:hidden}.modal-backdrop{padding:24px;overflow:auto;align-
  #bulkServiceStatus{flex:1 1 210px;min-height:44px}
 }
 @media(max-width:420px){.service-filter-fields{grid-template-columns:1fr}.service-filter-search{grid-template-columns:1fr}.service-filter-search label{grid-column:auto}}
+
+/* School student picker and services filters: responsive RTL controls */
+.service-picker-tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}
+.service-picker-tools label{display:grid;gap:7px;min-width:0;font-weight:700}
+.service-picker-tools input,.service-picker-tools select{width:100%;min-width:0;min-height:44px;border-radius:11px}
+.service-picker-toggle{display:flex;align-items:center;gap:8px;margin:12px 0}
+.service-picker-toggle input{width:18px;height:18px}
+.service-picker-student{display:flex;align-items:flex-start;gap:12px;padding:12px;border:1px solid #dfe8e2;border-radius:12px;margin:5px 0;cursor:pointer}
+.service-picker-student input{width:19px;height:19px;flex:none;margin-top:4px;accent-color:#087b50}
+.service-picker-student span{display:grid;gap:4px;min-width:0}
+.service-picker-student small{font-size:12px;color:#64748b;line-height:1.8}
+.service-picker-student.service-picker-assigned{background:#f8faf9;opacity:.75;cursor:not-allowed}
+.service-picker-student .service-picker-warning{color:#9a4b19}
+.service-picker-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:9px;margin-top:14px}
+.service-picker-actions button{min-height:44px}
+.service-filter-search .service-filter-submit{min-height:46px;white-space:nowrap;font-weight:800}
+.service-filter-search .service-filter-reset{min-height:46px;white-space:nowrap}
+.service-filters .service-driver-filter{min-width:0;display:grid;gap:8px}
+.service-filters .service-driver-filter label{min-width:0}
+.service-filters .service-driver-filter input,.service-filters .service-driver-filter select{width:100%;min-width:0}
+@media(max-width:760px){.service-picker-tools{grid-template-columns:repeat(2,minmax(0,1fr))}.service-picker-tools label:last-child{grid-column:1/-1}.service-picker-actions button{flex:1 1 130px}}
+@media(max-width:480px){.service-picker-tools{grid-template-columns:1fr}.service-picker-tools label:last-child{grid-column:auto}.service-filter-search .service-filter-submit,.service-filter-search .service-filter-reset{width:100%}}
