@@ -19,6 +19,23 @@ const student=(await request(scoped('/api/v1/students'),{method:'POST',body:{sch
 assert.ok(student.uuid);checks++;
 const service=(await request(scoped('/api/v1/services'),{method:'POST',body:{title:'سرویس HTTP',schoolId:school.id,capacity:1,status:'active'},status:201})).data;
 await request(scoped(`/api/v1/services/${service.id}/students`),{method:'POST',body:{studentId:student.id},status:201});
+const serviceListPath='/api/v1/services';
+const assertServiceIncluded=async filters=>{
+ const query=new URLSearchParams(filters);
+ const result=(await request(scoped(serviceListPath+'?'+query))).data;
+ assert.ok(Array.isArray(result.items),'Service list must return items');checks++;
+ assert.ok(result.items.some(row=>Number(row.id)===Number(service.id)),'Expected service absent for '+query);checks++;
+};
+await assertServiceIncluded({search:'سرویس HTTP'});
+await assertServiceIncluded({schoolId:String(school.id)});
+await assertServiceIncluded({status:'active'});
+await assertServiceIncluded({active:'1'});
+await assertServiceIncluded({studentSearch:'دانش‌آموز تست HTTP'});
+const emptyServiceSearch=(await request(scoped(serviceListPath+'?search='+encodeURIComponent('no-service-match-987654321')))).data;
+assert.ok(emptyServiceSearch.items.every(row=>Number(row.id)!==Number(service.id)));checks++;
+const emptySchoolFilter=(await request(scoped(serviceListPath+'?schoolId=99999999'))).data;
+assert.ok(emptySchoolFilter.items.every(row=>Number(row.id)!==Number(service.id)));checks++;
+
 assert.equal((await request(scoped(`/api/v1/students/${student.id}`))).data.service_status,'assigned');checks++;
 assert.equal((await request(scoped(`/api/v1/services/${service.id}/students`))).data.length,1);checks++;
 const serviceFinanceQuery='academicYear=1405-1406&months=9&from=2026-09-23&to=2027-09-22';
