@@ -44,7 +44,8 @@ final class OperationsService
     {
         self::scope($uid,$aid,'services.manage');
         if($order!==null&&$order<1)throw new AuthException(422,'ترتیب توقف نامعتبر است.','VALIDATION_ERROR');
-        self::transaction(function(PDO $p)use($aid,$serviceId,$studentId,$address,$order){
+        $canSetTariff=Authorization::isSuperAdmin($uid)||in_array('students.manage',Authorization::permissions($uid),true);
+        self::transaction(function(PDO $p)use($aid,$serviceId,$studentId,$address,$order,$canSetTariff){
             $q=$p->prepare('SELECT * FROM services WHERE id=:id AND agency_id=:a AND is_active=1 FOR UPDATE');$q->execute(['id'=>$serviceId,'a'=>$aid]);$service=$q->fetch();
             if(!$service)throw new AuthException(404,'سرویس پیدا نشد.','NOT_FOUND');
             $q=$p->prepare('SELECT * FROM students WHERE id=:id AND agency_id=:a AND is_active=1 FOR UPDATE');$q->execute(['id'=>$studentId,'a'=>$aid]);$student=$q->fetch();
@@ -55,6 +56,13 @@ final class OperationsService
             foreach($assigned as $id)if((int)$id!==$serviceId)throw new AuthException(409,'دانش‌آموز سرویس فعال دیگری دارد. ابتدا تخصیص قبلی را حذف کنید.','ALREADY_ASSIGNED');
             if(!$assigned){$q=$p->prepare('SELECT COUNT(*) FROM service_students WHERE service_id=:s');$q->execute(['s'=>$serviceId]);if((int)$q->fetchColumn()>=(int)$service['capacity'])throw new AuthException(409,'ظرفیت سرویس تکمیل است.','CAPACITY_EXCEEDED');}
             $p->prepare('INSERT INTO service_students(service_id,student_id,pickup_address,pickup_order) VALUES(:s,:st,:p,:o) ON DUPLICATE KEY UPDATE pickup_address=VALUES(pickup_address),pickup_order=VALUES(pickup_order)')->execute(['s'=>$serviceId,'st'=>$studentId,'p'=>$address,'o'=>$order]);
+            if($canSetTariff&&(float)$student['monthly_fee']===0.0){
+                $fee=AgencySchoolTariffs::quote($p,$aid,(int)$student['school_id'],
+                    (string)($student['academic_year']?:AgencySchoolTariffs::YEAR),
+                    $student['tariff_distance_km'],$student['tariff_vehicle_class']);
+                if($fee!==null)$p->prepare('UPDATE students SET monthly_fee=?,tariff_calculated_at=NOW() WHERE id=? AND agency_id=?')
+                    ->execute([$fee,$studentId,$aid]);
+            }
             $p->prepare("UPDATE students SET service_status='assigned' WHERE id=:id AND agency_id=:a")->execute(['id'=>$studentId,'a'=>$aid]);
         });
         self::audit($uid,$aid,'assign_student','services',$serviceId);

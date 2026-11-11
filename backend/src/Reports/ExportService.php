@@ -138,6 +138,23 @@ final class ExportService
         self::downloadRows(array_combine(['n','name','iban','work','management','coordination','company','total'],$schema['columns']),$rows,'school-workbook-statement-1405.xlsx');
     }
 
+    public static function serviceFinance(int $uid, int $aid, array $filter): never
+    {
+        Authorization::requirePermission($uid, 'reports.view');
+        $report = \ServiceYar\Domain\ServiceFinanceReport::report($uid, $aid, $filter);
+        $rows = array_map(static fn(array $row): array => $row + [
+            'academic_year'=>$report['academicYear'], 'from_date'=>$report['from'],
+            'to_date'=>$report['to'], 'months'=>$report['months'],
+        ], $report['items']);
+        self::downloadRows([
+            'academic_year'=>'سال تحصیلی', 'from_date'=>'صدور از تاریخ میلادی', 'to_date'=>'صدور تا تاریخ میلادی',
+            'months'=>'تعداد ماه خدمت', 'school'=>'مدرسه', 'service'=>'سرویس', 'driver'=>'راننده',
+            'student'=>'دانش‌آموز', 'assignment_count'=>'تعداد تخصیص فعال',
+            'monthly_fee'=>'ماهیانه · ریال', 'estimated_fee'=>'برآورد · ریال',
+            'invoiced'=>'فاکتور · ریال', 'received'=>'پرداخت ثبت‌شده · ریال', 'balance'=>'مانده فاکتور · ریال',
+        ], $rows, 'service-finance.xlsx');
+    }
+
     private static function downloadRows(array $columns,array $rows,string $filename): never
     {
         if (!class_exists(\ZipArchive::class)) self::jsonError(500,'EXPORT_DEPENDENCY_MISSING','امکان ساخت فایل Excel روی سرور فعال نیست.');

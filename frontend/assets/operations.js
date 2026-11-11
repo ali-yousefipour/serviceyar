@@ -288,7 +288,14 @@ function resourceWizard(form,key){
  actions.querySelector('[data-wizard-prev]').onclick=()=>show(current-1);actions.querySelector('[data-wizard-next]').onclick=()=>{const field=invalid(steps[current].section);if(field){field.focus();field.scrollIntoView({block:'center'});return;}show(current+1);};
  form.addEventListener('submit',e=>{if(current<steps.length-1){e.preventDefault();e.stopImmediatePropagation();actions.querySelector('[data-wizard-next]').click();return;}for(let i=0;i<steps.length-1;i++){const field=invalid(steps[i].section);if(field){e.preventDefault();e.stopImmediatePropagation();show(i);field.focus();field.scrollIntoView({block:'center'});return;}}},true);show(0);
 }
-async function viewRecord(key,id){try{const r=await api(scoped('/api/v1/'+key+'/'+id));dialog('جزئیات '+resourceName(key),'<dl class="detail-grid">'+resources[key][1].map(f=>`<div><dt>${labels[f]||f}</dt><dd>${esc(val(r,f)||'—')}</dd></div>`).join('')+'</dl>');}catch(e){notify(e.message,true);}}
+async function viewRecord(key,id){
+ try{
+  const r=await api(scoped('/api/v1/'+key+'/'+id));
+  const showFinance=key==='students'&&can('school-statement');
+  dialog('جزئیات '+resourceName(key),'<dl class="detail-grid">'+resources[key][1].map(f=>`<div><dt>${labels[f]||f}</dt><dd>${esc(val(r,f)||'—')}</dd></div>`).join('')+'</dl>'+(showFinance?'<section id="studentServiceFinance"></section>':''));
+  if(showFinance)serviceFinancePanel($('studentServiceFinance'),{studentId:id,academicYear:r.academic_year||year()});
+ }catch(e){notify(e.message,true);}
+}
 function fieldOptions(key,f){if(f==='tariffVehicleClass')return [['1','کلاس ۱'],['2','کلاس ۲'],['3','کلاس ۳']];if(f==='gender')return [['boy','پسر'],['girl','دختر'],['mixed','مختلط']];if(f==='partyType'||f==='ownerType'||f==='recipientType')return [['student','دانش‌آموز'],['driver','راننده'],['school','مدرسه'],['agency','شرکت']];if(f==='direction')return [['receipt','دریافت'],['payment','پرداخت']];if(f==='channel')return [['internal','داخلی'],['sms','پیامک']];if(f==='nationality')return [['iranian','ایرانی'],['foreign','غیر ایرانی']];if(f==='isActive'||f==='isRepresentative')return [['1','بله'],['0','خیر']];if(f==='serviceStatus')return ['no_request','pending','prepayment','waiting','assigned','cancelled'].map(k=>[k,statuses[k]]);if(f==='status'){const values={drivers:['pending','active','inactive'],services:['draft','active','cancelled'],messages:['queued'],invoices:['open','paid','overdue'],contracts:['draft','active','cancelled'],'driver-work':['pending','approved','cancelled'],'parent-reports':['open','closed'],'driver-changes':['pending']};return (values[key]||['draft','active','cancelled']).map(k=>[k,statuses[k]||k]);}return null;}
 async function selectSchoolFromCatalog(){
  dialog('انتخاب مدرسه از فهرست مرکزی',`<p>مدرسه را با نام یا کد آموزش‌وپرورش جستجو کنید. مدرسه انتخاب‌شده به شرکت شما متصل می‌شود و نیازی به ثبت مجدد نیست.</p><label>جستجوی مدرسه<input id="catalogSearch" placeholder="نام یا کد مدرسه" autocomplete="off"></label><div id="catalogResults" aria-live="polite">در حال دریافت مدارس…</div>`);
@@ -325,12 +332,67 @@ async function importPage(token){
  $('templateDownload').onclick=()=>{const b=new Blob(['\uFEFFنام,نام خانوادگی,شماره همراه ولی,کد ملی,پایه,آدرس,سال تحصیلی\n'],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='student-template.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
  let importRevision=0;$('importForm').addEventListener('change',()=>{importRevision++;$('importPreview').innerHTML='';});$('importForm').onsubmit=async e=>{e.preventDefault();const revision=importRevision;const schoolId=e.target.schoolId.value,button=e.target.querySelector('button');button.disabled=true;try{const r=await fetch(scoped('/api/v1/operations/import/preview'),{method:'POST',credentials:'same-origin',headers:{'X-CSRF-Token':session.csrfToken},body:new FormData(e.target)}),d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error?.message||'فایل خوانده نشد.');if(token!==pageToken||revision!==importRevision)return;const rows=d.data.rows;$('importPreview').innerHTML='<h3>پیش‌نمایش '+number(rows.length)+' دانش‌آموز برای '+esc(schools.find(s=>String(s.id)===String(schoolId))?.name||'مدرسه انتخاب‌شده')+'</h3>'+simpleTable(['نام','نام خانوادگی','شماره همراه ولی'],rows.map(r=>[r.firstName,r.lastName,r.mobile]))+'<button class="primary" id="commitImport">ثبت همه ردیف‌ها در مدرسه انتخاب‌شده</button>';$('commitImport').onclick=async()=>{$('commitImport').disabled=true;try{const result=await write('/api/v1/operations/import',{schoolId,rows});lookupCache={};$('importPreview').innerHTML='<p class="ok">'+number(result.created)+' دانش‌آموز ثبت شد.</p>';}catch(err){notify(err.message,true);if($('commitImport'))$('commitImport').disabled=false;}};}catch(err){notify(err.message,true);}finally{if(button.isConnected)button.disabled=false;}};
 }
+function serviceFinanceRange(academicYear){
+ const y=ServiceYarDates.digits(String(academicYear)).match(/^(1[34]\d{2})[-/](1[34]\d{2})$/);
+ if(!y||Number(y[1])+1!==Number(y[2]))return null;
+ const from=ServiceYarDates.toISO(y[1]+'/07/01'),next=ServiceYarDates.toISO(y[2]+'/07/01');
+ const end=new Date(next+'T00:00:00Z');end.setUTCDate(end.getUTCDate()-1);
+ return {from,to:end.toISOString().slice(0,10)};
+}
+
+function serviceFinancePanel(panel,{studentId=null,academicYear=year()}={}){
+ const dates=serviceFinanceRange(academicYear);
+ panel.innerHTML=`<h3>${studentId?'مبلغ سالانه سرویس و حساب ولی':'صورت‌وضعیت تخصیص‌های فعال'}</h3>
+  <p class="muted">برآورد از مبلغ ماهانه × تعداد ماه خدمت به دست می‌آید. دریافت‌ها فقط پرداخت‌های ثبت‌شده برای فاکتورهای همین بازه تا تاریخ پایان هستند.</p>
+  <form class="filters">
+   <label>سال تحصیلی<input name="academicYear" value="${esc(academicYear)}" maxlength="9" ${studentId?'readonly':''} required></label>
+   <label>تعداد ماه خدمت<input type="number" name="months" min="1" max="12" value="${studentId?9:1}" required></label>
+   <label>صدور فاکتور از<input type="date" name="from" value="${dates?.from||''}" required></label>
+   <label>تا تاریخ<input type="date" name="to" value="${dates?.to||''}" required></label>
+   <button class="primary">محاسبه و نمایش</button>
+  </form><div data-service-finance-result aria-live="polite"></div>`;
+ const form=panel.querySelector('form'),result=panel.querySelector('[data-service-finance-result]');
+ const load=async()=>{
+  const button=form.querySelector('button');
+  button.disabled=true;result.textContent='در حال دریافت صورت‌وضعیت…';
+  try{
+   const params=new URLSearchParams(new FormData(form));
+   params.set('academicYear',ServiceYarDates.digits(params.get('academicYear')));
+   const path=studentId?'/api/v1/students/'+studentId+'/service-finance':'/api/v1/operations/service-finance';
+   const data=await api(scoped(path+'?'+params));
+   if(!panel.isConnected)return;
+   const money=v=>v===null?'تعرفه ثبت نشده':number(v);
+   const summary=[['برآورد سرویس',money(data.totals.estimated_fee)],['فاکتور صادرشده',money(data.totals.invoiced)],['پرداخت ثبت‌شده',money(data.totals.received)],['مانده فاکتور',money(data.totals.balance)]];
+   result.innerHTML='<div class="statement-summary">'+summary.map(([name,value])=>'<span>'+esc(name)+' <b>'+esc(value)+'</b></span>').join('')+'</div>'+
+    '<p class="muted">مبالغ به ریال · تعداد ماه: '+number(data.months)+' · بدون مبلغ ماهانه: '+number(data.totals.missing_fees)+'</p>'+
+    (data.items.length?simpleTable(['دانش‌آموز','مدرسه','سرویس','راننده','ماهیانه','برآورد','فاکتور','دریافت','مانده'],data.items.map(r=>[r.student,r.school||'—',Number(r.assignment_count)>1?'تداخل تخصیص':r.service||'—',r.driver||'—',money(r.monthly_fee),money(r.estimated_fee),money(r.invoiced),money(r.received),money(r.balance)])):'<p class="empty">تخصیص فعالی برای این سال یافت نشد.</p>');
+   if(!studentId&&can('reports')){
+    const exportButton=document.createElement('button');
+    exportButton.textContent='دریافت اکسل صورت‌وضعیت';
+    exportButton.onclick=()=>downloadFile('/api/v1/reports/service-finance.xlsx?'+params,'صورت-وضعیت-سرویس.xlsx');
+    result.prepend(exportButton);
+   }
+  }catch(err){if(panel.isConnected)result.textContent=err.message;}
+  finally{button.disabled=false;}
+ };
+ form.elements.academicYear.onchange=()=>{
+  const next=serviceFinanceRange(form.elements.academicYear.value);
+  if(next){form.elements.from.value=next.from;form.elements.to.value=next.to;}
+ };
+ form.onsubmit=e=>{e.preventDefault();load();};
+ if(studentId&&dates)load();
+}
+
 async function schoolStatementPage(token){
  const template=await api(scoped('/api/v1/operations/school-statement/rules'));if(token!==pageToken)return;
  const month=persianMonthRange(1405,7);
- $('content').innerHTML=`<section class="panel"><div class="toolbar"><div><h2>صورت‌وضعیت سرویس مدارس</h2><p class="muted">سال تحصیلی ۱۴۰۵–۱۴۰۶ · مهر ۱۴۰۵ · مبالغ به ریال</p></div><button id="statementPrint">چاپ گزارش</button></div><p class="muted">مبالغ صورت‌وضعیت از فایل مبنا محاسبه شده‌اند؛ دریافت‌های واقعی فقط از پرداخت‌های ثبت‌شده فاکتور دانش‌آموز در بازه انتخابی نمایش داده می‌شوند.</p><form class="filters" id="schoolStatementFilters"><label>دریافت از تاریخ<input name="from" type="date" value="${month?.from||''}" required></label><label>تا تاریخ<input name="to" type="date" value="${month?.to||''}" required></label><button class="primary">نمایش صورت‌وضعیت</button></form><div id="schoolStatementResult" aria-live="polite"></div></section><section class="panel"><h3>محاسبه آزمایشی صورت‌وضعیت</h3><p class="muted">این ابزار مبلغ را بر اساس نرخ پایه و روزهای ارائه خدمت محاسبه می‌کند و هیچ سند یا بدهی ثبت نمی‌کند.</p><form id="schoolStatementPreview" class="filters"><label>حق‌الزحمه مبنا (ریال)<input name="baseFee" type="number" min="0" step="1" required></label><label>روز خدمت (از ۳۰ روز)<input name="serviceDays" type="number" min="0" max="30" value="30" required></label><label><input name="certificate" type="checkbox" checked> گواهی صلاحیت</label><label><input name="insured" type="checkbox" checked> بیمه ۷٫۸٪</label><button class="primary">محاسبه</button></form><div id="schoolStatementPreviewResult" aria-live="polite"></div></section>`;
+ $('content').innerHTML=`<section class="panel"><div class="toolbar"><div><h2>صورت‌وضعیت واردشده از فایل مهر</h2><p class="muted">سال تحصیلی ۱۴۰۵–۱۴۰۶ · مهر ۱۴۰۵ · مبالغ به ریال</p></div><button id="statementPrint">چاپ گزارش</button></div><p class="muted">مبالغ صورت‌وضعیت از فایل مبنا محاسبه شده‌اند؛ دریافت‌های واقعی فقط از پرداخت‌های ثبت‌شده فاکتور دانش‌آموز در بازه انتخابی نمایش داده می‌شوند.</p><form class="filters" id="schoolStatementFilters"><label>دریافت از تاریخ<input name="from" type="date" value="${month?.from||''}" required></label><label>تا تاریخ<input name="to" type="date" value="${month?.to||''}" required></label><button class="primary">نمایش صورت‌وضعیت</button></form><div id="schoolStatementResult" aria-live="polite"></div></section><section class="panel"><h3>محاسبه آزمایشی صورت‌وضعیت</h3><p class="muted">این ابزار مبلغ را بر اساس نرخ پایه و روزهای ارائه خدمت محاسبه می‌کند و هیچ سند یا بدهی ثبت نمی‌کند.</p><form id="schoolStatementPreview" class="filters"><label>حق‌الزحمه مبنا (ریال)<input name="baseFee" type="number" min="0" step="1" required></label><label>روز خدمت (از ۳۰ روز)<input name="serviceDays" type="number" min="0" max="30" value="30" required></label><label><input name="certificate" type="checkbox" checked> گواهی صلاحیت</label><label><input name="insured" type="checkbox" checked> بیمه ۷٫۸٪</label><button class="primary">محاسبه</button></form><div id="schoolStatementPreviewResult" aria-live="polite"></div></section>`;
+ if(can('students')){
+  const live=document.createElement('section');live.className='panel';$('content').prepend(live);
+  serviceFinancePanel(live);
+ }
  $('statementPrint').onclick=()=>window.print();
- const source=document.createElement('section');source.className='panel';source.innerHTML='<h3>مبنای محاسبات فایل مدارس ۱۴۰۵</h3><p>نظارت ۳٪ · هماهنگی ۱٪ · شرکت ۷٪ · گواهی '+number(template.rules.qualificationRial)+' ریال · بیمه ۷٫۸٪ جمع سهم‌ها. شهرداری، ارزش افزوده و راهور دوباره به جمع اضافه نمی‌شوند.</p><a class="route-link" href="'+esc(scoped('/api/v1/reports/school-workbook.xlsx?period=Mehr'))+'">دریافت صورت‌وضعیت مهر مطابق فایل مدارس</a><p>این خروجی از مبالغ تاریخی واردشده ساخته می‌شود؛ قالب رسمی پذیرش مشهد تأیید نشده است.</p>';$('content').prepend(source);
+ const source=document.createElement('section');source.className='panel';source.innerHTML='<h3>مبنای محاسبات فایل مدارس ۱۴۰۵</h3><p>نظارت ۳٪ · هماهنگی ۱٪ · شرکت ۷٪ · گواهی '+number(template.rules.qualificationRial)+' ریال · بیمه ۷٫۸٪ جمع سهم‌ها. شهرداری، ارزش افزوده و راهور دوباره به جمع اضافه نمی‌شوند.</p><a class="route-link" href="'+esc(scoped('/api/v1/reports/school-workbook.xlsx?period=Mehr'))+'">دریافت صورت‌وضعیت مهر مطابق فایل مدارس</a><p>این خروجی از مبالغ تاریخی واردشده ساخته می‌شود؛ قالب رسمی پذیرش مشهد تأیید نشده است.</p>';$('schoolStatementFilters').closest('section').before(source);
  $('schoolStatementPreview').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,button=form.querySelector('button');button.disabled=true;try{const d=await write('/api/v1/operations/school-statement/preview',{baseFee:form.elements.baseFee.value,serviceDays:Number(form.elements.serviceDays.value),certificate:form.elements.certificate.checked,insured:form.elements.insured.checked});$('schoolStatementPreviewResult').innerHTML=simpleTable(['عنوان','مبلغ (ریال)'],[['حق‌الزحمه راننده',number(d.driver_fee)],['سهم نظارت ۳٪',number(d.oversight_3pct)],['سهم شرکت ۷٪',number(d.company_7pct)],['آموزش‌وپرورش ۱٪',number(d.education_1pct)],['جمع صورت‌وضعیت',number(d.statement_excluding_certificate_insurance)],['گواهی',number(d.certificate_fee)],['بیمه',number(d.insurance_fee)],['جمع دریافتی اولیا',number(d.parent_total)]]);}catch(err){$('schoolStatementPreviewResult').innerHTML='<p class="error" role="alert">'+esc(err.message)+'</p>';}finally{button.disabled=false;}};
  const load=async()=>{
   const result=$('schoolStatementResult'),button=$('schoolStatementFilters').querySelector('button');
@@ -567,13 +629,14 @@ async function newServicePage(token){
  if(!can('services','manage')||!can('students')||!can('schools')||!can('drivers'))throw new Error('برای ثبت سرویس به مجوز مدرسه، راننده و دانش‌آموز نیاز است.');
  $('pageTitle').textContent='ثبت سرویس';
  const [schools,drivers,students,vehicles]=await Promise.all(['schools','drivers','students','vehicles'].map(lookup));if(token!==pageToken)return;
- $('content').innerHTML=`<form id="newServiceSetup"><div class="toolbar"><button type="button" id="showServiceStudents" disabled>افزودن دانش‌آموز</button><button type="button" id="quoteServiceStudents" disabled>دریافت قیمت و مسیر</button></div><div class="dashboard-grid"><section class="panel"><h2>مدرسه سرویس</h2><p id="serviceSchoolSummary">برای شروع، مدرسه یا مدارس سرویس را انتخاب کنید.</p><button type="button" id="pickServiceSchools">انتخاب مدرسه</button></section><section class="panel"><h2>راننده سرویس</h2><p id="serviceDriverSummary">راننده را انتخاب کنید تا قیمت‌ها محاسبه شوند.</p><button type="button" id="pickServiceDriver">انتخاب راننده</button></section></div><section class="panel" id="serviceStudentSelection" hidden><h2>دانش‌آموزان سرویس</h2><p id="selectedServiceStudents"></p></section><section class="panel" id="serviceSetupDetails" hidden><h2>مشخصات و هزینه سرویس</h2><div class="form-grid"><label>عنوان سرویس<input name="title" maxlength="200" required></label><label>ظرفیت<input name="capacity" type="number" min="1" max="200" value="4" required></label><label>شیفت<input name="shift" maxlength="50"></label><label>مبلغ توافقی راننده · ریال<input name="agreedAmount" type="number" min="0" step="1" value="0"></label></div><div id="serviceQuoteResult" role="status" aria-live="polite"></div><button class="primary" id="createService" disabled>ثبت سرویس</button></section></form>`;
+ $('content').innerHTML=`<form id="newServiceSetup"><div class="toolbar"><button type="button" id="showServiceStudents" disabled>افزودن دانش‌آموز</button><button type="button" id="quoteServiceStudents" disabled>دریافت قیمت و مسیر</button></div><div class="dashboard-grid"><section class="panel"><h2>مدرسه سرویس</h2><p id="serviceSchoolSummary">برای شروع، مدرسه یا مدارس سرویس را انتخاب کنید.</p><button type="button" id="pickServiceSchools">انتخاب مدرسه</button></section><section class="panel"><h2>راننده سرویس</h2><p id="serviceDriverSummary">راننده را انتخاب کنید تا قیمت‌ها محاسبه شوند.</p><button type="button" id="pickServiceDriver">انتخاب راننده</button></section></div><section class="panel" id="serviceStudentSelection" hidden><h2>دانش‌آموزان سرویس</h2><p id="selectedServiceStudents"></p></section><section class="panel" id="serviceSetupDetails" hidden><h2>مشخصات و هزینه سرویس</h2><div class="form-grid"><label>عنوان سرویس<input name="title" maxlength="200" required></label><label>ظرفیت<input name="capacity" type="number" min="1" max="200" value="4" required></label><label>شیفت<input name="shift" maxlength="50"></label><label>مبلغ توافقی راننده · ریال<input name="agreedAmount" type="number" min="0" step="1" value="0"></label><label>ماه خدمت برای برآورد سالانه<input id="serviceQuoteMonths" type="number" min="1" max="12" value="9" required></label></div><div id="serviceQuoteResult" role="status" aria-live="polite"></div><button class="primary" id="createService" disabled>ثبت سرویس</button></section></form>`;
  const form=$('newServiceSetup'),chosen=new Set(),show=$('showServiceStudents'),quote=$('quoteServiceStudents'),result=$('serviceQuoteResult'),save=$('createService');
  let selectedSchools=[],driverId=null,revision=0,saving=false;
  const vehicleFor=driver=>vehicles.find(v=>Number(v.id)===Number(driver.vehicle_id));
  const driverCaption=driver=>[person(driver),vehicleFor(driver)?.model].filter(Boolean).join(' · ');
  const hasMehrDriver=student=>Number(student.mehr_driver_id)===Number(driverId);
  const schoolIds=()=>selectedSchools;
+ const quoteMonths=$('serviceQuoteMonths');
  const sync=()=>{
   for(const s of students)if(!selectedSchools.includes(Number(s.school_id)))chosen.delete(s.id);
   show.disabled=!selectedSchools.length||!driverId;quote.disabled=show.disabled||!chosen.size;save.disabled=true;
@@ -616,7 +679,10 @@ async function newServicePage(token){
   name.oninput=address.oninput=history.onchange=render;rows.onchange=e=>{togglePick(e,pending);$('studentPickerCount').textContent='انتخاب‌شده: '+number(pending.size);};
   $('confirmStudents').onclick=()=>{chosen.clear();for(const s of students)if(pending.has(Number(s.id)))chosen.add(s.id);closeDialog();sync();};render();name.focus();
  };
+ quoteMonths.oninput=sync;
  quote.onclick=async()=>{
+  const months=Number(quoteMonths.value);
+  if(!Number.isInteger(months)||months<1||months>12){result.textContent='تعداد ماه خدمت باید بین ۱ تا ۱۲ باشد.';return;}
   const version=++revision,rows=students.filter(s=>chosen.has(s.id));
   save.disabled=true;
   if(rows.length>Number(form.elements.capacity.value)){result.textContent='تعداد دانش‌آموزان از ظرفیت بیشتر است.';return;}
@@ -636,10 +702,10 @@ async function newServicePage(token){
     const saved=Number(s.monthly_fee);
     const rate=saved>0?{monthlyFee:saved}:distance>0?await write('/api/v1/operations/tariffs/quote',{schoolId:s.school_id,academicYear:s.academic_year||year(),distanceKm:distance,vehicleClass:s.tariff_vehicle_class}):{monthlyFee:null};
     if(rate.monthlyFee===null)missing++;else total+=Number(rate.monthlyFee);
-    lines.push([person(s),distance??'—',routeText,rate.monthlyFee===null?'نرخ ثبت نشده':number(rate.monthlyFee),saved>0?'مبلغ ثبت‌شده':rate.monthlyFee===null?'—':can('students','manage')?'نرخ‌نامه · ذخیره با ثبت سرویس':'نرخ‌نامه · پیش‌نمایش']);
+    lines.push([person(s),distance??'—',routeText,rate.monthlyFee===null?'نرخ ثبت نشده':number(rate.monthlyFee),rate.monthlyFee===null?'—':number(Number(rate.monthlyFee)*months),saved>0?'مبلغ ثبت‌شده':rate.monthlyFee===null?'—':can('students','manage')?'نرخ‌نامه · ذخیره با ثبت سرویس':'نرخ‌نامه · پیش‌نمایش']);
    }
    if(!current())return;
-   result.innerHTML=simpleTable(['دانش‌آموز','کیلومتر تعرفه','مسیر نشان','ماهیانه · ریال','مبنای مبلغ'],lines)+'<p>جمع مبالغ موجود: '+number(total)+' ریال · بدون نرخ: '+number(missing)+'</p>'+(routes.length?'<div class="service-map" id="serviceQuoteMap" aria-label="نقشه مسیرهای نشان"></div>':'');
+   result.innerHTML=simpleTable(['دانش‌آموز','کیلومتر تعرفه','مسیر نشان','ماهیانه · ریال','برآورد سالانه · ریال','مبنای مبلغ'],lines)+'<p>جمع ماهانه: '+number(total)+' ریال · برآورد '+number(months)+' ماه: '+number(total*months)+' ریال · بدون نرخ: '+number(missing)+'</p>'+(routes.length?'<div class="service-map" id="serviceQuoteMap" aria-label="نقشه مسیرهای نشان"></div>':'');
    save.disabled=saving;
    if(routes.length){
     const map=await makeMap($('serviceQuoteMap'));

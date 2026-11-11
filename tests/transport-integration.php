@@ -74,6 +74,33 @@ try{
  D::removeStudent($uid,$a,(int)$service['id'],(int)$s1['id']);check(D::get($uid,$a,'students',(int)$s1['id'])['service_status']==='waiting','Removal restores waiting status');
  $before=(int)$p->query('SELECT COUNT(*) FROM services')->fetchColumn();rejected(fn()=>O::createGroup($uid,$a,['title'=>'bad','schoolId'=>$school['id'],'capacity'=>2,'ids'=>[$s1['id'],$foreign['id']]]),'NOT_FOUND');check((int)$p->query('SELECT COUNT(*) FROM services')->fetchColumn()===$before,'Failed group creates no orphan service');
  $group=O::createGroup($uid,$a,['title'=>'group','schoolId'=>$school['id'],'capacity'=>2,'ids'=>[$s1['id'],$s2['id']]]);check($group['assigned']===2,'Group creation assigns all students');
+ // The operational statement keeps tariff estimates and invoice balances separate.
+ $feeAgency=insertFixture('agencies',['uuid'=>Uuid::v4(),'name'=>'شرکت صورت‌وضعیت آزمون']);
+ $feeSchool=D::save($uid,$feeAgency,'schools',['name'=>'مدرسه صورت‌وضعیت']);
+ $feeStudent=D::save($uid,$feeAgency,'students',['schoolId'=>$feeSchool['id'],'firstName'=>'سالانه','lastName'=>'آزمایشی',
+   'mobile'=>'09120000992','academicYear'=>'1405/1406','tariffDistanceKm'=>5,'tariffVehicleClass'=>1]);
+ insertFixture('agency_school_tariffs',['agency_id'=>$feeAgency,'academic_year'=>'1405-1406','region'=>'',
+   'vehicle_class'=>1,'distance_km'=>5,'amount_irr'=>1500000]);
+ $feeService=D::save($uid,$feeAgency,'services',['title'=>'سرویس صورت‌وضعیت','schoolId'=>$feeSchool['id'],'status'=>'active']);
+ D::assignStudent($uid,$feeAgency,(int)$feeService['id'],(int)$feeStudent['id']);
+ check((float)D::get($uid,$feeAgency,'students',(int)$feeStudent['id'])['monthly_fee']===1500000.0,'Individual assignment fills a missing fee from the agency tariff');
+ $invoiceId=insertFixture('invoices',['agency_id'=>$feeAgency,'title'=>'قسط سرویس','party_type'=>'student',
+   'party_id'=>$feeStudent['id'],'amount'=>'1200000.50','issue_date'=>'2026-10-01','status'=>'open']);
+ foreach([['2026-10-05','200000.25'],['2026-10-06','100000.00'],['2027-10-10','400000.00']] as [$paidAt,$paid]){
+   insertFixture('payments',['agency_id'=>$feeAgency,'invoice_id'=>$invoiceId,'amount'=>$paid,'payment_date'=>$paidAt]);
+ }
+ $filter=['academicYear'=>'1405/1406','months'=>9,'from'=>'2026-09-23','to'=>'2027-09-22'];
+ $feeReport=\ServiceYar\Domain\ServiceFinanceReport::report($uid,$feeAgency,$filter);
+ $item=$feeReport['items'][0];
+ check($feeReport['totals']['student_count']===1&&(float)$item['estimated_fee']===13500000.0,'Annual estimate uses saved rate and explicit service months');
+ check($item['invoiced']==='1200000.50'&&$item['received']==='300000.25'&&$item['balance']==='900000.25','Multiple payments neither duplicate invoice amounts nor include later payments');
+ rejected(fn()=>\ServiceYar\Domain\ServiceFinanceReport::report($viewer,$feeAgency,$filter),'SCOPE_FORBIDDEN');
+ rejected(fn()=>\ServiceYar\Domain\ServiceFinanceReport::report($uid,$feeAgency,['months'=>13]+$filter),'VALIDATION_ERROR');
+ rejected(fn()=>\ServiceYar\Domain\ServiceFinanceReport::report($uid,$feeAgency,$filter,(int)$foreign['id']),'NOT_FOUND');
+ D::removeStudent($uid,$feeAgency,(int)$feeService['id'],(int)$feeStudent['id']);
+ check(\ServiceYar\Domain\ServiceFinanceReport::report($uid,$feeAgency,$filter)['items']===[],'Operational report omits a removed assignment');
+ $individual=\ServiceYar\Domain\ServiceFinanceReport::report($uid,$feeAgency,$filter,(int)$feeStudent['id']);
+ check($individual['items'][0]['service']===null&&$individual['items'][0]['balance']==='900000.25','Student retains invoice history after assignment removal');
  $rows=StudentImport::map([['نام','نام خانوادگی','شماره همراه ولی'],['آزمایش','واردات','۰۹۱۲۰۰۰۰۰۰۴']]);check($rows[0]['mobile']==='09120000004','Import normalizes Persian digits');
  $studentsBefore=(int)$p->query('SELECT COUNT(*) FROM students')->fetchColumn();rejected(fn()=>StudentImport::commit($uid,$a,['schoolId'=>$school['id'],'rows'=>[$rows[0],['firstName'=>'bad','lastName'=>'bad','mobile'=>'bad']]]),'VALIDATION_ERROR');check((int)$p->query('SELECT COUNT(*) FROM students')->fetchColumn()===$studentsBefore,'Import commit rolls back on invalid row');
  $result=StudentImport::commit($uid,$a,['schoolId'=>$school['id'],'rows'=>$rows]);check($result['created']===1,'Valid import persists');

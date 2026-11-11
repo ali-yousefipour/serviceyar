@@ -121,16 +121,6 @@ final class DomainService {
    $service=self::saveRecord($uid,$aid,$resource,$b,null);
    OperationsService::setServiceSchools($uid,$aid,(int)$service['id'],['schoolIds'=>$schools]);
    sort($students);foreach($students as $student)self::assignStudent($uid,$aid,(int)$service['id'],$student);
-   if(in_array('students.manage',Authorization::permissions($uid),true)){
-    $missing=$pdo->prepare('SELECT school_id,academic_year,tariff_distance_km,tariff_vehicle_class FROM students WHERE id=? AND agency_id=? AND monthly_fee=0');
-    $update=$pdo->prepare('UPDATE students SET monthly_fee=?,tariff_calculated_at=NOW() WHERE id=? AND agency_id=? AND monthly_fee=0');
-    foreach($students as $student){
-     $missing->execute([$student,$aid]);$row=$missing->fetch();
-     if(!$row)continue;
-     $fee=AgencySchoolTariffs::quote($pdo,$aid,(int)$row['school_id'],(string)($row['academic_year']?:AgencySchoolTariffs::YEAR),$row['tariff_distance_km'],$row['tariff_vehicle_class']);
-     if($fee!==null)$update->execute([$fee,$student,$aid]);
-    }
-   }
    return $service;
   });
  }
