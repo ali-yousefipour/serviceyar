@@ -57,6 +57,9 @@ final class DomainService {
   $select='*';
   if($resource==='students')$select="students.*,
    (SELECT CONCAT(d.first_name,' ',d.last_name) FROM service_students ss JOIN services sv ON sv.id=ss.service_id JOIN drivers d ON d.id=sv.driver_id AND d.agency_id=students.agency_id WHERE ss.student_id=students.id AND sv.agency_id=students.agency_id AND sv.is_active=1 LIMIT 1) driver_name,
+   (SELECT CONCAT(d.first_name,' ',d.last_name) FROM school_service_import_fees f JOIN drivers d ON d.id=f.driver_id AND d.agency_id=f.agency_id
+    WHERE f.agency_id=students.agency_id AND f.student_national_code=students.national_code AND f.period='Mehr'
+      AND f.academic_year=COALESCE(NULLIF(REPLACE(students.academic_year,'/','-'),''),'1405-1406') LIMIT 1) mehr_driver_name,
    (SELECT COALESCE(SUM(i.amount),0) FROM invoices i WHERE i.party_type='student' AND i.party_id=students.id AND i.agency_id=students.agency_id AND i.status<>'cancelled') invoice_total,
    (SELECT COALESCE(SUM(p.amount),0) FROM payments p JOIN invoices i ON i.id=p.invoice_id AND i.agency_id=p.agency_id WHERE i.party_type='student' AND i.party_id=students.id AND p.agency_id=students.agency_id) paid_total";
   $s=$pdo->prepare("SELECT $select FROM {$c['table']} WHERE $where ORDER BY id DESC LIMIT $limit OFFSET $off");$s->execute($params);
@@ -72,7 +75,13 @@ final class DomainService {
   return OperationsService::transaction(function()use($uid,$aid,$resource,$b,$id){
    if($resource!=='services'||$id!==null||!array_key_exists('schoolIds',$b))return self::saveRecord($uid,$aid,$resource,$b,$id);
    Authorization::requirePermission($uid,'students.view');
+   Authorization::requirePermission($uid,'services.manage');
+   Authorization::requireAgencyAccess($uid,$aid);
    $schools=OperationsService::ids($b['schoolIds']);$students=OperationsService::ids($b['studentIds']??[]);
+   $driverId=OperationsService::ids([$b['driverId']??null])[0];
+   $driver=Connection::get()->prepare("SELECT id FROM drivers WHERE id=? AND agency_id=? AND is_active=1 AND status='active' FOR UPDATE");
+   $driver->execute([$driverId,$aid]);
+   if(!$driver->fetchColumn())throw new AuthException(422,'راننده تأییدشده و فعال را انتخاب کنید.','DRIVER_NOT_ELIGIBLE');
    $b['schoolId']=$schools[0];$b['status']='active';
    $service=self::saveRecord($uid,$aid,$resource,$b,null);
    OperationsService::setServiceSchools($uid,$aid,(int)$service['id'],['schoolIds'=>$schools]);

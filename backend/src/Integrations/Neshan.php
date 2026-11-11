@@ -23,7 +23,12 @@ final class Neshan {
   if(!in_array($path,['/v4/direction','/v3/search','/v5/reverse'],true))throw new \InvalidArgumentException('Unknown Neshan endpoint');
   $curl=curl_init('https://api.neshan.org'.$path.'?'.http_build_query($params));$response='';
   curl_setopt_array($curl,[CURLOPT_HTTPHEADER=>['Api-Key: '.$key,'Accept: application/json'],CURLOPT_TIMEOUT=>20,CURLOPT_CONNECTTIMEOUT=>8,CURLOPT_FOLLOWLOCATION=>false,CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_SSL_VERIFYHOST=>2,CURLOPT_WRITEFUNCTION=>static function($ch,$chunk)use(&$response){if(strlen($response)+strlen($chunk)>2097152)return 0;$response.=$chunk;return strlen($chunk);}]);
-  try{$ok=curl_exec($curl);$status=(int)curl_getinfo($curl,CURLINFO_HTTP_CODE);if($ok===false||$status!==200)throw new AuthException(502,'پاسخ سرویس نشان دریافت نشد؛ اعتبار، محدودیت دامنه یا IP و دسترسی سرویس کلید را بررسی کنید.','NESHAN_PROVIDER_ERROR');$data=json_decode($response,true);if(!is_array($data))throw new AuthException(502,'پاسخ نشان نامعتبر است.','NESHAN_PROVIDER_ERROR');return $data;}finally{curl_close($curl);}
+  if(PHP_OS_FAMILY==='Windows'&&defined('CURLSSLOPT_NATIVE_CA'))curl_setopt($curl,CURLOPT_SSL_OPTIONS,CURLSSLOPT_NATIVE_CA);
+  $ok=curl_exec($curl);$status=(int)curl_getinfo($curl,CURLINFO_HTTP_CODE);
+  if($ok===false||$status!==200)throw new AuthException(502,'پاسخ سرویس نشان دریافت نشد؛ اعتبار، محدودیت دامنه یا IP و دسترسی سرویس کلید را بررسی کنید.','NESHAN_PROVIDER_ERROR');
+  $data=json_decode($response,true);
+  if(!is_array($data))throw new AuthException(502,'پاسخ نشان نامعتبر است.','NESHAN_PROVIDER_ERROR');
+  return $data;
  }
  public static function route(int $aid,string $origin,string $destination): array {
   return self::routeResult(self::request($aid,'/v4/direction',['type'=>'car','origin'=>$origin,'destination'=>$destination,'alternative'=>'false']));
