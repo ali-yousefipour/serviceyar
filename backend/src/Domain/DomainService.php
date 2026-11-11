@@ -142,7 +142,13 @@ final class DomainService {
    Authorization::requirePermission($uid,'services.manage');
    Authorization::requireAgencyAccess($uid,$aid);
    $schools=OperationsService::ids($b['schoolIds']);$students=OperationsService::ids($b['studentIds']??[]);
-   $driverId=OperationsService::ids([$b['driverId']??null])[0];
+   if(!$schools)throw new AuthException(422,'حداقل یک مدرسه برای سرویس انتخاب کنید.','SCHOOL_REQUIRED');
+   if(!$students)throw new AuthException(422,'حداقل یک دانش‌آموز برای سرویس انتخاب کنید.','STUDENTS_REQUIRED');
+   $capacity=(int)($b['capacity']??4);
+   if($capacity<1||$capacity>200||count($students)>$capacity)throw new AuthException(422,'تعداد دانش‌آموزان از ظرفیت معتبر سرویس بیشتر است.','CAPACITY_EXCEEDED');
+   $driverIds=OperationsService::ids([$b['driverId']??null]);
+   if(count($driverIds)!==1)throw new AuthException(422,'راننده سرویس را انتخاب کنید.','DRIVER_REQUIRED');
+   $driverId=$driverIds[0];
    $pdo=Connection::get();
    $driver=$pdo->prepare("SELECT v.capacity FROM drivers d LEFT JOIN vehicles v ON v.id=d.vehicle_id AND v.agency_id=d.agency_id AND v.is_active=1
     WHERE d.id=? AND d.agency_id=? AND d.is_active=1 AND d.status='active' FOR UPDATE");
