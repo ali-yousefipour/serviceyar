@@ -69,7 +69,16 @@ final class DomainService {
  }
  public static function save(int $uid,int $aid,string $resource,array $b,?int $id=null): array {
   if($resource==='accounting-documents')return AccountingJournal::save($uid,$aid,$b,$id);
-  return OperationsService::transaction(fn()=>self::saveRecord($uid,$aid,$resource,$b,$id));
+  return OperationsService::transaction(function()use($uid,$aid,$resource,$b,$id){
+   if($resource!=='services'||$id!==null||!array_key_exists('schoolIds',$b))return self::saveRecord($uid,$aid,$resource,$b,$id);
+   Authorization::requirePermission($uid,'students.view');
+   $schools=OperationsService::ids($b['schoolIds']);$students=OperationsService::ids($b['studentIds']??[]);
+   $b['schoolId']=$schools[0];$b['status']='active';
+   $service=self::saveRecord($uid,$aid,$resource,$b,null);
+   OperationsService::setServiceSchools($uid,$aid,(int)$service['id'],['schoolIds'=>$schools]);
+   sort($students);foreach($students as $student)self::assignStudent($uid,$aid,(int)$service['id'],$student);
+   return $service;
+  });
  }
  private static function saveRecord(int $uid,int $aid,string $resource,array $b,?int $id=null): array {
   $c=self::cfg($resource); Authorization::requirePermission($uid,$c['permission'].'.manage'); Authorization::requireAgencyAccess($uid,$aid);
@@ -187,7 +196,7 @@ final class DomainService {
   OperationsService::transaction(function(\PDO $pdo)use($aid,$serviceId,$studentId){$q=$pdo->prepare('DELETE ss FROM service_students ss JOIN services s ON s.id=ss.service_id WHERE ss.service_id=:s AND ss.student_id=:st AND s.agency_id=:a');$q->execute(['s'=>$serviceId,'st'=>$studentId,'a'=>$aid]);if($q->rowCount()<1)throw new AuthException(404,'تخصیص سرویس پیدا نشد.','NOT_FOUND');$q=$pdo->prepare("UPDATE students SET service_status='waiting' WHERE id=:id AND agency_id=:a AND NOT EXISTS(SELECT 1 FROM service_students ss JOIN services sv ON sv.id=ss.service_id WHERE ss.student_id=:st AND sv.agency_id=:agency AND sv.is_active=1)");$q->execute(['id'=>$studentId,'a'=>$aid,'st'=>$studentId,'agency'=>$aid]);});self::activity($pdo,$aid,$uid,'remove_student','services',$serviceId);
  }
  public static function serviceStudents(int $uid,int $aid,int $serviceId): array {
-  Authorization::requirePermission($uid,'services.view');Authorization::requireAgencyAccess($uid,$aid);$q=Connection::get()->prepare('SELECT st.id,st.uuid,st.first_name,st.last_name,st.grade,st.national_code,ss.pickup_address,ss.pickup_order FROM service_students ss JOIN students st ON st.id=ss.student_id JOIN services s ON s.id=ss.service_id WHERE ss.service_id=:s AND s.agency_id=:a ORDER BY ss.pickup_order,st.last_name,st.first_name');$q->execute(['s'=>$serviceId,'a'=>$aid]);return $q->fetchAll();
+  Authorization::requirePermission($uid,'services.view');Authorization::requireAgencyAccess($uid,$aid);$q=Connection::get()->prepare('SELECT st.id,st.uuid,st.first_name,st.last_name,st.grade,st.national_code,st.tariff_distance_km,st.tariff_vehicle_class,st.monthly_fee,ss.pickup_address,ss.pickup_order FROM service_students ss JOIN students st ON st.id=ss.student_id JOIN services s ON s.id=ss.service_id WHERE ss.service_id=:s AND s.agency_id=:a ORDER BY ss.pickup_order,st.last_name,st.first_name');$q->execute(['s'=>$serviceId,'a'=>$aid]);return $q->fetchAll();
  }
  public static function delete(int $uid,int $aid,string $resource,int $id): void {
   $c=self::cfg($resource);Authorization::requirePermission($uid,$c['permission'].'.manage');Authorization::requireAgencyAccess($uid,$aid);self::get($uid,$aid,$resource,$id);$pdo=Connection::get();$columns=thisColumns($c['table'],$pdo);

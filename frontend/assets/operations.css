@@ -69,3 +69,13 @@ body.has-modal{overflow:hidden}.modal-backdrop{padding:24px;overflow:auto;align-
 .location-picker{margin-block:18px;padding-block:14px;border-block:1px solid var(--border,#dce8df);min-width:0}.location-search{display:flex;align-items:end;gap:10px;margin-bottom:12px}.location-search label{flex:1;min-width:0}.location-search button,.location-results button{min-height:44px}.location-results{display:grid;gap:6px;max-height:220px;overflow:auto}.location-results button{text-align:right;white-space:normal;overflow-wrap:anywhere;background:#f1f6f2;color:var(--brand-green,#005b35)}.location-picker [role=status]{overflow-wrap:anywhere}.location-picker .map-picker>.error{margin:12px}.location-picker h4{margin-top:0}.location-picker .member-actions{display:flex;flex-wrap:wrap;gap:8px}@media(max-width:550px){.location-search{align-items:stretch;flex-direction:column}}
 
 .company-map-pin{display:grid;place-items:center;background:var(--brand-green,#005b35);color:white;border:3px solid white;border-radius:16px 16px 16px 3px;box-shadow:0 3px 10px #153b3040}.company-map-pin svg{width:26px;height:26px}.nav-group>summary svg,.sidebar .nav svg{stroke-width:1.8}.nav-group>summary:focus-visible{outline:2px solid #f6ca44;outline-offset:3px}.dashboard-stat svg{stroke-width:1.8}
+
+/* Navigation palette and filled silhouettes follow the Samar reference. */
+.sidebar{--menu-navy:#283256;--menu-accent:#e45231;background:var(--menu-navy);border-color:var(--menu-navy)}
+.sidebar .nav-popup{background:var(--menu-navy);color:white;border-color:var(--menu-navy);border-radius:20px;padding:10px}
+.sidebar .nav-popup a{color:white;min-height:44px;display:flex;align-items:center;gap:10px}
+.sidebar .nav-popup a svg{width:22px;height:22px;flex:none}
+.sidebar .nav-popup a:hover,.sidebar .nav-popup a:focus-visible,.sidebar .nav-popup a.active,.sidebar .nav.active,.sidebar .nav-group.current-group>summary{background:white;color:var(--menu-accent)}
+.sidebar .nav-group>summary,.sidebar .nav{min-width:44px;min-height:44px}
+
+.service-picker-list{display:grid;gap:8px;max-height:280px;overflow:auto;padding:8px}.service-picker-list label{display:flex;align-items:center;gap:10px;min-height:44px}.service-picker-list input[type=checkbox]{width:auto;flex:none}#newServiceSetup>.toolbar{justify-content:flex-start;flex-wrap:wrap;gap:10px}

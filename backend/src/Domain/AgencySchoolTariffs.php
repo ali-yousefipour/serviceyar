@@ -27,6 +27,7 @@ final class AgencySchoolTariffs {
   return ['insertedOrUpdated'=>$count,'currency'=>'IRR','academicYear'=>self::YEAR];
  }
  public static function quote(PDO $pdo,int $aid,int $schoolId,string $year,mixed $distance,mixed $class): ?int {
+  $year=str_replace('/','-',$year);
   if($distance===null||$class===null||!is_numeric($distance)||!in_array((string)$class,['1','2','3'],true))return null;
   $km=(float)$distance;
   if(!is_finite($km)||$km<3||$km>1000)return null;

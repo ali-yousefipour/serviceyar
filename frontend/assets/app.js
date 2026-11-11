@@ -39,6 +39,20 @@ Object.assign(iconPaths,{
  accounts:'<path d="M3 10h18L12 3ZM5 10v8m5-8v8m4-8v8m5-8v8M3 21h18"/>',
  reports:'<path d="M4 3v18h17M8 16v-4m5 4V8m5 8V5"/>'
 });
+const samarMenuPaths={
+ dashboard:'M3 3h8v8H3zM13 3h8v5h-8zM3 13h8v8H3zM13 10h8v11h-8z',
+ schools:'M12 3 1 9l11 6 9-4.91V17h2V9L12 3zm-7 10v4l7 4 7-4v-4l-7 4-7-4z',
+ students:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4.42 0-8 2.24-8 5v2h16v-2c0-2.76-3.58-5-8-5z',
+ drivers:'M5 5h14l3 8v7h-2v-2H4v2H2v-7l3-8zm1.4 2L5 11h14l-1.4-4H6.4zM6 13a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm12 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z',
+ services:'M6 7h11V4l5 4-5 4V9H6v4H4V7h2zm12 10H7v3l-5-4 5-4v3h11v-4h2v6z',
+ accounts:'M4 2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm1 5v2h6V7H5zm10-2-1.4 1.4L15 8l-1.4 1.6L15 11l1.5-1.6L18 11l1.4-1.4L18 8l1.4-1.6L18 5l-1.5 1.6L15 5zM7 13v2H5v2h2v2h2v-2h2v-2H9v-2H7zm7 1v2h5v-2h-5zm0 3v2h5v-2h-5z',
+ reports:'M3 2h14a2 2 0 0 1 2 2v2H7v12H3a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm6 6h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2zm1 3v2h10v-2H10zm0 4v2h3v-2h-3zm5 0v2h5v-2h-5z'
+};
+const samarMenuAliases={'schools/new':'schools','students/new':'students','previous-students':'students','services/new':'services','accounting-documents':'accounts','installments':'accounts','finance-report':'reports','school-report':'reports','vehicles':'drivers'};
+function samarMenuIcon(key){
+ const path=samarMenuPaths[samarMenuAliases[key]||key];
+ return path?`<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" fill-rule="evenodd"><path d="${path}"/></svg>`:navIcon(key.split('/')[0]);
+}
 function navIcon(key){return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${iconPaths[key]||iconPaths.dashboard}</svg>`}
 function renderAgencySelector(){const wrap=$('agencyPickerWrap'),select=$('agencySelect');if(!wrap||!select)return;const canSwitch=session?.roles?.includes('super_admin')||(agencies||[]).length>1;wrap.hidden=!canSwitch;select.innerHTML=(agencies||[]).map(a=>`<option value="${esc(a.id)}">${esc(a.name)}${Number(a.is_active)===0?' (غیرفعال)':''}</option>`).join('');if(currentAgency)select.value=String(currentAgency.id);}
 function renderNav(){ renderAgencySelector(); const perms=session?.permissions||[];const access={dashboard:'dashboard.view',schools:'schools.view',students:'students.view',drivers:'drivers.view',vehicles:'services.view',services:'services.view',packs:'services.view',contracts:'finance.view','driver-work':'finance.view','driver-payments':'finance.view','school-charges':'finance.view','service-charges':'finance.view',invoices:'finance.view',payments:'finance.view',accounts:'finance.view','accounting-documents':'finance.view',wallets:'finance.view',messages:'messages.manage','driver-changes':'services.manage',reports:'reports.view',settings:'settings.view'};const visible=nav.filter(([k])=>k==='companies'?session?.roles?.includes('super_admin'):session?.roles?.includes('super_admin')||perms.includes(access[k]));$('nav').innerHTML=visible.map(([k,t])=>`<a class="nav" href="#${k}" data-page="${k}">${navIcon(k)}<span>${t}</span></a>`).join('') }

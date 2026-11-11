@@ -11,7 +11,7 @@ final class SchoolStatement {
  public static function calculate(array $input): array {
   $class=$input['vehicleClass']??'';$distance=$input['distanceKm']??'';$region=$input['region']??'';$days=$input['days']??30;
   if(!is_scalar($class)||!in_array((string)$class,['1','2','3'],true)||!is_scalar($distance)||!is_numeric($distance)||!is_int($days)||$days<0||$days>30||!is_string($region))self::invalid();
-  $rates=json_decode(file_get_contents(__DIR__.'/school-tariffs-1405.json'),true,512,JSON_THROW_ON_ERROR);$key=(string)(0+$distance);$rate=$rates[(string)$class][$key]??null;
+  $rates=json_decode(file_get_contents(__DIR__.'/school-workbook-rates-1405.json'),true,512,JSON_THROW_ON_ERROR);$key=(string)(0+$distance);$rate=$rates[(string)$class][$key]??null;
   $factors=['ناحیه 1'=>100,'ناحیه 2'=>110,'ناحیه 3'=>125,'ناحیه 4'=>125,'ناحیه 5'=>110,'ناحیه 6'=>125,'ناحیه 7'=>110,'تبادکان'=>100];
   if($rate===null||!isset($factors[$region]))throw new AuthException(422,'مسافت باید دقیقاً در جدول تعرفه و ناحیه در فهرست مبنا وجود داشته باشد.','TARIFF_NOT_FOUND');
   if(!ctype_digit((string)$rate)||(int)$rate>1000000000)self::invalid();

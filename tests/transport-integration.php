@@ -267,6 +267,14 @@ try{
  $office=\ServiceYar\Integrations\Neshan::config($a)['companyLocation'];check((float)$office['latitude']===36.3&& (float)$office['longitude']===59.6,'Company map location persists in agency settings');
  check(\ServiceYar\Integrations\Neshan::config($b)['companyLocation']===null,'Company map location is isolated by agency');
  rejected(fn()=>\ServiceYar\Settings\SettingsService::put($uid,$a,['company_location'=>['latitude'=>91,'longitude'=>59.6]]),'LOCATION_REQUIRED');
+ $p->prepare("INSERT INTO agency_school_tariffs(agency_id,academic_year,region,vehicle_class,distance_km,amount_irr) VALUES(?, '1405-1406', '', 1, 5, 18852524)")->execute([$a]);
+ $tariffStudent=D::save($uid,$a,'students',['schoolId'=>$school['id'],'firstName'=>'آزمایش تعرفه','lastName'=>'سرویس','mobile'=>'09120000981','academicYear'=>'1405/1406','tariffDistanceKm'=>5,'tariffVehicleClass'=>1]);
+ check((int)$tariffStudent['monthly_fee']===18852524,'Student tariff resolves Persian academic year separator');
+ check(\ServiceYar\Domain\AgencySchoolTariffs::quote($p,$a,(int)$school['id'],'1405/1406','5.2',1)===null,'Fractional distance never selects an unrelated tariff');
+ $newService=D::save($uid,$a,'services',['title'=>'سرویس چند مدرسه','capacity'=>2,'schoolIds'=>[$school['id'],$secondSchool['id']],'studentIds'=>[$tariffStudent['id'],$secondStudent['id']]]);
+ check(count(D::serviceStudents($uid,$a,(int)$newService['id']))===2,'New service saves selected schools and students together');
+ rejected(fn()=>D::save($uid,$a,'services',['title'=>'rollback-service-'.$tag,'capacity'=>2,'schoolIds'=>[$school['id']],'studentIds'=>[$secondStudent['id']]]),'SCHOOL_MISMATCH');
+ $q=$p->prepare('SELECT COUNT(*) FROM services WHERE agency_id=? AND title=?');$q->execute([$a,'rollback-service-'.$tag]);check((int)$q->fetchColumn()===0,'Failed member assignment rolls back service creation');
  echo "Transport integration: $checks checks passed. All fixtures rolled back.\n";
 }finally{if($p->inTransaction())$p->rollBack();}
 
