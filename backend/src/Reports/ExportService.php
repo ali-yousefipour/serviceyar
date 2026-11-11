@@ -55,7 +55,7 @@ final class ExportService
             'dateFrom' => ['column' => $schema['date_column'] ?? 'created_at', 'operator' => '>=', 'suffix' => ' 00:00:00'],
             'dateTo' => ['column' => $schema['date_column'] ?? 'created_at', 'operator' => '<=', 'suffix' => ' 23:59:59'],
         ];
-        foreach ($filters as $key => $filter) {
+        foreach ($resource === "driver-work" ? [] : $filters as $key => $filter) {
             $value = trim((string)($_GET[$key] ?? ''));
             $column = $filter['column'];
             if ($value !== '' && in_array($column, $columnNames, true) && preg_match('/^\\d{4}-\\d{2}-\\d{2}$/', $value)) {
@@ -65,12 +65,20 @@ final class ExportService
             }
         }
         if ($resource === 'services') {
-            [$serviceWhere, $serviceParams] = DomainService::serviceFilters($_GET);
+            [$serviceWhere, $serviceParams] = DomainService::serviceFilters($_GET,$uid);
             $where = array_merge($where, $serviceWhere);
             $params += $serviceParams;
         }
+        if ($resource === 'driver-work') {
+            [$workWhere, $workParams] = DomainService::workDateFilters($_GET);
+            $where = array_merge($where, $workWhere);
+            $params += $workParams;
+        }
         $search = $resource === 'services' ? '' : trim((string)($_GET['search'] ?? ''));
-        if ($search !== '') {
+        if ($search !== '' && $resource === 'driver-work') {
+            $where[] = 'note LIKE :work_note';
+            $params['work_note'] = '%' . $search . '%';
+        } elseif ($search !== '') {
             $parts = [];
             $escapedSearch = '%' . str_replace(['\\\\', '%', '_'], ['\\\\\\\\', '\\%', '\\_'], $search) . '%';
             foreach ($columnNames as $index => $column) {

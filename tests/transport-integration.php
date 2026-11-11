@@ -60,6 +60,9 @@ try{
  $driver=D::save($uid,$a,'drivers',['firstName'=>'راننده','lastName'=>'یک']);$replacement=D::save($uid,$a,'drivers',['firstName'=>'راننده','lastName'=>'دو']);
  $service=D::save($uid,$a,'services',['title'=>'صبح','schoolId'=>$school['id'],'driverId'=>$driver['id'],'capacity'=>1]);
  D::assignStudent($uid,$a,(int)$service['id'],(int)$s1['id']);check(D::get($uid,$a,'students',(int)$s1['id'])['service_status']==='assigned','Assignment updates service status');
+ $studentServices=D::list($uid,$a,'services',['studentSearch'=>'آرمان آزمایشی']);
+ check(array_map('intval',array_column($studentServices['items'],'id'))===[(int)$service['id']],'Student name finds only the assigned service');
+ check(D::list($uid,$a,'services',['studentSearch'=>'%'])['items']===[],'Student search treats wildcards literally');
  D::assignStudent($uid,$a,(int)$service['id'],(int)$s1['id'],'نشانی اصلاحی',1);check(count(D::serviceStudents($uid,$a,(int)$service['id']))===1,'Repeated assignment remains unique');
  rejected(fn()=>D::assignStudent($uid,$a,(int)$service['id'],(int)$s2['id']),'CAPACITY_EXCEEDED');
  rejected(fn()=>D::assignStudent($uid,$a,(int)$service['id'],(int)$foreign['id']),'NOT_FOUND');
@@ -68,6 +71,11 @@ try{
  rejected(fn()=>O::bulkFees($uid,$a,['ids'=>[$s1['id'],$foreign['id']],'mode'=>'set','value'=>5]),'CROSS_SCOPE_REFERENCE');check((float)D::get($uid,$a,'students',(int)$s1['id'])['monthly_fee']===1100.0,'Cross-company bulk write is atomic');
  rejected(fn()=>O::bulkFees($uid,$a,['ids'=>[$s1['id'],$s2['id']],'mode'=>'decrease','value'=>2000]),'VALIDATION_ERROR');check((float)D::get($uid,$a,'students',(int)$s1['id'])['monthly_fee']===1100.0,'Failed bulk write rolls back');
  $date=(new DateTimeImmutable('now',new DateTimeZone('Asia/Tehran')))->format('Y-m-d');D::save($uid,$a,'driver-work',['driverId'=>$driver['id'],'workDate'=>$date,'amount'=>1000]);D::save($uid,$a,'driver-payments',['driverId'=>$driver['id'],'paymentDate'=>$date,'amount'=>200]);D::save($uid,$a,'ledger',['partyType'=>'driver','partyId'=>$driver['id'],'direction'=>'payment','amount'=>100,'entryDate'=>$date]);
+ $workFilters=['driverId'=>$driver['id'],'dateFrom'=>$date,'dateTo'=>$date,'status'=>'pending'];
+ check(D::list($uid,$a,'driver-work',$workFilters)['pagination']['total']===1,'Work date range includes both endpoints');
+ check(D::list($uid,$a,'driver-work',array_replace($workFilters,['status'=>'approved']))['items']===[],'Work review status filters the matching dates');
+ rejected(fn()=>D::list($uid,$a,'driver-work',['dateFrom'=>'2026-02-30']),'VALIDATION_ERROR');
+ rejected(fn()=>D::list($uid,$a,'driver-work',['dateFrom'=>'2026-11-03','dateTo'=>'2026-11-02']),'VALIDATION_ERROR');
  $pay=O::payroll($uid,$a,['from'=>$date,'to'=>$date]);$paid=array_values(array_filter($pay['items'],fn($r)=>(int)$r['id']===(int)$driver['id']))[0];check((float)$paid['balance']===700.0,'Payroll combines earned and real payments');
  $change=D::save($uid,$a,'driver-changes',['serviceId'=>$service['id'],'newDriverId'=>$replacement['id']]);O::changeDriver($uid,$a,(int)$change['id'],'approved');check((int)D::get($uid,$a,'services',(int)$service['id'])['driver_id']===(int)$replacement['id'],'Approved change updates service driver');rejected(fn()=>O::changeDriver($uid,$a,(int)$change['id'],'approved'),'ALREADY_REVIEWED');
  rejected(fn()=>D::save($uid,$a,'driver-changes',['serviceId'=>$service['id'],'newDriverId'=>$driver['id'],'status'=>'approved']),'WORKFLOW_REQUIRED');

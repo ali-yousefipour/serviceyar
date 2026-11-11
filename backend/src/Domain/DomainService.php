@@ -47,12 +47,17 @@ final class DomainService {
  public static function list(int $uid,int $aid,string $resource,array $q): array {
   $c=self::cfg($resource); self::scope($uid,$aid,$c['permission']); $where='agency_id=:agency';$params=['agency'=>$aid];
   if($resource==='services'){
-   [$clauses,$serviceParams]=self::serviceFilters($q);
+   [$clauses,$serviceParams]=self::serviceFilters($q,$uid);
    foreach($clauses as $clause)$where.=' AND '.$clause;
    $params+=$serviceParams;
   }elseif(isset($q['search'])&&trim((string)$q['search'])!==''){ $parts=[];foreach($c['search'] as $i=>$f){$k='s'.$i;$parts[]="$f LIKE :$k";$params[$k]='%'.trim((string)$q['search']).'%';}if(in_array($resource,['students','drivers'],true)){$parts[]="CONCAT(first_name,' ',last_name) LIKE :full_name";$params['full_name']='%'.trim((string)$q['search']).'%';}$where.=' AND ('.implode(' OR ',$parts).')';}
   foreach($resource==='services'?[]:['schoolId'=>'school_id','driverId'=>'driver_id','packId'=>'pack_id','status'=>'status','serviceStatus'=>'service_status','academicYear'=>'academic_year','schoolType'=>'school_type','active'=>'is_active','mobile'=>'mobile'] as $key=>$column){
    if(isset($q[$key]) && $q[$key]!=='' && in_array($column,$c['fields'],true)){$where.=" AND $column=:filter_$column";$params['filter_'.$column]=(string)$q[$key];}
+  }
+  if($resource==='driver-work'){
+   [$workWhere,$workParams]=self::workDateFilters($q);
+   foreach($workWhere as $clause)$where.=' AND '.$clause;
+   $params+=$workParams;
   }
   if($resource==='students' && ($q['unassigned']??'')==='1')$where.=' AND NOT EXISTS (SELECT 1 FROM service_students ss JOIN services sv ON sv.id=ss.service_id WHERE ss.student_id=students.id AND sv.agency_id=students.agency_id AND sv.is_active=1)';
   if($resource==='students'&&!empty($q['eligibleServiceId'])){self::get($uid,$aid,'services',(int)$q['eligibleServiceId']);$where.=' AND EXISTS(SELECT 1 FROM services sv LEFT JOIN service_schools ss ON ss.service_id=sv.id WHERE sv.id=:eligible_service AND sv.agency_id=students.agency_id AND (sv.school_id=students.school_id OR ss.school_id=students.school_id))';$params['eligible_service']=(int)$q['eligibleServiceId'];}
@@ -72,7 +77,7 @@ final class DomainService {
   $s=$pdo->prepare("SELECT $select FROM {$c['table']} WHERE $where ORDER BY id DESC LIMIT $limit OFFSET $off");$s->execute($params);
    $total=(int)$count->fetchColumn(); return ['items'=>$s->fetchAll(),'pagination'=>['page'=>$page,'limit'=>$limit,'total'=>$total,'pages'=>(int)ceil($total/$limit)]];
  }
- public static function serviceFilters(array $query): array {
+ public static function serviceFilters(array $query,int $uid): array {
   $where=[];$params=[];
   foreach(['driverId'=>'driver_id','packId'=>'pack_id','status'=>'status','active'=>'is_active','shift'=>'shift'] as $key=>$column){
    $value=$query[$key]??'';
@@ -93,6 +98,29 @@ final class DomainService {
      AND (sc.id=services.school_id OR EXISTS (SELECT 1 FROM service_schools ss WHERE ss.service_id=services.id AND ss.school_id=sc.id))))";
    foreach(['service_title','service_code','service_driver','service_school'] as $name)$params[$name]=$term;
   }
+  $student=$query['studentSearch']??'';
+  if(is_string($student)&&trim($student)!==''){
+   Authorization::requirePermission($uid,'students.view');
+   $term='%'.strtr(trim($student),['!'=>'!!','%'=>'!%','_'=>'!_']).'%';
+   $where[]="EXISTS (SELECT 1 FROM service_students sm JOIN students st ON st.id=sm.student_id
+    WHERE sm.service_id=services.id AND st.agency_id=services.agency_id
+     AND (CONCAT_WS(' ',st.first_name,st.last_name) LIKE :student_name ESCAPE '!'
+          OR st.national_code LIKE :student_code ESCAPE '!'))";
+   $params['student_name']=$params['student_code']=$term;
+  }
+  return [$where,$params];
+ }
+ public static function workDateFilters(array $query): array {
+  $where=[];$params=[];
+  foreach(['dateFrom'=>'>=','dateTo'=>'<='] as $key=>$operator){
+   $date=$query[$key]??'';
+   if($date==='')continue;
+   if(!is_string($date)||!OperationsService::validDate($date))
+    throw new AuthException(422,'تاریخ کارکرد معتبر نیست.','VALIDATION_ERROR');
+   $where[]="work_date $operator :work_$key";$params["work_$key"]=$date;
+  }
+  if(isset($params['work_dateFrom'],$params['work_dateTo'])&&$params['work_dateFrom']>$params['work_dateTo'])
+   throw new AuthException(422,'ابتدای بازهٔ کارکرد باید پیش از پایان آن باشد.','VALIDATION_ERROR');
   return [$where,$params];
  }
  public static function get(int $uid,int $aid,string $resource,int $id): array {
