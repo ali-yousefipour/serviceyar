@@ -161,6 +161,8 @@ try {
  if($method==='POST'&&$path==='/api/v1/drivers/bulk-status'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\DriverBulkStatus::apply($s['id'],$aid,Request::json())]);}
  if($method==='GET'&&$path==='/api/v1/operations/mehr-assignments/preview')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\MehrWorkbookAssignments::run($s['id'],$aid,false)]);
  if($method==='POST'&&$path==='/api/v1/operations/mehr-assignments/drafts'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\MehrWorkbookAssignments::run($s['id'],$aid,true)]);}
+ if($path==='/api/v1/school-catalog'&&$method==='GET')Response::json(['ok'=>true,'data'=>\\ServiceYar\\Domain\\SchoolCatalog::search($s['id'],$aid,$_GET)]);
+ if($path==='/api/v1/school-catalog/select'&&$method==='POST'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\\ServiceYar\\Domain\\SchoolCatalog::select($s['id'],$aid,Request::json())]);}
  $domainMap=['schools','students','drivers','vehicles','services','packs','contracts','driver-work','driver-payments','school-charges','service-charges','invoices','payments','accounts','accounting-documents','wallets','messages','driver-changes','ledger','driver-ratings','parent-reports'];
  foreach($domainMap as $resource){
   $base='/api/v1/'.$resource;
