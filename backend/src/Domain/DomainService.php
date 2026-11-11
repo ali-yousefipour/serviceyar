@@ -85,7 +85,11 @@ final class DomainService {
     foreach(['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹','٠','١','٢','٣','٤','٥','٦','٧','٨','٩'] as $i=>$digit)$normalized='REPLACE('.$normalized.",'".$digit."','".($i%10)."')";
     $normalized="REPLACE(REPLACE($normalized,'ي','ی'),'ك','ک')";
     $where.=" AND $normalized REGEXP :vehicle_plate_pattern";
-    $params['vehicle_plate_pattern']='^'.implode('',$patterns).'
+    $params['vehicle_plate_pattern']='^'.implode('',$patterns).'$';
+   }
+  }
+  if($resource==='driver-work'){
+   [$workWhere,$workParams]=self::workDateFilters($q);
    foreach($workWhere as $clause)$where.=' AND '.$clause;
    $params+=$workParams;
   }
