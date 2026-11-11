@@ -232,3 +232,24 @@ body.has-modal{overflow:hidden}.modal-backdrop{padding:24px;overflow:auto;align-
 .modal-body{overflow-wrap:anywhere}
 @media(max-width:760px){.sy-nav-search{min-width:min(250px,100%);padding:6px}.wizard-marker{font-size:11px}.wizard-marker b{width:26px;height:26px}.wizard-actions{gap:7px;flex-wrap:wrap;padding:12px 0;bottom:0}.wizard-actions button{min-width:0;flex:1 1 110px}.wizard-actions>span{flex:1 1 100%;text-align:center;order:-1}.wizard-step .form-grid{grid-template-columns:1fr}.modal .wizard-progress{margin-inline:0}}
 @media(max-width:420px){.wizard-actions button{flex:1 1 45%;padding:10px}.wizard-review .detail-grid{grid-template-columns:1fr}}
+
+/* Reusable resource-grid empty, error and responsive states */
+.sy-empty-results,.sy-grid-error{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:180px;padding:28px 18px;text-align:center;color:#385b49;white-space:normal}
+.sy-empty-results strong,.sy-grid-error strong{font-size:17px;color:#194c32;font-weight:850}
+.sy-empty-results span,.sy-grid-error p{font-size:13px;line-height:1.9;color:#627b6d;margin:0;max-width:480px}
+.sy-empty-results button,.sy-grid-error button{margin-top:8px;border:1px solid #a5c8b4;border-radius:11px;background:#eef8f1;color:#125337;min-height:44px;padding:9px 20px;font-weight:800}
+.sy-empty-results button:hover,.sy-grid-error button:hover{background:#d8eee0}
+.sy-grid-error{border:1px solid #f0c6bc;border-radius:14px;background:#fff9f7;color:#883f31}
+.sy-grid-error strong{color:#8b3c30}
+#table[aria-busy=true]{min-height:120px}
+#table .table-wrap:focus-visible{outline:3px solid #c5aa5c;outline-offset:2px;border-radius:12px}
+#table .table-wrap{overscroll-behavior-inline:contain;scrollbar-width:thin}
+#table table{font-variant-numeric:tabular-nums}
+#table .row-actions{min-width:140px}
+#table .row-actions button{min-height:36px;border-radius:9px}
+#table .row-actions .danger{border-color:#edc4c0;color:#a5352d;background:#fff7f6}
+#table .row-actions .danger:hover{background:#ffebe9}
+#table .pager{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;padding:16px 8px}
+#table .pager button,#table .pager select{min-height:42px;border-radius:10px}
+@media(max-width:760px){#table .row-actions{min-width:190px}#table .row-actions button{margin-block:3px}#table .pager{justify-content:space-between}#table .pager span{order:-1;flex-basis:100%;text-align:center}.sy-empty-results,.sy-grid-error{padding:22px 12px}}
+@media(prefers-reduced-motion:reduce){.sy-empty-results button,.sy-grid-error button{transition:none}}
