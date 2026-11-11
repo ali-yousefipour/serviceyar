@@ -790,12 +790,14 @@ async function newServicePage(token,initialDriverId){
  const hasMehrDriver=student=>Number(student.mehr_driver_id)===Number(driverId);
  const schoolIds=()=>selectedSchools;
  const quoteMonths=$('serviceQuoteMonths');
+ const canSubmit=()=>Boolean(driverId&&selectedSchools.length&&chosen.size&&!saving&&form.elements.title.value.trim()&&form.elements.capacity.checkValidity()&&chosen.size<=Number(form.elements.capacity.value)&&form.elements.agreedAmount.checkValidity());
+ const refreshSave=()=>{save.disabled=!canSubmit();};
  const sync=()=>{
   for(const s of students)if(!selectedSchools.includes(Number(s.school_id)))chosen.delete(s.id);
-  show.disabled=!selectedSchools.length||!driverId;quote.disabled=show.disabled||!chosen.size;save.disabled=true;
+  show.disabled=!selectedSchools.length||!driverId;quote.disabled=show.disabled||!chosen.size;refreshSave();
   $('serviceStudentSelection').hidden=show.disabled;$('serviceSetupDetails').hidden=!chosen.size;
   $('selectedServiceStudents').textContent=chosen.size?students.filter(s=>chosen.has(s.id)).map(person).join('، '):'دانش‌آموزان این سرویس را انتخاب کنید.';
-  revision++;result.textContent='برای ادامه، قیمت و مسیر را دریافت کنید.';
+  revision++;result.textContent='برای مشاهده برآورد هزینه و مسیر، «دریافت قیمت و مسیر» را انتخاب کنید. ثبت سرویس بدون دریافت پیش‌نمایش نیز امکان‌پذیر است.';
  };
  const matches=(value,term)=>normalizeServiceSearch(value).includes(normalizeServiceSearch(term));
  const checklist=(rows,selected,caption)=>rows.map(r=>`<label><input type="checkbox" value="${r.id}" ${selected.has(Number(r.id))?'checked':''}>${esc(caption(r))}</label>`).join('')||'<p class="empty">موردی برای انتخاب پیدا نشد.</p>';
@@ -842,12 +844,15 @@ async function newServicePage(token,initialDriverId){
   name.oninput=address.oninput=history.onchange=render;rows.onchange=e=>{togglePick(e,pending);$('studentPickerCount').textContent='انتخاب‌شده: '+number(pending.size);};
   $('confirmStudents').onclick=()=>{chosen.clear();for(const s of students)if(pending.has(Number(s.id)))chosen.add(s.id);closeDialog();sync();};render();name.focus();
  };
- quoteMonths.oninput=form.elements.capacity.oninput=sync;
+ form.elements.title.addEventListener('input',refreshSave);
+ form.elements.agreedAmount.addEventListener('input',refreshSave);
+ quoteMonths.oninput=()=>{revision++;result.textContent='برآورد قبلی نیاز به به‌روزرسانی دارد.';};
+ form.elements.capacity.oninput=sync;
  quote.onclick=async()=>{
   const months=Number(quoteMonths.value);
   if(!Number.isInteger(months)||months<1||months>12){result.textContent='تعداد ماه خدمت باید بین ۱ تا ۱۲ باشد.';return;}
   const version=++revision,rows=students.filter(s=>chosen.has(s.id));
-  save.disabled=true;
+  refreshSave();
   if(!form.elements.capacity.reportValidity()){result.textContent='ظرفیت معتبر وارد کنید.';return;}
   if(rows.length>Number(form.elements.capacity.value)){result.textContent='تعداد دانش‌آموزان از ظرفیت بیشتر است.';return;}
   quote.disabled=true;disposeMaps();result.textContent='در حال دریافت قیمت و مسیر…';
@@ -869,17 +874,17 @@ async function newServicePage(token,initialDriverId){
    }
    if(!current())return;
    result.innerHTML=simpleTable(['دانش‌آموز','کیلومتر تعرفه','مسیر نشان','ماهیانه · ریال','برآورد سالانه · ریال','مبنای مبلغ'],lines)+'<p>جمع ماهانه: '+number(total)+' ریال · برآورد '+number(months)+' ماه: '+number(total*months)+' ریال · بدون نرخ: '+number(missing)+'</p>'+(routes.length?'<div class="service-map" id="serviceQuoteMap" aria-label="نقشه مسیرهای نشان"></div>':'');
-   save.disabled=saving;
+   refreshSave();
    if(routes.length){
     const map=await makeMap($('serviceQuoteMap'));
     if(!map||!current())return;
     const group=L.featureGroup(routes.map(geometry=>L.polyline(geometry,{color:'#005b35',weight:4}))).addTo(map);
     map.fitBounds(group.getBounds().pad(.15),{maxZoom:16});
    }
-  }catch(e){if(current())result.textContent=e.message;}finally{if(current())quote.disabled=false;}
+  }catch(e){if(current())result.textContent='دریافت برآورد امکان‌پذیر نشد: '+e.message+'؛ در صورت تکمیل مشخصات می‌توانید سرویس را ثبت کنید.';}finally{if(current()){quote.disabled=false;refreshSave();}}
  };
  form.onsubmit=async e=>{
-  e.preventDefault();if(save.disabled||saving)return;
+  e.preventDefault();refreshSave();if(save.disabled||saving)return;
   const body=Object.fromEntries(new FormData(form));body.driverId=driverId;body.schoolIds=schoolIds();body.studentIds=[...chosen];
   const version=revision;saving=true;save.disabled=true;
   try{await write('/api/v1/services',body);lookupCache={};if(form.isConnected){notify('سرویس و دانش‌آموزان ثبت شدند.');location.hash=initialDriverId?'drivers':'services';}}
