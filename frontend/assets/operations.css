@@ -357,3 +357,45 @@ body.has-modal{overflow:hidden}.modal-backdrop{padding:24px;overflow:auto;align-
 @media(max-width:1100px){.dashboard-grid{grid-template-columns:1fr}.dashboard-content{margin-left:0}.dashboard-active #dashboardBackdrop{opacity:.13;pointer-events:none}}
 @media(max-width:640px){.dashboard-welcome{align-items:stretch;flex-direction:column;padding:15px}.dashboard-create{width:100%}.dashboard-create a,.samar-refresh{flex:1}.quick-search form{flex-wrap:wrap}.quick-search form input{flex:1 1 100%}.stats.transport-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-grid>.panel{padding:14px}.samar-donut{width:148px;height:148px}.samar-donut>span{width:108px;height:108px}}
 @media(prefers-reduced-motion:reduce){.transport-stats article{transition:none}.transport-stats article:hover{transform:none}}
+
+/* Dashboard completion: spatial layout from SAMAR reference screenshots 041/042.
+   Map occupies the left zone in RTL; operational widgets remain in the right zone. */
+@media(min-width:1250px){
+ .dashboard-active .main{margin-right:80px;width:calc(100% - 80px);max-width:none;padding-inline:18px}
+ .dashboard-active .dashboard-content{margin:0!important;width:100%}
+ .dashboard-active .dashboard-grid{display:grid;grid-template-columns:minmax(260px,1fr) minmax(260px,1fr) minmax(360px,1.45fr);grid-auto-flow:row;align-items:stretch;gap:12px}
+ .dashboard-active .dashboard-grid>.dashboard-map-panel{grid-column:3;grid-row:1 / span 5;position:sticky;top:16px;align-self:start;min-height:calc(100vh - 155px);max-height:calc(100vh - 32px);display:flex;flex-direction:column;overflow:hidden}
+ .dashboard-active .dashboard-map-panel .dashboard-school-map{flex:1;min-height:440px;max-height:none}
+ .dashboard-active .dashboard-grid>.panel{margin:0}
+ .dashboard-active .dashboard-grid>.panel:not(.dashboard-map-panel){min-height:190px}
+ .dashboard-active .dashboard-grid>.samar-chart-panel{min-height:260px}
+}
+.dashboard-active .dashboard-map-panel{border:1px solid #d9e4ef;background:#f6f9fb}
+.dashboard-active .dashboard-map-panel .dashboard-panel-head{flex:none}
+.dashboard-active .dashboard-map-panel .dashboard-school-map{isolation:isolate}
+.dashboard-active .dashboard-grid .dashboard-attention{background:#fff}
+.dashboard-active .dashboard-grid .distribution a{transition:background .15s ease,border-color .15s ease}
+.dashboard-active .dashboard-grid .distribution a:hover{background:#f1f7fb;border-color:#b9cfdf}
+.dashboard-active .dashboard-grid .setup-list a:focus-visible,.dashboard-active .dashboard-grid .distribution a:focus-visible{outline:3px solid #d9a22a;outline-offset:2px}
+.dashboard-active .dashboard-grid .table-wrap{scrollbar-width:thin;scrollbar-color:#a8bed0 #f4f7fb}
+.dashboard-active .dashboard-grid th{background:#eef3f8;color:#344b67;position:sticky;top:0}
+.dashboard-active .dashboard-grid .calendar-head button{min-width:40px;min-height:40px;border-radius:12px}
+.dashboard-active .dashboard-grid .calendar-days .today{border-radius:12px}
+.dashboard-active .dashboard-welcome{box-shadow:0 5px 18px #1e365610}
+.dashboard-active .quick-search{position:relative;z-index:2}
+.dashboard-active .quick-search input:focus-visible{outline:2px solid #318b83;outline-offset:2px}
+@media(min-width:900px) and (max-width:1249px){
+ .dashboard-active .dashboard-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .dashboard-active .dashboard-map-panel{grid-column:1 / -1}
+ .dashboard-active .dashboard-map-panel .dashboard-school-map{min-height:340px}
+}
+@media(max-width:899px){
+ .dashboard-active .dashboard-grid{grid-template-columns:1fr}
+ .dashboard-active .dashboard-map-panel{grid-column:auto;grid-row:auto;position:static;max-height:none}
+ .dashboard-active .dashboard-map-panel .dashboard-school-map{min-height:290px}
+}
+@media print{
+ .dashboard-active .dashboard-map-panel{position:static!important;max-height:none!important}
+ .dashboard-active .dashboard-grid{display:block!important}
+ .dashboard-active .dashboard-grid>.panel{break-inside:avoid;margin-bottom:12px}
+}
