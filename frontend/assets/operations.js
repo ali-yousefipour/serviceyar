@@ -173,7 +173,10 @@ function serviceFilterForm(schoolFilter){
   </div>
   <div class="service-filter-fields">
    ${schoolFilter?relation('schoolId','مدرسه','همه مدارس'):''}
-   ${can('drivers')?relation('driverId','راننده','همه رانندگان'):''}
+   ${can('drivers')?`<div class="service-driver-filter">
+    <label>جست‌وجوی راننده<input id="serviceDriverSearch" type="search" placeholder="بخشی از نام یا نام خانوادگی" autocomplete="off" maxlength="200" disabled></label>
+    ${relation('driverId','راننده','همه رانندگان')}
+   </div>`:''}
    ${can('packs')?relation('packId','پک سرویس','همه پک‌ها'):''}
    <label>وضعیت سرویس<select name="status"><option value="">همه وضعیت‌ها</option>${fieldOptions('services','status').map(([key,label])=>`<option value="${key}">${label}</option>`).join('')}</select></label>
    <label>فعال بودن<select name="active"><option value="">همه سوابق</option><option value="1">فعال</option><option value="0">غیرفعال</option></select></label>
@@ -206,7 +209,24 @@ async function resourcePage(key,token=pageToken,options={}){
    const select=filterForm.elements[name];if(!select)return;
    try{
     const rows=await lookup(resource,true);if(token!==pageToken)return;
-    for(const row of rows.sort((a,b)=>person(a).localeCompare(person(b),'fa')))select.add(new Option(person(row),row.id));
+    const sorted=[...rows].sort((a,b)=>person(a).localeCompare(person(b),'fa'));
+    if(name==='driverId'){
+     const search=$('serviceDriverSearch');
+     const normalize=value=>value.normalize('NFKC').replace(/ي|ى/g,'ی').replace(/ك/g,'ک').replace(/[\s\u200c]+/g,' ').trim().toLowerCase();
+     const drivers=sorted.map(row=>({id:row.id,label:person(row),searchName:normalize(person(row))}));
+     const update=()=>{
+      const selected=select.value,term=normalize(search.value);
+      const matches=drivers.filter(driver=>driver.searchName.includes(term));
+      select.replaceChildren(new Option(matches.length||!term?'همه رانندگان':'راننده‌ای پیدا نشد',''));
+      for(const driver of matches)select.add(new Option(driver.label,driver.id));
+      if(matches.some(driver=>String(driver.id)===selected))select.value=selected;
+     };
+     search.addEventListener('input',update);
+     filterForm.addEventListener('reset',()=>setTimeout(update,0));
+     search.disabled=false;update();
+    }else{
+     for(const row of sorted)select.add(new Option(person(row),row.id));
+    }
     select.disabled=false;
    }catch(e){if(token===pageToken)notify(e.message,true);}
   }));

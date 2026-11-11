@@ -105,6 +105,7 @@ body.has-modal{overflow:hidden}.modal-backdrop{padding:24px;overflow:auto;align-
 .service-filter-search,.service-filter-fields{display:grid;gap:10px;align-items:end}
 .service-filter-search{grid-template-columns:minmax(0,1fr) auto auto}
 .service-filter-fields{grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr))}
+.service-driver-filter{display:grid;gap:8px;min-width:0}
 .service-filters label{display:grid;gap:5px;color:var(--ink);font-size:13px;font-weight:650;min-width:0}
 .service-filters :is(input,select,button){min-height:44px}
 .service-filters :is(input,select){width:100%;font-weight:400}
