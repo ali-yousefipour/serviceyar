@@ -194,3 +194,19 @@ body.has-modal{overflow:hidden}.modal-backdrop{padding:24px;overflow:auto;align-
 .service-filters .service-driver-filter input,.service-filters .service-driver-filter select{width:100%;min-width:0}
 @media(max-width:760px){.service-picker-tools{grid-template-columns:repeat(2,minmax(0,1fr))}.service-picker-tools label:last-child{grid-column:1/-1}.service-picker-actions button{flex:1 1 130px}}
 @media(max-width:480px){.service-picker-tools{grid-template-columns:1fr}.service-picker-tools label:last-child{grid-column:auto}.service-filter-search .service-filter-submit,.service-filter-search .service-filter-reset{width:100%}}
+
+/* Search-first student and driver directory experience */
+.directory-filters{display:grid;grid-template-columns:minmax(220px,2fr) repeat(3,minmax(135px,1fr));gap:12px;align-items:end;padding:18px;background:linear-gradient(140deg,#f4faf6,#fff);border:1px solid #d9e8df;border-radius:16px;margin-bottom:16px}
+.directory-filters>label{display:grid;gap:7px;min-width:0;color:#315a47;font-weight:750;font-size:13px}
+.directory-filters :is(input,select){width:100%;min-width:0;min-height:46px;border:1px solid #d6e5dc;border-radius:11px;background:#fff;padding:9px 12px}
+.directory-filters button{min-height:46px;border-radius:11px;white-space:normal}
+.directory-filters .directory-search{grid-column:span 2}
+.directory-filters .directory-search-button{font-weight:850}
+.directory-filters .directory-reset-button{background:#fff;border:1px solid #d6e5dc;color:#35594a}
+.directory-filters :is(input,select,button):focus-visible{outline:3px solid #d3a345;outline-offset:2px}
+#studentStatuses{display:flex;align-items:center;gap:8px;overflow-x:auto;scrollbar-width:thin;padding:4px 2px 12px;scroll-snap-type:x proximity}
+#studentStatuses button{min-height:44px;flex-shrink:0;scroll-snap-align:start;border-radius:11px}
+#studentStatuses button.active{background:#e2f2e8;color:#005b35;border-color:#9bc9ae;font-weight:850}
+@media(max-width:1100px){.directory-filters{grid-template-columns:repeat(3,minmax(0,1fr))}.directory-filters .directory-search{grid-column:span 3}}
+@media(max-width:760px){.directory-filters{grid-template-columns:repeat(2,minmax(0,1fr));padding:13px}.directory-filters .directory-search{grid-column:span 2}.directory-filters button{width:100%}}
+@media(max-width:440px){.directory-filters{grid-template-columns:1fr}.directory-filters .directory-search{grid-column:auto}.directory-filters>label,.directory-filters>button{grid-column:1}}
