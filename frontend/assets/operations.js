@@ -794,6 +794,7 @@ async function newServicePage(token,initialDriverId){
  const refreshSave=()=>{save.disabled=!canSubmit();};
  const sync=()=>{
   for(const s of students)if(!selectedSchools.includes(Number(s.school_id)))chosen.delete(s.id);
+  if(!form.elements.title.value.trim()&&driverId&&selectedSchools.length){const driver=drivers.find(d=>Number(d.id)===driverId);const school=schools.find(sc=>Number(sc.id)===selectedSchools[0]);form.elements.title.value=['سرویس',school?.name,driver?person(driver):''].filter(Boolean).join(' - ').slice(0,200);}
   show.disabled=!selectedSchools.length||!driverId;quote.disabled=show.disabled||!chosen.size;refreshSave();
   $('serviceStudentSelection').hidden=show.disabled;$('serviceSetupDetails').hidden=!chosen.size;
   $('selectedServiceStudents').textContent=chosen.size?students.filter(s=>chosen.has(s.id)).map(person).join('، '):'دانش‌آموزان این سرویس را انتخاب کنید.';
