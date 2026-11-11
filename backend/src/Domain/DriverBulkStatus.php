@@ -22,20 +22,24 @@ final class DriverBulkStatus {
   $ids=array_values($unique);$pdo=Connection::get();
   return OperationsService::transaction(function()use($pdo,$uid,$aid,$ids,$active){
    $placeholders=implode(',',array_fill(0,count($ids),'?'));
-   $q=$pdo->prepare("SELECT id,is_active FROM drivers WHERE agency_id=? AND id IN ($placeholders) FOR UPDATE");
+   $q=$pdo->prepare("SELECT id,is_active,status FROM drivers WHERE agency_id=? AND id IN ($placeholders) FOR UPDATE");
    $q->execute(array_merge([$aid],$ids));$rows=$q->fetchAll(PDO::FETCH_ASSOC);
    if(count($rows)!==count($ids))throw new AuthException(422,'برخی رانندگان متعلق به این شرکت نیستند یا وجود ندارند.','CROSS_SCOPE_REFERENCE');
    $desired=($active===true||$active===1)?1:0;
-   $update=$pdo->prepare('UPDATE drivers SET is_active=? WHERE id=? AND agency_id=?');
+   $update=$pdo->prepare('UPDATE drivers SET is_active=?,status=? WHERE id=? AND agency_id=?');
    $audit=$pdo->prepare('INSERT INTO activity_logs(agency_id,user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?)');
    $changed=0;
    foreach($rows as $row){
-    if((int)$row['is_active']===$desired)continue;
-    $update->execute([$desired,$row['id'],$aid]);
+    $targetStatus=$desired?'active':'inactive';
+    if((int)$row['is_active']===$desired && (string)$row['status']===$targetStatus)continue;
+    $update->execute([$desired,$targetStatus,$row['id'],$aid]);
+    $verify=$pdo->prepare('SELECT is_active,status FROM drivers WHERE id=? AND agency_id=?');
+    $verify->execute([$row['id'],$aid]);$saved=$verify->fetch(PDO::FETCH_ASSOC);
+    if(!$saved||(int)$saved['is_active']!==$desired||(string)$saved['status']!==$targetStatus)throw new AuthException(500,'ثبت وضعیت راننده تأیید نشد.','DRIVER_STATUS_NOT_SAVED');
     $audit->execute([$aid,$uid,$desired?'bulk_activate':'bulk_deactivate','drivers',$row['id']]);
     $changed++;
    }
-   return ['selected'=>count($ids),'changed'=>$changed,'unchanged'=>count($ids)-$changed,'active'=>(bool)$desired];
+   return ['selected'=>count($ids),'changed'=>$changed,'unchanged'=>count($ids)-$changed,'active'=>(bool)$desired,'status'=>$desired?'active':'inactive'];
   });
  }
 }
