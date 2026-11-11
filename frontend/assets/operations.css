@@ -98,3 +98,19 @@ body.has-modal{overflow:hidden}.modal-backdrop{padding:24px;overflow:auto;align-
 .plate-raw{white-space:nowrap;unicode-bidi:isolate}
 .bulk-driver-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
 .bulk-driver-actions button{min-height:40px}
+.service-filters{
+ display:grid;gap:14px;padding:16px;border:1px solid var(--line);
+ border-radius:14px;background:var(--brand-soft);
+}
+.service-filter-search,.service-filter-fields{display:grid;gap:10px;align-items:end}
+.service-filter-search{grid-template-columns:minmax(0,1fr) auto auto}
+.service-filter-fields{grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr))}
+.service-filters label{display:grid;gap:5px;color:var(--ink);font-size:13px;font-weight:650;min-width:0}
+.service-filters :is(input,select,button){min-height:44px}
+.service-filters :is(input,select){width:100%;font-weight:400}
+.service-filters :is(input,select):focus-visible{outline:2px solid var(--brand-green);outline-offset:2px}
+#serviceFilterSummary{margin:0;color:var(--ink);min-height:20px;font-size:13px}
+@media(max-width:600px){
+ .service-filter-search{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .service-filter-search label{grid-column:1/-1}
+}

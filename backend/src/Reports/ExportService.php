@@ -4,6 +4,7 @@ namespace ServiceYar\Reports;
 
 use ServiceYar\Auth\Authorization;
 use ServiceYar\Database\Connection;
+use ServiceYar\Domain\DomainService;
 
 final class ExportService
 {
@@ -21,7 +22,7 @@ final class ExportService
             'is_active'=>'وضعیت فعال','created_at'=>'تاریخ ثبت']],
         'services' => ['table'=>'services','filename'=>'services-report.xlsx','date_column'=>'created_at','columns'=>[
             'id'=>'شناسه','title'=>'عنوان سرویس','code'=>'کد سرویس','school_id'=>'شناسه مدرسه',
-            'driver_id'=>'شناسه راننده','capacity'=>'ظرفیت','status'=>'وضعیت سرویس','is_active'=>'وضعیت فعال','created_at'=>'تاریخ ثبت']],
+            'driver_id'=>'شناسه راننده','capacity'=>'ظرفیت','shift'=>'شیفت','status'=>'وضعیت سرویس','is_active'=>'وضعیت فعال','created_at'=>'تاریخ ثبت']],
         'invoices' => ['table'=>'invoices','filename'=>'invoices-report.xlsx','date_column'=>'issue_date','columns'=>[
             'id'=>'شناسه','title'=>'عنوان فاکتور','party_type'=>'نوع طرف حساب','party_id'=>'شناسه طرف حساب',
             'amount'=>'مبلغ','status'=>'وضعیت','issue_date'=>'تاریخ صدور','due_date'=>'سررسید','created_at'=>'تاریخ ثبت']],
@@ -63,7 +64,12 @@ final class ExportService
                 $params[$param] = $value . $filter['suffix'];
             }
         }
-        $search = trim((string)($_GET['search'] ?? ''));
+        if ($resource === 'services') {
+            [$serviceWhere, $serviceParams] = DomainService::serviceFilters($_GET);
+            $where = array_merge($where, $serviceWhere);
+            $params += $serviceParams;
+        }
+        $search = $resource === 'services' ? '' : trim((string)($_GET['search'] ?? ''));
         if ($search !== '') {
             $parts = [];
             $escapedSearch = '%' . str_replace(['\\\\', '%', '_'], ['\\\\\\\\', '\\%', '\\_'], $search) . '%';
@@ -74,7 +80,7 @@ final class ExportService
             }
             $where[] = '(' . implode(' OR ', $parts) . ')';
         }
-        foreach (['schoolId'=>'school_id', 'driverId'=>'driver_id', 'serviceId'=>'service_id'] as $key => $column) {
+        foreach ($resource === 'services' ? [] : ['schoolId'=>'school_id', 'driverId'=>'driver_id', 'serviceId'=>'service_id'] as $key => $column) {
             $value = trim((string)($_GET[$key] ?? ''));
             if ($value !== '' && in_array($column, $columnNames, true) && ctype_digit($value) && (int)$value > 0) {
                 $param = lcfirst($key);
@@ -82,14 +88,14 @@ final class ExportService
                 $params[$param] = (int)$value;
             }
         }
-        if (in_array('status', $columnNames, true) && trim((string)($_GET['status'] ?? '')) !== '') {
+        if ($resource !== 'services' && in_array('status', $columnNames, true) && trim((string)($_GET['status'] ?? '')) !== '') {
             $where[] = 'status = :status';
             $params['status'] = trim((string)$_GET['status']);
         }
         foreach(['serviceStatus'=>'service_status','academicYear'=>'academic_year','mobile'=>'mobile'] as $key=>$column){
             if(in_array($column,$columnNames,true)&&isset($_GET[$key])&&$_GET[$key]!==''){$where[]=$column.' = :extra_'.$column;$params['extra_'.$column]=(string)$_GET[$key];}
         }
-        if (in_array('is_active', $columnNames, true) && in_array((string)($_GET['active'] ?? ''), ['0','1'], true)) {
+        if ($resource !== 'services' && in_array('is_active', $columnNames, true) && in_array((string)($_GET['active'] ?? ''), ['0','1'], true)) {
             $where[] = 'is_active = :active';
             $params['active'] = (int)$_GET['active'];
         }
