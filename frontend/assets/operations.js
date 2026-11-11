@@ -58,7 +58,7 @@ function renderNav(){
  renderAgencySelector();$('nav').innerHTML=`<a class="nav" href="#dashboard" title="داشبورد">${samarMenuIcon('dashboard')}<span>داشبورد</span></a>`+menus.map(([icon,title,items])=>{const visible=items.filter(([key])=>can(key.split('/')[0],(key.endsWith('/new')||key.endsWith('/quick')||key.endsWith('/fees')||key==='driver-assignment')?'manage':'view'));return visible.length?`<details class="nav-group"><summary title="${esc(title)}">${samarMenuIcon(icon)}<span>${esc(title)}</span></summary><div class="nav-popup" aria-label="${esc(title)}">${visible.map(([key,text])=>`<a href="#${key}" aria-label="${esc(text)}">${samarMenuIcon(key)}<span>${esc(text)}</span></a>`).join('')}</div></details>`:''}).join('')+(session?.roles?.includes('super_admin')?`<a class="nav" href="#companies" title="تنظیمات سامانه">${navIcon('settings')}<span>تنظیمات سامانه</span></a>`:'');
  const navSearch=document.createElement('label');navSearch.className='sy-nav-search';navSearch.innerHTML='<span>جست‌وجوی بخش‌های سامانه</span><input type="search" id="syNavSearch" placeholder="نام صفحه یا عملیات…" autocomplete="off" aria-label="جست‌وجوی منو"><small id="syNavSearchStatus" role="status"></small>';
  $('nav').prepend(navSearch);
- const normalizeMenuText=value=>String(value||'').replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').replace(/[\\u200c\\s]+/g,' ').trim().toLocaleLowerCase('fa');
+ const normalizeMenuText=value=>String(value||'').replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').replace(/[\u200c\s]+/g,' ').trim().toLocaleLowerCase('fa');
  const navSearchInput=navSearch.querySelector('input');
  navSearchInput.addEventListener('input',()=>{
   const query=normalizeMenuText(navSearchInput.value);
