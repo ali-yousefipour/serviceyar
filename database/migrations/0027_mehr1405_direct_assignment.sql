@@ -1,0 +1,5 @@
+-- Service assignment is performed via manual SQL import, not UI.
+-- Data import file: serviceyar_mehr1405_activate_services_full.sql
+-- Historical Excel assignments bypass physical vehicle-capacity validation only.
+-- Manually registered services continue to use the normal capacity checks.
+-- Never run a blanket update to remove capacity constraints from application code.
