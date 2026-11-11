@@ -45,6 +45,15 @@ await request(scoped('/api/v1/maps/route'),{method:'POST',body:{studentId:studen
 await request(scoped(`/api/v1/services/${service.id}/map`));
 await request(scoped('/api/v1/operations/payroll-documents'),{method:'POST',body:{lines:[]},status:422});
 await request(scoped('/api/v1/operations/payroll-documents/0/bank'),{status:404});
+const payrollDriver=(await request(scoped('/api/v1/drivers'),{method:'POST',body:{firstName:'راننده',lastName:'آزمون اکسل'},status:201})).data;
+const payrollPath='/api/v1/operations/payroll-documents';
+const payrollDoc=(await request(scoped(payrollPath),{method:'POST',body:{from:'2026-09-23',to:'2026-10-22',lines:[{driverId:payrollDriver.id,amount:900}]},status:201})).data;
+const payrollXlsx=scoped(payrollPath+'/'+payrollDoc.id+'/xlsx');
+await request(payrollXlsx,{status:422});
+await request(scoped(payrollPath+'/'+payrollDoc.id+'/approve'),{method:'POST'});
+const approvedWorkbook=await request(payrollXlsx,{raw:true});
+assert.equal(approvedWorkbook.response.headers.get('content-type'),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+assert.equal(String.fromCharCode(...approvedWorkbook.data.slice(0,2)),'PK');checks+=2;
 const settingsBefore=(await request(scoped('/api/v1/settings'))).data;
 const financialRules={mode:'monthly_distance',baseAmount:100000,perKm:20000,includedKm:2,driverPercent:80};
 await request(scoped('/api/v1/settings'),{method:'PUT',body:{finance_rules:{driverPercent:101}},status:422});

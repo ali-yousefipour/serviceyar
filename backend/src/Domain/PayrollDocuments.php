@@ -14,11 +14,12 @@ final class PayrollDocuments
         $q=Connection::get()->prepare('SELECT id,document_no,status,total_amount,created_at FROM payroll_documents WHERE agency_id=:a AND date_from=:f AND date_to=:t ORDER BY id DESC');$q->execute(['a'=>$aid,'f'=>$from,'t'=>$to]);return $q->fetchAll();
     }
 
-    public static function get(int $uid,int $aid,int $id): array
+    public static function get(int $uid,int $aid,int $id, bool $forWorkbook = false): array
     {
         Authorization::requirePermission($uid,'finance.view');Authorization::requireAgencyAccess($uid,$aid);$p=Connection::get();
-        $q=$p->prepare('SELECT * FROM payroll_documents WHERE id=:id AND agency_id=:a');$q->execute(['id'=>$id,'a'=>$aid]);$doc=$q->fetch();if(!$doc)throw new AuthException(404,'سند حقوق پیدا نشد.','NOT_FOUND');
-        $q=$p->prepare('SELECT l.driver_id,l.earned,l.agreed,l.paid,l.salary,d.first_name,d.last_name,d.iban,d.bank_account,d.bank_name FROM payroll_document_lines l JOIN drivers d ON d.id=l.driver_id AND d.agency_id=:a WHERE l.document_id=:id ORDER BY d.last_name,d.first_name');$q->execute(['a'=>$aid,'id'=>$id]);$doc['lines']=$q->fetchAll();return $doc;
+        $q=$p->prepare('SELECT p.*,a.name AS agency_name FROM payroll_documents p JOIN agencies a ON a.id=p.agency_id WHERE p.id=:id AND p.agency_id=:a');$q->execute(['id'=>$id,'a'=>$aid]);$doc=$q->fetch();if(!$doc)throw new AuthException(404,'سند حقوق پیدا نشد.','NOT_FOUND');
+        $nationalCode=$forWorkbook?',d.national_code':'';
+        $q=$p->prepare('SELECT l.driver_id,l.earned,l.agreed,l.paid,l.salary,d.first_name,d.last_name,d.iban,d.bank_account,d.bank_name'.$nationalCode.' FROM payroll_document_lines l JOIN drivers d ON d.id=l.driver_id AND d.agency_id=:a WHERE l.document_id=:id ORDER BY d.last_name,d.first_name');$q->execute(['a'=>$aid,'id'=>$id]);$doc['lines']=$q->fetchAll();return $doc;
     }
 
     public static function create(int $uid,int $aid,array $body): array

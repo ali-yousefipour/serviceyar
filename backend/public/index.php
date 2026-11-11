@@ -106,8 +106,9 @@ try {
  }
  if($method==='GET'&&$path==='/api/v1/operations/payroll-documents')Response::json(['ok'=>true,'data'=>PayrollDocuments::list($s['id'],$aid,$_GET)]);
  if($method==='POST'&&$path==='/api/v1/operations/payroll-documents'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>PayrollDocuments::create($s['id'],$aid,Request::json())],201);}
- if(preg_match('#^/api/v1/operations/payroll-documents/(\d+)(?:/(approve|bank))?$#',$path,$m)){
+ if(preg_match('#^/api/v1/operations/payroll-documents/(\d+)(?:/(approve|bank|xlsx))?$#',$path,$m)){
   if($method==='GET'&&($m[2]??'')==='bank')PayrollDocuments::bankCsv($s['id'],$aid,(int)$m[1]);
+  if($method==='GET'&&($m[2]??'')==='xlsx')\ServiceYar\Reports\PayrollWorkbook::download($s['id'],$aid,(int)$m[1]);
   if($method==='GET')Response::json(['ok'=>true,'data'=>PayrollDocuments::get($s['id'],$aid,(int)$m[1])]);
   if($method==='PUT'&&empty($m[2])){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>PayrollDocuments::update($s['id'],$aid,(int)$m[1],Request::json())]);}
   if($method==='POST'&&($m[2]??'')==='approve'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>PayrollDocuments::approve($s['id'],$aid,(int)$m[1])]);}
