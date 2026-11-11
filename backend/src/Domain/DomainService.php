@@ -149,6 +149,13 @@ final class DomainService {
    $service=self::saveRecord($uid,$aid,$resource,$b,null);
    OperationsService::setServiceSchools($uid,$aid,(int)$service['id'],['schoolIds'=>$schools]);
    sort($students);foreach($students as $student)self::assignStudent($uid,$aid,(int)$service['id'],$student);
+   if ($students && !array_key_exists('monthlyFee', $b)) {
+    $pdo->prepare('UPDATE services SET monthly_fee=(
+      SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss
+      JOIN students st ON st.id=ss.student_id WHERE ss.service_id=? AND st.agency_id=?
+     ) WHERE id=? AND agency_id=?')->execute([$service['id'],$aid,$service['id'],$aid]);
+    $service=self::get($uid,$aid,'services',(int)$service['id']);
+   }
    return $service;
   });
  }
