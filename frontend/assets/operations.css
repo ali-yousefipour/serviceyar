@@ -285,3 +285,26 @@ body.has-modal{overflow:hidden}.modal-backdrop{padding:24px;overflow:auto;align-
 @media(max-width:680px){.modal-backdrop{align-items:flex-end;padding:0}.modal{max-width:100%;width:100%;max-height:calc(100dvh - 8px);border-radius:18px 18px 0 0}.modal-head{padding:13px 16px}.modal-body{padding:16px}.modal-body .form-grid{grid-template-columns:1fr}.wizard-progress{margin-bottom:14px}.wizard-marker{flex:0 0 auto}.wizard-actions{padding-bottom:max(12px,env(safe-area-inset-bottom));margin-top:14px}.modal-body .detail-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:390px){.modal-body .detail-grid{grid-template-columns:1fr}.wizard-actions button{flex:1 1 100%}}
 @media(prefers-reduced-motion:reduce){.modal,.wizard-marker{transition:none!important}}
+
+/* Vehicles directory: owner and driver context + realistic compact Iranian plate search */
+#gridFilters:has(.vehicle-plate-filter){display:grid;grid-template-columns:minmax(220px,1.3fr) minmax(220px,1fr) minmax(320px,1.8fr) minmax(150px,.6fr);gap:12px;align-items:end}
+#gridFilters:has(.vehicle-plate-filter)>label{display:grid;gap:7px;min-width:0;font-size:12px;font-weight:750;color:#365a46}
+#gridFilters:has(.vehicle-plate-filter)>label input{width:100%;min-height:44px}
+.vehicle-plate-filter{margin:0;min-width:0;border:1px solid #dbe8df;border-radius:14px;padding:10px 12px 12px;background:linear-gradient(135deg,#f7faf7,#fff)}
+.vehicle-plate-filter legend{padding-inline:8px;color:#234d37;font-size:13px;font-weight:800}
+.vehicle-plate-filter>small{display:block;margin-top:7px;color:#718679;font-size:11px;line-height:1.7}
+.vehicle-plate-entry{display:flex;align-items:stretch;min-height:47px;max-width:440px;margin-inline:auto;direction:rtl;border:2px solid #263d38;border-radius:7px;overflow:hidden;background:#fff}
+.vehicle-plate-entry input,.vehicle-plate-entry select{box-sizing:border-box;min-width:0!important;min-height:44px!important;height:44px!important;border:0!important;border-inline-start:1px solid #d4ded8!important;border-radius:0!important;background:transparent!important;padding:4px 5px!important;text-align:center!important;font-size:15px!important;font-weight:800;color:#132e24;box-shadow:none!important}
+.vehicle-plate-entry input[name=plateFirst],.vehicle-plate-entry input[name=plateRegion]{flex:0 1 52px;width:52px}
+.vehicle-plate-entry input[name=plateMiddle]{flex:1 1 70px;width:70px}
+.vehicle-plate-entry select[name=plateLetter]{flex:0 1 62px;width:62px;appearance:auto;cursor:pointer;font-size:13px!important}
+.vehicle-plate-iran{flex:0 0 43px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;line-height:1.2;font-weight:850;border-inline-start:1px solid #293e36;color:#1c352c}
+.vehicle-plate-iran small{font-size:8px}
+.vehicle-plate-flag{flex:0 0 30px;display:grid;place-items:center;background:#12539a;color:#fff;font-size:10px;font-weight:850}
+.vehicle-plate-entry :is(input,select):focus-visible{outline:3px solid #d2a950!important;outline-offset:-3px!important;position:relative;z-index:1}
+#gridFilters:has(.vehicle-plate-filter)>button{min-height:44px}
+#table table td:has(.iran-plate){min-width:180px}
+#table table td:has(.iran-plate) .iran-plate{transform:none}
+@media(max-width:1120px){#gridFilters:has(.vehicle-plate-filter){grid-template-columns:repeat(2,minmax(0,1fr))}.vehicle-plate-filter{grid-column:span 2}}
+@media(max-width:650px){#gridFilters:has(.vehicle-plate-filter){grid-template-columns:1fr}.vehicle-plate-filter{grid-column:auto}.vehicle-plate-entry{max-width:100%}#gridFilters:has(.vehicle-plate-filter)>button{width:100%}}
+@media(max-width:370px){.vehicle-plate-filter{padding:8px}.vehicle-plate-entry input[name=plateFirst],.vehicle-plate-entry input[name=plateRegion]{flex-basis:38px;width:38px}.vehicle-plate-entry select[name=plateLetter]{flex-basis:50px;width:50px}.vehicle-plate-iran{flex-basis:37px}.vehicle-plate-flag{flex-basis:25px}}
