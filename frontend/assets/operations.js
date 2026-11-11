@@ -56,7 +56,27 @@ function renderNav(){
  if(!$('ownPassword')){const b=document.createElement('button');b.id='ownPassword';b.type='button';b.className='account-password';b.textContent='تغییر رمز من';b.onclick=()=>passwordDialog({id:session.user.id,username:session.user.username},false,true);document.querySelector('.header-actions').append(b);}
  if(!$('navigationToggle')){const button=document.createElement('button');button.id='navigationToggle';button.type='button';button.textContent='☰';button.setAttribute('aria-label','باز کردن منوی اصلی');button.setAttribute('aria-expanded','false');document.querySelector('.header').prepend(button);const shade=document.createElement('button');shade.id='navigationShade';shade.type='button';shade.setAttribute('aria-label','بستن منوی اصلی');shade.hidden=true;document.querySelector('#app').append(shade);const toggle=open=>{document.querySelector('.sidebar').classList.toggle('nav-open',open);shade.hidden=!open;button.setAttribute('aria-expanded',String(open));};button.onclick=()=>toggle(button.getAttribute('aria-expanded')!=='true');shade.onclick=()=>toggle(false);document.addEventListener('keydown',e=>{if(e.key==='Escape'&&button.getAttribute('aria-expanded')==='true'){toggle(false);$('nav').querySelectorAll('details').forEach(d=>d.open=false);button.focus();}});}
  renderAgencySelector();$('nav').innerHTML=`<a class="nav" href="#dashboard" title="داشبورد">${samarMenuIcon('dashboard')}<span>داشبورد</span></a>`+menus.map(([icon,title,items])=>{const visible=items.filter(([key])=>can(key.split('/')[0],(key.endsWith('/new')||key.endsWith('/quick')||key.endsWith('/fees')||key==='driver-assignment')?'manage':'view'));return visible.length?`<details class="nav-group"><summary title="${esc(title)}">${samarMenuIcon(icon)}<span>${esc(title)}</span></summary><div class="nav-popup" aria-label="${esc(title)}">${visible.map(([key,text])=>`<a href="#${key}" aria-label="${esc(text)}">${samarMenuIcon(key)}<span>${esc(text)}</span></a>`).join('')}</div></details>`:''}).join('')+(session?.roles?.includes('super_admin')?`<a class="nav" href="#companies" title="تنظیمات سامانه">${navIcon('settings')}<span>تنظیمات سامانه</span></a>`:'');
- $('nav').querySelectorAll('details').forEach(d=>d.addEventListener('toggle',()=>{if(d.open){const popup=d.querySelector('.nav-popup'),rect=d.getBoundingClientRect();popup.style.top=Math.max(10,Math.min(rect.top,innerHeight-Math.min(popup.scrollHeight,innerHeight*.75)-12))+'px';$('nav').querySelectorAll('details').forEach(other=>{if(other!==d)other.open=false;});}}));
+ const navSearch=document.createElement('label');navSearch.className='sy-nav-search';navSearch.innerHTML='<span>جست‌وجوی بخش‌های سامانه</span><input type="search" id="syNavSearch" placeholder="نام صفحه یا عملیات…" autocomplete="off" aria-label="جست‌وجوی منو"><small id="syNavSearchStatus" role="status"></small>';
+ $('nav').prepend(navSearch);
+ const normalizeMenuText=value=>String(value||'').replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').replace(/[\\u200c\\s]+/g,' ').trim().toLocaleLowerCase('fa');
+ const navSearchInput=navSearch.querySelector('input');
+ navSearchInput.addEventListener('input',()=>{
+  const query=normalizeMenuText(navSearchInput.value);
+  let matches=0;
+  $('nav').querySelectorAll('.nav-group').forEach(group=>{
+   let visible=0;
+   group.querySelectorAll('.nav-popup a').forEach(link=>{
+    const match=!query||normalizeMenuText(link.textContent).includes(query)||normalizeMenuText(group.querySelector('summary')?.textContent).includes(query);
+    link.hidden=!match;if(match){visible++;matches++;}
+   });
+   group.hidden=visible===0;
+   if(query&&visible)group.open=true;
+   if(!query)group.open=false;
+  });
+  $('nav').querySelectorAll(':scope > a.nav').forEach(link=>{link.hidden=!!query&&!normalizeMenuText(link.textContent).includes(query);if(!link.hidden)matches++;});
+  navSearch.querySelector('small').textContent=query?(matches?'نتایج مرتبط: '+number(matches):'بخشی با این نام پیدا نشد.'):'';
+ });
+  $('nav').querySelectorAll('details').forEach(d=>d.addEventListener('toggle',()=>{if(d.open){if(navSearchInput.value.trim())return;const popup=d.querySelector('.nav-popup'),rect=d.getBoundingClientRect();popup.style.top=Math.max(10,Math.min(rect.top,innerHeight-Math.min(popup.scrollHeight,innerHeight*.75)-12))+'px';$('nav').querySelectorAll('details').forEach(other=>{if(other!==d)other.open=false;});}}));
  if(!$('quickReceipt')){const button=document.createElement('button');button.id='quickReceipt';button.title='ثبت دریافت و پرداخت';button.innerHTML=navIcon('payments');button.onclick=()=>{location.hash='ledger/new'};$('nav').before(button);} $('quickReceipt').hidden=!can('ledger','manage');
  document.querySelector('.logo').title='سرویس‌یار';document.querySelector('.main').classList.add('transport-main');
  if(!$('sessionFooter')){const footer=document.createElement('footer');footer.id='sessionFooter';document.querySelector('.main').append(footer);}
@@ -65,7 +85,7 @@ function renderNav(){
 }
 function render(){
  if(!session)return;if($('modal')?.firstElementChild)closeDialog();disposeMaps();$('dashboardBackdrop')?.remove();const token=++pageToken;const [raw,action,recordId]=location.hash.slice(1).split('/');let key=raw||'dashboard';if(key==='admin')key='companies';if(!titles[key])key='dashboard';
- document.querySelectorAll('.nav-group').forEach(d=>d.open=false);$('pageTitle').textContent=titles[key];$('app').classList.toggle('dashboard-active',key==='dashboard');$('content').classList.toggle('dashboard-content',key==='dashboard');
+ document.querySelectorAll('.nav-group').forEach(d=>{if(!$('syNavSearch')?.value.trim())d.open=false;});$('pageTitle').textContent=titles[key];$('app').classList.toggle('dashboard-active',key==='dashboard');$('content').classList.toggle('dashboard-content',key==='dashboard');
  $('content').innerHTML='<div class="loading">در حال دریافت اطلاعات…</div>';
  document.querySelector('.sidebar').classList.remove('nav-open');if($('navigationShade'))$('navigationShade').hidden=true;if($('navigationToggle'))$('navigationToggle').setAttribute('aria-expanded','false');
  $('nav').querySelectorAll('a').forEach(a=>{const active=a.getAttribute('href')==='#'+(raw||'dashboard')+(action?'/'+action:'');a.classList.toggle('active',active);if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});$('nav').querySelectorAll('details').forEach(d=>d.classList.toggle('current-group',!!d.querySelector('[aria-current=page]')));
