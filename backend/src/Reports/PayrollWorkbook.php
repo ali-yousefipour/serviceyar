@@ -84,8 +84,12 @@ final class PayrollWorkbook
                 $total = $last + 1;
                 $merge->setAttribute('ref', "A$total:G$total");
             }
-            $xpath->query('/s:worksheet/s:dimension')->item(0)->setAttribute('ref', 'A1:AS'.(114 + $offset));
+            $xpath->query('/s:worksheet/s:dimension')->item(0)->setAttribute('ref', 'A1:AZ'.(114 + $offset));
         }
+        // Keep the original Mehr layout intact; append an auditable deduction ledger after column AS.
+        $headers=['AT'=>'کارکرد ناخالص (ریال)','AU'=>'مدیریت، نظارت و بازرسی ۳٪','AV'=>'اطلاع‌رسانی و هماهنگی ۱٪','AW'=>'بالاسری شرکت ۷٪','AX'=>'بیمه راننده ۷٫۸٪','AY'=>'جمع کسورات ۱۸٫۸٪','AZ'=>'خالص محاسباتی (ریال)'];
+        foreach($headers as $column=>$label)self::put($byNumber[3],$column,$label);
+        $xpath->query('/s:worksheet/s:dimension')->item(0)->setAttribute('ref','A1:AZ'.(114+$offset));
         self::put($byNumber[1], 'A', 'لیست حقوق '.$payroll['agency_name'].' | '.$payroll['date_from'].' تا '.$payroll['date_to']);
         $work = 0.0;
         $salary = 0.0;
@@ -101,11 +105,15 @@ final class PayrollWorkbook
                     self::put($row, $column, $value);
                 }
             }
+            foreach(['AT'=>(float)$line['earned'],'AU'=>(float)$line['supervision_deduction'],'AV'=>(float)$line['coordination_deduction'],'AW'=>(float)$line['overhead_deduction'],'AX'=>(float)$line['insurance_deduction'],'AY'=>(float)$line['total_deductions'],'AZ'=>(float)$line['net_earned']] as $column=>$amount){
+                self::put($row,$column,$amount);
+            }
             $work += (float)$line['earned'];
             $salary += (float)$line['salary'];
         }
         self::put($totalRow, 'P', $work, "SUM(P4:P$last)");
         self::put($totalRow, 'AM', $salary, "SUM(AM4:AM$last)");
+        foreach(array_keys($headers) as $column)self::put($totalRow,$column,0,"SUM({$column}4:{$column}$last)");
         return $sheet->saveXML();
     }
 
@@ -138,6 +146,18 @@ final class PayrollWorkbook
             }
             return;
         }
-        throw new \RuntimeException('Missing workbook cell '.$ref);
+        // New deduction columns do not exist in the original template; append cells without modifying its formulas.
+        $cell=$sheet->createElementNS($row->namespaceURI,'c');
+        $cell->setAttribute('r',$ref);
+        if(is_string($value)){
+            $cell->setAttribute('t','inlineStr');
+            $is=$cell->appendChild($sheet->createElementNS($row->namespaceURI,'is'));
+            $is->appendChild($sheet->createElementNS($row->namespaceURI,'t'))->appendChild($sheet->createTextNode($value));
+        }else{
+            if($formula!==null)$cell->appendChild($sheet->createElementNS($row->namespaceURI,'f',$formula));
+            $cell->appendChild($sheet->createElementNS($row->namespaceURI,'v',(string)$value));
+        }
+        $row->appendChild($cell);
+        return;
     }
 }
