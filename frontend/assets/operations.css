@@ -1236,3 +1236,18 @@ body.sy-menu-palette-open{overflow:hidden}
 .sy-deduction-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;background:#f0f8f4;border:1px solid #d0e7d9;border-radius:14px;padding:16px}
 .sy-deduction-summary strong{font-size:20px;color:#17613e}
 @media(max-width:650px){.sy-settings-tabs{top:0}.sy-settings-tabs button{flex:1}.sy-deduction-summary{grid-template-columns:1fr 1fr;padding:12px}.sy-deduction-summary strong{font-size:17px}}
+
+/* School-service monthly statement archive */
+.sy-statement-panel{min-width:0}
+.sy-statement-panel .toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.sy-statement-panel .table-wrap{max-height:440px;overflow:auto;border:1px solid #d9e4e6;border-radius:14px}
+.sy-statement-panel .table-wrap thead th{position:sticky;top:0;z-index:2;background:#eaf4f2;white-space:nowrap}
+.sy-statement-panel .member-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.sy-statement-panel .member-actions a,.sy-statement-modal .member-actions a{display:inline-flex;align-items:center;justify-content:center;border:1px solid #c8d8d5;border-radius:10px;padding:7px 10px;text-decoration:none;font-weight:650}
+.sy-statement-panel .statement-summary{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
+.sy-statement-panel .statement-summary span{border:1px solid #d5e8e2;border-radius:10px;background:#f2f9f6;padding:9px 12px}
+.sy-statement-modal{max-width:min(1100px,95vw);max-height:92vh;overflow:auto}
+.sy-statement-modal .table-wrap{max-height:360px;overflow:auto}
+.sy-statement-modal thead th{position:sticky;top:0;background:#eaf4f2}
+.sy-inline-checkbox{display:flex;align-items:center;gap:8px;white-space:nowrap}
+@media(max-width:680px){.sy-statement-panel .filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.sy-statement-panel .filters button{grid-column:1/-1}.sy-statement-modal{max-width:98vw;padding:12px}}
