@@ -32,7 +32,8 @@ const menus=[
 ];
 for(const [k,v] of Object.entries(resources))titles[k]=v[0];
 Object.assign(titles,{'installments':'برنامه پیش‌پرداخت و اقساط','school-statement':'صورت‌وضعیت سرویس مدارس','daily-schedule':'برنامه روزانه سرویس‌ها','driver-assignment':'تخصیص پیشنهادی راننده','school-report':'گزارش مدارس','bale-payments':'پرداخت کیف پول بله',import:'ثبت دانش‌آموز از اکسل','previous-students':'دانش‌آموزان سال قبل',grouping:'دسته‌بندی هوشمند',payroll:'فیش حقوق راننده','finance-report':'گزارش دریافتی پرداختی',monitoring:'مانیتورینگ',distances:'بررسی فاصله‌های ناجور',agreements:'ثبت مبلغ توافقی راننده'});
-let pageToken=0,gridState=null,lookupCache={},initialSearch='',initialStudentStatus='',returnFocus=null;
+let pageToken=0,gridState=null,lookupCache={};
+let journalRequestSequence=0,initialSearch='',initialStudentStatus='',returnFocus=null;
 const can=(key,action='view')=>session?.roles?.includes('super_admin')||session?.permissions?.includes((permissionFor[key]||key)+'.'+action);
 const scoped=url=>url+(url.includes('?')?'&':'?')+'agencyId='+encodeURIComponent(currentAgency?.id||'');
 const write=(url,body,method='POST')=>api(scoped(url),{method,headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify(body)});
@@ -181,11 +182,12 @@ async function accountStatementPage(token=pageToken,initial=null,initialPage=1){
  if(initial){for(const [key,value] of Object.entries(initial))if(form.elements[key])form.elements[key].value=value;await load(initial,initialPage);}
 }
 async function journalPage(token=pageToken,page=1,filters={}){
+ const sequence=++journalRequestSequence;
  const query=new URLSearchParams({limit:25,page,
   search:String(filters.search||''),status:String(filters.status||''),
   sortBy:filters.order==='amount'?'total_amount':'document_date',
   sortDir:filters.order==='old'?'asc':'desc'});
- const d=await api(scoped('/api/v1/accounting-documents?'+query));if(token!==pageToken)return;
+ const d=await api(scoped('/api/v1/accounting-documents?'+query));if(token!==pageToken||sequence!==journalRequestSequence)return;
  const documents=Array.isArray(d.items)?d.items:[];
  $('content').innerHTML=`<section class="panel sy-journal-list">
   ${accountingTabs(false)}
