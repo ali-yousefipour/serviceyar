@@ -700,7 +700,55 @@ async function formResource(key,id,onSaved){
  form.onsubmit=async e=>{e.preventDefault();const button=$('saveRecord');button.disabled=true;$('formError').hidden=true;try{const body=Object.fromEntries(new FormData(form));if(key==='students'&&body.tariffDistanceKm!==undefined&&body.tariffDistanceKm!=='')body.tariffDistanceKm=Math.round(Number(body.tariffDistanceKm));if(key==='ledger')delete body.amountDisplay;await write('/api/v1/'+key+(id?'/'+id:''),body,id?'PUT':'POST');lookupCache={};closeDialog();notify('اطلاعات ذخیره شد.');if(onSaved)onSaved();else if(gridState?.key===key&&gridState.token===pageToken)await loadResource(key);else{location.hash=key;}}catch(err){if($('formError')){$('formError').textContent=err.message;$('formError').hidden=false;$('formError').focus();}}finally{if(button.isConnected)button.disabled=false;}};
  }catch(e){notify(e.message,true);}
 }
-function bulkFeeDialog(){if(!gridState?.selected.size){notify('دانش‌آموزان مورد نظر را انتخاب کنید.',true);return;}dialog('تغییر سریع هزینه سرویس',`<form id="feeForm"><p>${number(gridState.selected.size)} دانش‌آموز انتخاب شده است.</p><label>نوع تغییر<select name="mode"><option value="set">تعیین مبلغ</option><option value="increase">افزایش مبلغ</option><option value="decrease">کاهش مبلغ</option><option value="percent">درصد تغییر (منفی برای کاهش)</option></select></label><label>مقدار<input type="number" step="0.01" name="value" required></label><button class="primary">ثبت تغییر هزینه‌ها</button></form>`);$('feeForm').onsubmit=async e=>{e.preventDefault();const button=e.target.querySelector('button');button.disabled=true;try{await write('/api/v1/operations/fees',{ids:[...gridState.selected],...Object.fromEntries(new FormData(e.target))});closeDialog();await loadResource('students');notify('هزینه‌ها به‌روزرسانی شدند.');}catch(err){$('formError').textContent=err.message;$('formError').hidden=false;button.disabled=false;}};}
+function bulkFeeDialog(){
+ if(!gridState?.selected.size){notify('دانش‌آموزان مورد نظر را انتخاب کنید.',true);return;}
+ const ids=[...gridState.selected];
+ dialog('تغییر سریع هزینه سرویس',`
+  <form id="feeForm" class="sy-bulk-fee-form">
+   <p class="sy-bulk-fee-intro">تعداد <strong>${number(ids.length)}</strong> دانش‌آموز انتخاب شده است. مبلغ جدید برای همه موارد انتخابی محاسبه خواهد شد.</p>
+   <div class="form-grid">
+    <label>نوع تغییر<select name="mode" required><option value="set">تعیین مبلغ ثابت</option><option value="increase">افزایش مبلغ</option><option value="decrease">کاهش مبلغ</option><option value="percent">تغییر درصدی</option></select></label>
+    <label>مقدار <span id="bulkFeeUnit">ریال</span><input type="text" id="bulkFeeAmountDisplay" name="amountDisplay" inputmode="numeric" autocomplete="off" spellcheck="false" dir="ltr" required placeholder="۰" aria-describedby="bulkFeeHint"><input type="hidden" name="value"></label>
+   </div>
+   <p id="bulkFeeHint" class="sy-bulk-fee-hint">مبلغ را به ریال، بدون اعشار وارد کنید. ارقام سه‌رقمی جدا می‌شوند.</p>
+   <div class="member-actions"><button class="primary" type="submit">بررسی و ثبت تغییرات</button><button type="button" id="cancelBulkFee">انصراف</button></div>
+  </form>`);
+ const form=$('feeForm'),mode=form.elements.mode,display=$('bulkFeeAmountDisplay'),raw=form.elements.value;
+ const ascii=value=>String(value).replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[٬,\s]/g,'');
+ const sync=()=>{
+  const percentMode=mode.value==='percent',text=ascii(display.value);
+  const normalized=percentMode?text.replace(/[^0-9.\-]/g,''):text.replace(/\D/g,'');
+  const candidate=normalized.replace(/^(-?)0+(?=\d)/,'$1');
+  const ok=percentMode?/^-?\d+(?:\.\d{0,2})?$/.test(candidate)&&Number(candidate)>=-100&&Number(candidate)<=100:/^\d{1,13}$/.test(candidate)&&Number(candidate)<=1000000000000;
+  raw.value=ok?String(Number(candidate)):'';
+  display.setCustomValidity(ok?'':percentMode?'درصد را بین منفی ۱۰۰ تا مثبت ۱۰۰ با حداکثر دو رقم اعشار وارد کنید.':'مبلغ ریالی معتبر و بدون اعشار وارد کنید.');
+  if(ok){
+   const digits=percentMode?candidate:candidate.replace(/\B(?=(\d{3})+(?!\d))/g,'٬');
+   display.value=persianDigits(digits);
+  }
+  return ok;
+ };
+ mode.addEventListener('change',()=>{
+  const percentage=mode.value==='percent';
+  display.value='';raw.value='';display.setCustomValidity('');
+  display.inputMode=percentage?'decimal':'numeric';
+  $('bulkFeeUnit').textContent=percentage?'درصد':'ریال';
+  $('bulkFeeHint').textContent=percentage?'برای افزایش یا کاهش درصدی، عدد مثبت یا منفی وارد کنید. حداقل منفی ۱۰۰ و حداکثر مثبت ۱۰۰ درصد.':'مبلغ را به ریال، بدون اعشار وارد کنید. ارقام سه‌رقمی جدا می‌شوند.';
+  display.focus();
+ });
+ display.addEventListener('input',sync);
+ $('cancelBulkFee').onclick=closeDialog;
+ form.onsubmit=async e=>{
+  e.preventDefault();
+  if(!sync()){display.reportValidity();return;}
+  if(!confirm('تغییر هزینه برای '+number(ids.length)+' دانش‌آموز ثبت شود؟'))return;
+  const button=form.querySelector('[type=submit]');button.disabled=true;
+  try{
+   await write('/api/v1/operations/fees',{ids,mode:mode.value,value:raw.value});
+   closeDialog();await loadResource('students');notify('هزینه‌های انتخاب‌شده به‌روزرسانی شدند.');
+  }catch(err){$('formError').textContent=err.message;$('formError').hidden=false;button.disabled=false;}
+ };
+}
 function bulkMessageDialog(){if(!gridState?.selected.size){notify('گیرندگان را انتخاب کنید.',true);return;}dialog('پیامک به انتخاب‌شده‌ها',`<form id="messageForm"><p>پیام برای ${number(gridState.selected.size)} گیرنده در صف قرار می‌گیرد؛ تحویل نیازمند اتصال سرویس پیامک است.</p><label>متن پیام<textarea name="body" required maxlength="2000"></textarea></label><button class="primary">ثبت در صف پیامک</button></form>`);$('messageForm').onsubmit=async e=>{e.preventDefault();const button=e.target.querySelector('button');button.disabled=true;try{await write('/api/v1/operations/messages',{ids:[...gridState.selected],recipientType:gridState.key==='students'?'student':'driver',body:e.target.body.value});closeDialog();notify('پیام‌ها در صف ثبت شدند.');}catch(err){$('formError').textContent=err.message;$('formError').hidden=false;button.disabled=false;}};}
 async function serviceMembers(id,back){
  const token=pageToken;
