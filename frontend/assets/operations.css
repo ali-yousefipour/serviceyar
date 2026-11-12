@@ -832,3 +832,21 @@ body.sy-menu-palette-open{overflow:hidden}
  #content .directory-filters{grid-template-columns:minmax(0,1fr)}
  #content .directory-filters .directory-search{grid-column:auto}
 }
+
+/* Dedicated receive/payment create and edit dialogs */
+#modal .modal:has(.sy-ledger-editor){width:min(100%,780px)}
+#modal .sy-ledger-editor{display:flex;flex-direction:column;gap:17px}
+#modal .sy-ledger-editor>.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 18px;align-items:start}
+#modal .sy-ledger-editor>.form-grid>label{display:flex;flex-direction:column;gap:9px;min-width:0;font-size:12px;line-height:1.7;color:#315b42;font-weight:800}
+#modal .sy-ledger-editor>.form-grid>label :is(input,select,textarea){box-sizing:border-box;min-height:46px;border:1px solid #d9e5dc;background:#fff;border-radius:11px;padding:10px 12px;color:#214a33;font-size:13px;line-height:1.7}
+#modal .sy-ledger-editor>.form-grid>label textarea{min-height:100px;resize:vertical}
+#modal .sy-ledger-editor .sy-money-field{display:flex;align-items:stretch;position:relative;min-width:0;direction:ltr}
+#modal .sy-ledger-editor .sy-money-field input[data-money-display]{flex:1;min-width:0;width:100%;padding-inline:15px 58px!important;font-size:19px!important;font-weight:850;letter-spacing:.3px;text-align:left;font-variant-numeric:tabular-nums;direction:ltr}
+#modal .sy-ledger-editor .sy-money-unit{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:800;color:#417251;pointer-events:none}
+#modal .sy-ledger-editor .sy-money-hint{font-size:11px;font-weight:500;line-height:1.8;color:#708374}
+#modal .sy-ledger-editor>.muted{margin:0;font-size:11px;line-height:1.9;color:#657a6c}
+#modal .sy-ledger-editor>#saveRecord{align-self:flex-end;min-width:130px;min-height:46px}
+@media(max-width:650px){
+ #modal .sy-ledger-editor>.form-grid{grid-template-columns:minmax(0,1fr);gap:15px}
+ #modal .sy-ledger-editor>#saveRecord{align-self:stretch;width:100%}
+}
