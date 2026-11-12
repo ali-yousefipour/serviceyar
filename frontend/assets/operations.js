@@ -661,6 +661,26 @@ async function formResource(key,id,onSaved){
  rialInputs.forEach(input=>input.addEventListener('input',()=>formatRialInput(input)));
  if(key==='ledger'){const display=form.querySelector('[data-money-display]'),raw=form.elements.amount;const normalize=v=>String(v??'').replace(/[۰-۹]/g,c=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/[٠-٩]/g,c=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(c))).replace(/[^0-9]/g,'');const sync=()=>{const digits=normalize(display.value).replace(/^0+(?=\d)/,'');raw.value=digits;display.value=digits?digits.replace(/\B(?=(\d{3})+(?!\d))/g,'٬').replace(/[0-9]/g,c=>'۰۱۲۳۴۵۶۷۸۹'[Number(c)]):'';display.setCustomValidity(digits&&Number(digits)>0?'':'مبلغ معتبر و بزرگ‌تر از صفر وارد کنید.');};display.addEventListener('input',sync);display.addEventListener('blur',sync);sync();form.addEventListener('submit',e=>{sync();if(!display.checkValidity()){e.preventDefault();e.stopImmediatePropagation();display.reportValidity();}},true);}
  if(form.elements.mobile){const mobile=form.elements.mobile;mobile.pattern='09[0-9]{9}';mobile.maxLength=11;mobile.inputMode='tel';mobile.dir='ltr';mobile.placeholder='09xxxxxxxxx';mobile.title='شماره همراه ۱۱ رقمی با ۰۹ شروع می‌شود.';mobile.addEventListener('input',()=>{mobile.value=ServiceYarDates.digits(mobile.value);});}const typeKey=['partyId','ownerId','recipientId'].find(f=>form.elements[f]);
+ if(key==='contracts'){
+  form.classList.add('sy-contract-editor');
+  const start=form.elements.startDate,end=form.elements.endDate;
+  const amount=form.elements.amount;
+  const info=document.createElement('div');info.className='sy-contract-period-feedback';info.setAttribute('role','status');info.setAttribute('aria-live','polite');
+  (end?.closest('label')||form.querySelector('.form-grid')).after(info);
+  const validateContract=()=>{
+   const from=start?.value||'',to=end?.value||'';
+   if(start&&end){
+    end.setCustomValidity(from&&to&&to<from?'تاریخ پایان قرارداد نباید قبل از شروع قرارداد باشد.':'');
+   }
+   info.textContent=from&&to?(to<from?'بازه نامعتبر است؛ تاریخ پایان را اصلاح کنید.':'بازه قرارداد: '+dateText(from)+' تا '+dateText(to)):'شروع و پایان قرارداد را به‌صورت شمسی انتخاب کنید.';
+   info.classList.toggle('is-invalid',Boolean(from&&to&&to<from));
+  };
+  start?.addEventListener('change',validateContract);
+  end?.addEventListener('change',validateContract);
+  start?.addEventListener('input',validateContract);
+  end?.addEventListener('input',validateContract);
+  validateContract();
+ }
  if(key==='students'){
   attachStudentTariff(form);
   const feeField=form.elements.monthlyFee,schoolField=form.elements.schoolId,gradeField=form.elements.grade;
