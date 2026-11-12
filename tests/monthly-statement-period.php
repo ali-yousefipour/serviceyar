@@ -19,6 +19,6 @@ try{
  $range->invoke(null,['year'=>1405,'month'=>7,'from'=>'2026-09-23','to'=>'2027-09-22']);
  throw new RuntimeException('Year-long period unexpectedly accepted');
 }catch(AuthException $e){
- if($e->getCode()!==422)throw $e;
+ if($e->status!==422)throw $e;
 }
 echo "Monthly statement date validation passed\n";
