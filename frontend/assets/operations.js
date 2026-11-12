@@ -153,7 +153,39 @@ Object.assign(labels,{branchName:'شعبه',serialNo:'شماره / سریال چ
 async function chequeEditor(id,token,refresh){
  const row=id?await api(scoped('/api/v1/accounting/cheques/'+id)):{received_date:todayISO(),due_date:todayISO()},defaults=await api(scoped('/api/v1/accounting/defaults')),accounts=[];let page=1;while(true){const d=await api(scoped('/api/v1/accounts?active=1&limit=200&page='+page++));if(token!==pageToken)return;accounts.push(...d.items);if(page>d.pagination.pages)break;}
  labels.counterAccountId='حساب مقابل سند دریافت (اختیاری)';const fields=['bankName','branchName','serialNo','bankAccount','receivedFrom','accountId','amount','receivedDate','dueDate','description',...(!id?['counterAccountId']:[])];
- dialog(id?'ویرایش چک دریافتی':'ثبت چک دریافتی',`<form id="editForm"><div class="form-grid">${fields.map(key=>{const value=val(row,key)||(key==='accountId'?defaults.chequeReceivable||'':'');return `<label>${labels[key]}${['bankName','serialNo','receivedFrom','accountId','amount','receivedDate','dueDate'].includes(key)?' *':''}${['accountId','counterAccountId'].includes(key)?`<select name="${key}" ${key==='accountId'?'required':''}><option value="">انتخاب حساب</option>${accounts.map(a=>`<option value="${a.id}" ${String(value)===String(a.id)?'selected':''}>${esc(a.code+' · '+a.title)}</option>`).join('')}</select>`:key==='description'?`<textarea name="${key}" maxlength="1000">${esc(value)}</textarea>`:`<input name="${key}" value="${esc(value)}" ${['receivedDate','dueDate'].includes(key)?'type="date" required':key==='amount'?'type="number" min="0.01" max="999999999999.99" step="0.01" required':['bankName','serialNo','receivedFrom'].includes(key)?'required maxlength="100"':'maxlength="100"'}>`}</label>`;}).join('')}</div><button id="saveRecord" class="primary">ذخیره چک</button></form>`);const form=$('editForm');resourceWizard(form,'cheques');form.onsubmit=async e=>{e.preventDefault();const button=$('saveRecord');button.disabled=true;try{await write('/api/v1/accounting/cheques'+(id?'/'+id:''),Object.fromEntries(new FormData(form)),id?'PUT':'POST');closeDialog();notify('چک دریافتی ذخیره شد.');await refresh();}catch(err){$('formError').textContent=err.message;$('formError').hidden=false;$('formError').focus();button.disabled=false;}};
+ dialog(id?'ویرایش چک دریافتی':'ثبت چک دریافتی',`<form id="editForm" class="sy-cheque-editor"><p class="sy-cheque-editor-intro">مشخصات چک را مطابق برگ دریافتی وارد کنید. در صورت ایجاد سند دریافت، ویرایش مشخصات چک قفل می‌شود.</p><div class="form-grid">${fields.map(key=>{const value=val(row,key)||(key==='accountId'?defaults.chequeReceivable||'':'');return `<label>${labels[key]}${['bankName','serialNo','receivedFrom','accountId','amount','receivedDate','dueDate'].includes(key)?' *':''}${['accountId','counterAccountId'].includes(key)?`<select name="${key}" ${key==='accountId'?'required':''}><option value="">انتخاب حساب</option>${accounts.map(a=>`<option value="${a.id}" ${String(value)===String(a.id)?'selected':''}>${esc(a.code+' · '+a.title)}</option>`).join('')}</select>`:key==='description'?`<textarea name="${key}" maxlength="1000">${esc(value)}</textarea>`:`<input name="${key}" value="${esc(value)}" ${['receivedDate','dueDate'].includes(key)?'type="date" required':key==='amount'?'type="text" inputmode="decimal" autocomplete="off" data-cheque-money dir="ltr" required aria-describedby="chequeAmountHelp"':['bankName','serialNo','receivedFrom'].includes(key)?'required maxlength="100"':'maxlength="100"'}>`}</label>`;}).join('')}</div><p id="chequeAmountHelp" class="sy-cheque-editor-help">مبلغ به ریال، با حداکثر دو رقم اعشار؛ برای مقادیر صحیح، اعشار لازم نیست.</p><div id="chequeDateFeedback" role="status" aria-live="polite"></div><div class="sy-cheque-editor-actions"><button type="submit" id="saveRecord" class="primary">ذخیره چک</button><button type="button" data-cancel-cheque>انصراف</button></div></form>`);const form=$('editForm');
+ const money=form.querySelector('[data-cheque-money]'),from=form.elements.receivedDate,to=form.elements.dueDate;
+ const cleanDigits=value=>String(value??'').trim().replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+ const amountValue=()=>{
+  const raw=cleanDigits(money.value);
+  const parts=raw.split(/[٫.]/);
+  if(parts.length>2||!/^(?:[0-9]{1,12}|[0-9]{1,3}(?:[٬,][0-9]{3})+)$/.test(parts[0])||(parts.length===2&&!/^[0-9]{1,2}$/.test(parts[1])))return null;
+  const digits=parts[0].replace(/[٬,]/g,'');
+  if(!Number(digits)&&(!parts[1]||!Number(parts[1])))return null;
+  return digits+(parts.length===2?'.'+parts[1]:'');
+ };
+ const validate=()=>{
+  const numeric=amountValue();
+  money.setCustomValidity(numeric?'':'مبلغ چک باید مثبت و دارای حداکثر دو رقم اعشار باشد.');
+  to.setCustomValidity(from.value&&to.value&&to.value<from.value?'سررسید چک نمی‌تواند قبل از تاریخ دریافت باشد.':'');
+  $('chequeDateFeedback').textContent=from.value&&to.value?'دریافت: '+dateText(from.value)+' · سررسید: '+dateText(to.value):'تاریخ دریافت و سررسید را انتخاب کنید.';
+  $('chequeDateFeedback').classList.toggle('is-invalid',Boolean(to.validationMessage));
+  return Boolean(numeric)&&!to.validationMessage;
+ };
+ money.addEventListener('input',validate);
+ for(const input of [from,to]){input.addEventListener('input',validate);input.addEventListener('change',validate);}
+ money.addEventListener('blur',()=>{
+  const normalized=amountValue();
+  if(normalized){
+   const [whole,decimal]=normalized.split('.');
+   money.value=persianDigits(whole.replace(/\B(?=(\d{3})+(?!\d))/g,'٬')+(decimal===undefined?'':'٫'+decimal));
+  }
+ });
+ form.querySelector('[data-cancel-cheque]').onclick=closeDialog;
+ resourceWizard(form,'cheques');validate();
+ form.onsubmit=async e=>{e.preventDefault();if(!validate()){form.reportValidity();return;}const button=$('saveRecord');button.disabled=true;try{
+  const body=Object.fromEntries(new FormData(form));body.amount=amountValue();
+  await write('/api/v1/accounting/cheques'+(id?'/'+id:''),body,id?'PUT':'POST');closeDialog();notify('چک دریافتی ذخیره شد.');await refresh();}catch(err){$('formError').textContent=err.message;$('formError').hidden=false;$('formError').focus();button.disabled=false;}};
 }
 async function financialAccountsPage(token=pageToken){
  const defaults=await api(scoped('/api/v1/accounting/defaults')),accounts=[];let page=1;while(true){const d=await api(scoped('/api/v1/accounts?active=1&limit=200&page='+page++));if(token!==pageToken)return;accounts.push(...d.items);if(page>d.pagination.pages)break;}
