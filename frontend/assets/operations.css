@@ -1225,3 +1225,14 @@ body.sy-menu-palette-open{overflow:hidden}
 /* Distinguish tuition collected from net monthly driver payment. */
 .sy-service-facts .sy-service-net,.sy-service-net-summary{background:#eff8f2;border:1px solid #cce6d4;border-radius:10px;padding:10px 12px;color:#165a36;font-weight:800;line-height:1.8}
 .sy-service-facts .sy-service-net dd{font-weight:900;font-size:16px;color:#14532d}
+
+/* Company financial settings: deductions tab */
+.sy-settings-tabs{display:flex;gap:8px;flex-wrap:wrap;position:sticky;top:0;z-index:5;padding:10px 0;background:var(--bg,#f7f9fb)}
+.sy-settings-tabs button{min-height:42px;border:1px solid #cbd5e1;border-radius:12px;background:#fff;color:#334155;padding:8px 18px;font-weight:750}
+.sy-settings-tabs button.active{background:#155e42;border-color:#155e42;color:#fff}
+.sy-settings-panel[hidden],.sy-deductions-panel[hidden]{display:none!important}
+.sy-deduction-form{display:grid;gap:16px}
+.sy-deduction-form input[type=number]{font-variant-numeric:tabular-nums;direction:ltr;text-align:center;max-width:240px}
+.sy-deduction-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;background:#f0f8f4;border:1px solid #d0e7d9;border-radius:14px;padding:16px}
+.sy-deduction-summary strong{font-size:20px;color:#17613e}
+@media(max-width:650px){.sy-settings-tabs{top:0}.sy-settings-tabs button{flex:1}.sy-deduction-summary{grid-template-columns:1fr 1fr;padding:12px}.sy-deduction-summary strong{font-size:17px}}
