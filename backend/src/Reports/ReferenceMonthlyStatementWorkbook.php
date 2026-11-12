@@ -31,8 +31,8 @@ final class ReferenceMonthlyStatementWorkbook
         $zip=new \ZipArchive();
         if($zip->open($path)!==true)return ['valid'=>false,'reason'=>'INVALID_ZIP'];
         try{
-            foreach($zip as $entry){
-                $name=(string)$entry['name'];
+            for($entryIndex=0;$entryIndex<$zip->numFiles;$entryIndex++){
+                $name=(string)$zip->getNameIndex($entryIndex);
                 if(preg_match('~(^|/)(vbaProject\\.bin|externalLinks/|embeddings/|connections\\.xml)~i',$name))
                     return ['valid'=>false,'reason'=>'UNSAFE_TEMPLATE_CONTENT'];
             }
