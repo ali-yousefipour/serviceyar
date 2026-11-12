@@ -154,10 +154,15 @@ final class DomainService {
    END AS party_name";
   if($resource==='services')$select="services.*,
    (SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id WHERE ss.service_id=services.id) AS students_monthly_total,
-   (SELECT COALESCE(SUM(ROUND(st.monthly_fee * (CASE WHEN LOWER(COALESCE(sc.school_type,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR (LOWER(COALESCE(st.grade,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR TRIM(COALESCE(st.grade,'')) REGEXP '^[1-6] WHEN LOWER(COALESCE(sc.school_type,'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' OR LOWER(COALESCE(st.grade,'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 ELSE 9 END),0)),0)
-    FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id LEFT JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id WHERE ss.service_id=services.id) AS students_annual_total,
+   (SELECT COALESCE(SUM(ROUND(COALESCE(st.monthly_fee,0) *
+     (CASE WHEN LOWER(COALESCE(sc.school_type,'')) REGEXP 'ابتدایی|دبستان|primary|elementary'
+       OR LOWER(COALESCE(st.grade,'')) REGEXP 'ابتدایی|دبستان|primary|elementary'
+       OR TRIM(COALESCE(st.grade,'')) IN ('1','2','3','4','5','6','۱','۲','۳','۴','۵','۶')
+       THEN 8.5 ELSE 9 END),0)),0)
+    FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id
+    LEFT JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id
+    WHERE ss.service_id=services.id) AS students_annual_total,
    (SELECT COUNT(*) FROM service_students ss WHERE ss.service_id=services.id) AS student_count";
-  
   if($resource==='vehicles')$select="vehicles.*, (SELECT GROUP_CONCAT(CONCAT_WS(' ',vd.first_name,vd.last_name) ORDER BY vd.id DESC SEPARATOR '، ') FROM drivers vd WHERE vd.vehicle_id=vehicles.id AND vd.agency_id=vehicles.agency_id AND vd.is_active=1) AS driver_name";
   if($resource==='students')$select="students.*,
    (SELECT CONCAT(d.first_name,' ',d.last_name) FROM service_students ss JOIN services sv ON sv.id=ss.service_id JOIN drivers d ON d.id=sv.driver_id AND d.agency_id=students.agency_id WHERE ss.student_id=students.id AND sv.agency_id=students.agency_id AND sv.is_active=1 LIMIT 1) driver_name,
