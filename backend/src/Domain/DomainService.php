@@ -215,7 +215,23 @@ final class DomainService {
  public static function get(int $uid,int $aid,string $resource,int $id): array {
   $c=self::cfg($resource);self::scope($uid,$aid,$c['permission']);
   $s=Connection::get()->prepare('SELECT * FROM '.$c['table'].' WHERE id=:id AND agency_id=:a');$s->execute(['id'=>$id,'a'=>$aid]);
-  $row=$s->fetch();if(!$row)throw new AuthException(404,'رکورد پیدا نشد.','NOT_FOUND');return $row;
+  $row=$s->fetch();if(!$row)throw new AuthException(404,'رکورد پیدا نشد.','NOT_FOUND');
+  if($resource==='ledger'){
+   $p=Connection::get()->prepare("SELECT
+    CASE le.party_type
+     WHEN 'student' THEN (SELECT NULLIF(TRIM(CONCAT_WS(' ',st.first_name,st.last_name)),'') FROM students st WHERE st.id=le.party_id AND st.agency_id=le.agency_id)
+     WHEN 'driver' THEN (SELECT NULLIF(TRIM(CONCAT_WS(' ',dr.first_name,dr.last_name)),'') FROM drivers dr WHERE dr.id=le.party_id AND dr.agency_id=le.agency_id)
+     WHEN 'school' THEN (SELECT sc.name FROM schools sc WHERE sc.id=le.party_id AND sc.agency_id=le.agency_id)
+     WHEN 'agency' THEN (SELECT ag.name FROM agencies ag WHERE ag.id=le.party_id AND ag.id=le.agency_id)
+    END AS party_name,
+    NULLIF(TRIM(CONCAT_WS(' ',u.first_name,u.last_name)),'') AS creator_name,
+    u.username AS creator_username
+    FROM ledger_entries le LEFT JOIN users u ON u.id=le.created_by
+    WHERE le.id=:id AND le.agency_id=:a");
+   $p->execute(['id'=>$id,'a'=>$aid]);
+   $row=array_merge($row,$p->fetch()?:[]);
+  }
+  return $row;
  }
  public static function save(int $uid,int $aid,string $resource,array $b,?int $id=null): array {
   if($resource==='accounting-documents')return AccountingJournal::save($uid,$aid,$b,$id);
