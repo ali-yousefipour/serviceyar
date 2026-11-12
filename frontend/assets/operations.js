@@ -230,7 +230,7 @@ async function accountStatementPage(token=pageToken,initial=null,initialPage=1){
  const form=$('statementForm');let request=0;
  const accountSelect=form.elements.accountId;
  const accountChoices=accounts.map(row=>({id:String(row.id),title:row.code+' · '+row.title+(Number(row.is_active)?'':' (غیرفعال)')}));
- const normalizeAccount=value=>String(value??'').replace(/ي|ى/g,'ی').replace(/ك/g,'ک').replace(/[\u200c\s]+/g,' ').trim().toLocaleLowerCase('fa');
+ const normalizeAccount=value=>String(value??'').replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/ي|ى/g,'ی').replace(/ك/g,'ک').replace(/[\u200c\s]+/g,' ').trim().toLocaleLowerCase('fa');
  $('statementSearch').oninput=e=>{
   const query=normalizeAccount(e.target.value),selected=accountSelect.value;
   const available=accountChoices.filter(row=>!query||normalizeAccount(row.title).includes(query));
