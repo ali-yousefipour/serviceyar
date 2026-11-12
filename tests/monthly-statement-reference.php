@@ -7,7 +7,14 @@ use ServiceYar\Domain\SchoolServiceStatement;
 // One audited row from the user's 1405 reference workbook, amounts in IRR.
 // The final driver-statement subtotal intentionally excludes certification
 // and insurance, but not the management/coordination/company components.
-$row=SchoolServiceStatement::fromWorkbookRate('15625000',30,true,true);
+$row=SchoolServiceStatement::fromSchoolTariff('2',4,'ناحیه 6',30);
+if(abs($row['base_fee']-15625000.0)>0.001){
+    throw new RuntimeException('Vehicle class / region factor / distance tariff mismatch');
+}
+$legacy=SchoolServiceStatement::fromWorkbookRate('15625000',30,true,true);
+if(abs($legacy['parent_total']-$row['parent_total'])>0.001){
+    throw new RuntimeException('School tariff and reference workbook arithmetic diverged');
+}
 $expected=[
     'driver_fee'=>15625000.0,
     'oversight_3pct'=>468750.0,
