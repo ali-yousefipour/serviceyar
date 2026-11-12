@@ -1536,7 +1536,18 @@ async function newServicePage(token,initialDriverId){
  const hasMehrDriver=student=>Number(student.mehr_driver_id)===Number(driverId);
  const schoolIds=()=>selectedSchools;
 
- const canSubmit=()=>Boolean(driverId&&selectedSchools.length&&chosen.size&&!saving&&form.elements.title.value.trim()&&form.elements.capacity.checkValidity()&&chosen.size<=Number(form.elements.capacity.value)&&form.elements.agreedAmount.checkValidity());
+ const normalizeAgreed=value=>String(value??'').replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).trim();
+ const validAgreed=value=>/^(?:[0-9]{1,15}|[0-9]{1,3}(?:[٬,][0-9]{3})+)$/.test(normalizeAgreed(value));
+ const syncAgreed=()=>{
+  const input=form.elements.agreedAmountDisplay,raw=normalizeAgreed(input.value);
+  const value=raw.replace(/[٬,]/g,'');
+  const valid=validAgreed(input.value)&&value.length<=15;
+  input.setCustomValidity(valid?'':'مبلغ توافقی باید عدد صحیح ریالی و فاقد اعشار باشد.');
+  form.elements.agreedAmount.value=valid?value:'';
+  if(valid)input.value=persianDigits(value.replace(/\\B(?=(\\d{3})+(?!\\d))/g,'٬'));
+  return valid;
+ };
+ const canSubmit=()=>Boolean(driverId&&selectedSchools.length&&chosen.size&&!saving&&form.elements.title.value.trim()&&form.elements.capacity.checkValidity()&&chosen.size<=Number(form.elements.capacity.value)&&syncAgreed());
  const refreshSave=()=>{save.disabled=!canSubmit();};
  const sync=()=>{
   for(const s of students)if(!selectedSchools.includes(Number(s.school_id)))chosen.delete(Number(s.id));
@@ -1544,6 +1555,11 @@ async function newServicePage(token,initialDriverId){
   show.disabled=!selectedSchools.length||!driverId;quote.disabled=show.disabled||!chosen.size;refreshSave();
   $('serviceStudentSelection').hidden=show.disabled;$('serviceSetupDetails').hidden=!chosen.size;
   $('selectedServiceStudents').textContent=chosen.size?students.filter(s=>chosen.has(Number(s.id))).map(person).join('، '):'دانش‌آموزان این سرویس را انتخاب کنید.';
+  const capacity=Number(form.elements.capacity.value),exceeded=chosen.size>capacity;
+  const warning=$('serviceCapacityWarning');warning.hidden=!exceeded;
+  warning.textContent=exceeded?'تعداد دانش‌آموزان ('+number(chosen.size)+') بیشتر از ظرفیت سرویس ('+number(capacity)+') است.':'';
+  $('serviceStudentsCount').textContent=number(chosen.size)+' دانش‌آموز انتخاب شده · ظرفیت '+number(capacity);
+  $('serviceSetupProgress').textContent=!driverId||!selectedSchools.length?'مرحله ۱ از ۳ · انتخاب مدرسه و راننده':!chosen.size?'مرحله ۲ از ۳ · انتخاب دانش‌آموزان':'مرحله ۳ از ۳ · بازبینی مشخصات و مبلغ';
   revision++;result.textContent='برای مشاهده برآورد هزینه و مسیر، «دریافت قیمت و مسیر» را انتخاب کنید. ثبت سرویس بدون دریافت پیش‌نمایش نیز امکان‌پذیر است.';
  };
  const matches=(value,term)=>normalizeServiceSearch(value).includes(normalizeServiceSearch(term));
@@ -1560,8 +1576,9 @@ async function newServicePage(token,initialDriverId){
  const selectDriver=driver=>{
   const vehicle=vehicleFor(driver);
   driverId=Number(driver.id);
-  form.elements.capacity.max=vehicle?Math.min(200,Number(vehicle.capacity)):200;
-  form.elements.capacity.value=vehicle?Math.min(200,Number(vehicle.capacity)):4;
+  const vehicleMax=vehicle&&Number.isInteger(Number(vehicle.capacity))&&Number(vehicle.capacity)>0?Math.min(200,Number(vehicle.capacity)):200;
+  form.elements.capacity.max=vehicleMax;
+  form.elements.capacity.value=vehicle?vehicleMax:4;
   $('serviceDriverSummary').textContent=driverCaption(driver)+(vehicle?' · ظرفیت '+number(vehicle.capacity):' · ظرفیت خودرو ثبت نشده');
   $('pickServiceDriver').textContent='تغییر راننده';
   sync();
@@ -1597,8 +1614,9 @@ async function newServicePage(token,initialDriverId){
   $('confirmStudents').onclick=()=>{chosen.clear();for(const s of students)if(pending.has(Number(s.id))&&!blocked(s))chosen.add(Number(s.id));closeDialog();sync();};render();name.focus();
  };
  form.elements.title.addEventListener('input',refreshSave);
- form.elements.agreedAmount.addEventListener('input',refreshSave);
+ form.elements.agreedAmountDisplay.addEventListener('input',()=>{syncAgreed();refreshSave();});
 
+ $('changeServiceStudents').onclick=()=>show.click();
  form.elements.capacity.oninput=sync;
  quote.onclick=async()=>{
 
