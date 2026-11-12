@@ -341,7 +341,7 @@ try{
  check((int)$newService['driver_id']===(int)$ad['id'],'New service retains the selected driver');
  check(count(D::serviceStudents($uid,$a,(int)$newService['id']))===2,'New service saves selected schools and students together');
  $memberFees=array_column(D::serviceStudents($uid,$a,(int)$newService['id']),'monthly_fee');
- check((float)$newService['monthly_fee']===array_sum($memberFees),'Wizard saves the total of the assigned student fees after tariff calculation');
+ check((float)$newService['monthly_fee']===\ServiceYar\Domain\OperationsService::driverDeductions((float)array_sum($memberFees))['net_earned'],'Wizard saves the net driver fee after 18.8 percent deductions');
  $matches=D::list($uid,$a,'services',['schoolId'=>$secondSchool['id'],'driverId'=>$ad['id'],'status'=>'active','search'=>'مدرسه دوم همین شرکت']);
  check(array_map('intval',array_column($matches['items'],'id'))===[(int)$newService['id']],'Service filters combine driver, status and a secondary school name');
  check(D::list($uid,$a,'services',['search'=>'تخصیص آزمون','shift'=>'no-such-shift'])['pagination']['total']===0,'Shift constrains service search by driver name');
