@@ -1367,3 +1367,20 @@ body.sy-menu-palette-open{overflow:hidden}
 @media(prefers-reduced-motion:reduce){
  button,.primary,#content .sy-statement-table tr{transition:none!important}
 }
+
+
+/* Server-paginated directory sorting, available from headers and filter bars */
+#content .sy-grid-sort-controls{display:flex;align-items:end;gap:9px;flex-wrap:wrap;min-width:0}
+#content .sy-grid-sort-controls label{display:flex;flex-direction:column;gap:5px;color:#3f6049;font-size:12px;font-weight:750;min-width:135px;flex:1 1 140px}
+#content .sy-grid-sort-controls select{width:100%;min-width:0;min-height:42px;background:#fff;border:1px solid #d1e1d5;border-radius:9px;padding:8px 10px;color:#244c36;font-size:12px}
+#content .sy-grid-sort-heading{display:inline-flex;justify-content:space-between;align-items:center;gap:6px;width:100%;max-width:100%;padding:4px 2px;min-height:29px;background:transparent;border:0;border-radius:5px;color:inherit;font-size:inherit;font-weight:inherit;text-align:right;white-space:nowrap;box-shadow:none;cursor:pointer}
+#content .sy-grid-sort-heading:hover{color:#0d6840;background:#e0eee5}
+#content .sy-grid-sort-heading:focus-visible{outline:2px solid #0b7650;outline-offset:2px}
+#content .sy-grid-sort-heading span{font-size:14px;color:#37764f;font-family:Tahoma,sans-serif;flex:none}
+#content th[aria-sort=ascending] .sy-grid-sort-heading,#content th[aria-sort=descending] .sy-grid-sort-heading{color:#0e5937}
+@media(max-width:700px){
+ #content .sy-grid-sort-controls{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ #content .sy-grid-sort-controls label{min-width:0;flex:auto}
+ #content .sy-grid-sort-controls select{font-size:16px;min-height:44px}
+}
+@media(max-width:380px){#content .sy-grid-sort-controls{grid-template-columns:1fr}}
