@@ -850,3 +850,45 @@ body.sy-menu-palette-open{overflow:hidden}
  #modal .sy-ledger-editor>.form-grid{grid-template-columns:minmax(0,1fr);gap:15px}
  #modal .sy-ledger-editor>#saveRecord{align-self:stretch;width:100%}
 }
+
+/* Compact design-system pass: override legacy oversized per-page spacing */
+#content{max-width:none!important;width:100%;min-width:0}
+#content>.panel,#content>.toolbar,#content>.sy-operation-page{min-width:0;max-width:100%}
+#content .toolbar{gap:10px;margin-bottom:12px}
+#content .toolbar h2{font-size:19px;line-height:1.5}
+#content .toolbar p{font-size:11px;line-height:1.6}
+#content .panel{padding:clamp(12px,1.3vw,18px);margin-top:12px}
+#content .filters,#content .service-filters,#content .ledger-filters{gap:10px;margin-bottom:12px}
+#content :is(.directory-filters,.service-filter-fields,.ledger-filter-grid){gap:10px 12px}
+#content :is(.service-filter-top,.ledger-filter-header,.sy-operation-header){padding:12px 14px;gap:10px}
+#content :is(.service-filter-top,.ledger-filter-header,.sy-operation-header) h3{font-size:15px;line-height:1.5;margin:0 0 3px}
+#content :is(.service-filter-top,.ledger-filter-header,.sy-operation-header) p{font-size:11px;line-height:1.6;margin:0}
+#content :is(.service-filter-primary,.ledger-filter-primary,.service-filter-search){gap:9px}
+#content :is(.service-filters,.ledger-filters,.directory-filters) :is(input,select,button){min-height:39px;font-size:12px;padding-block:7px}
+#content :is(.service-filters,.ledger-filters,.directory-filters) label{font-size:11px;line-height:1.5;gap:5px}
+#content :is(.status-tabs,.ledger-report-tabs,.tabs){gap:6px;margin-block:9px 12px}
+#content :is(.status-tabs,.ledger-report-tabs,.tabs) button{min-height:36px;padding:6px 11px;font-size:12px}
+#content .bulk-toolbar{gap:7px;margin-block:8px}
+#content .table-wrap :is(th,td){font-size:12px;padding:8px 10px}
+#content .sy-operation-page{padding:14px}
+#content .sy-operation-filters{gap:10px}
+#modal .modal:has(.sy-ledger-editor){width:min(100%,740px)}
+#modal .sy-ledger-editor{gap:11px}
+#modal .sy-ledger-editor>.form-grid{gap:12px 14px}
+#modal .sy-ledger-editor>.form-grid>label{gap:5px;font-size:12px}
+#modal .sy-ledger-editor>.form-grid>label :is(input,select,textarea){min-height:40px;padding:8px 10px;font-size:12px}
+#modal .sy-ledger-editor>.form-grid>label textarea{min-height:74px}
+#modal .sy-ledger-editor .sy-money-field input[data-money-display]{font-size:17px!important}
+#modal .modal-head{padding:11px 16px}
+#modal .modal-body{padding:14px 16px}
+#modal .wizard-step{margin-block:10px;padding:12px}
+#modal .wizard-step h4{font-size:14px;margin-bottom:9px}
+#modal .wizard-progress{gap:6px;margin-bottom:4px}
+#modal .wizard-marker{min-height:39px;padding:6px 8px;font-size:11px}
+#modal .wizard-actions{padding:10px 0 2px}
+@media(max-width:760px){
+ #content .service-filter-top,#content .ledger-filter-header{padding:10px}
+ #content .service-filter-primary,#content .ledger-filter-primary{gap:8px}
+ #modal .modal-body{padding:12px}
+ #modal .sy-ledger-editor>.form-grid{gap:11px}
+}
