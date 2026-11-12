@@ -1658,7 +1658,19 @@ async function newServicePage(token,initialDriverId){
     lines.push([person(s),km(distance),routeText,rate.monthlyFee===null?'نرخ ثبت نشده':number(rate.monthlyFee),rate.monthlyFee===null?'—':number(Math.round(Number(rate.monthlyFee)*months)),rate.saved?'مبلغ ثبت‌شده':rate.monthlyFee===null?'—':can('students','manage')?'نرخ‌نامه · ذخیره با ثبت سرویس':'نرخ‌نامه · پیش‌نمایش']);
    }
    if(!current())return;
-   result.innerHTML=simpleTable(['دانش‌آموز','کیلومتر تعرفه','مسیر نشان','ماهیانه · ریال','برآورد سالانه · ریال','مبنای مبلغ'],lines)+'<p>جمع ماهانه: '+number(total)+' ریال · کسورات راننده '+percent(driverFeeBreakdown(total,driverRates).rate)+'٪: '+number(driverFeeBreakdown(total,driverRates).deducted)+' ریال · خالص ماهانه راننده: '+number(driverFeeBreakdown(total,driverRates).net)+' ریال · برآورد سالانه (ابتدایی ۸٫۵ / متوسطه ۹ ماه): '+number(annualTotal)+' ریال · بدون نرخ: '+number(missing)+'</p>'+(routes.length?'<div class="service-map" id="serviceQuoteMap" aria-label="نقشه مسیرهای نشان"></div>':'');
+   const breakdown=driverFeeBreakdown(total,driverRates);
+   result.innerHTML=
+    '<section class="sy-service-quote-head"><h3>برآورد مالی سرویس</h3><span>بر اساس نرخ‌های ثبت‌شده دانش‌آموزان انتخابی</span></section>'+
+    '<div class="sy-service-quote-metrics">'+
+    '<div><span>جمع ناخالص ماهانه</span><strong>'+number(total)+' ریال</strong></div>'+
+    '<div><span>کسورات راننده ('+percent(breakdown.rate)+'٪)</span><strong>'+number(breakdown.deducted)+' ریال</strong></div>'+
+    '<div class="sy-service-quote-net"><span>خالص ماهانه راننده</span><strong>'+number(breakdown.net)+' ریال</strong></div>'+
+    '<div><span>برآورد مبلغ سالانه</span><strong>'+number(annualTotal)+' ریال</strong></div>'+
+    '</div>'+
+    (missing?'<p class="sy-service-quote-warning" role="alert">برای '+number(missing)+' دانش‌آموز نرخ تعرفه یافت نشد. پیش از ثبت نهایی، اطلاعات شهریه و نرخ‌نامه را بررسی کنید.</p>':'')+
+    '<div class="sy-service-quote-table">'+simpleTable(['دانش‌آموز','کیلومتر تعرفه','مسیر نشان','ماهیانه · ریال','برآورد سالانه · ریال','مبنای مبلغ'],lines)+'</div>'+
+    '<p class="sy-service-quote-footnote">برآورد سالانه متناسب با مقطع تحصیلی است: ابتدایی ۸٫۵ ماه و متوسطه و دبیرستان ۹ ماه. مبالغ به ریال هستند.</p>'+
+    (routes.length?'<div class="service-map" id="serviceQuoteMap" aria-label="نقشه مسیرهای نشان"></div>':'');
    refreshSave();
    if(routes.length){
     const map=await makeMap($('serviceQuoteMap'));
