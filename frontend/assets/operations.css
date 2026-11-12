@@ -1663,3 +1663,70 @@ body.sy-menu-palette-open{overflow:hidden}
  #content .sy-journal-editor>button,#content .sy-journal-editor #journalForm>button{min-height:43px;margin:4px 2px}
  #content .sy-journal-totals{font-size:12px}
 }
+
+
+/* Cheque receipt management: desktop table, mobile cards and irreversible-action review */
+#content .sy-cheque-panel{min-width:0;padding:clamp(13px,2vw,22px);border:1px solid #dce9e1;border-radius:17px}
+#content .sy-cheque-intro{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+#content .sy-cheque-intro h2{font-size:19px;line-height:1.6;color:#165638;margin:3px 0 6px}
+#content .sy-cheque-intro p{font-size:12px;line-height:1.8;color:#5e7666;margin:0;max-width:730px}
+#content .sy-cheque-intro button{min-height:43px;white-space:nowrap}
+#content .sy-cheque-filters{display:grid;grid-template-columns:minmax(195px,2fr) repeat(3,minmax(135px,1fr)) auto auto;gap:10px;align-items:end;margin:16px 0 12px;padding:13px;background:#f5faf7;border:1px solid #e1ece4;border-radius:12px}
+#content .sy-cheque-filters>label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:750;color:#356044;min-width:0}
+#content .sy-cheque-filters :is(input,select){width:100%;min-width:0;box-sizing:border-box;min-height:43px;padding:8px 11px;border-radius:9px;border:1px solid #cfdfd3;background:#fff;color:#204932;font-size:13px}
+#content .sy-cheque-filters button{min-height:43px;padding:8px 12px;white-space:nowrap}
+#content .sy-cheque-filters button[type=reset]{background:#fff;border:1px solid #ccddcf;color:#315d40}
+#content .sy-cheque-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin-bottom:13px}
+#content .sy-cheque-metrics>div{display:flex;flex-direction:column;gap:7px;padding:13px 14px;border:1px solid #d7e8dc;border-radius:12px;background:#f0f8f2}
+#content .sy-cheque-metrics span{font-size:11px;font-weight:750;color:#5b7765}
+#content .sy-cheque-metrics strong{font-size:17px;line-height:1.55;color:#145b38;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#content .sy-cheque-table-wrap{max-height:530px;overflow:auto;overscroll-behavior:contain;border:1px solid #dfebe2;border-radius:11px;margin:12px 0}
+#content .sy-cheque-table{min-width:1020px;width:100%;border-collapse:separate;border-spacing:0}
+#content .sy-cheque-table thead th{position:sticky;top:0;z-index:2;background:#eaf4ed;color:#275b3c;font-size:11px;font-weight:850;padding:11px 9px;white-space:nowrap;text-align:right}
+#content .sy-cheque-table tbody td{font-size:12px;color:#2d4936;line-height:1.8;vertical-align:middle;padding:11px 9px;border-bottom:1px solid #edf2ee}
+#content .sy-cheque-table tbody tr:nth-child(even){background:#fbfdfb}
+#content .sy-cheque-table tbody tr:hover{background:#f1f9f3}
+#content .sy-cheque-table td.sy-financial-number{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:800;color:#165b39}
+#content .sy-cheque-table .row-actions{white-space:nowrap}
+#content .sy-cheque-table .row-actions button{font-size:11px;min-height:33px;padding:5px 9px;border-radius:8px}
+#modal .sy-cheque-editor{display:grid;gap:12px}
+#modal .sy-cheque-editor-intro{margin:0;padding:11px 13px;border:1px solid #d1e6d8;background:#f2f9f4;color:#345d45;border-radius:10px;font-size:12px;line-height:1.85}
+#modal .sy-cheque-editor .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+#modal .sy-cheque-editor .form-grid>label{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:12px;color:#325b42;font-weight:750}
+#modal .sy-cheque-editor .form-grid :is(input,select,textarea){min-height:44px;min-width:0;width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #cddfd2;border-radius:9px;font-size:14px}
+#modal .sy-cheque-editor input[data-cheque-money]{direction:ltr;text-align:left;font-variant-numeric:tabular-nums;font-size:16px}
+#modal .sy-cheque-editor-help{margin:0;padding:9px 12px;border-radius:9px;background:#f9fcf9;color:#54705f;font-size:11px;line-height:1.75}
+#modal #chequeDateFeedback{font-size:12px;line-height:1.75;color:#2a6143}
+#modal #chequeDateFeedback.is-invalid{color:#ac4235;font-weight:800}
+#modal .sy-cheque-editor-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+#modal .sy-cheque-editor-actions button{min-height:42px;padding:8px 16px}
+#modal .sy-cheque-action-summary{display:flex;flex-direction:column;gap:5px;padding:12px 14px;background:#eef8f1;border:1px solid #cfe6d6;border-radius:11px}
+#modal .sy-cheque-action-summary strong{font-size:15px;color:#145f3a}
+#modal .sy-cheque-action-summary span{font-size:12px;color:#567460;line-height:1.7}
+#modal .sy-cheque-action-warning{padding:11px 13px;background:#fff4ed;border:1px solid #e9d1bf;border-radius:10px;color:#8d512e;font-size:12px;line-height:1.8}
+#modal .sy-cheque-action-form{display:grid;gap:11px}
+#modal .sy-cheque-action-form>label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:750;color:#385d47;min-width:0}
+#modal .sy-cheque-action-form :is(input,select,textarea){box-sizing:border-box;width:100%;min-width:0;min-height:44px;font-size:14px;padding:9px 11px;border:1px solid #cfded3;border-radius:9px}
+#modal .sy-cheque-action-form textarea{min-height:90px;resize:vertical}
+#modal .sy-cheque-action-help{font-size:11px;line-height:1.8;color:#5c7967;margin:0;padding:9px 11px;background:#f6faf7;border-radius:8px}
+#modal .sy-cheque-action-footer{display:flex;gap:9px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+#modal .sy-cheque-action-footer button{min-height:43px;padding:9px 14px}
+@media(max-width:1100px){#content .sy-cheque-filters{grid-template-columns:repeat(2,minmax(0,1fr))}#content .sy-cheque-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:700px){
+ #content .sy-cheque-filters{grid-template-columns:minmax(0,1fr)}
+ #content .sy-cheque-filters :is(input,select){font-size:16px;min-height:46px}
+ #content .sy-cheque-filters button{min-height:44px}
+ #content .sy-cheque-metrics{grid-template-columns:minmax(0,1fr)}
+ #content .sy-cheque-table-wrap{overflow:visible;max-height:none;border:0}
+ #content .sy-cheque-table{display:block;min-width:0}
+ #content .sy-cheque-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+ #content .sy-cheque-table tbody{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+ #content .sy-cheque-table tbody tr{display:flex;flex-direction:column;gap:0;background:#fff;border:1px solid #dbe9df;border-radius:12px;padding:11px 13px}
+ #content .sy-cheque-table tbody td{display:flex;align-items:baseline;justify-content:space-between;gap:12px;border-bottom:1px dashed #e8efe9;padding:7px 0;white-space:normal;min-width:0;text-align:end}
+ #content .sy-cheque-table tbody td::before{content:attr(data-label);flex:0 0 35%;font-size:11px;color:#647b69;text-align:start;font-weight:750}
+ #content .sy-cheque-table tbody td:last-child{border:0}
+ #content .sy-cheque-table .row-actions{white-space:normal;flex-wrap:wrap;justify-content:flex-end}
+ #modal .sy-cheque-editor .form-grid{grid-template-columns:minmax(0,1fr)}
+ #modal .sy-cheque-editor .form-grid :is(input,select,textarea),#modal .sy-cheque-action-form :is(input,select,textarea){min-height:46px;font-size:16px}
+ #modal .sy-cheque-editor-actions button,#modal .sy-cheque-action-footer button{flex:1 1 auto}
+}
