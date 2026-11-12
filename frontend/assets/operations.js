@@ -629,11 +629,13 @@ async function formResource(key,id,onSaved){
  if(!can(key,'manage'))return;if(key==='schools'&&!id){await selectSchoolFromCatalog();return;}const token=pageToken;let row={};try{if(id)row=await api(scoped('/api/v1/'+key+'/'+id));if(token!==pageToken)return;const required={schools:['name'],students:['firstName','lastName','mobile','schoolId'],drivers:['firstName','lastName'],services:['title'],vehicles:['plate'],ledger:['partyType','partyId','direction','amount','entryDate'],'driver-work':['driverId','workDate','amount'],'driver-payments':['driverId','paymentDate','amount']};
  dialog((id?'ویرایش ':'ثبت ')+resourceName(key),`<form id="editForm" class="${key==='ledger'?'sy-ledger-editor':''}"><div class="form-grid">${resources[key][1].map(f=>{const defaults={academicYear:year(),nationality:'iranian',capacity:4,serviceStatus:'no_request',isRepresentative:0,direction:'receipt',channel:'internal',monthlyFee:0,agreedAmount:0};const original=val(row,f);const v=original!==''?original:(id?'':defaults[f]??''),options=fieldOptions(key,f),req=required[key]?.includes(f)?'required':'',text=/address|body|note|reason|description|response/i.test(f),relation=relations[f]||(['partyId','ownerId','recipientId'].includes(f)?'party':null),rialField=f==='amount'&&['invoices','payments','driver-payments','school-charges','service-charges','contracts'].includes(key);return `<label>${labels[f]||esc(f)}${req?' *':''}${f==='amount'&&key==='ledger'?`<div class="sy-money-field"><input type="text" name="amountDisplay" data-money-display inputmode="numeric" autocomplete="off" spellcheck="false" dir="ltr" placeholder="۰" aria-label="مبلغ به ریال" ${req} value="${esc(v!==''?number(v):'')}"><span class="sy-money-unit">ریال</span><input type="hidden" name="amount" value="${esc(v)}"></div><small class="sy-money-hint">مبلغ را بدون اعشار وارد کنید؛ ارقام به‌صورت سه‌رقمی جدا می‌شوند.</small>`:options?`<select name="${f}" ${req}><option value="">انتخاب کنید</option>${options.map(([value,title])=>`<option value="${esc(value)}" ${String(v)===String(value)?'selected':''}>${esc(title)}</option>`).join('')}</select>`:relation?`<input data-lookup-search="${f}" placeholder="جستجوی ${labels[f]}" aria-label="جستجوی ${labels[f]}"><select name="${f}" aria-label="${esc(labels[f]||f)}" data-relation="${relation}" ${req}><option value="">انتخاب کنید</option>${v?`<option value="${esc(v)}" selected>#${esc(v)}</option>`:''}</select>`:rialField?`<input type="text" name="${f}" data-rial-amount inputmode="numeric" autocomplete="off" dir="ltr" ${req} placeholder="۰" value="${esc(v!==''?number(v):'')}" aria-label="${esc(labels[f]||f)} به ریال"><small class="sy-money-hint">مبلغ به ریال؛ بدون اعشار و با جداکننده هزارگان</small>`:text?`<textarea name="${f}" maxlength="6000" ${req}>${esc(v)}</textarea>`:`<input name="${f}" ${req} ${/Date$/.test(f)?'type="date"':/distanceKm/i.test(f)?'type="number" min="0" step="1" inputmode="numeric"':/amount|fee|capacity|score|latitude|longitude|rating|balance/i.test(f)?'type="number" step="any"':/mobile|phone/i.test(f)?'inputmode="tel"':'maxlength="255"'} value="${esc(v)}">`}</label>`}).join('')}</div><p class="muted">مبالغ به ریال و تمام تاریخ‌های ورودی و نمایشی شمسی هستند.</p><button class="primary" id="saveRecord">ذخیره</button></form>`);
  const form=$('editForm');
- const normalizeRialInput=value=>String(value??'').replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[٬,\s]/g,'');
+ const rialAscii=value=>String(value??'').replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).trim();
+ const normalizeRialInput=value=>rialAscii(value).replace(/[٬,]/g,'');
+ const validRialGrouping=value=>/^(?:[0-9]+|[0-9]{1,3}(?:[٬,][0-9]{3})+)$/.test(rialAscii(value));
  const rialInputs=[...form.querySelectorAll('[data-rial-amount]')];
  const formatRialInput=input=>{
   const ascii=normalizeRialInput(input.value);
-  const ok=ascii===''?!input.required:/^\d{1,15}$/.test(ascii);
+  const ok=ascii===''?!input.required:validRialGrouping(input.value)&&/^\d{1,15}$/.test(ascii);
   input.setCustomValidity(ok?'':'مبلغ را به ریال، بدون اعشار و با رقم معتبر وارد کنید.');
   if(ok&&ascii!=='')input.value=persianDigits(ascii.replace(/^0+(?=\d)/,'').replace(/\B(?=(\d{3})+(?!\d))/g,'٬'));
   return ok;
@@ -730,9 +732,10 @@ function bulkFeeDialog(){
   const percentMode=mode.value==='percent',text=ascii(display.value);
   // Preserve invalid characters for validation: never turn 1.5 into 15 rials
   // or a negative amount into a positive one.
-  const normalized=percentMode?text.trim().replace(/[٫,]/g,'.'):text.replace(/[٬,\s]/g,'');
+  const normalized=percentMode?text.trim().replace(/[٫,]/g,'.'):text.replace(/[٬,]/g,'').trim();
   const candidate=normalized.replace(/^(-?)0+(?=\d)/,'$1');
-  const ok=percentMode?/^-?\d+(?:\.\d{0,2})?$/.test(candidate)&&Number(candidate)>=-100&&Number(candidate)<=100:/^\d{1,13}$/.test(candidate)&&Number(candidate)<=1000000000000;
+  const groupedMoney=/^(?:[0-9]+|[0-9]{1,3}(?:[٬,][0-9]{3})+)$/.test(text.trim());
+  const ok=percentMode?/^-?\d+(?:\.\d{0,2})?$/.test(candidate)&&Number(candidate)>=-100&&Number(candidate)<=100:groupedMoney&&/^\d{1,13}$/.test(candidate)&&Number(candidate)<=1000000000000;
   raw.value=ok?String(Number(candidate)):'';
   display.setCustomValidity(ok?'':percentMode?'درصد را بین منفی ۱۰۰ تا مثبت ۱۰۰ با حداکثر دو رقم اعشار وارد کنید.':'مبلغ ریالی معتبر و بدون اعشار وارد کنید.');
   if(ok){
