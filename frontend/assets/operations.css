@@ -1329,3 +1329,41 @@ body.sy-menu-palette-open{overflow:hidden}
 }
 @media(max-width:380px){#content .sy-statement-period{grid-template-columns:minmax(0,1fr)}#modal .sy-statement-modal-body .statement-summary{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){#content .sy-statement-table tbody tr{scroll-behavior:auto}}
+
+
+/* Shared filter / table usability across schools, students, drivers and finance */
+#content .sy-directory-heading,#content .services-page-title{min-width:0}
+#content .directory-filters,#content .filters:not(.sy-statement-period):not(.sy-operation-filters):not(.ledger-filters):not(.service-filters){align-items:end}
+#content .directory-filters>label,#content .filters>label{min-width:0}
+#content .directory-filters :is(input,select),#content .filters :is(input,select){max-width:100%}
+#content .directory-filters input[type=search]{background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23718a78' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-4-4'/%3E%3C/svg%3E") no-repeat left 12px center;padding-left:37px}
+#content .directory-filters :is(button[type=reset],.directory-reset-button){background:#f6faf7;color:#24593d;border:1px solid #d2e3d7}
+#content .directory-filters :is(button[type=reset],.directory-reset-button):hover{background:#eaf5ed}
+#content .directory-filters label{font-size:12px;font-weight:700;color:#3b6048;line-height:1.55}
+#content .directory-filters .directory-search{flex:2 1 230px;min-width:min(100%,230px)}
+#content .directory-filters .directory-filter-field{flex:1 1 155px;min-width:min(100%,155px)}
+#content .directory-filters .directory-search-button{white-space:nowrap;min-height:42px}
+#content .sy-directory-table-wrap,#content .sy-finance-table-wrap,#content .sy-report-table-wrap{scrollbar-width:thin;scrollbar-color:#9dbba9 transparent;overscroll-behavior:contain}
+#content .sy-directory-table-wrap:focus-within,#content .sy-finance-table-wrap:focus-within,#content .sy-report-table-wrap:focus-within{outline:2px solid #bddcc7;outline-offset:2px}
+#content .pager{display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;padding:12px 0}
+#content .pager :is(button,select){min-height:37px;border-radius:9px}
+#content .pager span{color:#43614b;font-size:12px;font-variant-numeric:tabular-nums}
+#content .bulk-toolbar{min-height:36px;align-items:center}
+#content :is(.sy-directory-table,.sy-finance-table,.sy-report-table) tbody tr:focus-within{background:#eef8f1}
+#content :is(.sy-directory-table,.sy-finance-table,.sy-report-table) th{line-height:1.5}
+#content .sy-finance-table td[data-label*="مبلغ"],#content .sy-directory-table td[data-label*="مبلغ"]{font-variant-numeric:tabular-nums}
+#content .panel:has(#gridFilters){min-width:0}
+@media(max-width:700px){
+ #content .toolbar{align-items:flex-start;flex-direction:column}
+ #content .toolbar .toolbar-buttons{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ #content .toolbar .toolbar-buttons>*{min-width:0;white-space:normal;min-height:42px;font-size:12px}
+ #content .directory-filters{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+ #content .directory-filters :is(label,.directory-search,.directory-filter-field){min-width:0;width:100%;flex:auto}
+ #content .directory-filters :is(input,select){font-size:16px;min-height:44px}
+ #content .directory-filters .directory-search-button,#content .directory-filters .directory-reset-button{width:100%;min-height:44px}
+ #content .pager{justify-content:space-between}
+ #content .pager span{order:-1;flex:0 0 100%;text-align:center}
+}
+@media(prefers-reduced-motion:reduce){
+ button,.primary,#content .sy-statement-table tr{transition:none!important}
+}
