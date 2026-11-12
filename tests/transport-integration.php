@@ -106,6 +106,10 @@ try{
  check((float)$annualSecondary['students_annual_total']===13500000.0,'Secondary annual service total uses 9 months');
  $secondaryStudent=D::get($uid,$feeAgency,'students',(int)$feeStudent['id']);
  check((float)$secondaryStudent['annual_months']===9.0&&(float)$secondaryStudent['annual_fee']===13500000.0,'Student detail recalculates annual fee after grade change');
+ $p->prepare("UPDATE schools SET school_type='متوسطه اول' WHERE id=? AND agency_id=?")->execute([(int)$feeSchool['id'],$feeAgency]);
+ $p->prepare('UPDATE students SET grade=? WHERE id=? AND agency_id=?')->execute(['1',(int)$feeStudent['id'],$feeAgency]);
+ $secondaryGradeOne=D::get($uid,$feeAgency,'students',(int)$feeStudent['id']);
+ check((float)$secondaryGradeOne['annual_months']===9.0,'Grade one in secondary school is not classified as primary');
  $invoiceId=insertFixture('invoices',['agency_id'=>$feeAgency,'title'=>'قسط سرویس','party_type'=>'student',
    'party_id'=>$feeStudent['id'],'amount'=>'1200000.50','issue_date'=>'2026-10-01','status'=>'open']);
  foreach([['2026-10-05','200000.25'],['2026-10-06','100000.00'],['2027-10-10','400000.00']] as [$paidAt,$paid]){
