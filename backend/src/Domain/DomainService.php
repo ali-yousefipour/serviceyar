@@ -165,6 +165,8 @@ final class DomainService {
    (SELECT COUNT(*) FROM service_students ss WHERE ss.service_id=services.id) AS student_count";
   if($resource==='vehicles')$select="vehicles.*, (SELECT GROUP_CONCAT(CONCAT_WS(' ',vd.first_name,vd.last_name) ORDER BY vd.id DESC SEPARATOR '، ') FROM drivers vd WHERE vd.vehicle_id=vehicles.id AND vd.agency_id=vehicles.agency_id AND vd.is_active=1) AS driver_name";
   if($resource==='students')$select="students.*,
+   (CASE WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR LOWER(COALESCE(students.grade,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR TRIM(COALESCE(students.grade,'')) IN ('1','2','3','4','5','6','۱','۲','۳','۴','۵','۶') THEN 8.5 ELSE 9 END) AS annual_months,
+   ROUND(COALESCE(students.monthly_fee,0) * (CASE WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR LOWER(COALESCE(students.grade,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR TRIM(COALESCE(students.grade,'')) IN ('1','2','3','4','5','6','۱','۲','۳','۴','۵','۶') THEN 8.5 ELSE 9 END),0) AS annual_fee,
    (SELECT CONCAT(d.first_name,' ',d.last_name) FROM service_students ss JOIN services sv ON sv.id=ss.service_id JOIN drivers d ON d.id=sv.driver_id AND d.agency_id=students.agency_id WHERE ss.student_id=students.id AND sv.agency_id=students.agency_id AND sv.is_active=1 LIMIT 1) driver_name,
    (SELECT CONCAT(d.first_name,' ',d.last_name) FROM school_service_import_fees f JOIN drivers d ON d.id=f.driver_id AND d.agency_id=f.agency_id
     WHERE f.agency_id=students.agency_id AND f.student_national_code=students.national_code AND f.period='Mehr'
@@ -227,6 +229,10 @@ final class DomainService {
   $c=self::cfg($resource);self::scope($uid,$aid,$c['permission']);
   $s=Connection::get()->prepare('SELECT * FROM '.$c['table'].' WHERE id=:id AND agency_id=:a');$s->execute(['id'=>$id,'a'=>$aid]);
   $row=$s->fetch();if(!$row)throw new AuthException(404,'رکورد پیدا نشد.','NOT_FOUND');
+  if($resource==='students'){
+   $annual=Connection::get()->prepare("SELECT (CASE WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR LOWER(COALESCE(students.grade,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR TRIM(COALESCE(students.grade,'')) IN ('1','2','3','4','5','6','۱','۲','۳','۴','۵','۶') THEN 8.5 ELSE 9 END) AS annual_months, ROUND(COALESCE(students.monthly_fee,0) * (CASE WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR LOWER(COALESCE(students.grade,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR TRIM(COALESCE(students.grade,'')) IN ('1','2','3','4','5','6','۱','۲','۳','۴','۵','۶') THEN 8.5 ELSE 9 END),0) AS annual_fee FROM students WHERE students.id=:id AND students.agency_id=:a");
+   $annual->execute(['id'=>$id,'a'=>$aid]);$row=array_merge($row,$annual->fetch()?:[]);
+  }
   if($resource==='ledger'){
    $p=Connection::get()->prepare("SELECT
     CASE le.party_type
