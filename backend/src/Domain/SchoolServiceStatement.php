@@ -9,6 +9,31 @@ use ServiceYar\Auth\AuthException;
 /** Calculation from the 1405 school transport workbook, amounts in IRR. */
 final class SchoolServiceStatement
 {
+    /** Match the original Excel tariff table by class, distance and region. */
+    public static function fromSchoolTariff(string $vehicleClass,mixed $distanceKm,string $region,int $serviceDays=30): array
+    {
+        $raw=SchoolStatement::calculate([
+            'vehicleClass'=>$vehicleClass,'distanceKm'=>$distanceKm,
+            'region'=>$region,'days'=>$serviceDays
+        ])['amounts'];
+        $r=array_map('floatval',$raw);
+        return [
+            'base_fee'=>$r['base'],'driver_fee'=>$r['work'],
+            'oversight_3pct'=>$r['management'],
+            'municipality_2_75pct'=>$r['municipality'],
+            'municipality_vat_10pct'=>$r['vat'],
+            'road_police_0_25pct'=>$r['police'],
+            'education_1pct'=>$r['coordination'],
+            'company_7pct'=>$r['company'],
+            'statement_excluding_certificate_insurance'=>$r['statement'],
+            'certificate_fee'=>$r['qualification'],
+            'insurance_fee'=>$r['insurance'],
+            'parent_total'=>$r['parent'],
+            'service_days'=>$serviceDays,'nominal_days'=>30,
+            'source'=>'school-workbook-rates-1405'
+        ];
+    }
+
     public static function fromWorkbookRate(string $baseFee, int $serviceDays, bool $certificate = true, bool $insured = true): array
     {
         if (!is_numeric($baseFee) || !is_finite((float)$baseFee) || (float)$baseFee<0 || (float)$baseFee>1000000000000 || $serviceDays<0 || $serviceDays>30) {
