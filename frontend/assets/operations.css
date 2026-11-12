@@ -1630,3 +1630,36 @@ body.sy-menu-palette-open{overflow:hidden}
  #content .sy-journal-table td::before{content:attr(data-label);min-width:37%;text-align:start;color:#607866;font-size:11px;font-weight:750}
  #content .sy-journal-table td:last-child{border-bottom:0}
 }
+
+
+/* Contract editor with clear date range feedback */
+#modal .sy-contract-editor .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#modal .sy-contract-editor .form-grid>label{display:flex;flex-direction:column;gap:6px;min-width:0;color:#345b42;font-size:12px;font-weight:750}
+#modal .sy-contract-editor .form-grid :is(input,select){min-width:0;width:100%;box-sizing:border-box;min-height:44px;border-radius:10px;font-size:14px}
+#modal .sy-contract-period-feedback{grid-column:1/-1;margin:2px 0 10px;padding:11px 13px;background:#eef8f1;border:1px solid #d5e7db;border-radius:10px;color:#225c3f;font-size:12px;line-height:1.8;font-weight:750}
+#modal .sy-contract-period-feedback.is-invalid{background:#fff1ef;color:#a33e34;border-color:#edcecb}
+@media(max-width:640px){#modal .sy-contract-editor .form-grid{grid-template-columns:minmax(0,1fr)}#modal .sy-contract-editor .form-grid :is(input,select){font-size:16px;min-height:46px}}
+/* Journal editor with prominent balance checks */
+#content .sy-journal-editor{min-width:0;padding:clamp(13px,2vw,22px);border:1px solid #dee9e1;border-radius:17px}
+#content .sy-journal-editor-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #e3eee7}
+#content .sy-journal-editor-heading h2{color:#1a583a;font-size:18px;margin:3px 0 5px;line-height:1.6}
+#content .sy-journal-editor-heading p{font-size:12px;line-height:1.8;color:#5d7565;margin:0}
+#content .sy-journal-editor .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px}
+#content .sy-journal-editor .form-grid>label{font-size:12px;font-weight:750;color:#345d43;display:flex;flex-direction:column;gap:6px;min-width:0}
+#content .sy-journal-editor .form-grid :is(input,select){min-height:44px;min-width:0;width:100%;box-sizing:border-box;border-radius:9px}
+#content .sy-journal-editor .table-wrap{max-height:480px;overflow:auto;overscroll-behavior:contain;border:1px solid #dbe8df;border-radius:11px;margin:14px 0}
+#content .sy-journal-editor .table-wrap table{min-width:980px;width:100%}
+#content .sy-journal-editor .table-wrap th{position:sticky;top:0;z-index:1;background:#eaf5ed;color:#285d40;white-space:nowrap;font-size:12px}
+#content .sy-journal-editor .table-wrap :is(input,select){box-sizing:border-box;min-width:105px;max-width:100%;min-height:40px;font-size:12px;border-radius:8px}
+#content .sy-journal-editor .table-wrap select[name=accountId]{min-width:195px}
+#content .sy-journal-editor .table-wrap input[name=description]{min-width:180px}
+#content .sy-journal-editor .table-wrap tr.sy-journal-line-error{background:#fff6f4}
+#content .sy-journal-totals{margin:14px 0;padding:13px 16px;font-size:13px;font-weight:850;line-height:1.9;color:#155c39;background:#eaf7ee;border:1px solid #cbe7d3;border-radius:11px;font-variant-numeric:tabular-nums}
+#content .sy-journal-totals.is-unbalanced{color:#9d4931;background:#fff3ee;border-color:#eed2c6}
+#content .sy-journal-editor #journalSave:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:650px){
+ #content .sy-journal-editor .form-grid{grid-template-columns:minmax(0,1fr)}
+ #content .sy-journal-editor .form-grid :is(input,select){font-size:16px;min-height:46px}
+ #content .sy-journal-editor>button,#content .sy-journal-editor #journalForm>button{min-height:43px;margin:4px 2px}
+ #content .sy-journal-totals{font-size:12px}
+}
