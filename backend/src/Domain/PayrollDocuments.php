@@ -19,7 +19,16 @@ final class PayrollDocuments
         Authorization::requirePermission($uid,'finance.view');Authorization::requireAgencyAccess($uid,$aid);$p=Connection::get();
         $q=$p->prepare('SELECT p.*,a.name AS agency_name FROM payroll_documents p JOIN agencies a ON a.id=p.agency_id WHERE p.id=:id AND p.agency_id=:a');$q->execute(['id'=>$id,'a'=>$aid]);$doc=$q->fetch();if(!$doc)throw new AuthException(404,'سند حقوق پیدا نشد.','NOT_FOUND');
         $nationalCode=$forWorkbook?',d.national_code':'';
-        $q=$p->prepare('SELECT l.driver_id,l.earned,l.agreed,l.paid,l.salary,d.first_name,d.last_name,d.iban,d.bank_account,d.bank_name'.$nationalCode.' FROM payroll_document_lines l JOIN drivers d ON d.id=l.driver_id AND d.agency_id=:a WHERE l.document_id=:id ORDER BY d.last_name,d.first_name');$q->execute(['a'=>$aid,'id'=>$id]);$doc['lines']=$q->fetchAll();return $doc;
+        $q=$p->prepare('SELECT l.driver_id,l.earned,l.agreed,l.paid,l.salary,d.first_name,d.last_name,d.iban,d.bank_account,d.bank_name'.$nationalCode.' FROM payroll_document_lines l JOIN drivers d ON d.id=l.driver_id AND d.agency_id=:a WHERE l.document_id=:id ORDER BY d.last_name,d.first_name');$q->execute(['a'=>$aid,'id'=>$id]);$doc['lines']=$q->fetchAll();
+        foreach($doc['lines'] as &$line){
+            $deductions=OperationsService::driverDeductions((float)$line['earned']);
+            $line=array_merge($line,$deductions);
+            $line['gross_earned']=(float)$line['earned'];
+            $line['expected_net_salary']=$deductions['net_earned'];
+            $line['salary_differs_from_calculated_net']=abs((float)$line['salary']-$deductions['net_earned'])>=1;
+        }unset($line);
+        $doc['deduction_policy']='پیش‌فرض ۱۸٫۸٪ شامل نظارت ۳٪، هماهنگی ۱٪، بالاسری ۷٪ و بیمه ۷٫۸٪؛ برای اسناد قدیمی، مبلغ حقوق ثبت‌شده بدون تغییر باقی می‌ماند.';
+        return $doc;
     }
 
     public static function create(int $uid,int $aid,array $body): array
