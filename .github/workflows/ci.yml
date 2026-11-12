@@ -22,6 +22,7 @@ jobs:
           php tests/monthly-statement-period.php
           node --check frontend/assets/app.js
           node --check frontend/assets/operations.js
+          node tests/wizard-lookup.cjs
           node tests/solar-date.cjs
   transport-integration:
     runs-on: ubuntu-latest
