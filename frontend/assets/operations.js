@@ -1392,7 +1392,16 @@ async function installmentPage(){
    if(numeric!==null)input.value=persianDigits(numeric.replace(/\B(?=(\d{3})+(?!\d))/g,'٬'));
   });
  }
- const students=await lookup('students');
+ let students;
+ try{students=await lookup('students');}
+ catch(err){
+  if(token===pageToken&&select.isConnected){
+   select.innerHTML='<option value="">دریافت فهرست دانش‌آموزان ناموفق بود</option>';
+   result.innerHTML='<div class="sy-operation-error" role="alert"><strong>دانش‌آموزان بارگذاری نشدند</strong><p>'+esc(err.message)+'</p><button type="button" id="installmentRetryStudents">تلاش مجدد</button></div>';
+   $('installmentRetryStudents').onclick=()=>installmentPage();
+  }
+  return;
+ }
  if(token!==pageToken||!select.isConnected)return;
  const sorted=[...students].sort((a,b)=>person(a).localeCompare(person(b),'fa'));
  const normalizeSearch=value=>String(value??'').replace(/ي|ى/g,'ی').replace(/ك/g,'ک').replace(/[\u200c\s]+/g,' ').trim().toLocaleLowerCase('fa');
