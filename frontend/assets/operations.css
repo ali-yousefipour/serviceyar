@@ -727,3 +727,37 @@ body.sy-menu-palette-open{overflow:hidden}
  #content .pager button{flex:1 1 90px}
  #content .row-actions button{flex:1 1 auto}
 }
+
+/* Detail dialogs and multi-step record wizards: reusable page-specific UX */
+#modal .modal-backdrop{padding:clamp(8px,2.5vw,28px);overflow-y:auto;overscroll-behavior:contain}
+#modal .modal{width:min(100%,860px);max-width:100%;max-height:calc(100dvh - 24px);display:flex;flex-direction:column;overflow:hidden;border-radius:20px}
+#modal .modal-head{flex:none;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px clamp(14px,2.5vw,25px);border-bottom:1px solid #e4ece6}
+#modal .modal-head h3{font-size:clamp(17px,2vw,22px);line-height:1.6;overflow-wrap:anywhere}
+#modal .modal-head #closeModal{flex:none;min-width:40px;min-height:40px}
+#modal .modal-body{min-width:0;overflow:auto;overscroll-behavior:contain;padding:clamp(14px,2.5vw,25px)}
+#modal .modal-body :is(input,select,textarea){min-width:0;max-width:100%;font-family:Vazirmatn,Tahoma,sans-serif}
+#modal .modal-body :is(.form-grid,.wizard-step,.wizard-progress,.detail-grid){min-width:0;max-width:100%}
+#modal .modal-body .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+#modal .modal-body .form-grid>label{min-width:0;display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:750;color:#365847}
+#modal .modal-body .form-grid :is(input,select,textarea){width:100%;min-height:43px;border-radius:10px}
+#modal .modal-body .form-grid textarea{min-height:100px;resize:vertical}
+#modal .sy-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0}
+#modal .sy-detail-grid>div{min-width:0;background:#f7faf8;border:1px solid #e2ebe4;border-radius:12px;padding:12px 14px}
+#modal .sy-detail-grid dt{font-size:11px;font-weight:700;color:#657a6d;margin-bottom:6px}
+#modal .sy-detail-grid dd{font-size:14px;line-height:1.85;font-weight:750;color:#214a33;margin:0;overflow-wrap:anywhere;white-space:pre-wrap}
+#modal .wizard-step{border:1px solid #e0eae2;border-radius:14px;padding:clamp(12px,2vw,18px);margin-block:14px;background:#fff}
+#modal .wizard-step h4{font-size:15px;color:#145237;font-weight:850;margin:0 0 14px}
+#modal .wizard-progress{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+#modal .wizard-progress button{min-height:40px;white-space:normal;line-height:1.5}
+#modal #saveRecord{min-height:44px;padding-inline:24px}
+#modal :is(button,input,select,textarea):focus-visible{outline:3px solid #b4ddc3;outline-offset:2px}
+@media(max-width:640px){
+ #modal .modal-backdrop{padding:6px}
+ #modal .modal{max-height:calc(100dvh - 12px);border-radius:14px}
+ #modal .modal-head{padding:12px 14px}
+ #modal .modal-body{padding:12px}
+ #modal .modal-body .form-grid,#modal .sy-detail-grid{grid-template-columns:1fr}
+ #modal .wizard-step{padding:12px}
+ #modal .wizard-progress button{flex:1 1 110px}
+ #modal #saveRecord{width:100%}
+}
