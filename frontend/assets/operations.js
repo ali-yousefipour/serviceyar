@@ -101,7 +101,7 @@ function renderNav(){
   navSearch.querySelector('small').textContent=query?(matches?'نتایج مرتبط: '+number(matches):'بخشی با این نام پیدا نشد.'):'';
  });
   $('nav').querySelectorAll('details').forEach(d=>d.addEventListener('toggle',()=>{if(d.open){if(navSearchInput.value.trim())return;const popup=d.querySelector('.nav-popup'),rect=d.getBoundingClientRect();popup.style.top=Math.max(10,Math.min(rect.top,innerHeight-Math.min(popup.scrollHeight,innerHeight*.75)-12))+'px';$('nav').querySelectorAll('details').forEach(other=>{if(other!==d)other.open=false;});}}));
- if(!$('quickReceipt')){const button=document.createElement('button');button.id='quickReceipt';button.title='ثبت دریافت و پرداخت';button.innerHTML=navIcon('payments');button.onclick=()=>formResource('ledger',null);$('nav').before(button);} $('quickReceipt').hidden=!can('ledger','manage');
+ if(!$('quickReceipt')){const button=document.createElement('button');button.id='quickReceipt';button.title='ثبت دریافت و پرداخت';button.innerHTML=navIcon('payments');button.onclick=()=>{if(location.hash!=='#ledger')location.hash='ledger';else resourcePage('ledger',pageToken);};$('nav').before(button);} $('quickReceipt').hidden=!can('ledger','manage');
  document.querySelector('.logo').title='سرویس‌یار';document.querySelector('.main').classList.add('transport-main');
  if(!$('sessionFooter')){const footer=document.createElement('footer');footer.id='sessionFooter';document.querySelector('.main').append(footer);}
  $('sessionFooter').textContent='سال تحصیلی '+year()+' • '+(currentAgency?.name||'مدیریت سامانه')+' • '+(session?.user?.firstName||session?.user?.username||'')+' • '+new Intl.DateTimeFormat('fa-IR',{dateStyle:'full',timeZone:'Asia/Tehran'}).format(new Date());
