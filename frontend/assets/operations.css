@@ -1564,3 +1564,23 @@ body.sy-menu-palette-open{overflow:hidden}
  #modal .service-picker-tools{grid-template-columns:1fr}
  #modal .service-picker-actions button{flex:1 1 42%;min-height:44px}
 }
+
+
+/* Transparent financial quote inside the new-service wizard */
+#content .sy-service-quote-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:5px 0 10px}
+#content .sy-service-quote-head h3{font-size:15px;font-weight:850;color:#1a573b;margin:0}
+#content .sy-service-quote-head span{font-size:11px;color:#66806d}
+#content .sy-service-quote-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}
+#content .sy-service-quote-metrics>div{display:flex;flex-direction:column;gap:8px;padding:12px;background:#f1f8f3;border:1px solid #dae9df;border-radius:12px;min-width:0}
+#content .sy-service-quote-metrics span{font-size:11px;font-weight:750;color:#56745e}
+#content .sy-service-quote-metrics strong{font-size:14px;font-variant-numeric:tabular-nums;color:#1c5d3d;line-height:1.6;overflow-wrap:anywhere}
+#content .sy-service-quote-metrics .sy-service-quote-net{background:#def3e6;border-color:#b9dfc5}
+#content .sy-service-quote-metrics .sy-service-quote-net strong{font-size:17px;color:#0e633b}
+#content .sy-service-quote-warning{background:#fff4ed;border:1px solid #eac9b7;border-radius:10px;padding:10px 12px;color:#8c4b2b;font-size:12px;font-weight:750;line-height:1.8}
+#content .sy-service-quote-table{max-width:100%;overflow-x:auto;border:1px solid #dce9e1;border-radius:10px;scrollbar-width:thin}
+#content .sy-service-quote-table .table-wrap{max-height:340px;overflow:auto}
+#content .sy-service-quote-table table{width:100%;min-width:790px}
+#content .sy-service-quote-table thead th{position:sticky;top:0;z-index:1;background:#eaf5ed}
+#content .sy-service-quote-footnote{margin:10px 0 15px;padding:10px 12px;border-radius:9px;background:#f7faf8;color:#587363;font-size:11px;line-height:1.8}
+@media(max-width:1070px){#content .sy-service-quote-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:550px){#content .sy-service-quote-metrics{grid-template-columns:1fr}#content .sy-service-quote-metrics strong{font-size:15px}}
