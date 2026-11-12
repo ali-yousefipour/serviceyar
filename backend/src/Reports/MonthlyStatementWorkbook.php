@@ -107,7 +107,7 @@ final class MonthlyStatementWorkbook
             $ref=$r['reference']??SchoolServiceStatement::fromWorkbookRate((string)$r['gross'],30,true,true);
             $parentRows[]=[
                 $i+1,$r['student_name'],$r['student_national_code'],$r['school_name'],$r['region'],$r['driver_name'],$r['vehicle_model'],$r['tariff_distance_km'],
-                $r['gross'],30,$ref['driver_fee'],$ref['oversight_3pct'],$ref['municipality_2_75pct'],
+                ($ref['base_fee']??$ref['driver_fee']),30,$ref['driver_fee'],$ref['oversight_3pct'],$ref['municipality_2_75pct'],
                 $ref['municipality_vat_10pct'],$ref['road_police_0_25pct'],$ref['education_1pct'],
                 $ref['company_7pct'],$ref['certificate_fee'],
                 $ref['parent_total']-$ref['insurance_fee'],$ref['insurance_fee'],$ref['parent_total'],
