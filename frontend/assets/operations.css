@@ -1197,3 +1197,10 @@ body.sy-menu-palette-open{overflow:hidden}
  #content .dashboard-grid>.panel{padding:11px 12px}
  #content .dashboard-grid .status-chart>div{grid-template-columns:minmax(75px,1fr) minmax(60px,2fr) auto;gap:6px}
 }
+
+/* Service membership management: imported and manually created services */
+#modal .sy-member-actions{display:grid;grid-template-columns:1fr;gap:7px;margin:12px 0;padding:10px;border:1px solid #e1eae3;border-radius:10px;background:#f8fbf9}
+#modal .sy-member-action-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;padding:7px 9px;background:#fff;border:1px solid #e7eee8;border-radius:8px}
+#modal .sy-member-action-row>span{flex:1 1 180px;min-width:0;font-size:12px;font-weight:750;overflow-wrap:anywhere}
+#modal .sy-member-action-row>button{min-height:34px;padding:6px 10px;font-size:11px;border-radius:8px}
+@media(max-width:580px){#modal .sy-member-actions{padding:7px}#modal .sy-member-action-row>span{flex-basis:100%}#modal .sy-member-action-row>button{flex:1 1 auto}}
