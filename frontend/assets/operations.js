@@ -781,15 +781,43 @@ async function schoolStatementPage(token){
    $('statementClose').onclick=()=>modal.innerHTML='';modal.querySelector('.modal-backdrop').addEventListener('click',e=>{if(e.target.classList.contains('modal-backdrop'))modal.innerHTML='';});
   }catch(e){notify(e.message,true);}
  };
- const load=async()=>{
-  archive.innerHTML='<p class="loading">در حال دریافت صورت‌وضعیت‌ها…</p>';
-  try{const list=await api(scoped('/api/v1/operations/school-statements?includeDeleted='+($('statementShowDeleted').checked?'1':'0')));if(token!==pageToken)return;
-   archive.innerHTML=list.length?`<table><thead><tr><th>ردیف</th><th>ماه</th><th>بازه</th><th>دانش‌آموز</th><th>راننده</th><th>حق‌الزحمه رانندگان</th><th>بهای خدمات اولیا</th><th>جمع صورت‌وضعیت</th><th>وضعیت</th><th>عملیات</th></tr></thead><tbody>${list.map((r,i)=>`<tr><td>${number(i+1)}</td><td>${esc(months[Number(r.jalali_month)-1])} ${number(r.jalali_year)}</td><td dir="ltr">${esc(r.period_start)} – ${esc(r.period_end)}</td><td>${number(r.totals?.students)}</td><td>${number(r.totals?.drivers)}</td><td>${number(r.reference_totals?.driver_fee??r.totals?.gross)}</td><td>${number(r.reference_totals?.parent_total??0)}</td><td>${number(r.reference_totals?.statement_excluding_certificate_insurance??r.totals?.net)}</td><td>${r.status==='deleted'?'حذف‌شده':'نهایی'}</td><td><div class="member-actions"><button type="button" data-statement-detail="${r.id}">جزئیات</button><a href="${esc(scoped('/api/v1/reports/school-statements/'+r.id+'.xlsx'))}">خروجی اکسل</a>${allowed?`<button type="button" data-statement-toggle="${r.id}" data-statement-action="${r.status==='deleted'?'restore':'delete'}">${r.status==='deleted'?'بازیابی':'حذف'}</button>`:''}</div></td></tr>`).join('')}</tbody></table>`:'<p class="muted">هنوز صورت‌وضعیت نهایی ثبت نشده است.</p>';
-   archive.querySelectorAll('[data-statement-detail]').forEach(b=>b.onclick=()=>showDetail(Number(b.dataset.statementDetail)));
-   archive.querySelectorAll('[data-statement-toggle]').forEach(b=>b.onclick=async()=>{const restore=b.dataset.statementAction==='restore';if(!confirm(restore?'صورت‌وضعیت بازیابی شود؟':'صورت‌وضعیت به بخش حذف‌شده‌ها منتقل شود؟'))return;b.disabled=true;try{await write('/api/v1/operations/school-statements/'+b.dataset.statementToggle+'/'+b.dataset.statementAction,{},'POST');notify(restore?'بازیابی شد.':'حذف شد.');await load();}catch(e){notify(e.message,true);b.disabled=false;}});
-  }catch(e){archive.innerHTML='<p class="error">'+esc(e.message)+'</p>';}
+ const archiveSearch=$('statementArchiveSearch'),archiveStatus=$('statementArchiveStatus'),archiveOrder=$('statementArchiveOrder');
+ let storedStatements=[],archiveRequest=0,archiveLoadError='';
+ const normalizeStatementQuery=value=>String(value??'').replace(/[۰-۹]/g,x=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(x))).replace(/[٠-٩]/g,x=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(x))).replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').replace(/[\\u200c\\s]+/g,' ').trim().toLocaleLowerCase('fa');
+ const statementAmount=r=>Number(r.reference_totals?.statement_excluding_certificate_insurance??r.totals?.net??0);
+ const paintArchive=()=>{
+  if(token!==pageToken||!archive.isConnected)return;
+  if(archiveLoadError){archive.innerHTML='<div class="error" role="alert">'+esc(archiveLoadError)+'</div>';$('statementArchiveCount').textContent='بارگذاری ناموفق';archive.removeAttribute('aria-busy');return;}
+  const query=normalizeStatementQuery(archiveSearch.value),status=archiveStatus.value,order=archiveOrder.value;
+  const filtered=storedStatements.filter(r=>{
+   if(status!=='all'&&r.status!==status)return false;
+   const period=(months[Number(r.jalali_month)-1]||'')+' '+r.jalali_year+' '+r.jalali_month+' '+r.period_start+' '+r.period_end;
+   return !query||normalizeStatementQuery(period).includes(query);
+  }).sort((a,b)=>order==='amount'?statementAmount(b)-statementAmount(a)||Number(b.id)-Number(a.id):
+      (order==='asc'?1:-1)*((Number(a.jalali_year)*12+Number(a.jalali_month))-(Number(b.jalali_year)*12+Number(b.jalali_month)))||
+      Number(b.id)-Number(a.id));
+  $('statementArchiveCount').textContent=number(filtered.length)+' صورت‌وضعیت از '+number(storedStatements.length)+' سابقه';
+  archive.innerHTML=filtered.length?`<table class="sy-statement-table"><thead><tr><th scope="col">ردیف</th><th scope="col">ماه</th><th scope="col">بازه</th><th scope="col">دانش‌آموز</th><th scope="col">راننده</th><th scope="col">حق‌الزحمه رانندگان</th><th scope="col">بهای خدمات اولیا</th><th scope="col">جمع صورت‌وضعیت</th><th scope="col">وضعیت</th><th scope="col">عملیات</th></tr></thead><tbody>${filtered.map((r,i)=>`<tr><td data-label="ردیف">${number(i+1)}</td><td data-label="ماه"><strong>${esc(months[Number(r.jalali_month)-1]||'—')} ${number(r.jalali_year)}</strong></td><td data-label="بازه">${esc(dateText(r.period_start))} تا ${esc(dateText(r.period_end))}</td><td data-label="دانش‌آموز">${number(r.totals?.students)}</td><td data-label="راننده">${number(r.totals?.drivers)}</td><td data-label="حق‌الزحمه رانندگان" class="sy-financial-number">${number(r.reference_totals?.driver_fee??r.totals?.gross)}</td><td data-label="بهای خدمات اولیا" class="sy-financial-number">${r.reference_totals?.parent_total!=null?number(r.reference_totals.parent_total):'—'}</td><td data-label="جمع صورت‌وضعیت" class="sy-financial-number"><strong>${number(statementAmount(r))}</strong></td><td data-label="وضعیت"><span class="sy-statement-state ${r.status==='deleted'?'is-deleted':'is-final'}">${r.status==='deleted'?'حذف‌شده':'نهایی'}</span></td><td data-label="عملیات"><div class="member-actions"><button type="button" data-statement-detail="${r.id}">جزئیات</button>${r.status==='final'?'<a href="'+esc(scoped('/api/v1/reports/school-statements/'+r.id+'.xlsx'))+'">خروجی اکسل</a>':''}${allowed?`<button type="button" data-statement-toggle="${r.id}" data-statement-action="${r.status==='deleted'?'restore':'delete'}">${r.status==='deleted'?'بازیابی':'حذف'}</button>`:''}</div></td></tr>`).join('')}</tbody></table>`:'<div class="sy-statement-empty"><strong>صورت‌وضعیتی با این فیلتر پیدا نشد.</strong><p>ماه، سال یا وضعیت انتخابی را تغییر دهید.</p></div>';
+  archive.removeAttribute('aria-busy');
+  archive.querySelectorAll('[data-statement-detail]').forEach(b=>b.onclick=()=>showDetail(Number(b.dataset.statementDetail)));
+  archive.querySelectorAll('[data-statement-toggle]').forEach(b=>b.onclick=async()=>{
+   const restore=b.dataset.statementAction==='restore';
+   if(!confirm(restore?'صورت‌وضعیت بازیابی شود؟':'صورت‌وضعیت به بخش حذف‌شده‌ها منتقل شود؟'))return;
+   b.disabled=true;
+   try{await write('/api/v1/operations/school-statements/'+b.dataset.statementToggle+'/'+b.dataset.statementAction,{},'POST');notify(restore?'بازیابی شد.':'حذف شد.');await load();}
+   catch(e){notify(e.message,true);b.disabled=false;}
+  });
  };
- $('statementShowDeleted').onchange=load;
+ const load=async()=>{
+  const request=++archiveRequest;archive.setAttribute('aria-busy','true');archive.innerHTML='<p class="loading" role="status">در حال دریافت صورت‌وضعیت‌ها…</p>';
+  try{
+   const list=await api(scoped('/api/v1/operations/school-statements?includeDeleted=1'));
+   if(token!==pageToken||request!==archiveRequest)return;
+   storedStatements=Array.isArray(list)?list:[];archiveLoadError='';paintArchive();
+  }catch(e){if(token!==pageToken||request!==archiveRequest)return;archiveLoadError=e.message;paintArchive();}
+ };
+ archiveSearch.addEventListener('input',paintArchive);archiveStatus.addEventListener('change',paintArchive);archiveOrder.addEventListener('change',paintArchive);
+ $('statementArchiveReset').onclick=()=>{archiveSearch.value='';archiveStatus.value='final';archiveOrder.value='desc';paintArchive();archiveSearch.focus();};
  form.onsubmit=async e=>{
   e.preventDefault();const button=form.querySelector('[type=submit]');button.disabled=true;preview.innerHTML='<p class="loading">در حال تهیه پیش‌نمایش…</p>';
   const payload={year:Number(form.elements.year.value),month:Number(form.elements.month.value),from:form.elements.from.value,to:form.elements.to.value};
