@@ -38,7 +38,7 @@ const scoped=url=>url+(url.includes('?')?'&':'?')+'agencyId='+encodeURIComponent
 const write=(url,body,method='POST')=>api(scoped(url),{method,headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify(body)});
 const number=v=>Number(v||0).toLocaleString('fa-IR',{maximumFractionDigits:0,minimumFractionDigits:0});
 const km=v=>v===null||v===undefined||v===''?'—':number(Math.round(Number(v)));
-const serviceAcademicMonths=(student,school)=>{const grade=String(student.grade??student.student_grade??'').trim(),type=String(school?.school_type??school?.schoolType??student.school_type??'').trim();return /ابتدایی|دبستان|primary|elementary/i.test(type+' '+grade)||/^[۱-۶1-6]$/.test(grade)?8.5:9;};
+const serviceAcademicMonths=(student,school)=>{const grade=String(student.grade??student.student_grade??'').trim(),type=String(school?.school_type??school?.schoolType??student.school_type??'').trim();if(/متوسطه|دبیرستان|secondary|high.school/i.test(type))return 9;if(/ابتدایی|دبستان|primary|elementary/i.test(type))return 8.5;if(/متوسطه|دبیرستان|secondary|high.school/i.test(grade))return 9;return /ابتدایی|دبستان|primary|elementary/i.test(grade)||/^[۱-۶1-6]$/.test(grade)?8.5:9;};
 const persianDigits=v=>String(v??'').replace(/[0-9]/g,d=>'۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
 const normalizePlate=v=>String(v??'').replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[\u200c\s]/g,'');
 function iranPlate(value){
