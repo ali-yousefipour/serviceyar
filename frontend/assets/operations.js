@@ -776,9 +776,30 @@ async function schoolStatementPage(token){
   <div class="table-wrap sy-statement-students">${simpleTable(['دانش‌آموز','مدرسه','راننده','حق‌الزحمه مبنا','بیمه','بهای خدمات اولیا','مبنای تعرفه'],(d.items||[]).map(x=>[x.student_name,x.school_name,x.driver_name,fmt(x.reference?.driver_fee??x.gross),fmt(x.reference?.insurance_fee),fmt(x.reference?.parent_total),x.reference_tariff_verified===false?'نیازمند اصلاح':'نرخ‌نامه مرجع']))}</div>`;
  };
  const showDetail=async id=>{
-  try{const d=await api(scoped('/api/v1/operations/school-statements/'+id));if(token!==pageToken)return;
-   const modal=$('modal');modal.innerHTML=`<div class="modal-backdrop"><section class="modal-card sy-statement-modal" role="dialog" aria-modal="true" aria-label="جزئیات صورت‌وضعیت"><div class="toolbar"><h2>صورت‌وضعیت ${esc(d.month_name)} ${number(d.year)}</h2><button type="button" id="statementClose">بستن</button></div>${details(d)}<div class="member-actions"><a class="button primary" href="${esc(scoped('/api/v1/reports/school-statements/'+id+'.xlsx'))}">خروجی اکسل</a></div></section></div>`;
-   $('statementClose').onclick=()=>modal.innerHTML='';modal.querySelector('.modal-backdrop').addEventListener('click',e=>{if(e.target.classList.contains('modal-backdrop'))modal.innerHTML='';});
+  const opener=document.activeElement;
+  try{
+   const d=await api(scoped('/api/v1/operations/school-statements/'+id));if(token!==pageToken)return;
+   const modal=$('modal');
+   const exportLink=d.status==='final'?`<a class="button primary" href="${esc(scoped('/api/v1/reports/school-statements/'+id+'.xlsx'))}">دریافت اکسل ۱۴ شیتی</a>`:'<span class="sy-statement-muted">این صورت‌وضعیت حذف شده است؛ پس از بازیابی خروجی قابل دریافت خواهد بود.</span>';
+   modal.innerHTML=`<div class="modal-backdrop sy-statement-backdrop"><section class="modal-card sy-statement-modal" role="dialog" aria-modal="true" aria-labelledby="statementDetailHeading" tabindex="-1">
+    <div class="sy-statement-modal-heading"><div><span class="sy-statement-kicker">جزئیات صورت‌وضعیت ثبت‌شده</span><h2 id="statementDetailHeading">صورت‌وضعیت ${esc(d.month_name)} ${number(d.year)}</h2><p>ثبت در تاریخ ${esc(dateText(d.created_at))} · ${d.status==='deleted'?'حذف‌شده':'نهایی'}</p></div><button type="button" id="statementClose" aria-label="بستن جزئیات">بستن <span aria-hidden="true">×</span></button></div>
+    <div class="sy-statement-modal-body">${details(d)}</div><div class="sy-statement-modal-footer">${exportLink}<button type="button" data-close-statement>بازگشت به سوابق</button></div>
+   </section></div>`;
+   const dialogElement=modal.querySelector('[role="dialog"]');
+   const close=()=>{modal.innerHTML='';if(opener?.isConnected)opener.focus();};
+   modal.querySelector('#statementClose').onclick=close;
+   modal.querySelector('[data-close-statement]').onclick=close;
+   modal.querySelector('.modal-backdrop').addEventListener('click',e=>{if(e.target.classList.contains('modal-backdrop'))close();});
+   dialogElement.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){e.preventDefault();close();return;}
+    if(e.key!=='Tab')return;
+    const focusables=[...dialogElement.querySelectorAll('a[href],button:not([disabled]),[tabindex]:not([tabindex="-1"])')].filter(el=>el.getClientRects().length);
+    if(!focusables.length){e.preventDefault();dialogElement.focus();return;}
+    const first=focusables[0],last=focusables[focusables.length-1];
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+   });
+   modal.querySelector('#statementClose').focus();
   }catch(e){notify(e.message,true);}
  };
  const archiveSearch=$('statementArchiveSearch'),archiveStatus=$('statementArchiveStatus'),archiveOrder=$('statementArchiveOrder');
