@@ -370,6 +370,7 @@ final class ReferenceMonthlyStatementWorkbook
                         'A'=>count($drivers)+1,'B'=>$v['driver_name']??'',
                         'C'=>(string)($v['driver_national_code']??''),
                         'D'=>(string)($v['driver_mobile']??''),'E'=>$v['vehicle_model']??'',
+                        'F'=>(string)($v['tariff_vehicle_class']??''),
                         'G'=>preg_replace('/^IR/i','',$iban),'H'=>$iban,
                         'I'=>$v['bank_name']??'','J'=>(string)($v['vehicle_plate']??'')
                     ];
