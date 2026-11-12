@@ -727,21 +727,29 @@ async function schoolStatementPage(token){
  const months=['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
  const allowed=can('finance','manage');
  $('content').innerHTML=`<section class="panel sy-statement-panel">
- <div class="toolbar"><h2>صورت‌وضعیت‌های ماهانه</h2><label class="sy-inline-checkbox"><input id="statementShowDeleted" type="checkbox"> نمایش حذف‌شده‌ها</label></div>
- <div id="statementArchive" class="table-wrap" aria-live="polite"></div></section>
- <section class="panel sy-statement-panel">
- <h2>تهیه صورت‌وضعیت ماهانه</h2>
- <form id="statementMonthForm" class="filters">
- <label>سال شمسی<input name="year" type="number" min="1400" max="1500" value="${jy}" required></label>
+ <div class="sy-statement-heading"><div><span class="sy-statement-kicker">بایگانی مالی سرویس مدارس</span><h2>صورت‌وضعیت‌های ماهانه</h2><p>جست‌وجو، بررسی نسخه‌های نهایی و دریافت خروجی همان ماه ثبت‌شده</p></div><div class="sy-statement-count" id="statementArchiveCount" role="status" aria-live="polite">در حال دریافت سوابق…</div></div>
+ <div class="sy-statement-filters" role="search" aria-label="جست‌وجو و فیلتر صورت‌وضعیت‌ها">
+  <label>جست‌وجوی ماه یا سال<input id="statementArchiveSearch" type="search" autocomplete="off" placeholder="مثلاً آبان ۱۴۰۵"></label>
+  <label>وضعیت<select id="statementArchiveStatus"><option value="final">نهایی و فعال</option><option value="all">همه وضعیت‌ها</option><option value="deleted">حذف‌شده‌ها</option></select></label>
+  <label>مرتب‌سازی<select id="statementArchiveOrder"><option value="desc">جدیدترین دوره</option><option value="asc">قدیمی‌ترین دوره</option><option value="amount">بیشترین مبلغ صورت‌وضعیت</option></select></label>
+  <button type="button" id="statementArchiveReset" aria-label="پاک‌کردن فیلترهای صورت‌وضعیت">پاک‌کردن فیلترها</button>
+ </div>
+ <div id="statementArchive" class="table-wrap sy-statement-archive" aria-live="polite" aria-busy="true"></div>
+ </section>
+ <section class="panel sy-statement-panel sy-statement-create">
+ <div class="sy-statement-heading"><div><span class="sy-statement-kicker">مرحله اول · محاسبه و کنترل</span><h2>تهیه صورت‌وضعیت ماهانه</h2><p>ابتدا ماه موردنظر را انتخاب و محاسبات را بررسی کنید؛ ثبت تنها پس از تأیید نهایی انجام می‌شود.</p></div></div>
+ <form id="statementMonthForm" class="filters sy-statement-period">
+ <label>سال شمسی<input name="year" type="number" inputmode="numeric" min="1400" max="1500" value="${jy}" required></label>
  <label>ماه شمسی<select name="month">${months.map((name,i)=>`<option value="${i+1}" ${jm===i+1?'selected':''}>${name}</option>`).join('')}</select></label>
- <label>از تاریخ<input name="from" type="date" required readonly></label>
- <label>تا تاریخ<input name="to" type="date" required readonly></label>
- <button class="primary" type="submit">پیش‌نمایش صورت‌وضعیت</button>
+ <label>شروع دوره<input name="from" type="date" required readonly aria-describedby="statementPeriodHelp"></label>
+ <label>پایان دوره<input name="to" type="date" required readonly aria-describedby="statementPeriodHelp"></label>
+ <button class="primary" type="submit">محاسبه و نمایش پیش‌نمایش</button>
  </form>
+ <p class="sy-statement-period-hint" id="statementPeriodHelp">بازه به‌صورت خودکار از اولین تا آخرین روز همان ماه شمسی محاسبه می‌شود.</p>
  <div id="statementPreviewArea" aria-live="polite"></div>
  </section><div id="modal"></div>`;
  const form=$('statementMonthForm');
- const applyMonth=()=>{const range=persianMonthRange(Number(form.elements.year.value),Number(form.elements.month.value));form.elements.from.value=range?.from||'';form.elements.to.value=range?.to||'';};
+ const applyMonth=()=>{const range=persianMonthRange(Number(form.elements.year.value),Number(form.elements.month.value));form.elements.from.value=range?.from||'';form.elements.to.value=range?.to||'';const box=$('statementPreviewArea');if(box?.childElementCount)box.innerHTML='<p class="sy-statement-period-hint" role="status">ماه تغییر کرد؛ برای تأیید این دوره، پیش‌نمایش تازه تهیه کنید.</p>';};
  form.elements.year.addEventListener('change',applyMonth);form.elements.month.addEventListener('change',applyMonth);applyMonth();
  const archive=$('statementArchive'),preview=$('statementPreviewArea');
  const details=d=>{
