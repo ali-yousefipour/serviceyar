@@ -95,9 +95,15 @@ try{
  $p->prepare('UPDATE students SET grade=? WHERE id=? AND agency_id=?')->execute(['ابتدایی',(int)$feeStudent['id'],$feeAgency]);
  $annualPrimary=D::list($uid,$feeAgency,'services',['search'=>'سرویس صورت‌وضعیت'])['items'][0];
  check((float)$annualPrimary['students_monthly_total']===1500000.0&&(float)$annualPrimary['students_annual_total']===12750000.0,'Primary annual service total uses 8.5 months');
+ $primaryStudent=D::get($uid,$feeAgency,'students',(int)$feeStudent['id']);
+ check((float)$primaryStudent['annual_months']===8.5&&(float)$primaryStudent['annual_fee']===12750000.0,'Student detail shows 8.5-month annual fee');
+ $primaryList=D::list($uid,$feeAgency,'students',['search'=>'آزمایشی'])['items'];
+ check(count(array_filter($primaryList,fn($r)=>(int)$r['id']===(int)$feeStudent['id']&&(float)$r['annual_fee']===12750000.0))===1,'Existing student list includes calculated annual fee');
  $p->prepare('UPDATE students SET grade=? WHERE id=? AND agency_id=?')->execute(['متوسطه',(int)$feeStudent['id'],$feeAgency]);
  $annualSecondary=D::list($uid,$feeAgency,'services',['search'=>'سرویس صورت‌وضعیت'])['items'][0];
  check((float)$annualSecondary['students_annual_total']===13500000.0,'Secondary annual service total uses 9 months');
+ $secondaryStudent=D::get($uid,$feeAgency,'students',(int)$feeStudent['id']);
+ check((float)$secondaryStudent['annual_months']===9.0&&(float)$secondaryStudent['annual_fee']===13500000.0,'Student detail recalculates annual fee after grade change');
  $invoiceId=insertFixture('invoices',['agency_id'=>$feeAgency,'title'=>'قسط سرویس','party_type'=>'student',
    'party_id'=>$feeStudent['id'],'amount'=>'1200000.50','issue_date'=>'2026-10-01','status'=>'open']);
  foreach([['2026-10-05','200000.25'],['2026-10-06','100000.00'],['2027-10-10','400000.00']] as [$paidAt,$paid]){
