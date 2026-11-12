@@ -98,8 +98,33 @@ final class OperationsService
           (SELECT COALESCE(SUM(s.agreed_amount),0) FROM services s WHERE s.driver_id=d.id AND s.agency_id=d.agency_id AND s.is_active=1) agreed
           FROM drivers d WHERE d.agency_id=:a AND d.is_active=1 ORDER BY d.last_name,d.first_name');
         $q->execute(['a'=>$aid,'wf'=>$from,'wt'=>$to,'pf'=>$from,'pt'=>$to,'lf'=>$from,'lt'=>$to]);$rows=$q->fetchAll();
-        foreach($rows as &$r){$r['paid']=(float)$r['paid']+(float)$r['ledger_paid'];$r['balance']=(float)$r['earned']-$r['paid'];}unset($r);
+        foreach($rows as &$r){
+            $gross=(float)$r['earned'];
+            $deductions=self::driverDeductions($gross);
+            $r=array_merge($r,$deductions);
+            $r['paid']=(float)$r['paid']+(float)$r['ledger_paid'];
+            $r['gross_earned']=$gross;
+            $r['balance']=$deductions['net_earned']-$r['paid'];
+        }unset($r);
         return ['items'=>$rows,'from'=>$from,'to'=>$to];
+    }
+
+    /** Default driver deductions: supervision 3%, coordination 1%, company overhead 7%, insurance 7.8%. Amounts are in IRR. */
+    public static function driverDeductions(float $gross): array
+    {
+        $gross=max(0,$gross);
+        $supervision=round($gross*0.03);
+        $coordination=round($gross*0.01);
+        $overhead=round($gross*0.07);
+        $insurance=round($gross*0.078);
+        $total=$supervision+$coordination+$overhead+$insurance;
+        return [
+            'supervision_rate'=>3.0,'coordination_rate'=>1.0,'overhead_rate'=>7.0,'insurance_rate'=>7.8,
+            'deduction_rate'=>18.8,'supervision_deduction'=>$supervision,
+            'coordination_deduction'=>$coordination,'overhead_deduction'=>$overhead,
+            'insurance_deduction'=>$insurance,'total_deductions'=>$total,
+            'net_earned'=>max(0,round($gross)-$total)
+        ];
     }
 
     public static function range(array $q): array
