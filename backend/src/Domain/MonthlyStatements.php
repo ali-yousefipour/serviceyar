@@ -226,9 +226,9 @@ final class MonthlyStatements
     public static function list(int $uid,int $aid,bool $includeDeleted=false): array
     {
         self::authorize($uid,$aid);
-        $q=Connection::get()->prepare('SELECT id,jalali_year,jalali_month,period_start,period_end,academic_year,status,created_at,deleted_at,restored_at,JSON_EXTRACT(snapshot_json,\'$.totals\') AS totals_json FROM school_monthly_statements WHERE agency_id=:a '.($includeDeleted?'':'AND status=\'final\'').' ORDER BY jalali_year DESC,jalali_month DESC,id DESC LIMIT 200');
+        $q=Connection::get()->prepare('SELECT id,jalali_year,jalali_month,period_start,period_end,academic_year,status,created_at,deleted_at,restored_at,JSON_EXTRACT(snapshot_json,\'$.totals\') AS totals_json,JSON_EXTRACT(snapshot_json,\'$.reference_totals\') AS reference_totals_json FROM school_monthly_statements WHERE agency_id=:a '.($includeDeleted?'':'AND status=\'final\'').' ORDER BY jalali_year DESC,jalali_month DESC,id DESC LIMIT 200');
         $q->execute(['a'=>$aid]);
-        return array_map(static function($r){$r['totals']=json_decode((string)$r['totals_json'],true)?:[];unset($r['totals_json']);return $r;},$q->fetchAll());
+        return array_map(static function($r){$r['totals']=json_decode((string)$r['totals_json'],true)?:[];$r['reference_totals']=json_decode((string)($r['reference_totals_json']??''),true)?:[];unset($r['totals_json'],$r['reference_totals_json']);return $r;},$q->fetchAll());
     }
 
     public static function get(int $uid,int $aid,int $id): array
