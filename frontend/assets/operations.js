@@ -180,30 +180,37 @@ async function accountStatementPage(token=pageToken,initial=null,initialPage=1){
  form.onsubmit=e=>{e.preventDefault();load(Object.fromEntries(new FormData(form)));};
  if(initial){for(const [key,value] of Object.entries(initial))if(form.elements[key])form.elements[key].value=value;await load(initial,initialPage);}
 }
-async function journalPage(token=pageToken,page=1){
- const d=await api(scoped('/api/v1/accounting-documents?limit=25&page='+page));if(token!==pageToken)return;
+async function journalPage(token=pageToken,page=1,filters={}){
+ const query=new URLSearchParams({limit:25,page,
+  search:String(filters.search||''),status:String(filters.status||''),
+  sortBy:filters.order==='amount'?'total_amount':'document_date',
+  sortDir:filters.order==='old'?'asc':'desc'});
+ const d=await api(scoped('/api/v1/accounting-documents?'+query));if(token!==pageToken)return;
  const documents=Array.isArray(d.items)?d.items:[];
  $('content').innerHTML=`<section class="panel sy-journal-list">
   ${accountingTabs(false)}
   <header class="sy-journal-list-header"><div><span class="sy-operation-kicker">دفتر اسناد مالی</span><h2>اسناد حسابداری</h2><p>پیش‌نویس‌ها را بررسی و تکمیل کنید. اسناد تأییدشده قفل هستند و امکان ویرایش ندارند.</p></div><div class="sy-journal-list-actions">${can('accounting-documents','manage')?'<button type="button" id="newJournal" class="primary">ثبت سند جدید</button>':''}<a href="#accounts">تعاریف حساب‌ها</a></div></header>
-  <div class="sy-journal-list-filters" role="search"><label>جست‌وجو در اسناد این صفحه<input id="journalSearch" type="search" placeholder="شماره سند، شرح یا مرجع" autocomplete="off"></label><label>وضعیت<select id="journalStatus"><option value="">همه وضعیت‌ها</option><option value="draft">پیش‌نویس</option><option value="approved">تأییدشده</option></select></label><label>مرتب‌سازی<select id="journalOrder"><option value="recent">جدیدترین تاریخ</option><option value="old">قدیمی‌ترین تاریخ</option><option value="amount">بیشترین مبلغ</option></select></label><span id="journalFilterCount" role="status" aria-live="polite"></span></div>
+  <div class="sy-journal-list-filters" role="search"><label>جست‌وجو در تمام اسناد شرکت<input id="journalSearch" type="search" placeholder="شماره سند یا شرح" autocomplete="off" value="${esc(filters.search||'')}"></label><label>وضعیت<select id="journalStatus"><option value="">همه وضعیت‌ها</option><option value="draft" ${filters.status==='draft'?'selected':''}>پیش‌نویس</option><option value="approved" ${filters.status==='approved'?'selected':''}>تأییدشده</option></select></label><label>مرتب‌سازی<select id="journalOrder"><option value="recent">جدیدترین تاریخ</option><option value="old" ${filters.order==='old'?'selected':''}>قدیمی‌ترین تاریخ</option><option value="amount" ${filters.order==='amount'?'selected':''}>بیشترین مبلغ</option></select></label><span id="journalFilterCount" role="status" aria-live="polite"></span></div>
   <div id="journalTable" class="table-wrap sy-journal-list-table" aria-live="polite"></div>
-  <nav class="pager" aria-label="صفحات اسناد"><button type="button" id="journalPrev" ${page<=1?'disabled':''}>صفحه قبل</button><span>صفحه ${number(page)} از ${number(Math.max(1,d.pagination.pages))}</span><button type="button" id="journalNext" ${page>=d.pagination.pages?'disabled':''}>صفحه بعد</button></nav><p class="sy-journal-page-hint">جست‌وجو، وضعیت و مرتب‌سازی فعلاً روی اسناد همین صفحه اعمال می‌شوند. برای مشاهده اسناد بیشتر صفحه را تغییر دهید.</p></section>`;
+  <nav class="pager" aria-label="صفحات اسناد"><button type="button" id="journalPrev" ${page<=1?'disabled':''}>صفحه قبل</button><span>صفحه ${number(page)} از ${number(Math.max(1,d.pagination.pages))}</span><button type="button" id="journalNext" ${page>=d.pagination.pages?'disabled':''}>صفحه بعد</button></nav><p class="sy-journal-page-hint">جست‌وجو و فیلترها روی تمام اسناد شرکت اعمال می‌شوند. نتایج به‌صورت صفحه‌بندی‌شده نمایش داده می‌شوند.</p></section>`;
  const search=$('journalSearch'),status=$('journalStatus'),order=$('journalOrder'),table=$('journalTable');
- const normalize=value=>ServiceYarDates.digits(String(value??'')).replace(/ي|ى/g,'ی').replace(/ك/g,'ک').toLocaleLowerCase('fa');
  const render=()=>{
   if(token!==pageToken||!table?.isConnected)return;
-  const q=normalize(search.value.trim()),st=status.value,sort=order.value;
-  const rows=documents.filter(row=>(!st||row.status===st)&&(!q||normalize([row.document_no,row.description,row.reference_no,row.subsidiary_no].join(' ')).includes(q)))
-   .sort((a,b)=>sort==='amount'?Number(b.total_amount)-Number(a.total_amount):sort==='old'?String(a.document_date).localeCompare(String(b.document_date)):String(b.document_date).localeCompare(String(a.document_date)));
-  $('journalFilterCount').textContent=number(rows.length)+' از '+number(documents.length)+' سند این صفحه';
+  const rows=documents;
+  $('journalFilterCount').textContent=number(d.pagination.total??rows.length)+' سند مطابق فیلتر';
   table.innerHTML=rows.length?`<table class="sy-journal-table"><thead><tr><th scope="col">شماره سند</th><th scope="col">تاریخ شمسی</th><th scope="col">شرح</th><th scope="col">مبلغ سند (ریال)</th><th scope="col">وضعیت</th><th scope="col">عملیات</th></tr></thead><tbody>${rows.map(row=>`<tr><td data-label="شماره سند"><strong>${esc(row.document_no)}</strong></td><td data-label="تاریخ">${dateText(row.document_date)}</td><td data-label="شرح">${esc(row.description||'—')}</td><td data-label="مبلغ" class="sy-financial-number">${number(row.total_amount)}</td><td data-label="وضعیت"><span class="sy-journal-status ${row.status==='approved'?'is-approved':'is-draft'}">${esc(statuses[row.status]||row.status)}</span></td><td data-label="عملیات"><button type="button" data-journal="${row.id}">${row.status==='approved'?'مشاهده سند':'بررسی و ویرایش'}</button></td></tr>`).join('')}</tbody></table>`:'<div class="sy-journal-empty"><strong>سندی با این مشخصات در صفحه فعلی پیدا نشد.</strong><p>عبارت جست‌وجو یا فیلتر وضعیت را تغییر دهید.</p></div>';
   table.querySelectorAll('[data-journal]').forEach(b=>b.onclick=()=>journalEditor(Number(b.dataset.journal),token).catch(err=>notify(err.message,true)));
  };
- search.oninput=render;status.onchange=render;order.onchange=render;render();
+ const collect=()=>({search:search.value.trim(),status:status.value,order:order.value});
+ const refresh=()=>journalPage(token,1,collect()).then(()=>{
+  if(token===pageToken&&$('journalSearch')){$('journalSearch').focus();}
+ }).catch(err=>notify(err.message,true));
+ let searchTimer;
+ search.oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(refresh,400);};
+ status.onchange=refresh;order.onchange=refresh;render();
  $('newJournal')?.addEventListener('click',()=>journalEditor(null,token).catch(e=>notify(e.message,true)));
- $('journalPrev').onclick=()=>journalPage(token,page-1).catch(e=>notify(e.message,true));
- $('journalNext').onclick=()=>journalPage(token,page+1).catch(e=>notify(e.message,true));
+ $('journalPrev').onclick=()=>journalPage(token,page-1,collect()).catch(e=>notify(e.message,true));
+ $('journalNext').onclick=()=>journalPage(token,page+1,collect()).catch(e=>notify(e.message,true));
 }
 async function journalEditor(id,token=pageToken,back=null){
  const doc=id?await api(scoped('/api/v1/accounting/journal/'+id)):{document_no:'',document_date:todayISO(),description:'',status:'draft',lines:[{},{}]};
