@@ -146,6 +146,7 @@ try {
  if($method==='POST'&&$path==='/api/v1/operations/import/preview'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>StudentImport::preview($s['id'],$aid,$_FILES['file']??[])]);}
  if($method==='POST'&&$path==='/api/v1/operations/import'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>StudentImport::commit($s['id'],$aid,Request::json())],201);}
  if($method==='POST'&&preg_match('#^/api/v1/operations/driver-changes/(\d+)/review$#',$path,$m)){$auth->requireCsrf($s);$b=Request::json();Response::json(['ok'=>true,'data'=>OperationsService::changeDriver($s['id'],$aid,(int)$m[1],(string)($b['status']??''))]);}
+ if($method==='GET'&&$path==='/api/v1/operations/driver-deduction-rates'){Authorization::requirePermission($s['id'],'services.view');Authorization::requireAgencyAccess($s['id'],$aid);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\DriverDeductionPolicy::rates($aid)]);}
  if($method==='GET'&&$path==='/api/v1/settings')Response::json(['ok'=>true,'data'=>SettingsService::get($s['id'],$aid)]);
  if(($method==='PUT'||$method==='PATCH')&&$path==='/api/v1/settings'){ $auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>SettingsService::put($s['id'],$aid,Request::json())]); }
  if($method==='GET'&&$path==='/api/v1/holidays')Response::json(['ok'=>true,'data'=>HolidayService::list($s['id'],$aid)]);
