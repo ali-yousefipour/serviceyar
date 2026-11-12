@@ -285,7 +285,7 @@ final class DomainService {
    $raw=(string)$data['tariff_distance_km'];
    $raw=strtr($raw,['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9','٫'=>'.']);
    if(!is_numeric($raw)||!is_finite((float)$raw)||(float)$raw<=0||(float)$raw>1000)throw new AuthException(422,'مسافت تعرفه باید کیلومتر معتبر و مثبت باشد.','VALIDATION_ERROR');
-   $data['tariff_distance_km']=(int)round((float)$raw);
+   $data['tariff_distance_km']=max(1,(int)round((float)$raw));
   }
   if($resource==='drivers'&&array_key_exists('iban',$data)&&$data['iban']!==null){
    $data['iban']=IranBankDetails::normalize((string)$data['iban']);
