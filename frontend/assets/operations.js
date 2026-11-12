@@ -317,7 +317,13 @@ const resourceSortFields={
  accounts:[['id','جدیدترین ثبت'],['code','کد حساب'],['title','عنوان حساب']],
  'accounting-documents':[['id','جدیدترین ثبت'],['document_date','تاریخ سند'],['total_amount','مبلغ کل']],
  'school-charges':[['id','جدیدترین ثبت'],['due_date','سررسید'],['amount','مبلغ']],
- 'service-charges':[['id','جدیدترین ثبت'],['due_date','سررسید'],['amount','مبلغ']]
+ 'service-charges':[['id','جدیدترین ثبت'],['due_date','سررسید'],['amount','مبلغ']],
+ packs:[['id','جدیدترین ثبت'],['title','عنوان پک'],['capacity','ظرفیت'],['status','وضعیت']],
+ wallets:[['id','جدیدترین ثبت'],['balance','موجودی']],
+ messages:[['id','جدیدترین ثبت'],['subject','موضوع'],['status','وضعیت ارسال']],
+ 'driver-changes':[['id','جدیدترین ثبت'],['status','وضعیت بررسی']],
+ 'driver-ratings':[['id','جدیدترین ثبت'],['score','امتیاز']],
+ 'parent-reports':[['id','جدیدترین ثبت'],['subject','موضوع'],['status','وضعیت']]
 };
 const sortDataField={fullName:'last_name',firstName:'first_name',lastName:'last_name',nationalCode:'national_code',monthlyFee:'monthly_fee',schoolId:'school_id',entryDate:'entry_date',paymentDate:'payment_date',workDate:'work_date',issueDate:'issue_date',documentDate:'document_date',totalAmount:'total_amount',dueDate:'due_date',contractNo:'contract_no',vehicleId:'vehicle_id'};
 async function resourcePage(key,token=pageToken,options={}){
