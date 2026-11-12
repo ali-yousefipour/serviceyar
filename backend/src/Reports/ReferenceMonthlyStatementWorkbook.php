@@ -61,8 +61,10 @@ final class ReferenceMonthlyStatementWorkbook
     public static function available(): bool
     {
         // Default to the installed, CI-validated 14-sheet reference template.
-        // Emergency rollback: set SCHOOL_STATEMENT_REFERENCE_TEMPLATE_ENABLED=0.
-        if((string)config('SCHOOL_STATEMENT_REFERENCE_TEMPLATE_ENABLED','1')!=='1')return false;
+        // Read the override directly: the legacy config() helper maps '0'
+        // to its fallback, making emergency rollback ineffective.
+        $override=$_ENV['SCHOOL_STATEMENT_REFERENCE_TEMPLATE_ENABLED']??getenv('SCHOOL_STATEMENT_REFERENCE_TEMPLATE_ENABLED');
+        if($override!==false && $override!==null && trim((string)$override)!=='1')return false;
         return self::validateTemplate(self::TEMPLATE)['valid']??false;
     }
 
