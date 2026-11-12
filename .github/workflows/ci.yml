@@ -18,6 +18,7 @@ jobs:
           set -e
           find backend tests -name '*.php' -print0 | xargs -0 -n1 php -l
           php tests/static-smoke.php
+          php tests/directory-sorting.php
           php tests/monthly-statement-period.php
           node --check frontend/assets/app.js
           node --check frontend/assets/operations.js
