@@ -1303,9 +1303,37 @@ async function financialPostingDialog(key,id){
 }
 
 async function dailySchedulePage(token=pageToken){
- $('content').innerHTML=`<section class="panel"><h2>برنامه روزانه و تداخل شیفت‌ها</h2><p>برنامه از شیفت مدرسه و نام دقیق شیفت سرویس محاسبه می‌شود. بازه ورود تا خروج برای تشخیص تداخل استفاده می‌شود؛ زمان سفر و توقف محاسبه نمی‌شود. این گزارش تخصیص‌ها را تغییر نمی‌دهد.</p><form id="dailyScheduleFilters" class="filters"><label>تاریخ<input type="date" name="date" required value="${todayISO()}"></label><label>شنبه آغاز هفته اول<input type="date" name="weekAnchor"></label><button>نمایش برنامه</button></form><div id="dailyScheduleResult" aria-live="polite"></div></section>`;
- let request=0;const load=async()=>{const version=++request,box=$('dailyScheduleResult');box.textContent='در حال محاسبه برنامه…';try{const d=await api(scoped('/api/v1/operations/daily-schedule?'+new URLSearchParams(new FormData($('dailyScheduleFilters')))));if(token!==pageToken||version!==request)return;box.innerHTML='<h3>شیفت‌های فعال</h3>'+simpleTable(['سرویس','شیفت','ورود','خروج','راننده'],d.items.map(r=>[r.service,r.shift,r.start,r.end,r.driver||'تخصیص نیافته']))+'<h3>تداخل‌ها · '+number(d.conflicts.length)+'</h3>'+simpleTable(['سرویس اول','سرویس دوم','علت'],d.conflicts.map(r=>[r.first,r.second,r.reason]))+'<h3>موارد نیازمند تکمیل</h3>'+simpleTable(['سرویس','علت'],d.issues.map(r=>[r.service,r.reason]));}catch(e){if(token===pageToken&&version===request)box.textContent=e.message;}};
- $('dailyScheduleFilters').onsubmit=e=>{e.preventDefault();load();};await load();
+ $('content').innerHTML=`<section class="panel sy-daily-schedule">
+  <header class="sy-operation-header"><div><span class="sy-operation-kicker">کنترل برنامه رانندگان</span><h2>برنامه روزانه و تداخل شیفت‌ها</h2><p>شیفت‌های فعال، هم‌پوشانی زمانی سرویس‌ها و اطلاعات ناقص در یک گزارش مشخص نمایش داده می‌شوند.</p></div><button type="button" id="dailyScheduleRefresh">تازه‌سازی</button></header>
+  <form id="dailyScheduleFilters" class="filters sy-operation-filters" aria-label="فیلتر گزارش برنامه روزانه">
+   <label>تاریخ بررسی<input type="date" name="date" required value="${todayISO()}"></label>
+   <label>شنبه آغاز هفته اول<input type="date" name="weekAnchor"></label>
+   <button type="submit" class="primary" id="dailyScheduleSubmit">محاسبه برنامه</button>
+  </form>
+  <p class="sy-daily-schedule-note">گزارش بر اساس زمان ثبت‌شده شیفت‌های مدرسه و سرویس است. زمان واقعی مسیر یا ترافیک محاسبه نمی‌شود و هیچ تخصیصی تغییر نمی‌کند.</p>
+  <div id="dailyScheduleResult" aria-live="polite"></div>
+ </section>`;
+ let request=0;
+ const load=async()=>{
+  const version=++request,box=$('dailyScheduleResult'),button=$('dailyScheduleSubmit');
+  if(!box||!button)return;
+  button.disabled=true;box.setAttribute('aria-busy','true');box.innerHTML='<p class="loading" role="status">در حال دریافت برنامه و بررسی تداخل‌ها…</p>';
+  try{
+   const d=await api(scoped('/api/v1/operations/daily-schedule?'+new URLSearchParams(new FormData($('dailyScheduleFilters')))));
+   if(token!==pageToken||version!==request||!box.isConnected)return;
+   const items=Array.isArray(d.items)?d.items:[],conflicts=Array.isArray(d.conflicts)?d.conflicts:[],issues=Array.isArray(d.issues)?d.issues:[];
+   box.innerHTML=`<div class="sy-daily-summary"><div><span>شیفت‌های برنامه‌ریزی‌شده</span><strong>${number(items.length)}</strong></div><div class="${conflicts.length?'sy-daily-alert':''}"><span>تداخل زمانی</span><strong>${number(conflicts.length)}</strong></div><div class="${issues.length?'sy-daily-caution':''}"><span>اطلاعات نیازمند تکمیل</span><strong>${number(issues.length)}</strong></div></div>
+   <section class="sy-daily-section"><h3>شیفت‌های فعال</h3>${simpleTable(['سرویس','شیفت','ورود','خروج','راننده'],items.map(row=>[row.service,row.shift,row.start,row.end,row.driver||'تخصیص نیافته']))}</section>
+   <section class="sy-daily-section"><h3>تداخل‌های نیازمند بررسی</h3>${conflicts.length?simpleTable(['سرویس اول','سرویس دوم','علت'],conflicts.map(row=>[row.first,row.second,row.reason])):'<p class="sy-daily-empty">تداخل زمانی ثبت نشده است.</p>'}</section>
+   <section class="sy-daily-section"><h3>موارد ناقص</h3>${issues.length?simpleTable(['سرویس','علت'],issues.map(row=>[row.service,row.reason])):'<p class="sy-daily-empty">مورد ناقصی در اطلاعات برنامه پیدا نشد.</p>'}</section>`;
+  }catch(err){
+   if(token===pageToken&&version===request&&box.isConnected)box.innerHTML='<div class="sy-operation-error" role="alert"><strong>دریافت برنامه ناموفق بود</strong><p>'+esc(err.message)+'</p><button type="button" id="dailyScheduleRetry">تلاش مجدد</button></div>';
+   $('dailyScheduleRetry')?.addEventListener('click',load);
+  }finally{if(token===pageToken&&version===request&&button.isConnected){button.disabled=false;box.removeAttribute('aria-busy');}}
+ };
+ $('dailyScheduleFilters').onsubmit=e=>{e.preventDefault();load();};
+ $('dailyScheduleRefresh').onclick=load;
+ await load();
 }
 
 async function installmentPage(){
