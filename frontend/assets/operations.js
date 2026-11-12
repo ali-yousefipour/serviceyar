@@ -860,8 +860,8 @@ async function settingsPage(){
  const updateDeductionTotal=()=>{
   const values=Object.keys(defaults).map(k=>Number(deductionForm.elements[k].value||0));
   const total=values.reduce((a,b)=>a+b,0);
-  $('deductionTotal').textContent=number(Math.round(total*1000)/1000)+'٪';
-  $('deductionNet').textContent=number(Math.round((100-total)*1000)/1000)+' ریال';
+  $('deductionTotal').textContent=percent(Math.round(total*1000)/1000)+'٪';
+  $('deductionNet').textContent=percent(Math.round((100-total)*1000)/1000)+' ریال';
   deductionForm.querySelector('button[type=submit]')?.toggleAttribute('disabled',total>100||values.some(x=>!Number.isFinite(x)||x<0||x>100));
  };
  deductionForm.addEventListener('input',updateDeductionTotal);
