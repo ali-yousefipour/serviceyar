@@ -185,7 +185,7 @@ final class DomainService {
  }
  private static function attachServicePayable(array &$row): void {
   $gross=max(0,(float)($row['students_monthly_total']??0));
-  $parts=OperationsService::driverDeductions($gross);
+  $parts=OperationsService::driverDeductions($gross,(int)($row['agency_id']??0));
   $row['driver_gross_monthly']=$gross;
   $row['driver_net_monthly']=$parts['net_earned'];
   $row['driver_deduction_total']=$parts['total_deductions'];
@@ -298,7 +298,7 @@ final class DomainService {
    if ($students && !array_key_exists('monthlyFee', $b)) {
     $grossQuery=$pdo->prepare('SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
     $grossQuery->execute([$aid,$service['id']]);
-    $net=OperationsService::driverDeductions((float)$grossQuery->fetchColumn())['net_earned'];
+    $net=OperationsService::driverDeductions((float)$grossQuery->fetchColumn(),$aid)['net_earned'];
     $pdo->prepare('UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?')->execute([$net,$service['id'],$aid]);
     $service=self::get($uid,$aid,'services',(int)$service['id']);
    }
