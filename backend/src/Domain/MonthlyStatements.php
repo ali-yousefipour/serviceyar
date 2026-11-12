@@ -115,17 +115,55 @@ final class MonthlyStatements
         $items=[];$drivers=[];$seenStudents=[];$totals=['students'=>0,'drivers'=>0,'schools'=>0,'gross'=>0.0,'deductions'=>0.0,'net'=>0.0,
             'supervision'=>0.0,'coordination'=>0.0,'overhead'=>0.0,'insurance'=>0.0];
         $schools=[];
+        // Keep source-workbook accounting separate from the configurable driver
+        // deduction policy. The two models are not interchangeable.
+        $referenceKeys=['driver_fee','oversight_3pct','municipality_2_75pct',
+            'municipality_vat_10pct','road_police_0_25pct','education_1pct',
+            'company_7pct','certificate_fee','insurance_fee','parent_total',
+            'statement_excluding_certificate_insurance'];
+        $referenceTotals=array_fill_keys($referenceKeys,0.0);
+        $referenceDrivers=[];
         foreach($q->fetchAll() as $row){
             if(isset($seenStudents[$row['student_id']]))throw new AuthException(409,'یک دانش‌آموز به چند سرویس فعال تخصیص داده شده است؛ پیش از ثبت صورت‌وضعیت اصلاح کنید.','DUPLICATE_STUDENT_ASSIGNMENT');
             $seenStudents[$row['student_id']]=true;
             $gross=max(0,(float)$row['monthly_fee']);
             $calc=DriverDeductionPolicy::calculate($gross,$rates);
+            // SchoolServiceStatement follows the original 1405 reference file:
+            // service fee + 3% oversight + 1% coordination + 7% company
+            // + qualification + 7.8% insurance on that subtotal.
+            // Municipality / VAT / police are tracked separately, not
+            // mistakenly deducted from the driver's net pay.
+            $reference=SchoolServiceStatement::fromWorkbookRate((string)$gross,30,true,true);
+            $row['reference']=$reference;
             $row['gross']=$gross;
             $row['deductions']=$calc['total_deductions'];
             $row['net']=$calc['net_earned'];
             foreach(['supervision','coordination','overhead','insurance'] as $key)$row[$key]=$calc[$key.'_deduction'];
             $items[]=$row;
             $id=(int)$row['driver_id'];
+            if(!isset($referenceDrivers[$id])){
+                $referenceDrivers[$id]=['driver_id'=>$id,'driver_name'=>$row['driver_name']?:'راننده نامشخص',
+                    'driver_iban'=>$row['driver_iban'],'student_count'=>0]
+                    +array_fill_keys($referenceKeys,0.0);
+            }
+            $referenceDrivers[$id]['student_count']++;
+            $rvals=[
+                'driver_fee'=>$reference['driver_fee'],
+                'oversight_3pct'=>$reference['oversight_3pct'],
+                'municipality_2_75pct'=>$reference['municipality_2_75pct'],
+                'municipality_vat_10pct'=>$reference['municipality_vat_10pct'],
+                'road_police_0_25pct'=>$reference['road_police_0_25pct'],
+                'education_1pct'=>$reference['education_1pct'],
+                'company_7pct'=>$reference['company_7pct'],
+                'certificate_fee'=>$reference['certificate_fee'],
+                'insurance_fee'=>$reference['insurance_fee'],
+                'parent_total'=>$reference['parent_total'],
+                'statement_excluding_certificate_insurance'=>$reference['statement_excluding_certificate_insurance']
+            ];
+            foreach($rvals as $key=>$val){
+                $referenceTotals[$key]+=(float)$val;
+                $referenceDrivers[$id][$key]+=(float)$val;
+            }
             if(!isset($drivers[$id]))$drivers[$id]=['driver_id'=>$id,'driver_name'=>$row['driver_name']?:'راننده نامشخص',
                 'driver_iban'=>$row['driver_iban'],'student_count'=>0,'gross'=>0.0,'deductions'=>0.0,'net'=>0.0,
                 'supervision'=>0.0,'coordination'=>0.0,'overhead'=>0.0,'insurance'=>0.0];
@@ -138,7 +176,12 @@ final class MonthlyStatements
         $totals['students']=count($items);$totals['drivers']=count($drivers);$totals['schools']=count($schools);
         return ['year'=>$year,'month'=>$month,'month_name'=>self::MONTHS[$month],'from'=>$from,'to'=>$to,
           'academic_year'=>$academic,'rates'=>$rates,'totals'=>$totals,'drivers'=>array_values($drivers),
-          'items'=>$items,'status'=>'preview','source'=>'current_active_service_assignments'];
+          'items'=>$items,'reference_totals'=>$referenceTotals,
+          'reference_drivers'=>array_values($referenceDrivers),
+          'reference_basis'=>['service_days'=>30,'certificate_on_positive_fee'=>true,
+              'insured'=>true,'currency'=>'IRR','tariff_source'=>'students.monthly_fee',
+              'review_required'=>true],
+          'status'=>'preview','source'=>'current_active_service_assignments'];
     }
 
     public static function list(int $uid,int $aid,bool $includeDeleted=false): array
