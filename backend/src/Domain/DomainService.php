@@ -356,6 +356,15 @@ final class DomainService {
   if($id&&$resource==='messages'&&$existing['status']!=='queued')throw new AuthException(409,'پیام پردازش‌شده قابل ویرایش یا ارسال مجدد از این فرم نیست.','MESSAGE_LOCKED');
   if($id&&$resource==='payments'&&$existing['method']==='bale')throw new AuthException(409,'پرداخت استعلام‌شده بله قابل ویرایش نیست.','VERIFIED_PAYMENT_LOCKED');
   foreach($data as $f=>&$v){if($v==='')$v=null;}unset($v);
+  if($resource==='services'){
+   foreach(['agreed_amount','monthly_fee'] as $moneyField){
+    if(!array_key_exists($moneyField,$data)||$data[$moneyField]===null)continue;
+    $value=(string)$data[$moneyField];
+    if(!preg_match('/^[0-9]{1,15}$/D',$value))
+     throw new AuthException(422,'مبلغ سرویس باید به ریال صحیح و بدون اعشار وارد شود.','INVALID_SERVICE_AMOUNT');
+    $data[$moneyField]=$value;
+   }
+  }
   if($resource==='students'&&array_key_exists('tariff_distance_km',$data)&&$data['tariff_distance_km']!==null){
    $raw=(string)$data['tariff_distance_km'];
    $raw=strtr($raw,['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9','٫'=>'.']);
