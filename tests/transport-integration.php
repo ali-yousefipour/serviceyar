@@ -53,6 +53,8 @@ try{
  $av=D::save($uid,$a,'vehicles',['plate'=>'QA-'.$tag,'capacity'=>4]);$ad=D::save($uid,$a,'drivers',['firstName'=>'تخصیص','lastName'=>'آزمون','status'=>'active','vehicleId'=>$av['id']]);$as=D::save($uid,$a,'services',['title'=>'بدون راننده','schoolId'=>$school['id'],'capacity'=>4,'agreedAmount'=>'1250000','shift'=>'صبح']);
  check((int)$as['agreed_amount']===1250000,'Service agreed monthly driver amount persists');
  check($as['shift']==='صبح','Service shift persists from setup wizard');
+ $updatedService=D::save($uid,$a,'services',['agreedAmount'=>'1250000.00'],(int)$as['id']);
+ check((int)$updatedService['agreed_amount']===1250000,'Unchanged SQL decimal amount remains editable');
  rejected(fn()=>D::save($uid,$a,'services',['title'=>'مبلغ نامعتبر','schoolId'=>$school['id'],'agreedAmount'=>'12.5']),'INVALID_SERVICE_AMOUNT');
  $proposal=\ServiceYar\Domain\DriverAssignment::preview($uid,$a);check(count($proposal['items'])===1,'Assignment proposes available capacity');
  $assignment=['items'=>[['serviceId'=>(int)$as['id'],'driverId'=>(int)$ad['id']]]];
