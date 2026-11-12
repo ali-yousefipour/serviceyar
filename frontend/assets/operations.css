@@ -806,3 +806,29 @@ body.sy-menu-palette-open{overflow:hidden}
  .sy-report-table tbody td:not([data-label]):before{display:none}
  .sy-report-table tbody .sy-report-empty td{display:block;text-align:center}
 }
+
+/* Distinct directory page identity and usable responsive action bars */
+#content>.toolbar:has(.sy-directory-heading){display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;padding:clamp(16px,2.4vw,24px);border:1px solid #e0e9e3;border-radius:17px;background:linear-gradient(125deg,#f0f8f2,#fff 72%);margin-bottom:16px;min-width:0}
+#content .sy-directory-heading{min-width:0;flex:1 1 290px}
+#content .sy-directory-eyebrow{display:inline-flex;align-items:center;gap:7px;color:#28734c;font-size:11px;font-weight:850;margin-bottom:6px}
+#content .sy-directory-eyebrow:before{content:"";width:7px;height:7px;border-radius:50%;background:#238853}
+#content .sy-directory-heading h2{font-size:clamp(19px,2.2vw,26px);line-height:1.65;margin:0;color:#153f2a}
+#content .sy-directory-heading p{margin:5px 0 0;font-size:12px;line-height:1.9;color:#657a6b;max-width:670px}
+#content>.toolbar:has(.sy-directory-heading) .toolbar-buttons{display:flex;flex-wrap:wrap;gap:9px;align-items:center;min-width:0}
+#content>.toolbar:has(.sy-directory-heading) .toolbar-buttons button{min-height:42px;padding:9px 15px;border-radius:10px;font-family:Vazirmatn,Tahoma,sans-serif;font-weight:750}
+#content>.toolbar:has(.sy-directory-heading) .toolbar-buttons .primary{box-shadow:0 5px 12px #196d3c1a}
+#content .directory-filters{min-width:0}
+#content .directory-filters :is(label,input,select){min-width:0;max-width:100%}
+#content .directory-filters input[type="search"]{width:100%}
+@media(max-width:760px){
+ #content>.toolbar:has(.sy-directory-heading){padding:14px;gap:13px}
+ #content>.toolbar:has(.sy-directory-heading) .toolbar-buttons{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ #content>.toolbar:has(.sy-directory-heading) .toolbar-buttons button{min-width:0;white-space:normal}
+ #content>.toolbar:has(.sy-directory-heading) .toolbar-buttons button:first-child:last-child{grid-column:1/-1}
+ #content .directory-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ #content .directory-filters .directory-search{grid-column:1/-1}
+}
+@media(max-width:460px){
+ #content .directory-filters{grid-template-columns:minmax(0,1fr)}
+ #content .directory-filters .directory-search{grid-column:auto}
+}
