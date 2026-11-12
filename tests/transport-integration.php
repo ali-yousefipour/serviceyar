@@ -92,6 +92,12 @@ try{
  $feeService=D::save($uid,$feeAgency,'services',['title'=>'سرویس صورت‌وضعیت','schoolId'=>$feeSchool['id'],'status'=>'active']);
  D::assignStudent($uid,$feeAgency,(int)$feeService['id'],(int)$feeStudent['id']);
  check((float)D::get($uid,$feeAgency,'students',(int)$feeStudent['id'])['monthly_fee']===1500000.0,'Individual assignment fills a missing fee from the agency tariff');
+ $p->prepare('UPDATE students SET grade=? WHERE id=? AND agency_id=?')->execute(['ابتدایی',(int)$feeStudent['id'],$feeAgency]);
+ $annualPrimary=D::list($uid,$feeAgency,'services',['search'=>'سرویس صورت‌وضعیت'])['items'][0];
+ check((float)$annualPrimary['students_monthly_total']===1500000.0&&(float)$annualPrimary['students_annual_total']===12750000.0,'Primary annual service total uses 8.5 months');
+ $p->prepare('UPDATE students SET grade=? WHERE id=? AND agency_id=?')->execute(['متوسطه',(int)$feeStudent['id'],$feeAgency]);
+ $annualSecondary=D::list($uid,$feeAgency,'services',['search'=>'سرویس صورت‌وضعیت'])['items'][0];
+ check((float)$annualSecondary['students_annual_total']===13500000.0,'Secondary annual service total uses 9 months');
  $invoiceId=insertFixture('invoices',['agency_id'=>$feeAgency,'title'=>'قسط سرویس','party_type'=>'student',
    'party_id'=>$feeStudent['id'],'amount'=>'1200000.50','issue_date'=>'2026-10-01','status'=>'open']);
  foreach([['2026-10-05','200000.25'],['2026-10-06','100000.00'],['2027-10-10','400000.00']] as [$paidAt,$paid]){
