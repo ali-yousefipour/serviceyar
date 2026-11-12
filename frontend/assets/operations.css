@@ -1405,3 +1405,17 @@ body.sy-menu-palette-open{overflow:hidden}
  #modal .sy-record-wizard .sy-wizard-review-group dl{grid-template-columns:minmax(0,1fr)}
  #modal .sy-record-wizard .sy-wizard-review-heading button{min-height:39px}
 }
+
+
+/* Bulk tuition adjustments: separate rial amounts from signed percentages */
+#modal .sy-bulk-fee-form{display:grid;gap:13px;min-width:0}
+#modal .sy-bulk-fee-intro{margin:0;padding:11px 13px;background:#f0f8f3;border:1px solid #d5e8da;border-radius:11px;font-size:12px;line-height:1.85;color:#335b42}
+#modal .sy-bulk-fee-intro strong{font-size:15px;color:#11613a}
+#modal .sy-bulk-fee-form .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+#modal .sy-bulk-fee-form .form-grid>label{display:flex;flex-direction:column;gap:7px;min-width:0;font-size:12px;font-weight:750;color:#31533d}
+#modal .sy-bulk-fee-form .form-grid :is(input,select){box-sizing:border-box;width:100%;min-width:0;min-height:44px;padding:8px 12px;border:1px solid #cddfd3;border-radius:9px;background:#fff;font-size:15px}
+#modal .sy-bulk-fee-form #bulkFeeAmountDisplay{font-variant-numeric:tabular-nums;text-align:left;letter-spacing:.02em}
+#modal .sy-bulk-fee-hint{margin:0;padding:9px 12px;border:1px dashed #ccdfd0;border-radius:9px;background:#fafdfa;font-size:12px;line-height:1.7;color:#5c7463}
+#modal .sy-bulk-fee-form .member-actions{display:flex;justify-content:flex-end;gap:9px}
+#modal .sy-bulk-fee-form .member-actions button{min-height:42px;padding:8px 15px}
+@media(max-width:650px){#modal .sy-bulk-fee-form .form-grid{grid-template-columns:1fr}#modal .sy-bulk-fee-form .member-actions button{flex:1 1 auto}}
