@@ -16,14 +16,52 @@ final class ReferenceMonthlyStatementWorkbook
     private const TEMPLATE=__DIR__.'/templates/school-statement-reference.xlsx';
     private const NS='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
 
+    private const REFERENCE_SHEETS=[
+        'راهنما','اطلاعات پایه1','tbl_Monthly_Archive','دانش آموزان6',
+        'رانندگان 7','بهای خدمات اولیا5','صورت وضعیت نهایی8',
+        'Peyvastha','1','2','3','مفاصا','سند مالی10','روکش محاسبات 11'
+    ];
+
+    /** Reject unrelated/unsafe workbooks rather than silently corrupting payments. */
+    public static function validateTemplate(string $path): array
+    {
+        if(!is_file($path))return ['valid'=>false,'reason'=>'TEMPLATE_MISSING'];
+        if(!class_exists(\ZipArchive::class)||!class_exists(\DOMDocument::class))
+            return ['valid'=>false,'reason'=>'ZIP_OR_DOM_MISSING'];
+        $zip=new \ZipArchive();
+        if($zip->open($path)!==true)return ['valid'=>false,'reason'=>'INVALID_ZIP'];
+        try{
+            foreach($zip as $entry){
+                $name=(string)$entry['name'];
+                if(preg_match('~(^|/)(vbaProject\\.bin|externalLinks/|embeddings/|connections\\.xml)~i',$name))
+                    return ['valid'=>false,'reason'=>'UNSAFE_TEMPLATE_CONTENT'];
+            }
+            $book=$zip->getFromName('xl/workbook.xml');
+            if(!is_string($book))return ['valid'=>false,'reason'=>'WORKBOOK_MISSING'];
+            $doc=new \DOMDocument('1.0','UTF-8');
+            if(!@$doc->loadXML($book,LIBXML_NONET))return ['valid'=>false,'reason'=>'INVALID_WORKBOOK_XML'];
+            $names=[];
+            foreach($doc->getElementsByTagNameNS(self::NS,'sheet') as $sheet)$names[]=$sheet->getAttribute('name');
+            if($names!==self::REFERENCE_SHEETS)
+                return ['valid'=>false,'reason'=>'SHEET_ORDER_MISMATCH','sheet_count'=>count($names)];
+            for($i=1;$i<=14;$i++){
+                $raw=$zip->getFromName('xl/worksheets/sheet'.$i.'.xml');
+                if(!is_string($raw))return ['valid'=>false,'reason'=>'SHEET_MISSING','sheet'=>$i];
+                $sheet=new \DOMDocument('1.0','UTF-8');
+                if(!@$sheet->loadXML($raw,LIBXML_NONET))
+                    return ['valid'=>false,'reason'=>'INVALID_SHEET_XML','sheet'=>$i];
+            }
+            // Fixed reference template has 630 student/table data rows.
+            // A larger month must be handled with explicit table-range expansion,
+            // not silent overflow, orphaned formulas or broken sheet relations.
+            return ['valid'=>true,'max_student_rows'=>630,'max_driver_rows'=>122];
+        }finally{$zip->close();}
+    }
+
     public static function available(): bool
     {
-        // Installing the XLSX is not sufficient to enable finance-facing output.
-        // Require explicit operational approval after template and account audits.
-        return (string)config('SCHOOL_STATEMENT_REFERENCE_TEMPLATE_ENABLED','0')==='1'
-            && is_file(self::TEMPLATE)
-            && class_exists(\ZipArchive::class)
-            && class_exists(\DOMDocument::class);
+        if((string)config('SCHOOL_STATEMENT_REFERENCE_TEMPLATE_ENABLED','0')!=='1')return false;
+        return self::validateTemplate(self::TEMPLATE)['valid']??false;
     }
 
     private static function col(int $number): string
@@ -171,6 +209,9 @@ final class ReferenceMonthlyStatementWorkbook
     public static function downloadIfAvailable(array $d,string $agency,int $statementId): bool
     {
         if(!self::available())return false;
+        if(count($d['items']??[])>630 || count($d['reference_drivers']??$d['drivers']??[])>122){
+            throw new \RuntimeException('صورت‌وضعیت از ظرفیت ردیف‌های قالب مرجع بیشتر است؛ ابتدا قالب و محدوده جدول‌ها باید توسعه داده شوند.');
+        }
         $temp=tempnam(sys_get_temp_dir(),'sy-ref-');
         if($temp===false || !copy(self::TEMPLATE,$temp))throw new \RuntimeException('Cannot prepare reference workbook');
         try{
