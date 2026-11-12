@@ -816,7 +816,7 @@ async function schoolStatementPage(token){
  };
  const archiveSearch=$('statementArchiveSearch'),archiveStatus=$('statementArchiveStatus'),archiveOrder=$('statementArchiveOrder');
  let storedStatements=[],archiveRequest=0,archiveLoadError='';
- const normalizeStatementQuery=value=>String(value??'').replace(/[۰-۹]/g,x=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(x))).replace(/[٠-٩]/g,x=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(x))).replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').replace(/[\\u200c\\s]+/g,' ').trim().toLocaleLowerCase('fa');
+ const normalizeStatementQuery=value=>String(value??'').replace(/[۰-۹]/g,x=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(x))).replace(/[٠-٩]/g,x=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(x))).replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').replace(/[\u200c\s]+/g,' ').trim().toLocaleLowerCase('fa');
  const statementAmount=r=>Number(r.reference_totals?.statement_excluding_certificate_insurance??r.totals?.net??0);
  const paintArchive=()=>{
   if(token!==pageToken||!archive.isConnected)return;
