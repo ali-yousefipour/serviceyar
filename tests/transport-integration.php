@@ -324,9 +324,14 @@ try{
  $p->prepare('INSERT INTO agency_users(agency_id,user_id) VALUES(?,?)')->execute([$b,$newUser['id']]);rejected(fn()=>\ServiceYar\Users\UserService::changePassword($manager,$a,(int)$newUser['id'],['password'=>'Reset-Password-123','passwordConfirmation'=>'Reset-Password-123']),'PROTECTED_USER');
  rejected(fn()=>\ServiceYar\Agency\AgencyService::update($manager,$a,['name'=>'شرکت','isActive'=>0]),'FORBIDDEN');
  $planBody=['studentId'=>$s1['id'],'requestKey'=>'installments-test-'.$tag,'total'=>'100','advance'=>'10','count'=>3,'issueDate'=>'2026-10-01','dates'=>['2026-11-01','2026-12-01','2027-01-01']];
+ rejected(fn()=>\ServiceYar\Domain\InstallmentPlan::create($uid,$a,$planBody),'INSTALLMENT_PREVIEW_REQUIRED');
+ $planBody['approvalDigest']=\ServiceYar\Domain\InstallmentPlan::preview($planBody)['approvalDigest'];
  $plan=\ServiceYar\Domain\InstallmentPlan::create($uid,$a,$planBody);check(count($plan['invoiceIds'])===4,'Installments create advance and three invoice debts');
  $again=\ServiceYar\Domain\InstallmentPlan::create($uid,$a,$planBody);check($again===$plan,'Retry does not create duplicate invoices');
- rejected(fn()=>\ServiceYar\Domain\InstallmentPlan::create($uid,$a,array_merge($planBody,['total'=>'101'])),'REQUEST_CONFLICT');
+ rejected(fn()=>\ServiceYar\Domain\InstallmentPlan::create($uid,$a,array_merge($planBody,['total'=>'101'])),'INSTALLMENT_PREVIEW_CHANGED');
+ $changedPlan=array_merge($planBody,['total'=>'101']);
+ $changedPlan['approvalDigest']=\ServiceYar\Domain\InstallmentPlan::preview($changedPlan)['approvalDigest'];
+ rejected(fn()=>\ServiceYar\Domain\InstallmentPlan::create($uid,$a,$changedPlan),'REQUEST_CONFLICT');
  rejected(fn()=>\ServiceYar\Domain\InstallmentPlan::create($uid,$b,$planBody),'NOT_FOUND');
  $q=$p->prepare('SELECT SUM(amount) FROM invoices WHERE id IN ('.implode(',',array_fill(0,count($plan['invoiceIds']),'?')).')');$q->execute($plan['invoiceIds']);check((int)$q->fetchColumn()===100,'Installment invoice total equals agreement');
  \ServiceYar\Settings\SettingsService::put($uid,$a,['company_location'=>['latitude'=>36.3,'longitude'=>59.6]]);
