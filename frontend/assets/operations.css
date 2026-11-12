@@ -1586,3 +1586,47 @@ body.sy-menu-palette-open{overflow:hidden}
 @media(max-width:550px){#content .sy-service-quote-metrics{grid-template-columns:1fr}#content .sy-service-quote-metrics strong{font-size:15px}}
 
 #modal .sy-service-picker-more{padding:10px 12px;margin:8px 0 0;background:#f4faf6;border:1px dashed #cbded1;border-radius:9px;color:#476c51;font-size:12px;line-height:1.8;text-align:center}
+
+
+/* Accounting journal register: responsive, searchable per-page financial records */
+#content .sy-journal-list{min-width:0;padding:clamp(14px,2vw,22px);border:1px solid #dfe9e3;border-radius:17px}
+#content .sy-journal-list-header{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap;margin:16px 0;padding-bottom:15px;border-bottom:1px solid #e5efe7}
+#content .sy-journal-list-header h2{font-size:19px;color:#195b3b;line-height:1.6;margin:3px 0 5px}
+#content .sy-journal-list-header p{font-size:12px;color:#5e7966;line-height:1.8;margin:0}
+#content .sy-journal-list-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+#content .sy-journal-list-actions :is(a,button){display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 14px;border-radius:9px;font-size:12px;font-weight:800;text-decoration:none}
+#content .sy-journal-list-actions a{color:#225d3d;border:1px solid #cbded0;background:#f6faf6}
+#content .sy-journal-list-filters{display:grid;grid-template-columns:minmax(180px,2fr) minmax(140px,1fr) minmax(145px,1fr) auto;align-items:end;gap:10px;padding:13px;background:#f6faf7;border:1px solid #e1eee5;border-radius:11px;margin-bottom:12px}
+#content .sy-journal-list-filters label{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:12px;font-weight:800;color:#375f45}
+#content .sy-journal-list-filters :is(input,select){width:100%;min-width:0;box-sizing:border-box;min-height:43px;border:1px solid #cfded3;border-radius:9px;background:#fff;color:#284a35;padding:8px 10px;font-size:13px}
+#content .sy-journal-list-filters #journalFilterCount{align-self:center;color:#296040;font-size:11px;font-weight:800;white-space:nowrap}
+#content .sy-journal-list-table{max-height:525px;overflow:auto;border:1px solid #dfeae2;border-radius:11px;overscroll-behavior:contain}
+#content .sy-journal-table{width:100%;min-width:800px;border-collapse:separate;border-spacing:0}
+#content .sy-journal-table th{position:sticky;top:0;z-index:1;background:#eaf4ed;color:#285c3e;border-bottom:1px solid #cfe4d5;font-size:11px;text-align:right;padding:11px}
+#content .sy-journal-table td{padding:11px;border-bottom:1px solid #e9f0eb;font-size:12px;color:#294532;line-height:1.8;vertical-align:middle}
+#content .sy-journal-table tbody tr:nth-child(even){background:#fbfdfb}
+#content .sy-journal-table tbody tr:hover{background:#f0f8f2}
+#content .sy-journal-table td[data-label="شرح"]{max-width:350px;overflow-wrap:anywhere}
+#content .sy-journal-table .sy-financial-number{white-space:nowrap;font-variant-numeric:tabular-nums;color:#145938;font-weight:750}
+#content .sy-journal-table button{min-height:34px;padding:6px 11px;font-size:11px;border:1px solid #bddbc6;background:#f0f8f2;color:#135d3b;border-radius:9px;white-space:nowrap}
+#content .sy-journal-status{display:inline-flex;padding:5px 10px;border-radius:8px;font-size:11px;font-weight:750;background:#fff5e8;color:#94601e}
+#content .sy-journal-status.is-approved{background:#e5f5ea;color:#14653b}
+#content .sy-journal-empty{padding:35px 14px;text-align:center;color:#557662;font-size:12px}
+#content .sy-journal-empty strong{display:block;color:#255d3c;font-size:14px}
+#content .sy-journal-page-hint{font-size:11px;color:#6c806f;line-height:1.8;text-align:center;margin:9px 0 0}
+@media(max-width:1050px){#content .sy-journal-list-filters{grid-template-columns:repeat(2,minmax(0,1fr))}#content .sy-journal-list-filters #journalFilterCount{grid-column:1/-1}}
+@media(max-width:700px){
+ #content .sy-journal-list-filters{grid-template-columns:minmax(0,1fr);padding:10px}
+ #content .sy-journal-list-filters :is(input,select){min-height:46px;font-size:16px}
+ #content .sy-journal-list-filters #journalFilterCount{grid-column:1}
+ #content .sy-journal-list-actions{width:100%}
+ #content .sy-journal-list-actions :is(a,button){flex:1 1 auto}
+ #content .sy-journal-list-table{border:0;max-height:none;overflow:visible}
+ #content .sy-journal-table{display:block;min-width:0}
+ #content .sy-journal-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+ #content .sy-journal-table tbody{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+ #content .sy-journal-table tbody tr{display:flex;flex-direction:column;padding:12px;border:1px solid #dce9df;border-radius:12px;background:#fff}
+ #content .sy-journal-table td{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-bottom:1px dashed #e9efe9;padding:7px 0;max-width:none!important;text-align:end}
+ #content .sy-journal-table td::before{content:attr(data-label);min-width:37%;text-align:start;color:#607866;font-size:11px;font-weight:750}
+ #content .sy-journal-table td:last-child{border-bottom:0}
+}
