@@ -1037,3 +1037,55 @@ body.sy-menu-palette-open{overflow:hidden}
  #modal .sy-ledger-editor>.form-grid{grid-template-columns:minmax(0,1fr);gap:10px}
  #modal .modal:has(.sy-ledger-editor) .modal-body{padding:11px 12px}
 }
+
+/* Modal and wizard reconciliation: override legacy 180px minimum steps,
+   24px modal padding and oversized controls without changing other views. */
+#modal .modal:has(.sy-record-wizard),
+#modal .modal:has(.sy-record-details),
+#modal .modal:has(.sy-ledger-editor){
+ box-sizing:border-box;width:min(860px,calc(100vw - 24px));max-width:calc(100vw - 24px);
+ max-height:calc(100dvh - 24px);padding:0;overflow:hidden;
+ display:flex;flex-direction:column;border-radius:13px
+}
+#modal .modal:has(.sy-record-wizard)>.modal-head,
+#modal .modal:has(.sy-record-details)>.modal-head,
+#modal .modal:has(.sy-ledger-editor)>.modal-head{
+ flex:0 0 auto;min-height:55px;padding:10px 15px;margin:0;
+ border-bottom:1px solid #e2ebe4;gap:10px
+}
+#modal .modal:has(.sy-record-wizard)>.modal-body,
+#modal .modal:has(.sy-record-details)>.modal-body,
+#modal .modal:has(.sy-ledger-editor)>.modal-body{
+ flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+ padding:12px 15px;border-radius:0
+}
+#modal .modal:has(.sy-record-wizard) .modal-head h3,
+#modal .modal:has(.sy-record-details) .modal-head h3,
+#modal .modal:has(.sy-ledger-editor) .modal-head h3{font-size:15px;margin:0}
+#modal .modal:has(.sy-record-wizard) .modal-head button,
+#modal .modal:has(.sy-record-details) .modal-head button,
+#modal .modal:has(.sy-ledger-editor) .modal-head button{
+ min-width:36px;min-height:36px;font-size:21px
+}
+#modal .sy-record-wizard .wizard-step{min-height:0!important}
+#modal .sy-record-wizard .wizard-step h4{margin:0 0 10px;font-size:14px}
+#modal .sy-record-wizard .wizard-actions{
+ position:sticky;bottom:-12px;z-index:3;margin-top:8px;
+ padding:9px 0 3px;gap:7px;border-top:1px solid #e4ece6;background:#fff
+}
+#modal .sy-record-wizard .wizard-actions button{min-height:37px;padding:7px 11px;font-size:12px}
+#modal .sy-record-wizard .sy-wizard-fields>label :is(input,select,textarea),
+#modal .sy-ledger-editor>.form-grid>label :is(input,select,textarea){
+ box-sizing:border-box;min-height:39px;font-size:12px;line-height:1.6
+}
+#modal .sy-record-wizard .wizard-progress{overflow-x:auto;scrollbar-width:thin;max-width:100%;flex-wrap:nowrap}
+#modal .sy-record-wizard .wizard-marker{flex:0 0 auto;white-space:nowrap}
+@media(max-width:650px){
+ #modal .modal:has(.sy-record-wizard),
+ #modal .modal:has(.sy-record-details),
+ #modal .modal:has(.sy-ledger-editor){width:calc(100vw - 12px);max-width:calc(100vw - 12px);max-height:calc(100dvh - 12px);border-radius:10px}
+ #modal .modal:has(.sy-record-wizard)>.modal-body,
+ #modal .modal:has(.sy-record-details)>.modal-body,
+ #modal .modal:has(.sy-ledger-editor)>.modal-body{padding:10px}
+ #modal .sy-record-wizard .wizard-actions{bottom:-10px;flex-wrap:wrap}
+}
