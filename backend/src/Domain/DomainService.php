@@ -384,6 +384,20 @@ final class DomainService {
   foreach($defaults[$resource]??[] as $f=>$default)if(array_key_exists($f,$data)&&$data[$f]===null)$data[$f]=$default;
   $required=['schools'=>['name'],'students'=>['school_id','first_name','last_name','mobile'],'drivers'=>['first_name','last_name'],'vehicles'=>['plate'],'services'=>['title'],'packs'=>['title'],'contracts'=>['title','party_type'],'driver-work'=>['driver_id','work_date'],'driver-payments'=>['driver_id','payment_date','amount'],'school-charges'=>['school_id','title'],'service-charges'=>['service_id','title'],'invoices'=>['title'],'payments'=>['payment_date','amount'],'accounts'=>['code','title'],'accounting-documents'=>['document_no','document_date'],'wallets'=>['owner_type'],'messages'=>['body'],'driver-changes'=>['service_id','new_driver_id'],'ledger'=>['party_type','party_id','direction','amount','entry_date'],'driver-ratings'=>['driver_id','score'],'parent-reports'=>['student_id','subject','body']];
   $merged=array_merge($existing,$data);
+  if($resource==='contracts'){
+   $start=$merged['start_date']??null;$end=$merged['end_date']??null;
+   foreach([$start,$end] as $contractDate)
+    if($contractDate!==null&&$contractDate!==''&&(!is_string($contractDate)||!OperationsService::validDate($contractDate)))
+     throw new AuthException(422,'تاریخ شروع و پایان قرارداد باید معتبر باشند.','INVALID_CONTRACT_DATES');
+   if($start!==null&&$end!==null&&$start!==''&&$end!==''&&$end<$start)
+    throw new AuthException(422,'تاریخ پایان قرارداد نباید قبل از تاریخ شروع باشد.','INVALID_CONTRACT_DATES');
+   if(array_key_exists('amount',$data)&&$data['amount']!==null){
+    $amount=(string)$data['amount'];
+    if(!preg_match('/^[0-9]{1,15}(?:\\.0{1,2})?$/D',$amount))
+     throw new AuthException(422,'مبلغ قرارداد باید به ریال صحیح و بدون اعشار باشد.','INVALID_CONTRACT_AMOUNT');
+    $data['amount']=str_contains($amount,'.')?substr($amount,0,strpos($amount,'.')):$amount;
+   }
+  }
   if($resource==='students' && (array_key_exists('tariff_distance_km',$data)||array_key_exists('tariff_vehicle_class',$data)||array_key_exists('school_id',$data)||array_key_exists('academic_year',$data))){
    $distance=$merged['tariff_distance_km']??null;$class=$merged['tariff_vehicle_class']??null;
    if($distance!==null&&(!is_numeric($distance)||(float)$distance<=0||(float)$distance>1000))throw new AuthException(422,'مسافت تعرفه نامعتبر است.','VALIDATION_ERROR');
