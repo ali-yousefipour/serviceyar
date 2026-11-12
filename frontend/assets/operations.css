@@ -1384,3 +1384,24 @@ body.sy-menu-palette-open{overflow:hidden}
  #content .sy-grid-sort-controls select{font-size:16px;min-height:44px}
 }
 @media(max-width:380px){#content .sy-grid-sort-controls{grid-template-columns:1fr}}
+
+
+/* Record-wizard review, designed for editing real data without losing earlier steps */
+#modal .sy-record-wizard .sy-wizard-review-notice{margin:0 0 14px;padding:10px 12px;background:#f0f8f3;border:1px solid #d3e8d9;color:#335a43;border-radius:10px;font-size:12px;line-height:1.85}
+#modal .sy-record-wizard .sy-wizard-review-group{border:1px solid #dfe9e3;border-radius:12px;background:#fff;padding:12px 14px;margin-bottom:12px}
+#modal .sy-record-wizard .sy-wizard-review-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid #e7eee8;margin-bottom:10px}
+#modal .sy-record-wizard .sy-wizard-review-heading h5{font-size:13px;line-height:1.6;color:#20583a;margin:0}
+#modal .sy-record-wizard .sy-wizard-review-heading button{min-height:33px;padding:5px 11px;background:#eef7f0;border:1px solid #c9e2d0;color:#176443;font-size:11px;font-weight:800;border-radius:9px}
+#modal .sy-record-wizard .sy-wizard-review-group dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:9px;margin:0}
+#modal .sy-record-wizard .sy-wizard-review-group dl>div{min-width:0;padding:9px 11px;background:#f8fbf9;border:1px solid #edf2ed;border-radius:9px}
+#modal .sy-record-wizard .sy-wizard-review-group dt{font-size:11px;color:#62796a;margin:0 0 4px}
+#modal .sy-record-wizard .sy-wizard-review-group dd{font-size:12px;color:#203d2d;font-weight:800;line-height:1.75;margin:0;overflow-wrap:anywhere}
+#modal .sy-record-wizard :is(select,input,textarea)[aria-busy=true]{background-color:#f4f8f5;border-color:#7eaf91}
+#modal .sy-record-wizard [aria-invalid=true]{border-color:#ba4444!important;box-shadow:0 0 0 2px #ba444417}
+#modal .sy-record-wizard .field-error{display:block;color:#a52c2c;font-size:11px;line-height:1.75;margin-top:4px}
+#modal .sy-record-wizard .sy-wizard-extras[open]{padding:10px;border:1px solid #d5e6da;border-radius:11px;background:#fafdfa}
+@media(max-width:600px){
+ #modal .sy-record-wizard .sy-wizard-review-group{padding:10px}
+ #modal .sy-record-wizard .sy-wizard-review-group dl{grid-template-columns:minmax(0,1fr)}
+ #modal .sy-record-wizard .sy-wizard-review-heading button{min-height:39px}
+}
