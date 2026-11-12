@@ -88,6 +88,53 @@ final class DomainService {
     $params['vehicle_plate_pattern']='^'.implode('',$patterns).'$';
    }
   }
+  if($resource==='ledger'){
+   $types=['student','driver','school','agency'];
+   $partyType=$q['partyType']??'';
+   if($partyType!==''&&(!is_string($partyType)||!in_array($partyType,$types,true)))
+    throw new AuthException(422,'نوع طرف حساب معتبر نیست.','VALIDATION_ERROR');
+   if($partyType!==''){$where.=' AND party_type=:ledger_party_type';$params['ledger_party_type']=$partyType;}
+   $direction=$q['direction']??'';
+   if($direction!==''&&(!is_string($direction)||!in_array($direction,['receipt','payment'],true)))
+    throw new AuthException(422,'نوع عملیات معتبر نیست.','VALIDATION_ERROR');
+   if($direction!==''){$where.=' AND direction=:ledger_direction';$params['ledger_direction']=$direction;}
+   $method=$q['method']??'';
+   if($method!==''&&(!is_string($method)||!in_array($method,['cash','card','bank','transfer','cheque','wallet'],true)))
+    throw new AuthException(422,'روش پرداخت معتبر نیست.','VALIDATION_ERROR');
+   if($method!==''){$where.=' AND method=:ledger_method';$params['ledger_method']=$method;}
+   foreach(['dateFrom'=>'>=','dateTo'=>'<='] as $name=>$operator){
+    $date=$q[$name]??'';
+    if($date==='')continue;
+    if(!is_string($date)||!OperationsService::validDate($date))
+     throw new AuthException(422,'تاریخ دریافت یا پرداخت معتبر نیست.','VALIDATION_ERROR');
+    $where.=" AND entry_date $operator :ledger_$name";$params['ledger_'.$name]=$date;
+   }
+   if(isset($params['ledger_dateFrom'],$params['ledger_dateTo'])&&$params['ledger_dateFrom']>$params['ledger_dateTo'])
+    throw new AuthException(422,'تاریخ شروع باید قبل از تاریخ پایان باشد.','VALIDATION_ERROR');
+   foreach(['amountMin'=>'>=','amountMax'=>'<='] as $name=>$operator){
+    $amount=$q[$name]??'';
+    if($amount==='')continue;
+    if(!is_scalar($amount)||!is_numeric((string)$amount)||(float)$amount<0)
+     throw new AuthException(422,'محدوده مبلغ معتبر نیست.','VALIDATION_ERROR');
+    $where.=" AND amount $operator :ledger_$name";$params['ledger_'.$name]=(string)$amount;
+   }
+   if(isset($params['ledger_amountMin'],$params['ledger_amountMax'])&&(float)$params['ledger_amountMin']>(float)$params['ledger_amountMax'])
+    throw new AuthException(422,'حداقل مبلغ نمی‌تواند بیشتر از حداکثر باشد.','VALIDATION_ERROR');
+   $partySearch=$q['partySearch']??'';
+   if($partySearch!==''&&(!is_string($partySearch)||mb_strlen($partySearch)>200))
+    throw new AuthException(422,'عبارت جست‌وجوی طرف حساب معتبر نیست.','VALIDATION_ERROR');
+   if(is_string($partySearch)&&trim($partySearch)!==''){
+    $normalized=preg_replace('/[\\s\\x{200c}\\x{200d}]+/u','',strtr(trim($partySearch),['ي'=>'ی','ى'=>'ی','ك'=>'ک']));
+    $pattern='%'.strtr($normalized??'',['!'=>'!!','%'=>'!%','_'=>'!_']).'%';
+    $where.=" AND (
+     (party_type='student' AND EXISTS(SELECT 1 FROM students ls WHERE ls.id=ledger_entries.party_id AND ls.agency_id=ledger_entries.agency_id AND REPLACE(REPLACE(REPLACE(REPLACE(CONCAT_WS('',ls.first_name,ls.last_name),'ي','ی'),'ك','ک'),' ',''),'‌','') LIKE :ledger_student_name ESCAPE '!'))
+     OR (party_type='driver' AND EXISTS(SELECT 1 FROM drivers ld WHERE ld.id=ledger_entries.party_id AND ld.agency_id=ledger_entries.agency_id AND REPLACE(REPLACE(REPLACE(REPLACE(CONCAT_WS('',ld.first_name,ld.last_name),'ي','ی'),'ك','ک'),' ',''),'‌','') LIKE :ledger_driver_name ESCAPE '!'))
+     OR (party_type='school' AND EXISTS(SELECT 1 FROM schools lsc WHERE lsc.id=ledger_entries.party_id AND lsc.agency_id=ledger_entries.agency_id AND REPLACE(REPLACE(REPLACE(lsc.name,'ي','ی'),'ك','ک'),' ','') LIKE :ledger_school_name ESCAPE '!'))
+     OR (party_type='agency' AND EXISTS(SELECT 1 FROM agencies la WHERE la.id=ledger_entries.party_id AND la.id=ledger_entries.agency_id AND REPLACE(REPLACE(REPLACE(la.name,'ي','ی'),'ك','ک'),' ','') LIKE :ledger_agency_name ESCAPE '!'))
+    )";
+    foreach(['student','driver','school','agency'] as $type)$params['ledger_'.$type.'_name']=$pattern;
+   }
+  }
   if($resource==='driver-work'){
    [$workWhere,$workParams]=self::workDateFilters($q);
    foreach($workWhere as $clause)$where.=' AND '.$clause;
@@ -98,6 +145,13 @@ final class DomainService {
   $limit=min(max((int)($q['limit']??50),1),200);$page=max((int)($q['page']??1),1);$off=($page-1)*$limit;
   $pdo=Connection::get();$count=$pdo->prepare("SELECT COUNT(*) FROM {$c['table']} WHERE $where");$count->execute($params);
   $select='*';
+  if($resource==='ledger')$select="ledger_entries.*,
+   CASE ledger_entries.party_type
+    WHEN 'student' THEN (SELECT CONCAT_WS(' ',s.first_name,s.last_name) FROM students s WHERE s.id=ledger_entries.party_id AND s.agency_id=ledger_entries.agency_id)
+    WHEN 'driver' THEN (SELECT CONCAT_WS(' ',d.first_name,d.last_name) FROM drivers d WHERE d.id=ledger_entries.party_id AND d.agency_id=ledger_entries.agency_id)
+    WHEN 'school' THEN (SELECT sc.name FROM schools sc WHERE sc.id=ledger_entries.party_id AND sc.agency_id=ledger_entries.agency_id)
+    WHEN 'agency' THEN (SELECT a.name FROM agencies a WHERE a.id=ledger_entries.party_id AND a.id=ledger_entries.agency_id)
+   END AS party_name";
   if($resource==='vehicles')$select="vehicles.*, (SELECT GROUP_CONCAT(CONCAT_WS(' ',vd.first_name,vd.last_name) ORDER BY vd.id DESC SEPARATOR '، ') FROM drivers vd WHERE vd.vehicle_id=vehicles.id AND vd.agency_id=vehicles.agency_id AND vd.is_active=1) AS driver_name";
   if($resource==='students')$select="students.*,
    (SELECT CONCAT(d.first_name,' ',d.last_name) FROM service_students ss JOIN services sv ON sv.id=ss.service_id JOIN drivers d ON d.id=sv.driver_id AND d.agency_id=students.agency_id WHERE ss.student_id=students.id AND sv.agency_id=students.agency_id AND sv.is_active=1 LIMIT 1) driver_name,
