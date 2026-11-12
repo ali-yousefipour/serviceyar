@@ -28,6 +28,7 @@ jobs:
           node tests/new-service-wizard.cjs
           node tests/journal-balance.cjs
           node tests/cheque-editor.cjs
+          node tests/accounting-report-ui.cjs
           node tests/solar-date.cjs
   transport-integration:
     runs-on: ubuntu-latest
