@@ -1309,9 +1309,114 @@ async function dailySchedulePage(token=pageToken){
 }
 
 async function installmentPage(){
- $('content').innerHTML=`<section class="panel"><h2>برنامه پیش‌پرداخت و اقساط</h2><p>پیش‌نمایش را بررسی کنید؛ ثبت نهایی برای پیش‌پرداخت و هر قسط فاکتور باز می‌سازد. پیش‌پرداخت به معنی دریافت وجه نیست.</p><form id="installmentPreview" class="form-grid"><label>دانش‌آموز<select name="studentId" id="installmentStudent"></select></label><label>تاریخ صدور<input name="issueDate" type="date"></label><label>مبلغ کل قرارداد · ریال<input name="total" inputmode="numeric" required pattern="[0-9]{1,12}"></label><label>پیش‌پرداخت · ریال<input name="advance" inputmode="numeric" required value="0" pattern="[0-9]{1,12}"></label><label>تعداد اقساط<input name="count" type="number" min="1" max="24" value="9" required></label><label>سررسیدهای شمسی، هر تاریخ در یک خط<textarea name="dates" required placeholder="1405/08/01"></textarea></label><button>محاسبه برنامه اقساط</button>${can('installments','manage')?'<button name="createPlan" value="1">ثبت نهایی و ایجاد فاکتورها</button>':''}</form><div id="installmentResult" role="status" aria-live="polite"></div></section>`;
- const requestKey=crypto.randomUUID(),select=$('installmentStudent');const students=await lookup('students');if(!select.isConnected)return;select.innerHTML='<option value="">انتخاب کنید</option>'+students.map(r=>`<option value="${r.id}">${esc(person(r))}</option>`).join('');
- $('installmentPreview').onsubmit=async e=>{e.preventDefault();const buttons=[...e.target.querySelectorAll('button:not([type=button])')],result=$('installmentResult');buttons.forEach(b=>b.disabled=true);try{const body=Object.fromEntries(new FormData(e.target));body.dates=body.dates.trim().split(/\s+/).map(d=>ServiceYarDates.toISO(d));const creating=e.submitter?.name==='createPlan';if(creating&&!confirm('فاکتورهای پیش‌پرداخت و اقساط ایجاد شوند؟'))return;body.requestKey=requestKey;const d=await write(creating?'/api/v1/operations/installments':'/api/v1/operations/installments/preview',body);if(creating){if(result.isConnected)result.textContent='برنامه '+number(d.planId)+' ثبت شد؛ '+number(d.invoiceIds.length)+' فاکتور در بخش فاکتورها قابل پرداخت است.';return;}if(!result.isConnected)return;result.innerHTML='<p>پیش‌پرداخت: '+number(d.advance)+' ریال · مانده: '+number(d.remaining)+' ریال</p>'+simpleTable(['قسط','سررسید','مبلغ · ریال'],d.items.map(r=>[number(r.number),dateText(r.dueDate),number(r.amount)]));}catch(err){if(result.isConnected)result.textContent=err.message;}finally{buttons.forEach(b=>{if(b.isConnected)b.disabled=false;});}};
+ const token=pageToken,allowed=can('installments','manage');
+ $('content').innerHTML=`<section class="panel sy-installment-panel">
+  <header class="sy-installment-heading"><div><span class="sy-operation-kicker">برنامه مالی دانش‌آموزان</span><h2>پیش‌پرداخت و اقساط</h2><p>ابتدا شرایط قرارداد را وارد کنید، جدول اقساط را بررسی کنید و در مرحله آخر ایجاد فاکتورها را تأیید کنید.</p></div><span class="sy-installment-step">مرحله ۱ از ۲ · تنظیم برنامه</span></header>
+  <form id="installmentPreview" class="sy-installment-form" aria-label="محاسبه برنامه اقساط">
+   <div class="sy-installment-fields">
+    <label class="sy-installment-student">جست‌وجوی دانش‌آموز<input id="installmentStudentSearch" type="search" autocomplete="off" placeholder="نام یا نام خانوادگی دانش‌آموز"></label>
+    <label class="sy-installment-student">دانش‌آموز<select name="studentId" id="installmentStudent" required><option value="">در حال دریافت دانش‌آموزان…</option></select></label>
+    <label>تاریخ صدور فاکتورها<input name="issueDate" type="date" required value="${todayISO()}"></label>
+    <label>مبلغ کل قرارداد (ریال)<input name="total" type="text" data-installment-money inputmode="numeric" required autocomplete="off" placeholder="مثلاً ۱۲۰٬۰۰۰٬۰۰۰" dir="ltr"></label>
+    <label>پیش‌پرداخت (ریال)<input name="advance" type="text" data-installment-money inputmode="numeric" required autocomplete="off" value="۰" dir="ltr"></label>
+    <label>تعداد اقساط<input name="count" type="number" min="1" max="24" value="9" required></label>
+    <label class="sy-installment-dates">سررسید اقساط به تاریخ شمسی<textarea name="dates" rows="5" required placeholder="۱۴۰۵/۰۸/۰۱&#10;۱۴۰۵/۰۹/۰۱&#10;۱۴۰۵/۱۰/۰۱" aria-describedby="installmentDatesHelp"></textarea><small id="installmentDatesHelp">برای هر قسط یک تاریخ شمسی در خط جدا وارد کنید؛ تعداد تاریخ‌ها باید با تعداد اقساط برابر باشد.</small></label>
+   </div>
+   <div class="sy-installment-form-footer"><p>ثبت برنامه، فاکتورهای پرداخت‌نشده ایجاد می‌کند و به معنای دریافت وجه نیست.</p><button class="primary" type="submit" id="installmentCalculate">محاسبه و پیش‌نمایش اقساط</button></div>
+  </form>
+  <section id="installmentResult" class="sy-installment-result" role="status" aria-live="polite"></section>
+  </section>`;
+ const form=$('installmentPreview'),select=$('installmentStudent'),search=$('installmentStudentSearch'),result=$('installmentResult'),calculate=$('installmentCalculate');
+ let approved=null,busy=false,sequence=0,requestKey=crypto.randomUUID();
+ const normalize=value=>String(value??'').replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).trim();
+ const monetary=value=>{
+  const raw=normalize(value);
+  if(!/^(?:[0-9]{1,12}|[0-9]{1,3}(?:[٬,][0-9]{3}){1,4})$/.test(raw))return null;
+  const digits=raw.replace(/[٬,]/g,'');
+  return digits.length<=12?digits:null;
+ };
+ const invalidate=()=>{
+  sequence++;approved=null;
+  if(result.isConnected)result.innerHTML='<p class="sy-installment-hint" role="status">اطلاعات تغییر کرده است؛ برای ثبت باید پیش‌نمایش جدید تهیه کنید.</p>';
+ };
+ form.addEventListener('input',invalidate);
+ form.addEventListener('change',invalidate);
+ for(const input of form.querySelectorAll('[data-installment-money]')){
+  input.addEventListener('input',()=>{
+   const numeric=monetary(input.value);
+   input.setCustomValidity(numeric===null?'مبلغ را به ریال، بدون اعشار و با جداکننده هزارگان صحیح وارد کنید.':'');
+   if(numeric!==null)input.value=persianDigits(numeric.replace(/\B(?=(\d{3})+(?!\d))/g,'٬'));
+  });
+ }
+ const students=await lookup('students');
+ if(token!==pageToken||!select.isConnected)return;
+ const sorted=[...students].sort((a,b)=>person(a).localeCompare(person(b),'fa'));
+ const normalizeSearch=value=>String(value??'').replace(/ي|ى/g,'ی').replace(/ك/g,'ک').replace(/[\u200c\s]+/g,' ').trim().toLocaleLowerCase('fa');
+ const filterStudents=()=>{
+  const selected=select.value,term=normalizeSearch(search.value);
+  const list=sorted.filter(row=>!term||normalizeSearch(person(row)).includes(term)).slice(0,250);
+  select.replaceChildren(new Option(list.length?'انتخاب کنید':'دانش‌آموزی پیدا نشد',''));
+  for(const row of list)select.add(new Option(person(row),String(row.id)));
+  if(selected&&!list.some(row=>String(row.id)===selected)){
+   const row=sorted.find(x=>String(x.id)===selected);
+   if(row)select.add(new Option(person(row),selected));
+  }
+  select.value=selected;
+ };
+ search.addEventListener('input',filterStudents);
+ filterStudents();
+ const payload=()=>{
+  const total=monetary(form.elements.total.value),advance=monetary(form.elements.advance.value);
+  if(total===null||advance===null)throw new Error('مبالغ قرارداد و پیش‌پرداخت را به ریال، بدون اعشار وارد کنید.');
+  const count=Number(form.elements.count.value);
+  const dates=String(form.elements.dates.value).trim().split(/\s+/).filter(Boolean);
+  if(!Number.isInteger(count)||count<1||count>24||dates.length!==count)throw new Error('تعداد سررسیدهای شمسی باید دقیقاً با تعداد اقساط (۱ تا ۲۴) برابر باشد.');
+  if(!form.elements.studentId.value)throw new Error('دانش‌آموز را انتخاب کنید.');
+  if(!form.elements.issueDate.value)throw new Error('تاریخ صدور فاکتورها الزامی است.');
+  return {studentId:Number(form.elements.studentId.value),issueDate:form.elements.issueDate.value,
+   total,advance,count,dates:dates.map(date=>ServiceYarDates.toISO(date))};
+ };
+ const showPreview=(d,body)=>{
+  const studentName=select.selectedOptions[0]?.textContent||'دانش‌آموز';
+  result.innerHTML=`<div class="sy-installment-preview-head"><div><span class="sy-operation-kicker">مرحله ۲ از ۲ · بازبینی و تأیید</span><h3>پیش‌نمایش برنامه ${esc(studentName)}</h3></div><span class="sy-installment-status">ثبت‌نشده</span></div>
+  <div class="sy-installment-summary"><div><span>مبلغ قرارداد</span><strong>${number(d.total)} ریال</strong></div><div><span>پیش‌پرداخت</span><strong>${number(d.advance)} ریال</strong></div><div><span>مانده قابل تقسیط</span><strong>${number(d.remaining)} ریال</strong></div><div><span>تعداد اقساط</span><strong>${number(d.items.length)}</strong></div></div>
+  ${simpleTable(['شماره قسط','تاریخ سررسید شمسی','مبلغ (ریال)'],d.items.map(row=>[number(row.number),dateText(row.dueDate),number(row.amount)]))}
+  <div class="sy-installment-confirm"><p>با تأیید، برای پیش‌پرداخت (در صورت وجود) و هر قسط، فاکتور باز صادر می‌شود. هیچ دریافتی ثبت نخواهد شد.</p>${allowed?'<button type="button" class="primary" id="installmentFinalize">تأیید و ایجاد فاکتورها</button>':'<span>حساب شما مجوز ثبت نهایی ندارد.</span>'}</div>`;
+  $('installmentFinalize')?.addEventListener('click',async()=>{
+   if(busy||!approved)return;
+   let current;
+   try{current=payload();}catch(e){notify(e.message,true);invalidate();return;}
+   if(JSON.stringify(current)!==approved.key){invalidate();notify('اطلاعات تغییر کرده‌اند؛ پیش‌نمایش تازه تهیه کنید.',true);return;}
+   if(!confirm('برای '+studentName+'، '+number(d.items.length+(d.advance>0?1:0))+' فاکتور ایجاد شود؟'))return;
+   const button=$('installmentFinalize');button.disabled=true;busy=true;
+   try{
+    const created=await write('/api/v1/operations/installments',{...approved.body,approvalDigest:d.approvalDigest,requestKey},'POST');
+    if(token!==pageToken||!result.isConnected)return;
+    approved=null;
+    result.innerHTML='<div class="sy-installment-success" role="status"><strong>برنامه اقساط ثبت شد.</strong><p>'+number(created.invoiceIds?.length||0)+' فاکتور برای دانش‌آموز ایجاد شد. دریافت وجه انجام نشده است.</p><a href="#invoices">مشاهده فاکتورها</a></div>';
+    notify('برنامه اقساط با موفقیت ثبت شد.');
+    requestKey=crypto.randomUUID();
+   }catch(e){notify(e.message,true);if(button.isConnected)button.disabled=false;}
+   finally{busy=false;}
+  });
+ };
+ form.onsubmit=async e=>{
+  e.preventDefault();if(busy)return;
+  let body;
+  try{body=payload();}catch(err){notify(err.message,true);result.innerHTML='<p class="error" role="alert">'+esc(err.message)+'</p>';return;}
+  busy=true;approved=null;calculate.disabled=true;
+  const version=++sequence;result.innerHTML='<p class="loading" role="status">در حال محاسبه برنامه اقساط…</p>';
+  try{
+   const d=await write('/api/v1/operations/installments/preview',body,'POST');
+   if(token!==pageToken||version!==sequence||!result.isConnected)return;
+   if(!d.approvalDigest)throw new Error('تأییدیه پیش‌نمایش از سرور دریافت نشد؛ ثبت امکان‌پذیر نیست.');
+   approved={body,key:JSON.stringify(body)};
+   showPreview(d,body);
+  }catch(err){
+   if(token===pageToken&&version===sequence&&result.isConnected)
+    result.innerHTML='<p class="error" role="alert">'+esc(err.message)+'</p>';
+  }finally{busy=false;if(calculate.isConnected)calculate.disabled=false;}
+ };
 }
 
 function attachStudentTariff(form){
