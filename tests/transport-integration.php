@@ -76,7 +76,7 @@ try{
  check(D::list($uid,$a,'driver-work',array_replace($workFilters,['status'=>'approved']))['items']===[],'Work review status filters the matching dates');
  rejected(fn()=>D::list($uid,$a,'driver-work',['dateFrom'=>'2026-02-30']),'VALIDATION_ERROR');
  rejected(fn()=>D::list($uid,$a,'driver-work',['dateFrom'=>'2026-11-03','dateTo'=>'2026-11-02']),'VALIDATION_ERROR');
- $pay=O::payroll($uid,$a,['from'=>$date,'to'=>$date]);$paid=array_values(array_filter($pay['items'],fn($r)=>(int)$r['id']===(int)$driver['id']))[0];check((float)$paid['balance']===700.0,'Payroll combines earned and real payments');
+ $pay=O::payroll($uid,$a,['from'=>$date,'to'=>$date]);$paid=array_values(array_filter($pay['items'],fn($r)=>(int)$r['id']===(int)$driver['id']))[0];check((float)$paid['gross_earned']===1000.0&&(float)$paid['total_deductions']===188.0&&(float)$paid['insurance_deduction']===78.0&&(float)$paid['balance']===512.0,'Payroll deducts 18.8 percent including 7.8 insurance before real payments');
  $change=D::save($uid,$a,'driver-changes',['serviceId'=>$service['id'],'newDriverId'=>$replacement['id']]);O::changeDriver($uid,$a,(int)$change['id'],'approved');check((int)D::get($uid,$a,'services',(int)$service['id'])['driver_id']===(int)$replacement['id'],'Approved change updates service driver');rejected(fn()=>O::changeDriver($uid,$a,(int)$change['id'],'approved'),'ALREADY_REVIEWED');
  rejected(fn()=>D::save($uid,$a,'driver-changes',['serviceId'=>$service['id'],'newDriverId'=>$driver['id'],'status'=>'approved']),'WORKFLOW_REQUIRED');
  D::removeStudent($uid,$a,(int)$service['id'],(int)$s1['id']);check(D::get($uid,$a,'students',(int)$s1['id'])['service_status']==='waiting','Removal restores waiting status');
