@@ -146,11 +146,11 @@ final class ReferenceMonthlyStatementWorkbook
         foreach($rows as $row){
             $cells=[];
             foreach(iterator_to_array($row->childNodes) as $cell){
-                if($cell instanceof \\DOMElement && $cell->localName==='c'){
+                if($cell instanceof \DOMElement && $cell->localName==='c'){
                     $cells[]=$cell;$row->removeChild($cell);
                 }
             }
-            usort($cells,static function(\\DOMElement $a,\\DOMElement $b): int{
+            usort($cells,static function(\DOMElement $a,\DOMElement $b): int{
                 $key=static function(string $ref): int{
                     preg_match('/^[A-Z]+/',$ref,$m);$n=0;
                     foreach(str_split($m[0]??'') as $letter)$n=$n*26+ord($letter)-64;
