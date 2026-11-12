@@ -633,9 +633,54 @@ async function formResource(key,id,onSaved){
    lookup('schools').then(rows=>{schoolTypes=new Map(rows.map(sc=>[String(sc.id),sc.school_type||sc.schoolType||'']));if(form.isConnected)render();}).catch(()=>{});
   }
  }else if(['services','driver-work'].includes(key)&&can('payroll'))attachFinancialCalculator(form,key,id,row);
- const populate=async(select,search='')=>{let resource=select.dataset.relation;if(resource==='party'){const type=form.elements.partyType?.value||form.elements.ownerType?.value||form.elements.recipientType?.value;resource={student:'students',driver:'drivers',school:'schools',agency:'agencies'}[type];if(!resource)return;}try{const value=select.value,d=await api(scoped('/api/v1/'+resource+'?limit=200&active=1&search='+encodeURIComponent(search)));if(!select.isConnected)return;const items=d.items||d;select.innerHTML='<option value="">انتخاب کنید</option>'+items.map(r=>`<option value="${r.id}">${esc(person(r))}</option>`).join('');if(value&&!items.some(r=>String(r.id)===String(value))){const detail=await api(scoped('/api/v1/'+resource+'/'+value));select.add(new Option(person(detail),value));}select.value=value;}catch(e){notify(e.message,true);}};
- form.querySelectorAll('[data-relation]').forEach(select=>{populate(select);const input=form.querySelector(`[data-lookup-search="${select.name}"]`);let timer=0;input.oninput=()=>{clearTimeout(timer);timer=setTimeout(()=>populate(select,input.value),300);};});
- if(form.elements.latitude&&form.elements.longitude)await locationPicker(form,key);if(typeKey){const type=form.elements.partyType||form.elements.ownerType||form.elements.recipientType;type.onchange=()=>{form.elements[typeKey].value='';populate(form.elements[typeKey]);};}
+ const relationVersion=new WeakMap();
+ const populate=async(select,search='')=>{
+  const version=(relationVersion.get(select)||0)+1;relationVersion.set(select,version);
+  let resource=select.dataset.relation;
+  if(resource==='party'){
+   const type=form.elements.partyType?.value||form.elements.ownerType?.value||form.elements.recipientType?.value;
+   resource={student:'students',driver:'drivers',school:'schools',agency:'agencies'}[type];
+  }
+  const selected=select.value;
+  select.setAttribute('aria-busy','true');
+  if(!resource){
+   select.replaceChildren(new Option('ابتدا نوع طرف حساب را انتخاب کنید',''));
+   select.value='';select.removeAttribute('aria-busy');return;
+  }
+  try{
+   const response=await api(scoped('/api/v1/'+resource+'?limit=200&active=1&search='+encodeURIComponent(search)));
+   if(!select.isConnected||relationVersion.get(select)!==version)return;
+   const items=Array.isArray(response)?response:response.items||[];
+   const options=[new Option(items.length?'انتخاب کنید':'نتیجه‌ای یافت نشد','')];
+   for(const row of items)options.push(new Option(person(row),String(row.id)));
+   if(selected&&!items.some(row=>String(row.id)===selected)){
+    try{
+     const detail=await api(scoped('/api/v1/'+resource+'/'+encodeURIComponent(selected)));
+     if(!select.isConnected||relationVersion.get(select)!==version)return;
+     options.push(new Option(person(detail),selected));
+    }catch{
+     // Keep the existing selection while the user edits other fields.
+     options.push(new Option('مورد انتخاب‌شده ('+persianDigits(selected)+')',selected));
+    }
+   }
+   if(!select.isConnected||relationVersion.get(select)!==version)return;
+   select.replaceChildren(...options);select.value=selected;
+  }catch(e){
+   if(!select.isConnected||relationVersion.get(select)!==version)return;
+   notify('خطا در جست‌وجوی '+(labels[select.name]||'اطلاعات')+': '+e.message,true);
+  }finally{
+   if(select.isConnected&&relationVersion.get(select)===version)select.removeAttribute('aria-busy');
+  }
+ };
+ form.querySelectorAll('[data-relation]').forEach(select=>{
+  populate(select);
+  const input=form.querySelector(`[data-lookup-search="${select.name}"]`);
+  let timer=0;
+  input?.setAttribute('type','search');
+  input?.setAttribute('autocomplete','off');
+  if(input)input.oninput=()=>{clearTimeout(timer);relationVersion.set(select,(relationVersion.get(select)||0)+1);timer=setTimeout(()=>populate(select,input.value.trim()),350);};
+ });
+ if(form.elements.latitude&&form.elements.longitude)await locationPicker(form,key);if(typeKey){const type=form.elements.partyType||form.elements.ownerType||form.elements.recipientType;type.onchange=()=>{const select=form.elements[typeKey],search=form.querySelector(`[data-lookup-search="${typeKey}"]`);select.value='';if(search)search.value='';populate(select);};}
  resourceWizard(form,key);
  form.onsubmit=async e=>{e.preventDefault();const button=$('saveRecord');button.disabled=true;$('formError').hidden=true;try{const body=Object.fromEntries(new FormData(form));if(key==='students'&&body.tariffDistanceKm!==undefined&&body.tariffDistanceKm!=='')body.tariffDistanceKm=Math.round(Number(body.tariffDistanceKm));if(key==='ledger')delete body.amountDisplay;await write('/api/v1/'+key+(id?'/'+id:''),body,id?'PUT':'POST');lookupCache={};closeDialog();notify('اطلاعات ذخیره شد.');if(onSaved)onSaved();else if(gridState?.key===key&&gridState.token===pageToken)await loadResource(key);else{location.hash=key;}}catch(err){if($('formError')){$('formError').textContent=err.message;$('formError').hidden=false;$('formError').focus();}}finally{if(button.isConnected)button.disabled=false;}};
  }catch(e){notify(e.message,true);}
