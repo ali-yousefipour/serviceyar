@@ -1427,3 +1427,51 @@ body.sy-menu-palette-open{overflow:hidden}
 #modal .form-grid input[data-rial-amount]:invalid{border-color:#b85555}
 #modal .form-grid .sy-money-hint{display:block;margin-top:5px;color:#68806e;font-size:11px;line-height:1.75;font-weight:500}
 @media(max-width:650px){#modal .form-grid input[data-rial-amount]{min-height:46px;font-size:16px}}
+
+
+/* School tuition installments: review before financial posting */
+#content .sy-installment-panel{min-width:0;padding:clamp(14px,2vw,22px);border:1px solid #dfe9e3;border-radius:18px}
+#content .sy-installment-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:0 0 16px;border-bottom:1px solid #e3ede6;margin-bottom:17px}
+#content .sy-installment-heading h2{font-size:20px;line-height:1.5;margin:3px 0 6px;color:#175438}
+#content .sy-installment-heading p{font-size:12px;line-height:1.9;color:#5e7466;max-width:660px;margin:0}
+#content .sy-installment-step,#content .sy-installment-status{display:inline-flex;align-items:center;border-radius:10px;padding:9px 12px;background:#ecf5ef;border:1px solid #d3e8da;color:#255d3c;font-size:11px;font-weight:800;white-space:nowrap}
+#content .sy-installment-status{background:#fff5e5;border-color:#f4e0b8;color:#8b5c21}
+#content .sy-installment-form{display:grid;gap:15px}
+#content .sy-installment-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px 15px;align-items:start}
+#content .sy-installment-fields>label{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:12px;font-weight:800;color:#355b43}
+#content .sy-installment-fields :is(input,select,textarea){box-sizing:border-box;width:100%;min-width:0;min-height:44px;padding:9px 11px;border:1px solid #cdded2;border-radius:10px;background:#fff;color:#1d3a2a;font-size:14px;font-weight:500}
+#content .sy-installment-fields input[data-installment-money]{text-align:left;font-variant-numeric:tabular-nums;letter-spacing:.02em;background:#fdfefd;font-size:16px}
+#content .sy-installment-fields .sy-installment-student{grid-column:span 1}
+#content .sy-installment-fields .sy-installment-dates{grid-column:span 3}
+#content .sy-installment-fields textarea{min-height:128px;resize:vertical;line-height:1.9;direction:ltr;text-align:left;white-space:pre-wrap}
+#content .sy-installment-fields small{font-size:11px;font-weight:500;color:#678071;line-height:1.8}
+#content .sy-installment-fields :is(input,select,textarea):focus-visible{outline:2px solid #2f8656;outline-offset:2px}
+#content .sy-installment-fields :is(input,select,textarea):invalid{border-color:#bd6868}
+#content .sy-installment-form-footer{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:13px 0;border-top:1px solid #e4eee7}
+#content .sy-installment-form-footer p{font-size:12px;line-height:1.75;color:#617768;margin:0;flex:1}
+#content .sy-installment-form-footer button{min-height:44px;padding:9px 16px}
+#content .sy-installment-result{margin-top:17px;min-width:0}
+#content .sy-installment-preview-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin:12px 0}
+#content .sy-installment-preview-head h3{margin:5px 0 0;font-size:16px;color:#174c32}
+#content .sy-installment-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin:14px 0}
+#content .sy-installment-summary>div{display:flex;flex-direction:column;gap:8px;padding:14px 12px;background:#f1f8f3;border:1px solid #d9e9dd;border-radius:12px}
+#content .sy-installment-summary span{font-size:11px;color:#567260;font-weight:700}
+#content .sy-installment-summary strong{font-size:16px;color:#165939;line-height:1.6;font-variant-numeric:tabular-nums}
+#content .sy-installment-confirm{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap;background:#f9fbf9;border:1px solid #dce8df;border-radius:12px;padding:13px;margin-top:13px}
+#content .sy-installment-confirm p{max-width:640px;font-size:12px;line-height:1.85;color:#4f6e5a;margin:0}
+#content .sy-installment-confirm button{padding:10px 16px;min-height:45px}
+#content .sy-installment-hint{padding:11px;background:#f2f8f3;border:1px dashed #d2e2d6;border-radius:10px;color:#4e6f5a;font-size:12px;line-height:1.9}
+#content .sy-installment-success{padding:18px;border:1px solid #c8e8d2;border-radius:13px;background:#edf8f0}
+#content .sy-installment-success strong{font-size:16px;color:#15613a}
+#content .sy-installment-success p{font-size:12px;line-height:1.8;color:#355d43}
+#content .sy-installment-success a{color:#09643b;font-weight:800}
+@media(max-width:1050px){#content .sy-installment-fields{grid-template-columns:repeat(2,minmax(0,1fr))}#content .sy-installment-fields .sy-installment-dates{grid-column:span 2}#content .sy-installment-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){
+ #content .sy-installment-fields{grid-template-columns:minmax(0,1fr)}
+ #content .sy-installment-fields .sy-installment-dates{grid-column:1}
+ #content .sy-installment-fields :is(input,select,textarea){min-height:46px;font-size:16px}
+ #content .sy-installment-form-footer button,#content .sy-installment-confirm button{width:100%}
+ #content .sy-installment-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #content .sy-installment-summary strong{font-size:13px}
+}
+@media(max-width:365px){#content .sy-installment-summary{grid-template-columns:minmax(0,1fr)}}
