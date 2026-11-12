@@ -680,3 +680,50 @@ body.sy-menu-palette-open{overflow:hidden}
 @media(max-width:650px){.sy-service-card-head{padding:13px}.sy-service-facts{padding:11px;gap:7px}.sy-service-actions{padding:11px}.sy-service-actions button{flex:1 1 calc(33.33% - 7px);white-space:normal}.sy-services-results-head{align-items:flex-start}.sy-services-pager{justify-content:center}}
 @media(max-width:380px){.sy-service-facts{grid-template-columns:1fr}.sy-service-actions button{flex-basis:calc(50% - 7px)}}
 @media print{.sy-services-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sy-service-card{break-inside:avoid}.sy-service-actions,.sy-services-pager,.sy-services-select-all{display:none!important}}
+
+/* Shared UI/UX foundation across operational screens */
+#content{min-width:0;max-width:100%}
+#content :is(.panel,.toolbar,.table-wrap,.form-grid,.report-filters,.filters,.bulk-toolbar,.tabs,.pager){min-width:0;max-width:100%}
+#content :is(.toolbar,.bulk-toolbar,.pager){display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+#content .toolbar{justify-content:space-between}
+#content .toolbar>div:first-child{min-width:0;flex:1 1 230px}
+#content .toolbar h2{font-size:clamp(19px,2vw,25px);line-height:1.6;overflow-wrap:anywhere}
+#content .toolbar p{font-size:13px;line-height:1.9;color:#64796c}
+#content :is(.toolbar-buttons,.ledger-report-actions){display:flex;flex-wrap:wrap;gap:8px}
+#content :is(.filters,.report-filters,.form-grid,.ledger-filter-grid){min-width:0}
+#content :is(.filters,.report-filters) > :is(label,input,select,button,fieldset){min-width:0}
+#content :is(.filters,.report-filters,.form-grid) :is(input,select,textarea){max-width:100%;min-width:0;font-family:Vazirmatn,Tahoma,sans-serif}
+#content :is(.filters,.report-filters,.form-grid) label{min-width:0;overflow-wrap:anywhere}
+#content :is(button,input,select,textarea){font-family:Vazirmatn,Tahoma,sans-serif}
+#content button{line-height:1.55;overflow-wrap:anywhere}
+#content :is(.table-wrap,.ledger-report-table){scrollbar-width:thin}
+#content .table-wrap{overscroll-behavior-x:contain}
+#content .table-wrap table{font-size:13px;line-height:1.7}
+#content .table-wrap :is(th,td){padding-block:11px;vertical-align:middle}
+#content .table-wrap th{font-weight:800}
+#content .row-actions{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+#content .row-actions button{min-height:36px;margin:0;white-space:normal}
+#content .pager{justify-content:center;padding:14px 4px}
+#content .pager button{min-height:40px}
+#content .pager select{min-height:40px}
+#content :is(.modal,.dialog,[role="dialog"]){max-width:calc(100vw - 20px)}
+#content img{max-width:100%;height:auto;object-fit:contain}
+#content :is(.amount,.money,.currency,[data-currency]){font-variant-numeric:tabular-nums;direction:rtl;unicode-bidi:plaintext}
+@media(max-width:760px){
+ #content .toolbar{align-items:stretch}
+ #content .toolbar-buttons{width:100%}
+ #content .toolbar-buttons button{flex:1 1 130px}
+ #content .bulk-toolbar{align-items:stretch}
+ #content .bulk-toolbar button{flex:1 1 140px}
+ #content :is(.filters,.report-filters){grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr))}
+ #content .table-wrap{border-radius:12px}
+ #content .table-wrap table{font-size:12px}
+ #content .table-wrap :is(th,td){padding:9px 10px}
+}
+@media(max-width:460px){
+ #content :is(.filters,.report-filters){grid-template-columns:1fr}
+ #content .toolbar-buttons button{flex:1 1 calc(50% - 8px)}
+ #content .pager{font-size:12px}
+ #content .pager button{flex:1 1 90px}
+ #content .row-actions button{flex:1 1 auto}
+}
