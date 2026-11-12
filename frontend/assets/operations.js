@@ -722,30 +722,62 @@ function serviceFinancePanel(panel,{studentId=null,academicYear=year()}={}){
 }
 
 async function schoolStatementPage(token){
- const template=await api(scoped('/api/v1/operations/school-statement/rules'));if(token!==pageToken)return;
- const month=persianMonthRange(1405,7);
- $('content').innerHTML=`<section class="panel"><div class="toolbar"><div><h2>صورت‌وضعیت واردشده از فایل مهر</h2><p class="muted">سال تحصیلی ۱۴۰۵–۱۴۰۶ · مهر ۱۴۰۵ · مبالغ به ریال</p></div><button id="statementPrint">چاپ گزارش</button></div><p class="muted">مبالغ صورت‌وضعیت از فایل مبنا محاسبه شده‌اند؛ دریافت‌های واقعی فقط از پرداخت‌های ثبت‌شده فاکتور دانش‌آموز در بازه انتخابی نمایش داده می‌شوند.</p><form class="filters" id="schoolStatementFilters"><label>دریافت از تاریخ<input name="from" type="date" value="${month?.from||''}" required></label><label>تا تاریخ<input name="to" type="date" value="${month?.to||''}" required></label><button class="primary">نمایش صورت‌وضعیت</button></form><div id="schoolStatementResult" aria-live="polite"></div></section><section class="panel"><h3>محاسبه آزمایشی صورت‌وضعیت</h3><p class="muted">این ابزار مبلغ را بر اساس نرخ پایه و روزهای ارائه خدمت محاسبه می‌کند و هیچ سند یا بدهی ثبت نمی‌کند.</p><form id="schoolStatementPreview" class="filters"><label>حق‌الزحمه مبنا (ریال)<input name="baseFee" type="number" min="0" step="1" required></label><label>روز خدمت (از ۳۰ روز)<input name="serviceDays" type="number" min="0" max="30" value="30" required></label><label><input name="certificate" type="checkbox" checked> گواهی صلاحیت</label><label><input name="insured" type="checkbox" checked> بیمه ۷٫۸٪</label><button class="primary">محاسبه</button></form><div id="schoolStatementPreviewResult" aria-live="polite"></div></section>`;
- if(can('students')){
-  const live=document.createElement('section');live.className='panel';$('content').prepend(live);
-  serviceFinancePanel(live);
- }
- $('statementPrint').onclick=()=>window.print();
- const source=document.createElement('section');source.className='panel';source.innerHTML='<h3>مبنای محاسبات فایل مدارس ۱۴۰۵</h3><p>نظارت ۳٪ · هماهنگی ۱٪ · شرکت ۷٪ · گواهی '+number(template.rules.qualificationRial)+' ریال · بیمه ۷٫۸٪ جمع سهم‌ها. شهرداری، ارزش افزوده و راهور دوباره به جمع اضافه نمی‌شوند.</p><a class="route-link" href="'+esc(scoped('/api/v1/reports/school-workbook.xlsx?period=Mehr'))+'">دریافت صورت‌وضعیت مهر مطابق فایل مدارس</a><p>این خروجی از مبالغ تاریخی واردشده ساخته می‌شود؛ قالب رسمی پذیرش مشهد تأیید نشده است.</p>';$('schoolStatementFilters').closest('section').before(source);
- $('schoolStatementPreview').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,button=form.querySelector('button');button.disabled=true;try{const d=await write('/api/v1/operations/school-statement/preview',{baseFee:form.elements.baseFee.value,serviceDays:Number(form.elements.serviceDays.value),certificate:form.elements.certificate.checked,insured:form.elements.insured.checked});$('schoolStatementPreviewResult').innerHTML=simpleTable(['عنوان','مبلغ (ریال)'],[['حق‌الزحمه راننده',number(d.driver_fee)],['سهم نظارت ۳٪',number(d.oversight_3pct)],['سهم شرکت ۷٪',number(d.company_7pct)],['آموزش‌وپرورش ۱٪',number(d.education_1pct)],['جمع صورت‌وضعیت',number(d.statement_excluding_certificate_insurance)],['گواهی',number(d.certificate_fee)],['بیمه',number(d.insurance_fee)],['جمع دریافتی اولیا',number(d.parent_total)]]);}catch(err){$('schoolStatementPreviewResult').innerHTML='<p class="error" role="alert">'+esc(err.message)+'</p>';}finally{button.disabled=false;}};
- const load=async()=>{
-  const result=$('schoolStatementResult'),button=$('schoolStatementFilters').querySelector('button');
-  button.disabled=true;result.innerHTML='<p class="loading">در حال محاسبه صورت‌وضعیت…</p>';
-  try{
-   const params=new URLSearchParams(new FormData($('schoolStatementFilters')));params.set('period','Mehr');
-   const d=await api(scoped('/api/v1/operations/imported-school-statement?'+params));if(token!==pageToken)return;
-   const t=d.totals,summary=[['تعداد دانش‌آموز',number(t.student_count)],['حق‌الزحمه رانندگان',number(t.driver_fee)],['نظارت (۳٪)',number(t.oversight_fee)],['سهم شرکت (۷٪)',number(t.company_fee)],['آموزش‌وپرورش (۱٪)',number(t.education_fee)],['جمع صورت‌وضعیت بدون بیمه و گواهی',number(t.statement_total)],['گواهی صلاحیت',number(t.certificate_fee)],['بیمه',number(t.insurance_fee)],['جمع قابل مطالبه از اولیا',number(t.parent_total)],['دریافت ثبت‌شده',number(t.received)],['مانده',number(t.remaining)]];
-   result.innerHTML=`<div class="statement-summary" role="group" aria-label="خلاصه صورت‌وضعیت">${summary.map(([name,value])=>`<span>${esc(name)}: <b>${esc(value)}${name==='تعداد دانش‌آموز'?'':' ریال'}</b></span>`).join('')}</div><p class="muted">کسورات تفکیکی: شهرداری ۲٫۷۵٪ = ${number(t.municipality_fee)}، راهور ۰٫۲۵٪ = ${number(t.road_police_fee)}، ارزش افزوده شهرداری = ${number(t.municipality_vat)} ریال. این مبالغ دوباره به جمع صورت‌وضعیت اضافه نمی‌شوند.</p><p class="${Math.abs(Number(t.formula_difference))>0.02?'error':'ok'}">کنترل محاسبات: اختلاف ${number(t.formula_difference)} ریال · دانش‌آموزان تطبیق‌یافته با پرونده: ${number(t.matched_students)} از ${number(t.student_count)}</p><h3>صورت‌وضعیت به تفکیک راننده</h3>${simpleTable(['راننده','دانش‌آموز','حق‌الزحمه','صورت‌وضعیت','مطالبه اولیا','دریافت','مانده'],d.drivers.map(r=>[r.driver,number(r.students),number(r.driver_fee),number(r.statement_total),number(r.parent_total),number(r.received),number(r.remaining)]))}<h3>جزئیات دانش‌آموزان</h3><label>جستجوی نام یا کد ملی<input id="statementSearch" type="search" placeholder="نام دانش‌آموز، راننده یا کد ملی" autocomplete="off"></label><div id="statementStudentTable" class="table-wrap"></div>`;
-   const renderRows=()=>{const q=$('statementSearch').value.trim(),items=d.items.filter(r=>!q||[r.student_name,r.student_national_code,r.driver_name].some(v=>String(v||'').includes(q))).slice(0,100);$('statementStudentTable').innerHTML=simpleTable(['دانش‌آموز','راننده','مدرسه','حق‌الزحمه','صورت‌وضعیت','مطالبه اولیا','دریافت','مانده'],items.map(r=>[r.student_name,r.driver_name,r.school_name,number(r.driver_fee),number(r.statement_total),number(r.parent_total),number(r.received),number(r.remaining)]))+'<p class="muted">نمایش '+number(items.length)+' ردیف نخست از '+number(d.items.length)+' ردیف؛ برای مشاهده موارد بیشتر جستجو کنید.</p>';};
-   $('statementSearch').oninput=renderRows;renderRows();
-  }catch(e){if(token===pageToken)result.innerHTML='<p class="error" role="alert">'+esc(e.message)+'</p>';}
-  finally{if(button.isConnected)button.disabled=false;}
+ const parts=new Intl.DateTimeFormat('en-US-u-ca-persian',{year:'numeric',month:'numeric',timeZone:'Asia/Tehran'}).formatToParts(new Date());
+ const jy=Number(parts.find(p=>p.type==='year').value),jm=Number(parts.find(p=>p.type==='month').value);
+ const months=['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+ const allowed=can('finance','manage');
+ $('content').innerHTML=`<section class="panel sy-statement-panel">
+ <div class="toolbar"><h2>صورت‌وضعیت‌های ماهانه</h2><label class="sy-inline-checkbox"><input id="statementShowDeleted" type="checkbox"> نمایش حذف‌شده‌ها</label></div>
+ <div id="statementArchive" class="table-wrap" aria-live="polite"></div></section>
+ <section class="panel sy-statement-panel">
+ <h2>تهیه صورت‌وضعیت ماهانه</h2>
+ <form id="statementMonthForm" class="filters">
+ <label>سال شمسی<input name="year" type="number" min="1400" max="1500" value="${jy}" required></label>
+ <label>ماه شمسی<select name="month">${months.map((name,i)=>`<option value="${i+1}" ${jm===i+1?'selected':''}>${name}</option>`).join('')}</select></label>
+ <label>از تاریخ<input name="from" type="date" required readonly></label>
+ <label>تا تاریخ<input name="to" type="date" required readonly></label>
+ <button class="primary" type="submit">پیش‌نمایش صورت‌وضعیت</button>
+ </form>
+ <div id="statementPreviewArea" aria-live="polite"></div>
+ </section><div id="modal"></div>`;
+ const form=$('statementMonthForm');
+ const applyMonth=()=>{const range=persianMonthRange(Number(form.elements.year.value),Number(form.elements.month.value));form.elements.from.value=range?.from||'';form.elements.to.value=range?.to||'';};
+ form.elements.year.addEventListener('change',applyMonth);form.elements.month.addEventListener('change',applyMonth);applyMonth();
+ const archive=$('statementArchive'),preview=$('statementPreviewArea');
+ const details=d=>{
+  const t=d.totals||{},rates=d.rates||{};
+  return `<div class="statement-summary" role="group" aria-label="خلاصه صورت‌وضعیت">
+  ${[['دانش‌آموزان',number(t.students)],['رانندگان',number(t.drivers)],['مدارس',number(t.schools)],['مجموع شهریه (ریال)',number(t.gross)],['مجموع کسورات (ریال)',number(t.deductions)],['خالص رانندگان (ریال)',number(t.net)]].map(([k,v])=>`<span>${esc(k)}: <b>${esc(v)}</b></span>`).join('')}</div>
+  <p class="muted">نرخ‌های محاسبه: نظارت ${percent(rates.supervision)}٪ · هماهنگی ${percent(rates.coordination)}٪ · بالاسری ${percent(rates.overhead)}٪ · بیمه ${percent(rates.insurance)}٪</p>
+  <h3>خلاصه رانندگان</h3>
+  <div class="table-wrap">${simpleTable(['راننده','دانش‌آموز','مبلغ ناخالص','کسورات','خالص قابل پرداخت'],(d.drivers||[]).map(r=>[r.driver_name,number(r.student_count),number(r.gross),number(r.deductions),number(r.net)]))}</div>
+  <h3>جزئیات دانش‌آموزان</h3>
+  <div class="table-wrap sy-statement-students">${simpleTable(['دانش‌آموز','مدرسه','راننده','شهریه ماهانه','کسورات','خالص'],(d.items||[]).map(r=>[r.student_name,r.school_name,r.driver_name,number(r.gross),number(r.deductions),number(r.net)]))}</div>`;
  };
- $('schoolStatementFilters').onsubmit=e=>{e.preventDefault();load();};await load();
+ const showDetail=async id=>{
+  try{const d=await api(scoped('/api/v1/operations/school-statements/'+id));if(token!==pageToken)return;
+   const modal=$('modal');modal.innerHTML=`<div class="modal-backdrop"><section class="modal-card sy-statement-modal" role="dialog" aria-modal="true" aria-label="جزئیات صورت‌وضعیت"><div class="toolbar"><h2>صورت‌وضعیت ${esc(d.month_name)} ${number(d.year)}</h2><button type="button" id="statementClose">بستن</button></div>${details(d)}<div class="member-actions"><a class="button primary" href="${esc(scoped('/api/v1/reports/school-statements/'+id+'.xlsx'))}">خروجی اکسل</a></div></section></div>`;
+   $('statementClose').onclick=()=>modal.innerHTML='';modal.querySelector('.modal-backdrop').addEventListener('click',e=>{if(e.target.classList.contains('modal-backdrop'))modal.innerHTML='';});
+  }catch(e){notify(e.message,true);}
+ };
+ const load=async()=>{
+  archive.innerHTML='<p class="loading">در حال دریافت صورت‌وضعیت‌ها…</p>';
+  try{const list=await api(scoped('/api/v1/operations/school-statements?includeDeleted='+($('statementShowDeleted').checked?'1':'0')));if(token!==pageToken)return;
+   archive.innerHTML=list.length?`<table><thead><tr><th>ردیف</th><th>ماه</th><th>بازه</th><th>دانش‌آموز</th><th>راننده</th><th>مبلغ ناخالص</th><th>کسورات</th><th>خالص راننده</th><th>وضعیت</th><th>عملیات</th></tr></thead><tbody>${list.map((r,i)=>`<tr><td>${number(i+1)}</td><td>${esc(months[Number(r.jalali_month)-1])} ${number(r.jalali_year)}</td><td dir="ltr">${esc(r.period_start)} – ${esc(r.period_end)}</td><td>${number(r.totals?.students)}</td><td>${number(r.totals?.drivers)}</td><td>${number(r.totals?.gross)}</td><td>${number(r.totals?.deductions)}</td><td>${number(r.totals?.net)}</td><td>${r.status==='deleted'?'حذف‌شده':'نهایی'}</td><td><div class="member-actions"><button type="button" data-statement-detail="${r.id}">جزئیات</button><a href="${esc(scoped('/api/v1/reports/school-statements/'+r.id+'.xlsx'))}">خروجی اکسل</a>${allowed?`<button type="button" data-statement-toggle="${r.id}" data-statement-action="${r.status==='deleted'?'restore':'delete'}">${r.status==='deleted'?'بازیابی':'حذف'}</button>`:''}</div></td></tr>`).join('')}</tbody></table>`:'<p class="muted">هنوز صورت‌وضعیت نهایی ثبت نشده است.</p>';
+   archive.querySelectorAll('[data-statement-detail]').forEach(b=>b.onclick=()=>showDetail(Number(b.dataset.statementDetail)));
+   archive.querySelectorAll('[data-statement-toggle]').forEach(b=>b.onclick=async()=>{const restore=b.dataset.statementAction==='restore';if(!confirm(restore?'صورت‌وضعیت بازیابی شود؟':'صورت‌وضعیت به بخش حذف‌شده‌ها منتقل شود؟'))return;b.disabled=true;try{await write('/api/v1/operations/school-statements/'+b.dataset.statementToggle+'/'+b.dataset.statementAction,{},'POST');notify(restore?'بازیابی شد.':'حذف شد.');await load();}catch(e){notify(e.message,true);b.disabled=false;}});
+  }catch(e){archive.innerHTML='<p class="error">'+esc(e.message)+'</p>';}
+ };
+ $('statementShowDeleted').onchange=load;
+ form.onsubmit=async e=>{
+  e.preventDefault();const button=form.querySelector('[type=submit]');button.disabled=true;preview.innerHTML='<p class="loading">در حال تهیه پیش‌نمایش…</p>';
+  const payload={year:Number(form.elements.year.value),month:Number(form.elements.month.value),from:form.elements.from.value,to:form.elements.to.value};
+  try{const d=await write('/api/v1/operations/school-statements/preview',payload,'POST');if(token!==pageToken)return;
+   preview.innerHTML=`<div class="toolbar"><h3>پیش‌نمایش ${esc(d.month_name)} ${number(d.year)}</h3><span class="badge">ثبت‌نشده</span></div>${details(d)}${allowed?'<div class="member-actions"><button type="button" class="primary" id="finalizeStatement">تأیید و ثبت نهایی</button></div>':''}`;
+   $('finalizeStatement')?.addEventListener('click',async()=>{if(!confirm('صورت‌وضعیت این ماه با مبالغ نمایش‌داده‌شده نهایی و ثبت شود؟'))return;const b=$('finalizeStatement');b.disabled=true;try{const result=await write('/api/v1/operations/school-statements',payload,'POST');preview.innerHTML='<p class="ok">صورت‌وضعیت ماهانه ثبت شد.</p>';notify('صورت‌وضعیت نهایی ثبت شد.');await load();showDetail(result.id);}catch(err){notify(err.message,true);b.disabled=false;}});
+  }catch(err){preview.innerHTML='<p class="error">'+esc(err.message)+'</p>';}finally{button.disabled=false;}
+ };
+ await load();
 }
 async function operationPage(key,token){
  const dates=['payroll','finance-report'].includes(key),group=key==='grouping';
