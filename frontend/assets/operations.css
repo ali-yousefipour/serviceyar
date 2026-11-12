@@ -1730,3 +1730,50 @@ body.sy-menu-palette-open{overflow:hidden}
  #modal .sy-cheque-editor .form-grid :is(input,select,textarea),#modal .sy-cheque-action-form :is(input,select,textarea){min-height:46px;font-size:16px}
  #modal .sy-cheque-editor-actions button,#modal .sy-cheque-action-footer button{flex:1 1 auto}
 }
+
+
+/* Account statement: printable-style financial hierarchy and adaptive transaction rows */
+#content .sy-account-statement{min-width:0;padding:clamp(13px,2vw,22px);border:1px solid #dce9e0;border-radius:16px}
+#content .sy-account-statement-heading{padding:14px 0 16px;border-bottom:1px solid #e5eee7;margin-bottom:15px}
+#content .sy-account-statement-heading h2{font-size:19px;color:#195839;margin:3px 0 6px}
+#content .sy-account-statement-heading p{font-size:12px;line-height:1.85;color:#627a69;margin:0;max-width:750px}
+#content .sy-account-statement-filters{display:grid;grid-template-columns:minmax(155px,1.3fr) minmax(185px,1.6fr) repeat(2,minmax(145px,1fr)) auto auto;align-items:end;gap:10px;padding:13px;border:1px solid #e0ece3;border-radius:11px;background:#f6fbf7}
+#content .sy-account-statement-filters label{display:flex;flex-direction:column;gap:5px;min-width:0;color:#3a6048;font-size:12px;font-weight:750}
+#content .sy-account-statement-filters :is(input,select){box-sizing:border-box;width:100%;min-width:0;min-height:43px;padding:9px 11px;background:#fff;color:#284b36;border:1px solid #d0e1d6;border-radius:9px;font-size:13px}
+#content .sy-account-statement-filters button{min-height:43px;white-space:nowrap;padding:9px 14px}
+#content .sy-account-statement-filters #statementClear{border:1px solid #ceded2;color:#315f44;background:#fff}
+#content .sy-account-result-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:20px 0 12px}
+#content .sy-account-result-heading h3{font-size:16px;color:#205a3d;margin:0}
+#content .sy-account-result-heading p{font-size:11px;color:#5d7766;margin:0}
+#content .sy-account-totals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+#content .sy-account-totals>div{display:flex;flex-direction:column;gap:8px;padding:13px;background:#f2f9f4;border:1px solid #d9e9de;border-radius:12px}
+#content .sy-account-totals span{color:#637968;font-size:11px;font-weight:700}
+#content .sy-account-totals strong{font-size:16px;font-variant-numeric:tabular-nums;color:#155739;overflow-wrap:anywhere;line-height:1.6}
+#content .sy-account-totals .sy-account-closing{background:#e1f3e7;border-color:#c4e3cd}
+#content .sy-account-totals .sy-account-closing strong{color:#0d623a;font-size:18px}
+#content .sy-account-statement-table-wrap{max-height:510px;overflow:auto;overscroll-behavior:contain;border:1px solid #dde9e2;border-radius:11px;margin:12px 0}
+#content .sy-account-statement-table{min-width:1000px;width:100%;border-collapse:separate;border-spacing:0}
+#content .sy-account-statement-table th{position:sticky;top:0;z-index:1;background:#eaf4ed;color:#275a3d;padding:11px 9px;font-size:11px;text-align:right;white-space:nowrap}
+#content .sy-account-statement-table tbody td{padding:10px 9px;font-size:12px;line-height:1.75;border-bottom:1px solid #edf2ee;color:#2b4635}
+#content .sy-account-statement-table tbody tr:nth-child(even){background:#fbfdfb}
+#content .sy-account-statement-table tbody tr:hover{background:#f2faf4}
+#content .sy-account-statement-table .sy-financial-number{white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:750}
+#content .sy-account-statement-table button[data-statement-doc]{color:#17613c;background:#f0f9f3;border:1px solid #cee3d3;border-radius:8px;min-height:32px;padding:5px 9px}
+#content .sy-account-empty{padding:28px;text-align:center;color:#61816a;font-size:12px;background:#f7faf7;border-radius:10px;margin:12px 0}
+@media(max-width:1100px){#content .sy-account-statement-filters{grid-template-columns:repeat(2,minmax(0,1fr))}#content .sy-account-totals{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){
+ #content .sy-account-statement-filters{grid-template-columns:minmax(0,1fr);padding:10px}
+ #content .sy-account-statement-filters :is(input,select){font-size:16px;min-height:46px}
+ #content .sy-account-statement-filters button{min-height:44px}
+ #content .sy-account-totals{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #content .sy-account-totals strong{font-size:13px}
+ #content .sy-account-statement-table-wrap{border:0;max-height:none;overflow:visible}
+ #content .sy-account-statement-table{display:block;min-width:0}
+ #content .sy-account-statement-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+ #content .sy-account-statement-table tbody{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+ #content .sy-account-statement-table tbody tr{display:flex;flex-direction:column;padding:11px 13px;background:#fff;border:1px solid #dce9df;border-radius:12px}
+ #content .sy-account-statement-table tbody td{display:flex;align-items:baseline;justify-content:space-between;gap:10px;border-bottom:1px dashed #e8efe9;padding:6px 0;min-width:0;text-align:end}
+ #content .sy-account-statement-table tbody td::before{content:attr(data-label);flex:0 0 34%;font-weight:750;font-size:11px;color:#627c69;text-align:start}
+ #content .sy-account-statement-table tbody td:last-child{border:0}
+}
+@media(max-width:390px){#content .sy-account-totals{grid-template-columns:1fr}}
