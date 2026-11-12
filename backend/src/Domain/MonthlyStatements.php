@@ -123,10 +123,18 @@ final class MonthlyStatements
             'statement_excluding_certificate_insurance'];
         $referenceTotals=array_fill_keys($referenceKeys,0.0);
         $referenceDrivers=[];
-        $validationErrors=[];$reconciliationWarnings=[];
+        $validationErrors=[];$reconciliationWarnings=[];$missingDriver=[];
         foreach($q->fetchAll() as $row){
             if(isset($seenStudents[$row['student_id']]))throw new AuthException(409,'یک دانش‌آموز به چند سرویس فعال تخصیص داده شده است؛ پیش از ثبت صورت‌وضعیت اصلاح کنید.','DUPLICATE_STUDENT_ASSIGNMENT');
             $seenStudents[$row['student_id']]=true;
+            if(empty($row['driver_id'])){
+                $missingDriver[]=[
+                    'student_id'=>(int)$row['student_id'],
+                    'student_name'=>$row['student_name'],
+                    'service_id'=>(int)$row['service_id'],
+                    'message'=>'راننده برای سرویس تعیین نشده است.'
+                ];
+            }
             $gross=max(0,(float)$row['monthly_fee']);
             $calc=DriverDeductionPolicy::calculate($gross,$rates);
             // SchoolServiceStatement follows the original 1405 reference file:
@@ -216,6 +224,7 @@ final class MonthlyStatements
           'items'=>$items,'reference_totals'=>$referenceTotals,
           'reference_drivers'=>array_values($referenceDrivers),
           'validation_errors'=>$validationErrors,
+          'missing_driver_errors'=>$missingDriver,
           'reconciliation_warnings'=>$reconciliationWarnings,
           'reference_basis'=>['service_days'=>30,'certificate_on_positive_fee'=>true,
               'insured'=>true,'currency'=>'IRR','tariff_source'=>'students.monthly_fee',
@@ -250,6 +259,12 @@ final class MonthlyStatements
         if(!$data['items'])throw new AuthException(422,'برای این ماه هیچ تخصیص فعال و قابل محاسبه‌ای وجود ندارد.','STATEMENT_EMPTY');
         if(!empty($data['validation_errors'])){
             throw new AuthException(422,'تعدادی از دانش‌آموزان کلاس خودرو، مسافت یا ناحیه معتبر ندارند. پیش از ثبت نهایی، اطلاعات نرخ‌نامه را اصلاح کنید.','STATEMENT_TARIFF_UNVERIFIED');
+        }
+        if(!empty($data['missing_driver_errors'])){
+            throw new AuthException(422,'برای تعدادی از سرویس‌ها راننده تعیین نشده است. پیش از ثبت نهایی راننده‌ها را مشخص کنید.','STATEMENT_DRIVER_UNASSIGNED');
+        }
+        if(!empty($data['reconciliation_warnings'])){
+            throw new AuthException(422,'مبلغ ثبت‌شده بعضی دانش‌آموزان با نرخ‌نامه مرجع مغایرت دارد. پیش از ثبت نهایی، مبالغ را اصلاح و دوباره بررسی کنید.','STATEMENT_FEE_MISMATCH');
         }
         $pdo=Connection::get();$pdo->beginTransaction();
         try{
