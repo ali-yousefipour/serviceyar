@@ -141,6 +141,25 @@ final class ReferenceMonthlyStatementWorkbook
             }
             self::put($doc,$row,$col,$num,$value,$style);
         }
+        // OOXML requires cells to remain ordered by column. Replaced cells
+        // are appended by put(), so normalize each modified row explicitly.
+        foreach($rows as $row){
+            $cells=[];
+            foreach(iterator_to_array($row->childNodes) as $cell){
+                if($cell instanceof \\DOMElement && $cell->localName==='c'){
+                    $cells[]=$cell;$row->removeChild($cell);
+                }
+            }
+            usort($cells,static function(\\DOMElement $a,\\DOMElement $b): int{
+                $key=static function(string $ref): int{
+                    preg_match('/^[A-Z]+/',$ref,$m);$n=0;
+                    foreach(str_split($m[0]??'') as $letter)$n=$n*26+ord($letter)-64;
+                    return $n;
+                };
+                return $key($a->getAttribute('r'))<=>$key($b->getAttribute('r'));
+            });
+            foreach($cells as $cell)$row->appendChild($cell);
+        }
         $zip->addFromString('xl/worksheets/sheet'.$sheet.'.xml',$doc->saveXML());
     }
 
