@@ -49,6 +49,7 @@ jobs:
           node tests/wizard-lookup.cjs
           node tests/finance-form-inputs.cjs
           node tests/new-service-wizard.cjs
+          node tests/journal-balance.cjs
           python3 -m py_compile tools/deploy_serviceyar.py
           node tests/solar-date.cjs
           test -s frontend/assets/app.css
