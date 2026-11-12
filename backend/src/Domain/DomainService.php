@@ -360,9 +360,11 @@ final class DomainService {
    foreach(['agreed_amount','monthly_fee'] as $moneyField){
     if(!array_key_exists($moneyField,$data)||$data[$moneyField]===null)continue;
     $value=(string)$data[$moneyField];
-    if(!preg_match('/^[0-9]{1,15}$/D',$value))
+    // Decimal SQL columns return strings such as "1250000.00" on edit.
+    // Accept only zero fractional parts; never silently round actual fractions.
+    if(!preg_match('/^[0-9]{1,15}(?:\\.0{1,2})?$/D',$value))
      throw new AuthException(422,'مبلغ سرویس باید به ریال صحیح و بدون اعشار وارد شود.','INVALID_SERVICE_AMOUNT');
-    $data[$moneyField]=$value;
+    $data[$moneyField]=str_contains($value,'.')?substr($value,0,strpos($value,'.')):$value;
    }
   }
   if($resource==='students'&&array_key_exists('tariff_distance_km',$data)&&$data['tariff_distance_km']!==null){
