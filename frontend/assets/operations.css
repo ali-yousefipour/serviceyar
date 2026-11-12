@@ -613,3 +613,27 @@ body.sy-menu-palette-open{overflow:hidden}
 @media(max-width:850px){.ledger-report-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.ledger-report-letterhead{padding:17px}}
 @media(max-width:500px){.ledger-report-kpis{grid-template-columns:1fr 1fr;padding:10px;gap:8px}.ledger-report-kpis strong{font-size:14px}.ledger-report-letterhead>span{display:none}.ledger-report-tabs button{flex:1}}
 @media print{@page{size:A4 landscape;margin:12mm}body:has(.ledger-print-sheet) :is(.sidebar,.header,.toolbar,.ledger-report-tabs,.ledger-filters,.ledger-report-actions,.ledger-report-panel>.toolbar){display:none!important}body:has(.ledger-print-sheet) :is(.main,#content,.panel,.ledger-report-panel){display:block!important;margin:0!important;padding:0!important;width:100%!important;max-width:none!important;border:0!important;box-shadow:none!important}body:has(.ledger-print-sheet) .ledger-print-sheet{border:0!important;border-radius:0!important;overflow:visible!important}body:has(.ledger-print-sheet) .ledger-report-letterhead{background:#17465b!important;color:#fff!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}body:has(.ledger-print-sheet) .ledger-report-table thead{display:table-header-group}body:has(.ledger-print-sheet) .ledger-report-table tr{break-inside:avoid}body:has(.ledger-print-sheet) .ledger-print-sheet .table-wrap{overflow:visible!important;max-height:none!important}body:has(.ledger-print-sheet) .ledger-report-kpis{grid-template-columns:repeat(4,1fr)}}
+
+/* Financial receipt/payment detail: responsive Persian RTL modal */
+.modal:has(.ledger-detail){width:min(780px,100%);max-width:780px}
+.ledger-detail{direction:rtl;color:#213b30}
+.ledger-detail-hero{position:relative;overflow:hidden;border:1px solid #cfe6d7;border-radius:18px;padding:22px 24px;background:linear-gradient(125deg,#e6f5e9,#f6fbf7)}
+.ledger-detail-hero.is-payment{border-color:#d9e2f2;background:linear-gradient(125deg,#eef3fc,#f9fbff)}
+.ledger-detail-kind{display:inline-flex;align-items:center;gap:6px;font-weight:800;color:#075b36;font-size:14px}.is-payment .ledger-detail-kind{color:#304c8b}
+.ledger-detail-state{float:left;font-size:12px;padding:5px 12px;background:#fff;border:1px solid #dbe7dd;border-radius:30px;font-weight:650}
+.ledger-detail-amount{display:flex;align-items:baseline;gap:10px;margin:19px 0 4px;flex-wrap:wrap}
+.ledger-detail-amount strong{font-size:clamp(28px,5vw,40px);font-weight:900;line-height:1.35;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.ledger-detail-amount span{font-size:14px;font-weight:700}
+.ledger-detail-hero p{margin:0;color:#5d7066;font-size:12px}
+.ledger-detail-section{padding:20px 0;border-bottom:1px solid #e4ece7}
+.ledger-detail-section h4{margin:0 0 14px;font-size:15px;color:#0c5737}
+.ledger-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin:0}
+.ledger-detail-item{padding:13px 15px;background:#f8faf9;border:1px solid #e5ece8;border-radius:12px;min-width:0}
+.ledger-detail-item dt{font-size:12px;color:#61756b;margin:0 0 8px}
+.ledger-detail-item dd{margin:0;font-size:15px;font-weight:700;overflow-wrap:anywhere;line-height:1.8}
+.ledger-detail-note{margin-top:12px;padding:13px 15px;background:#f8faf9;border-radius:12px}
+.ledger-detail-note b{font-size:12px;color:#61756b}.ledger-detail-note p{margin:7px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.9}
+.ledger-detail-actions{display:flex;justify-content:flex-end;padding-top:17px}
+.ledger-detail-actions button{min-height:42px;min-width:110px}
+@media(max-width:570px){.modal:has(.ledger-detail) .modal-body{padding:14px}.ledger-detail-hero{padding:18px}.ledger-detail-grid{grid-template-columns:1fr}.ledger-detail-section{padding:16px 0}.ledger-detail-amount strong{font-size:29px}}
+@media print{.ledger-detail-actions{display:none}.ledger-detail-hero{background:#fff!important}}
