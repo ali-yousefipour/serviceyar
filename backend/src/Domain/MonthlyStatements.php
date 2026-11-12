@@ -88,6 +88,19 @@ final class MonthlyStatements
         throw new \LogicException('Invalid Jalali conversion');
     }
 
+    /** Stable digest of the exact financial inputs approved in preview. */
+    private static function approvalDigest(array $data): string
+    {
+        $business=[
+            'year'=>$data['year'],'month'=>$data['month'],
+            'from'=>$data['from'],'to'=>$data['to'],
+            'items'=>$data['items'],'reference_totals'=>$data['reference_totals'],
+            'reference_drivers'=>$data['reference_drivers'],
+            'rates'=>$data['rates']
+        ];
+        return hash('sha256',json_encode($business,JSON_UNESCAPED_UNICODE|JSON_PRESERVE_ZERO_FRACTION|JSON_THROW_ON_ERROR));
+    }
+
     public static function preview(int $uid,int $aid,array $input): array
     {
         self::authorize($uid,$aid);
@@ -219,7 +232,7 @@ final class MonthlyStatements
             $schools[(string)$row['school_name']]=true;
         }
         $totals['students']=count($items);$totals['drivers']=count($drivers);$totals['schools']=count($schools);
-        return ['year'=>$year,'month'=>$month,'month_name'=>self::MONTHS[$month],'from'=>$from,'to'=>$to,
+        $data=['year'=>$year,'month'=>$month,'month_name'=>self::MONTHS[$month],'from'=>$from,'to'=>$to,
           'academic_year'=>$academic,'rates'=>$rates,'totals'=>$totals,'drivers'=>array_values($drivers),
           'items'=>$items,'reference_totals'=>$referenceTotals,
           'reference_drivers'=>array_values($referenceDrivers),
@@ -230,6 +243,8 @@ final class MonthlyStatements
               'insured'=>true,'currency'=>'IRR','tariff_source'=>'students.monthly_fee',
               'review_required'=>true,'tariff_verified'=>!$validationErrors],
           'status'=>'preview','source'=>'current_active_service_assignments'];
+        $data['approval_digest']=self::approvalDigest($data);
+        return $data;
     }
 
     public static function list(int $uid,int $aid,bool $includeDeleted=false): array
@@ -256,6 +271,13 @@ final class MonthlyStatements
     {
         self::authorize($uid,$aid,true);
         $data=self::preview($uid,$aid,$input);
+        $acceptedDigest=$input['approvalDigest']??null;
+        if(!is_string($acceptedDigest)||!preg_match('/^[a-f0-9]{64}$/D',$acceptedDigest)){
+            throw new AuthException(422,'برای ثبت صورت‌وضعیت ابتدا پیش‌نمایش جدید تهیه و تأیید کنید.','STATEMENT_PREVIEW_REQUIRED');
+        }
+        if(!hash_equals($data['approval_digest'],$acceptedDigest)){
+            throw new AuthException(409,'اطلاعات مالی پس از پیش‌نمایش تغییر کرده است؛ پیش‌نمایش را دوباره تهیه و بررسی کنید.','STATEMENT_PREVIEW_CHANGED');
+        }
         if(!$data['items'])throw new AuthException(422,'برای این ماه هیچ تخصیص فعال و قابل محاسبه‌ای وجود ندارد.','STATEMENT_EMPTY');
         if(!empty($data['validation_errors'])){
             throw new AuthException(422,'تعدادی از دانش‌آموزان کلاس خودرو، مسافت یا ناحیه معتبر ندارند. پیش از ثبت نهایی، اطلاعات نرخ‌نامه را اصلاح کنید.','STATEMENT_TARIFF_UNVERIFIED');
