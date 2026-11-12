@@ -19,7 +19,7 @@ final class DriverDeductionPolicy
     public static function validate(mixed $value): string
     {
         if (is_string($value)) $value=json_decode($value,true);
-        if (!is_array($value)||array_keys($value)!==array_keys(self::DEFAULTS)) {
+        if (!is_array($value)||count($value)!==count(self::DEFAULTS)||array_diff(array_keys(self::DEFAULTS),array_keys($value))) {
             throw new AuthException(422,'چهار درصد کسورات باید به‌صورت کامل مشخص شوند.','INVALID_DEDUCTION_RATES');
         }
         $out=[];
