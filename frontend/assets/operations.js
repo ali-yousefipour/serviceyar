@@ -546,15 +546,16 @@ async function serviceMembers(id,back){
  try{
   const [service,rows]=await Promise.all([api(scoped('/api/v1/services/'+id)),api(scoped('/api/v1/services/'+id+'/students'))]);
   if(token!==pageToken||(previousDialog&&!previousDialog.isConnected))return;
-  const canAssign=can('services','manage')&&can('students')&&Number(service.is_active)===1&&service.status!=='cancelled';
+  const canManageMembers=can('services','manage')&&can('students');
+  const canAssign=canManageMembers&&Number(service.is_active)===1&&service.status!=='cancelled';
   const free=Math.max(0,Number(service.capacity)-rows.length);
   const monthlyTotal=rows.reduce((total,row)=>total+Number(row.monthly_fee||0),0);
   dialog('دانش‌آموزان سرویس '+service.title,`<p>ظرفیت ${number(service.capacity)} · تخصیص ${number(rows.length)} · جای خالی ${number(free)}</p>
    <p>جمع ماهانه دانش‌آموزان: ${number(monthlyTotal)} ریال</p>
    ${back?'<button type="button" id="backToDriverServices">بازگشت به سرویس‌های راننده</button>':''}
    ${simpleTable(['نام','مسافت تعرفه','ماهیانه · ریال','ترتیب توقف','نشانی'],rows.map(r=>[person(r),r.tariff_distance_km??'—',number(r.monthly_fee),r.pickup_order,r.pickup_address]))}
-   ${canAssign?`<div class="member-actions">${rows.map(r=>`<button type="button" data-remove-member="${r.id}">حذف تخصیص ${esc(person(r))}</button>`).join('')}</div>
-   ${free?`
+   ${canManageMembers?`<div class="member-actions sy-member-actions" aria-label="مدیریت دانش‌آموزان سرویس">${rows.map(r=>`<div class="sy-member-action-row"><span>${esc(person(r))}</span>${can('students','manage')?`<button type="button" data-edit-member="${r.id}">ویرایش دانش‌آموز</button>`:''}<button type="button" class="danger" data-remove-member="${r.id}">حذف از سرویس</button></div>`).join('')}</div>`:''}
+   ${canAssign?`${free?`
    <form id="assignForm">
     <label>جست‌وجوی دانش‌آموز<input type="search" id="memberSearch" placeholder="نام یا کد ملی" maxlength="200"></label>
     <label>دانش‌آموز<select name="studentId" required></select></label>
@@ -566,7 +567,9 @@ async function serviceMembers(id,back){
     <button class="primary" disabled>افزودن به سرویس</button>
    </form>`:'<p>ظرفیت این سرویس تکمیل است.</p>'}`:''}`);
   if(back)$('backToDriverServices').onclick=back;
+  $('modal').querySelectorAll('[data-edit-member]').forEach(button=>button.onclick=()=>formResource('students',Number(button.dataset.editMember),()=>serviceMembers(id,back)));
   $('modal').querySelectorAll('[data-remove-member]').forEach(button=>button.onclick=async()=>{
+   if(!confirm('این دانش‌آموز از سرویس حذف شود؟ پرونده دانش‌آموز حذف نخواهد شد.'))return;
    button.disabled=true;
    try{
     await api(scoped('/api/v1/services/'+id+'/students?studentId='+button.dataset.removeMember),{method:'DELETE',headers:{'X-CSRF-Token':session.csrfToken}});
