@@ -224,6 +224,11 @@ try{
  $journal['description']='شرح اصلاح‌شده';J::save($uid,$a,$journal,(int)$doc['id']);check(J::get($uid,$a,(int)$doc['id'])['description']===$journal['description'],'Draft journal can be edited');
  $bad=$journal;$bad['lines'][1]['credit']='0.11';rejected(fn()=>J::save($uid,$a,$bad,(int)$doc['id']),'UNBALANCED_JOURNAL');check(count(J::get($uid,$a,(int)$doc['id'])['lines'])===3,'Failed draft edit preserves all original lines');
  check(J::approve($uid,$a,(int)$doc['id'])['status']==='approved','Balanced journal can be approved');
+ $journalMatch=D::list($uid,$a,'accounting-documents',['search'=>'J-'.$tag,'status'=>'approved','sortBy'=>'document_date','sortDir'=>'desc']);
+ check(in_array((int)$doc['id'],array_map('intval',array_column($journalMatch['items'],'id')),true),'Journal global search finds approved documents');
+ $journalMissing=D::list($uid,$a,'accounting-documents',['search'=>'J-'.$tag,'status'=>'draft']);
+ check(!in_array((int)$doc['id'],array_map('intval',array_column($journalMissing['items'],'id')),true),'Journal draft filter excludes approved documents');
+
  rejected(fn()=>J::save($uid,$a,$journal,(int)$doc['id']),'JOURNAL_LOCKED');
  rejected(fn()=>D::save($uid,$a,'accounting-documents',['totalAmount'=>999,'status'=>'draft'],(int)$doc['id']),'JOURNAL_LOCKED');
  rejected(fn()=>J::approve($uid,$a,(int)$doc['id']),'JOURNAL_LOCKED');
