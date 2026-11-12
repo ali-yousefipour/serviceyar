@@ -745,14 +745,26 @@ async function schoolStatementPage(token){
  form.elements.year.addEventListener('change',applyMonth);form.elements.month.addEventListener('change',applyMonth);applyMonth();
  const archive=$('statementArchive'),preview=$('statementPreviewArea');
  const details=d=>{
-  const t=d.totals||{},rates=d.rates||{};
+  const t=d.totals||{},r=d.reference_totals||{},refDrivers=d.reference_drivers||[],errors=d.validation_errors||[],warnings=d.reconciliation_warnings||[];
+  const hasReference=Object.keys(r).length>0;
+  const fmt=v=>number(Number(v||0));
   return `<div class="statement-summary" role="group" aria-label="خلاصه صورت‌وضعیت">
-  ${[['دانش‌آموزان',number(t.students)],['رانندگان',number(t.drivers)],['مدارس',number(t.schools)],['مجموع شهریه (ریال)',number(t.gross)],['مجموع کسورات (ریال)',number(t.deductions)],['خالص رانندگان (ریال)',number(t.net)]].map(([k,v])=>`<span>${esc(k)}: <b>${esc(v)}</b></span>`).join('')}</div>
-  <p class="muted">نرخ‌های محاسبه: نظارت ${percent(rates.supervision)}٪ · هماهنگی ${percent(rates.coordination)}٪ · بالاسری ${percent(rates.overhead)}٪ · بیمه ${percent(rates.insurance)}٪</p>
-  <h3>خلاصه رانندگان</h3>
-  <div class="table-wrap">${simpleTable(['راننده','دانش‌آموز','مبلغ ناخالص','کسورات','خالص قابل پرداخت'],(d.drivers||[]).map(r=>[r.driver_name,number(r.student_count),number(r.gross),number(r.deductions),number(r.net)]))}</div>
-  <h3>جزئیات دانش‌آموزان</h3>
-  <div class="table-wrap sy-statement-students">${simpleTable(['دانش‌آموز','مدرسه','راننده','شهریه ماهانه','کسورات','خالص'],(d.items||[]).map(r=>[r.student_name,r.school_name,r.driver_name,number(r.gross),number(r.deductions),number(r.net)]))}</div>`;
+  ${[['دانش‌آموزان',fmt(t.students)],['رانندگان',fmt(t.drivers)],['مدارس',fmt(t.schools)],
+    ['حق‌الزحمه رانندگان (ریال)',fmt(hasReference?r.driver_fee:t.gross)],
+    ['نظارت ۳٪ (ریال)',fmt(r.oversight_3pct)],
+    ['هماهنگی ۱٪ (ریال)',fmt(r.education_1pct)],
+    ['سهم شرکت ۷٪ (ریال)',fmt(r.company_7pct)],
+    ['گواهی صلاحیت (ریال)',fmt(r.certificate_fee)],
+    ['بیمه (ریال)',fmt(r.insurance_fee)],
+    ['بهای خدمات اولیا (ریال)',fmt(r.parent_total)],
+    ['صورت‌وضعیت بدون بیمه و گواهی (ریال)',fmt(r.statement_excluding_certificate_insurance)]
+  ].map(([k,v])=>`<span>${esc(k)}: <b>${esc(v)}</b></span>`).join('')}</div>
+  ${errors.length?`<div class="error" role="alert"><strong>ثبت نهایی مسدود است:</strong> نرخ‌نامه ${number(errors.length)} دانش‌آموز معتبر نیست.<div class="table-wrap">${simpleTable(['دانش‌آموز','کلاس خودرو','مسافت','ناحیه','اشکال'],errors.map(x=>[x.student_name,x.vehicle_class||'ثبت نشده',x.distance_km,x.region,x.message]))}</div></div>`:''}
+  ${warnings.length?`<div class="muted" role="status">مبلغ ماهانه ثبت‌شده برای ${number(warnings.length)} دانش‌آموز با نرخ‌نامه مرجع تفاوت دارد؛ پیش از تأیید بررسی شود.<div class="table-wrap">${simpleTable(['دانش‌آموز','مبلغ ثبت‌شده','بهای محاسبه‌شده اولیا'],warnings.map(x=>[x.student_name,fmt(x.recorded_monthly_fee),fmt(x.reference_parent_fee)]))}</div></div>`:''}
+  <h3>صورت‌وضعیت رانندگان</h3>
+  <div class="table-wrap">${simpleTable(['راننده','دانش‌آموز','حق‌الزحمه راننده','نظارت ۳٪','هماهنگی ۱٪','سهم شرکت ۷٪','جمع صورت‌وضعیت'],(refDrivers.length?refDrivers:d.drivers||[]).map(x=>[x.driver_name,fmt(x.student_count),fmt(x.driver_fee??x.gross),fmt(x.oversight_3pct),fmt(x.education_1pct),fmt(x.company_7pct),fmt(x.statement_excluding_certificate_insurance??x.net)]))}</div>
+  <h3>بهای خدمات دانش‌آموزان</h3>
+  <div class="table-wrap sy-statement-students">${simpleTable(['دانش‌آموز','مدرسه','راننده','حق‌الزحمه مبنا','بیمه','بهای خدمات اولیا','مبنای تعرفه'],(d.items||[]).map(x=>[x.student_name,x.school_name,x.driver_name,fmt(x.reference?.driver_fee??x.gross),fmt(x.reference?.insurance_fee),fmt(x.reference?.parent_total),x.reference_tariff_verified===false?'نیازمند اصلاح':'نرخ‌نامه مرجع']))}</div>`;
  };
  const showDetail=async id=>{
   try{const d=await api(scoped('/api/v1/operations/school-statements/'+id));if(token!==pageToken)return;
@@ -763,7 +775,7 @@ async function schoolStatementPage(token){
  const load=async()=>{
   archive.innerHTML='<p class="loading">در حال دریافت صورت‌وضعیت‌ها…</p>';
   try{const list=await api(scoped('/api/v1/operations/school-statements?includeDeleted='+($('statementShowDeleted').checked?'1':'0')));if(token!==pageToken)return;
-   archive.innerHTML=list.length?`<table><thead><tr><th>ردیف</th><th>ماه</th><th>بازه</th><th>دانش‌آموز</th><th>راننده</th><th>مبلغ ناخالص</th><th>کسورات</th><th>خالص راننده</th><th>وضعیت</th><th>عملیات</th></tr></thead><tbody>${list.map((r,i)=>`<tr><td>${number(i+1)}</td><td>${esc(months[Number(r.jalali_month)-1])} ${number(r.jalali_year)}</td><td dir="ltr">${esc(r.period_start)} – ${esc(r.period_end)}</td><td>${number(r.totals?.students)}</td><td>${number(r.totals?.drivers)}</td><td>${number(r.totals?.gross)}</td><td>${number(r.totals?.deductions)}</td><td>${number(r.totals?.net)}</td><td>${r.status==='deleted'?'حذف‌شده':'نهایی'}</td><td><div class="member-actions"><button type="button" data-statement-detail="${r.id}">جزئیات</button><a href="${esc(scoped('/api/v1/reports/school-statements/'+r.id+'.xlsx'))}">خروجی اکسل</a>${allowed?`<button type="button" data-statement-toggle="${r.id}" data-statement-action="${r.status==='deleted'?'restore':'delete'}">${r.status==='deleted'?'بازیابی':'حذف'}</button>`:''}</div></td></tr>`).join('')}</tbody></table>`:'<p class="muted">هنوز صورت‌وضعیت نهایی ثبت نشده است.</p>';
+   archive.innerHTML=list.length?`<table><thead><tr><th>ردیف</th><th>ماه</th><th>بازه</th><th>دانش‌آموز</th><th>راننده</th><th>حق‌الزحمه رانندگان</th><th>بهای خدمات اولیا</th><th>جمع صورت‌وضعیت</th><th>وضعیت</th><th>عملیات</th></tr></thead><tbody>${list.map((r,i)=>`<tr><td>${number(i+1)}</td><td>${esc(months[Number(r.jalali_month)-1])} ${number(r.jalali_year)}</td><td dir="ltr">${esc(r.period_start)} – ${esc(r.period_end)}</td><td>${number(r.totals?.students)}</td><td>${number(r.totals?.drivers)}</td><td>${number(r.reference_totals?.driver_fee??r.totals?.gross)}</td><td>${number(r.reference_totals?.parent_total??0)}</td><td>${number(r.reference_totals?.statement_excluding_certificate_insurance??r.totals?.net)}</td><td>${r.status==='deleted'?'حذف‌شده':'نهایی'}</td><td><div class="member-actions"><button type="button" data-statement-detail="${r.id}">جزئیات</button><a href="${esc(scoped('/api/v1/reports/school-statements/'+r.id+'.xlsx'))}">خروجی اکسل</a>${allowed?`<button type="button" data-statement-toggle="${r.id}" data-statement-action="${r.status==='deleted'?'restore':'delete'}">${r.status==='deleted'?'بازیابی':'حذف'}</button>`:''}</div></td></tr>`).join('')}</tbody></table>`:'<p class="muted">هنوز صورت‌وضعیت نهایی ثبت نشده است.</p>';
    archive.querySelectorAll('[data-statement-detail]').forEach(b=>b.onclick=()=>showDetail(Number(b.dataset.statementDetail)));
    archive.querySelectorAll('[data-statement-toggle]').forEach(b=>b.onclick=async()=>{const restore=b.dataset.statementAction==='restore';if(!confirm(restore?'صورت‌وضعیت بازیابی شود؟':'صورت‌وضعیت به بخش حذف‌شده‌ها منتقل شود؟'))return;b.disabled=true;try{await write('/api/v1/operations/school-statements/'+b.dataset.statementToggle+'/'+b.dataset.statementAction,{},'POST');notify(restore?'بازیابی شد.':'حذف شد.');await load();}catch(e){notify(e.message,true);b.disabled=false;}});
   }catch(e){archive.innerHTML='<p class="error">'+esc(e.message)+'</p>';}
@@ -773,7 +785,7 @@ async function schoolStatementPage(token){
   e.preventDefault();const button=form.querySelector('[type=submit]');button.disabled=true;preview.innerHTML='<p class="loading">در حال تهیه پیش‌نمایش…</p>';
   const payload={year:Number(form.elements.year.value),month:Number(form.elements.month.value),from:form.elements.from.value,to:form.elements.to.value};
   try{const d=await write('/api/v1/operations/school-statements/preview',payload,'POST');if(token!==pageToken)return;
-   preview.innerHTML=`<div class="toolbar"><h3>پیش‌نمایش ${esc(d.month_name)} ${number(d.year)}</h3><span class="badge">ثبت‌نشده</span></div>${details(d)}${allowed?'<div class="member-actions"><button type="button" class="primary" id="finalizeStatement">تأیید و ثبت نهایی</button></div>':''}`;
+   preview.innerHTML=`<div class="toolbar"><h3>پیش‌نمایش ${esc(d.month_name)} ${number(d.year)}</h3><span class="badge">ثبت‌نشده</span></div>${details(d)}${allowed&&!d.validation_errors?.length?'<div class="member-actions"><button type="button" class="primary" id="finalizeStatement">تأیید و ثبت نهایی</button></div>':''}`;
    $('finalizeStatement')?.addEventListener('click',async()=>{if(!confirm('صورت‌وضعیت این ماه با مبالغ نمایش‌داده‌شده نهایی و ثبت شود؟'))return;const b=$('finalizeStatement');b.disabled=true;try{const result=await write('/api/v1/operations/school-statements',payload,'POST');preview.innerHTML='<p class="ok">صورت‌وضعیت ماهانه ثبت شد.</p>';notify('صورت‌وضعیت نهایی ثبت شد.');await load();showDetail(result.id);}catch(err){notify(err.message,true);b.disabled=false;}});
   }catch(err){preview.innerHTML='<p class="error">'+esc(err.message)+'</p>';}finally{button.disabled=false;}
  };
