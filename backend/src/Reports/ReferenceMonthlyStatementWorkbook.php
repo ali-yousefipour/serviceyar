@@ -114,6 +114,21 @@ final class ReferenceMonthlyStatementWorkbook
         $row->appendChild($cell);
     }
 
+    private static function resizeTable(\ZipArchive $zip,string $file,int $lastRow,int $filterLastRow,string $lastColumn): void
+    {
+        $raw=$zip->getFromName($file);
+        if(!is_string($raw))throw new \RuntimeException('Missing Excel table: '.$file);
+        $doc=new \DOMDocument('1.0','UTF-8');
+        if(!@$doc->loadXML($raw,LIBXML_NONET))throw new \RuntimeException('Invalid Excel table XML');
+        $table=$doc->documentElement;
+        if(!$table instanceof \DOMElement)throw new \RuntimeException('Invalid Excel table');
+        $table->setAttribute('ref','A2:'.$lastColumn.$lastRow);
+        foreach($doc->getElementsByTagNameNS(self::NS,'autoFilter') as $filter){
+            $filter->setAttribute('ref','A2:'.$lastColumn.$filterLastRow);
+        }
+        $zip->addFromString($file,$doc->saveXML());
+    }
+
     private static function replaceRows(\ZipArchive $zip,int $sheet,int $start,array $records,bool $withTotal=false): void
     {
         $doc=self::document($zip,$sheet);
@@ -129,22 +144,53 @@ final class ReferenceMonthlyStatementWorkbook
                 $style[$letter]=$cell->getAttribute('s')?:null;
             }
         }
-        // Remove every old source row, including cached financial subtotals.
-        // The copied format row is used only for its style IDs, never its data.
-        foreach(iterator_to_array($body->childNodes) as $row){
-            if($row instanceof \DOMElement && $row->localName==='row' && (int)$row->getAttribute('r') >= $start){
-                $body->removeChild($row);
+        // The final statement sheet has print/footer rows 220-230. Preserve
+        // those separately; other data sheets have no footer after the table.
+        $footer=null;
+        if($sheet===7){
+            foreach($body->childNodes as $row){
+                if($row instanceof \DOMElement && $row->localName==='row' && (int)$row->getAttribute('r')>=220){
+                    $footer=$row;break;
+                }
             }
         }
+        foreach(iterator_to_array($body->childNodes) as $row){
+            if(!$row instanceof \DOMElement || $row->localName!=='row')continue;
+            $n=(int)$row->getAttribute('r');
+            if($n>=$start && ($sheet!==7 || $n<220))$body->removeChild($row);
+        }
+        $insert=static function(\DOMElement $new) use ($body,$footer): void {
+            if($footer instanceof \DOMElement)$body->insertBefore($new,$footer);
+            else $body->appendChild($new);
+        };
         foreach($records as $i=>$cells){
-            $r=$start+$i;
-            $row=$doc->createElementNS(self::NS,'row');
+            $r=$start+$i;$row=$doc->createElementNS(self::NS,'row');
             $row->setAttribute('r',(string)$r);
             if($height!==null){$row->setAttribute('ht',$height);$row->setAttribute('customHeight','1');}
-            foreach($cells as $col=>$value){
-                self::put($doc,$row,(string)$col,$r,$value,$style[$col]??null);
+            // Preserve column order for valid OOXML even if callers supply
+            // values in a different insertion order.
+            uksort($cells,static function(string $a,string $b): int{
+                $index=static function(string $x): int{
+                    $n=0;foreach(str_split($x) as $char)$n=$n*26+ord($char)-64;
+                    return $n;
+                };
+                return $index($a)<=>$index($b);
+            });
+            foreach($cells as $col=>$value)self::put($doc,$row,(string)$col,$r,$value,$style[$col]??null);
+            $insert($row);
+        }
+        // Table4 owns a totals row, used by the reference finance formulas.
+        // Recreate it at the actual end of this month's records rather than
+        // leaving the old fixed row 633 orphaned.
+        if($sheet===6){
+            $r=$start+count($records);
+            $row=$doc->createElementNS(self::NS,'row');
+            $row->setAttribute('r',(string)$r);
+            self::put($doc,$row,'B',$r,'جمع کل',$style['B']??null);
+            foreach(['K','L','M','N','O','P','Q','R','S','T','U','V'] as $col){
+                self::put($doc,$row,$col,$r,['formula'=>'SUM('.$col.$start.':'.$col.($r-1).')'],$style[$col]??null);
             }
-            $body->appendChild($row);
+            $insert($row);
         }
         if($withTotal && $records){
             $r=$start+count($records);
@@ -154,9 +200,20 @@ final class ReferenceMonthlyStatementWorkbook
             foreach(['D','E','F','G','H'] as $col){
                 self::put($doc,$row,$col,$r,['formula'=>'SUM('.$col.$start.':'.$col.($r-1).')'],$style[$col]??null);
             }
-            $body->appendChild($row);
+            $insert($row);
         }
-        // Force Excel to recalculate dependent report formulas upon open.
+        // Resize all structured table ranges to the actual month. In
+        // particular #Totals references in the reference workbook must point
+        // to the new Table4 totals row, not the stale 633rd row.
+        if($sheet===4)self::resizeTable($zip,'xl/tables/table2.xml',max(3,$start+count($records)-1),max(3,$start+count($records)-1),'L');
+        if($sheet===5)self::resizeTable($zip,'xl/tables/table3.xml',max(3,$start+count($records)-1),max(3,$start+count($records)-1),'L');
+        if($sheet===6)self::resizeTable($zip,'xl/tables/table4.xml',max(4,$start+count($records)),max(3,$start+count($records)-1),'W');
+        $dimension=$doc->getElementsByTagNameNS(self::NS,'dimension')->item(0);
+        if($dimension instanceof \DOMElement){
+            $bounds=[3=>'BG',4=>'R',5=>'L',6=>'AM',7=>'AA'];
+            $last=max($start+count($records)+($sheet===6||$withTotal?0:-1),$sheet===7?230:2);
+            $dimension->setAttribute('ref','A1:'.($bounds[$sheet]??'Z').$last);
+        }
         $zip->addFromString('xl/worksheets/sheet'.$sheet.'.xml',$doc->saveXML());
     }
 
