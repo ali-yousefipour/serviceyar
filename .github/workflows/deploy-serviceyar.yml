@@ -27,7 +27,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          extensions: pdo_mysql
+          extensions: pdo_mysql, zip, dom
       - name: PHP syntax and static smoke tests
         shell: bash
         run: |
@@ -38,6 +38,7 @@ jobs:
           php tests/monthly-statement-reference.php
           php tests/monthly-statement-template.php
           php tests/monthly-statement-preview-digest.php
+          php tests/monthly-statement-installed-template.php
           node --check frontend/assets/app.js
           node --check frontend/assets/operations.js
           python3 -m py_compile tools/deploy_serviceyar.py
