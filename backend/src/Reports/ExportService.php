@@ -125,6 +125,19 @@ final class ExportService
         self::downloadRows($columns,$rows,$schema['filename']);
     }
 
+    public static function ledgerReport(int $uid,int $aid,array $filter): never
+    {
+        $report=ReportService::ledger($uid,$aid,$filter,true);
+        $rows=[];
+        $type=['student'=>'دانش‌آموز','driver'=>'راننده','school'=>'مدرسه','agency'=>'شرکت'];
+        $methods=['cash'=>'نقدی','card'=>'کارتخوان','bank'=>'انتقال بانکی','transfer'=>'حواله','cheque'=>'چک','wallet'=>'کیف پول'];
+        foreach($report['items'] as $i=>$row){
+            $rows[]=['n'=>$i+1,'date'=>$row['entry_date'],'direction'=>$row['direction']==='receipt'?'دریافت':'پرداخت','party'=>(string)($row['party_name']??''),'type'=>$type[$row['party_type']]??$row['party_type'],'receipt'=>$row['direction']==='receipt'?(float)$row['amount']:0,'payment'=>$row['direction']==='payment'?(float)$row['amount']:0,'method'=>$methods[$row['method']??'']??(string)($row['method']??''),'reference'=>(string)($row['reference_no']??''),'note'=>(string)($row['note']??''),'status'=>(int)$row['is_active']===1?'فعال':'غیرفعال'];
+        }
+        $rows[]=['n'=>'جمع کل','receipt'=>$report['totals']['receipts'],'payment'=>$report['totals']['payments'],'note'=>'خالص: '.number_format($report['totals']['balance']).' ریال'];
+        self::downloadRows(['n'=>'ردیف','date'=>'تاریخ','direction'=>'نوع عملیات','party'=>'نام دریافت‌کننده / پرداخت‌کننده','type'=>'طرف حساب','receipt'=>'دریافت (ریال)','payment'=>'پرداخت (ریال)','method'=>'روش پرداخت','reference'=>'شماره پیگیری','note'=>'توضیحات','status'=>'وضعیت سند'],$rows,'serviceyar-ledger-report.xlsx',true);
+    }
+
     public static function accountStatement(int $uid,int $aid,array $filter): never
     {
         Authorization::requirePermission($uid,'reports.view');
@@ -242,7 +255,7 @@ final class ExportService
           .'<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
           .'<cellXfs count="6"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="3" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="2" fillId="3" borderId="1" xfId="0"/><xf numFmtId="3" fontId="2" fillId="3" borderId="1" xfId="0" applyNumberFormat="1"/></cellXfs></styleSheet>';
         $parts=[
-          '[Content_Types].xml'=>'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',
+          '[Content_Types].xml'=>'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',
           '_rels/.rels'=>'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
           'xl/workbook.xml'=>'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="صورت وضعیت نهایی8" sheetId="1" r:id="rId1"/><sheet name="بهای خدمات اولیا5" sheetId="2" r:id="rId2"/></sheets></workbook>',
           'xl/_rels/workbook.xml.rels'=>'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
@@ -281,7 +294,7 @@ final class ExportService
         ], $rows, 'service-finance.xlsx');
     }
 
-    private static function downloadRows(array $columns,array $rows,string $filename): never
+    private static function downloadRows(array $columns,array $rows,string $filename,bool $styled=false): never
     {
         if (!class_exists(\ZipArchive::class)) self::jsonError(500,'EXPORT_DEPENDENCY_MISSING','امکان ساخت فایل Excel روی سرور فعال نیست.');
         $columnNames=array_keys($columns);
@@ -299,23 +312,25 @@ final class ExportService
             }
             return $label;
         };
-        $cell = static function (string $reference, mixed $value) use ($xml): string {
-            return '<c r="' . $reference . '" t="inlineStr"><is><t xml:space="preserve">' . $xml($value) . '</t></is></c>';
+        $cell = static function (string $reference, mixed $value,int $style=0) use ($xml): string {
+            $styleAttr=$style?' s="'.$style.'"':'';
+            if(is_int($value)||is_float($value))return '<c r="'.$reference.'"'.$styleAttr.'><v>'.$xml($value).'</v></c>';
+            return '<c r="'.$reference.'"'.$styleAttr.' t="inlineStr"><is><t xml:space="preserve">'.$xml($value).'</t></is></c>';
         };
 
         $sheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-            . '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
+            . '<sheetViews><sheetView workbookViewId="0" rightToLeft="1"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
             . '<sheetFormatPr defaultRowHeight="18"/><sheetData><row r="1">';
         $index = 1;
-        foreach ($columns as $label) $sheet .= $cell($columnLetter($index++) . '1', $label);
+        foreach ($columns as $label) $sheet .= $cell($columnLetter($index++) . '1', $label,$styled?1:0);
         $sheet .= '</row>';
 
         $rowNumber = 2;
         foreach ($rows as $row) {
             $sheet .= '<row r="' . $rowNumber . '">';
             $index = 1;
-            foreach ($columnNames as $column) $sheet .= $cell($columnLetter($index++) . $rowNumber, $row[$column] ?? '');
+            foreach ($columnNames as $column) $sheet .= $cell($columnLetter($index++) . $rowNumber, $row[$column] ?? '',$styled?($rowNumber===count($rows)+1?3:($rowNumber%2===0?2:4)):0);
             $sheet .= '</row>';
             $rowNumber++;
         }
@@ -332,8 +347,9 @@ final class ExportService
             '[Content_Types].xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',
             '_rels/.rels' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
             'xl/workbook.xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="گزارش" sheetId="1" r:id="rId1"/></sheets></workbook>',
-            'xl/_rels/workbook.xml.rels' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>',
+            'xl/_rels/workbook.xml.rels' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
             'xl/worksheets/sheet1.xml' => $sheet,
+            'xl/styles.xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Vazirmatn"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Vazirmatn"/></font></fonts><fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF123B53"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEAF5F3"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="5"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center"/></xf><xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="3" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyNumberFormat="1"/><xf numFmtId="3" fontId="0" fillId="3" borderId="0" xfId="0" applyFill="1" applyNumberFormat="1"/></cellXfs></styleSheet>',
         ];
         foreach ($parts as $name => $part) {
             if (!$zip->addFromString($name, $part)) {
