@@ -5,6 +5,7 @@ namespace ServiceYar\Reports;
 use ServiceYar\Auth\Authorization;
 use ServiceYar\Auth\AuthException;
 use ServiceYar\Domain\MonthlyStatements;
+use ServiceYar\Domain\SchoolServiceStatement;
 use ServiceYar\Database\Connection;
 
 /** Multi-sheet Excel export from the frozen, approved monthly statement snapshot. */
@@ -53,6 +54,40 @@ final class MonthlyStatementWorkbook
         $label=$d['month_name'].' '.$d['year'];
         $title=$label.' - '.$agency.' - صورت‌وضعیت سرویس مدارس (ریال)';
         $items=$d['items'];$drivers=$d['drivers'];$rates=$d['rates'];$t=$d['totals'];
+        // Frozen reference accounting is separate from driver deductions.
+        // Legacy snapshots are calculated at export without mutating storage.
+        $referenceTotals=$d['reference_totals']??[];
+        $referenceDrivers=$d['reference_drivers']??[];
+        if(!$referenceTotals || !$referenceDrivers){
+            $referenceTotals=[];$referenceDrivers=[];
+            foreach($items as $item){
+                $ref=$item['reference']??SchoolServiceStatement::fromWorkbookRate((string)($item['gross']??0),30,true,true);
+                $driverId=(int)($item['driver_id']??0);
+                if(!isset($referenceDrivers[$driverId])){
+                    $referenceDrivers[$driverId]=['driver_id'=>$driverId,
+                        'driver_name'=>$item['driver_name']?:'راننده نامشخص',
+                        'driver_iban'=>$item['driver_iban']??'','student_count'=>0];
+                }
+                $referenceDrivers[$driverId]['student_count']++;
+                foreach([
+                    'driver_fee'=>$ref['driver_fee'],
+                    'oversight_3pct'=>$ref['oversight_3pct'],
+                    'municipality_2_75pct'=>$ref['municipality_2_75pct'],
+                    'municipality_vat_10pct'=>$ref['municipality_vat_10pct'],
+                    'road_police_0_25pct'=>$ref['road_police_0_25pct'],
+                    'education_1pct'=>$ref['education_1pct'],
+                    'company_7pct'=>$ref['company_7pct'],
+                    'certificate_fee'=>$ref['certificate_fee'],
+                    'insurance_fee'=>$ref['insurance_fee'],
+                    'parent_total'=>$ref['parent_total'],
+                    'statement_excluding_certificate_insurance'=>$ref['statement_excluding_certificate_insurance']
+                ] as $k=>$v){
+                    $referenceTotals[$k]=($referenceTotals[$k]??0)+(float)$v;
+                    $referenceDrivers[$driverId][$k]=($referenceDrivers[$driverId][$k]??0)+(float)$v;
+                }
+            }
+            $referenceDrivers=array_values($referenceDrivers);
+        }
         $schoolMap=[];$driverMap=[];$vehicleMap=[];
         foreach($items as $r){
             $schoolMap[$r['school_name']??'']=true;
@@ -65,11 +100,14 @@ final class MonthlyStatementWorkbook
                 $i+1,$r['student_name'],$r['student_national_code'],$r['grade'],$r['guardian_first_name'].' '.$r['guardian_last_name'],
                 $r['mobile'],$r['address'],$r['school_name'],$r['region'],$r['tariff_distance_km'],$r['driver_name'],$r['service_name'],$r['gross']
             ];
+            $ref=$r['reference']??SchoolServiceStatement::fromWorkbookRate((string)$r['gross'],30,true,true);
             $parentRows[]=[
                 $i+1,$r['student_name'],$r['student_national_code'],$r['school_name'],$r['region'],$r['driver_name'],$r['vehicle_model'],$r['tariff_distance_km'],
-                $r['gross'],30,$r['gross'],$r['supervision'],round($r['gross']*.0275),round($r['gross']*.00275),
-                round($r['gross']*.0025),$r['coordination'],$r['overhead'],0,
-                $r['deductions'],$r['insurance'],$r['gross'],$r['net']
+                $r['gross'],30,$ref['driver_fee'],$ref['oversight_3pct'],$ref['municipality_2_75pct'],
+                $ref['municipality_vat_10pct'],$ref['road_police_0_25pct'],$ref['education_1pct'],
+                $ref['company_7pct'],$ref['certificate_fee'],
+                $ref['parent_total']-$ref['insurance_fee'],$ref['insurance_fee'],$ref['parent_total'],
+                $ref['statement_excluding_certificate_insurance'],$r['driver_iban']??''
             ];
             $archiveRows[]=[$d['year'],$label,$i+1,$r['student_name'],$r['student_national_code'],$r['grade'],$r['guardian_first_name'].' '.$r['guardian_last_name'],$r['mobile'],
                 '',$r['address'],$r['school_name'],$r['region'],$r['driver_name'],$r['driver_national_code'],$r['gross'],$r['deductions'],$r['net']];
@@ -79,14 +117,27 @@ final class MonthlyStatementWorkbook
             $extra=$driverMap[$r['driver_id']]??[];
             $driverRows[]=[$i+1,$r['driver_name'],$extra['driver_national_code']??'',$extra['driver_mobile']??'',
                 $extra['vehicle_model']??'',$extra['vehicle_plate']??'',$extra['driver_iban']??'',$extra['bank_name']??'',$extra['bank_account']??''];
-            $finalRows[]=[$i+1,$r['driver_name'],$r['driver_iban'],$r['gross'],$r['supervision'],$r['coordination'],$r['overhead'],
-                $r['gross']+$r['supervision']+$r['coordination']+$r['overhead'],$r['insurance'],$r['deductions'],$r['net']];
+
+        }
+        foreach(array_values($referenceDrivers) as $i=>$r){
+            $finalRows[]=[$i+1,$r['driver_name'],$r['driver_iban'],$r['driver_fee'],
+                $r['oversight_3pct'],$r['education_1pct'],$r['company_7pct'],
+                $r['statement_excluding_certificate_insurance']];
         }
         $rateRows=[];foreach($rates as $key=>$rate)$rateRows[]=[$key,(float)$rate];
         $summaryRows=[
             ['دانش‌آموزان',$t['students']],['رانندگان',$t['drivers']],['مدارس',$t['schools']],
-            ['شهریه ناخالص',$t['gross']],['کسورات',$t['deductions']],['خالص راننده',$t['net']],
-            ['نظارت',$t['supervision']],['هماهنگی',$t['coordination']],['بالاسری',$t['overhead']],['بیمه',$t['insurance']]
+            ['حق‌الزحمه رانندگان',$referenceTotals['driver_fee']??0],
+            ['مدیریت و نظارت ۳٪',$referenceTotals['oversight_3pct']??0],
+            ['اطلاع‌رسانی و هماهنگی ۱٪',$referenceTotals['education_1pct']??0],
+            ['سهم شرکت ۷٪',$referenceTotals['company_7pct']??0],
+            ['شهرداری ۲٫۷۵٪',$referenceTotals['municipality_2_75pct']??0],
+            ['ارزش افزوده شهرداری',$referenceTotals['municipality_vat_10pct']??0],
+            ['راهور ۰٫۲۵٪',$referenceTotals['road_police_0_25pct']??0],
+            ['گواهی صلاحیت',$referenceTotals['certificate_fee']??0],
+            ['بیمه ۷٫۸٪',$referenceTotals['insurance_fee']??0],
+            ['بهای خدمات اولیا',$referenceTotals['parent_total']??0],
+            ['صورت‌وضعیت بدون بیمه و گواهی',$referenceTotals['statement_excluding_certificate_insurance']??0]
         ];
         $sheets=[
             ['راهنما',['عنوان','توضیح'],[['دوره',$label],['شرکت',$agency],['وضعیت','نهایی'],['مبنای داده','تصویر ثابت از تخصیص‌های فعال در زمان تأیید'],['ارقام','ریال']]],
@@ -94,14 +145,14 @@ final class MonthlyStatementWorkbook
             ['tbl_Monthly_Archive',['سال مالی','ماه','ردیف','نام دانش‌آموز','کد ملی','مقطع','نام ولی','تلفن','شبا ولی','مبدا','مدرسه','ناحیه','راننده','کد ملی راننده','شهریه','کسورات','خالص'],$archiveRows],
             ['دانش آموزان6',['ردیف','نام دانش‌آموز','کد ملی','مقطع','نام ولی','تلفن','مبدا','مدرسه','ناحیه','فاصله','راننده','سرویس','شهریه ماهانه'],$studentRows],
             ['رانندگان 7',['ردیف','نام راننده','کد ملی','تلفن','نوع خودرو','پلاک','شبا','بانک','شماره حساب'],$driverRows],
-            ['بهای خدمات اولیا5',['ردیف','دانش‌آموز','کد ملی','مدرسه','ناحیه','راننده','نوع خودرو','فاصله','حق‌الزحمه مبنا','روز خدمت','حق‌الزحمه ماه','نظارت','شهرداری ۲٫۷۵٪','ارزش افزوده شهرداری','راهور ۰٫۲۵٪','هماهنگی','بالاسری','گواهی صلاحیت','جمع کسورات','بیمه','شهریه ناخالص','خالص راننده'],$parentRows],
-            ['صورت وضعیت نهایی8',['ردیف','راننده','شبا','حق‌الزحمه ماه','نظارت','هماهنگی','بالاسری','جمع صورت‌وضعیت بدون بیمه','بیمه','جمع کسورات','خالص راننده'],$finalRows],
+            ['بهای خدمات اولیا5',['ردیف','دانش‌آموز','کد ملی','مدرسه','ناحیه','راننده','نوع خودرو','فاصله','حق‌الزحمه مبنا','روز خدمت','حق‌الزحمه ماه','نظارت ۳٪','شهرداری ۲٫۷۵٪','ارزش افزوده شهرداری','راهور ۰٫۲۵٪','هماهنگی ۱٪','بالاسری شرکت ۷٪','گواهی صلاحیت','جمع سهم‌ها','بیمه ۷٫۸٪','بهای خدمات اولیا','صورت‌وضعیت بدون گواهی و بیمه','شماره شبا'],$parentRows],
+            ['صورت وضعیت نهایی8',['ردیف','راننده','شبا','حق‌الزحمه ماه','نظارت ۳٪','هماهنگی ۱٪','سهم شرکت ۷٪','جمع صورت‌وضعیت بدون گواهی و بیمه'],$finalRows],
             ['Peyvastha',['ماه','نام پیوست','مسیر پیوست'],[[$label,'','']]],
             ['1',['نوع کسور','درصد'],array_slice($rateRows,0,2)],
             ['2',['نوع کسور','درصد'],array_slice($rateRows,2,3)],
             ['3',['عنوان','مبلغ ریال'],$summaryRows],
             ['مفاصا',['عنوان','مقدار'],array_merge([['دوره',$label],['شرکت',$agency]],$summaryRows)],
-            ['سند مالی10',['شرح سند','بدهکار ریال','بستانکار ریال'],[['حق‌الزحمه رانندگان',$t['net'],0],['کسورات',$t['deductions'],0],['شهریه ناخالص',0,$t['gross']]]],
+            ['سند مالی10',['شرح سند','بدهکار ریال','بستانکار ریال'],[['حق‌الزحمه رانندگان',$referenceTotals['driver_fee']??0,0],['نظارت ۳٪',$referenceTotals['oversight_3pct']??0,0],['هماهنگی ۱٪',$referenceTotals['education_1pct']??0,0],['سهم شرکت ۷٪',$referenceTotals['company_7pct']??0,0],['جمع صورت‌وضعیت',0,$referenceTotals['statement_excluding_certificate_insurance']??0]]],
             ['روکش محاسبات 11',['عنوان','مبلغ ریال'],$summaryRows]
         ];
         $tmp=tempnam(sys_get_temp_dir(),'sy-statement-');
