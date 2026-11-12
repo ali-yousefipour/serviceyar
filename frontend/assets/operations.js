@@ -797,8 +797,11 @@ async function schoolStatementPage(token){
     <div class="sy-statement-modal-heading"><div><span class="sy-statement-kicker">جزئیات صورت‌وضعیت ثبت‌شده</span><h2 id="statementDetailHeading">صورت‌وضعیت ${esc(d.month_name)} ${number(d.year)}</h2><p>ثبت در تاریخ ${esc(dateText(d.created_at))} · ${d.status==='deleted'?'حذف‌شده':'نهایی'}</p></div><button type="button" id="statementClose" aria-label="بستن جزئیات">بستن <span aria-hidden="true">×</span></button></div>
     <div class="sy-statement-modal-body">${details(d)}</div><div class="sy-statement-modal-footer">${exportLink}<button type="button" data-close-statement>بازگشت به سوابق</button></div>
    </section></div>`;
+   restoreModalBackground();returnFocus=opener;
+   document.body.classList.add('has-modal');
+   document.querySelectorAll('.sidebar,.header,#sessionFooter,#content > :not(#modal)').forEach(node=>{modalBackground.push([node,node.inert]);node.inert=true;});
    const dialogElement=modal.querySelector('[role="dialog"]');
-   const close=()=>{modal.innerHTML='';if(opener?.isConnected)opener.focus();};
+   const close=()=>{modal.innerHTML='';restoreModalBackground();if(opener?.isConnected)opener.focus();};
    modal.querySelector('#statementClose').onclick=close;
    modal.querySelector('[data-close-statement]').onclick=close;
    modal.querySelector('.modal-backdrop').addEventListener('click',e=>{if(e.target.classList.contains('modal-backdrop'))close();});
