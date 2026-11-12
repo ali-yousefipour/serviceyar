@@ -162,7 +162,11 @@ final class DomainService {
     FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id
     LEFT JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id
     WHERE ss.service_id=services.id) AS students_annual_total,
-   (SELECT COUNT(*) FROM service_students ss WHERE ss.service_id=services.id) AS student_count";
+   (SELECT COUNT(*) FROM service_students ss WHERE ss.service_id=services.id) AS student_count,
+   ROUND((SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id WHERE ss.service_id=services.id)*0.03,0) AS supervision_deduction,
+   ROUND((SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id WHERE ss.service_id=services.id)*0.01,0) AS coordination_deduction,
+   ROUND((SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id WHERE ss.service_id=services.id)*0.07,0) AS overhead_deduction,
+   ROUND((SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id WHERE ss.service_id=services.id)*0.078,0) AS insurance_deduction";
   if($resource==='vehicles')$select="vehicles.*, (SELECT GROUP_CONCAT(CONCAT_WS(' ',vd.first_name,vd.last_name) ORDER BY vd.id DESC SEPARATOR '، ') FROM drivers vd WHERE vd.vehicle_id=vehicles.id AND vd.agency_id=vehicles.agency_id AND vd.is_active=1) AS driver_name";
   if($resource==='students')$select="students.*,
    (CASE WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'ابتدایی|دبستان|primary|elementary' THEN 8.5 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR TRIM(COALESCE(students.grade,'')) IN ('1','2','3','4','5','6','۱','۲','۳','۴','۵','۶') THEN 8.5 ELSE 9 END) AS annual_months,
@@ -177,7 +181,16 @@ final class DomainService {
    (SELECT COALESCE(SUM(i.amount),0) FROM invoices i WHERE i.party_type='student' AND i.party_id=students.id AND i.agency_id=students.agency_id AND i.status<>'cancelled') invoice_total,
    (SELECT COALESCE(SUM(p.amount),0) FROM payments p JOIN invoices i ON i.id=p.invoice_id AND i.agency_id=p.agency_id WHERE i.party_type='student' AND i.party_id=students.id AND p.agency_id=students.agency_id) paid_total";
   $s=$pdo->prepare("SELECT $select FROM {$c['table']} WHERE $where ORDER BY id DESC LIMIT $limit OFFSET $off");$s->execute($params);
-   $total=(int)$count->fetchColumn(); return ['items'=>$s->fetchAll(),'pagination'=>['page'=>$page,'limit'=>$limit,'total'=>$total,'pages'=>(int)ceil($total/$limit)]];
+   $total=(int)$count->fetchColumn();$items=$s->fetchAll();if($resource==='services')foreach($items as &$item)self::attachServicePayable($item);unset($item);return ['items'=>$items,'pagination'=>['page'=>$page,'limit'=>$limit,'total'=>$total,'pages'=>(int)ceil($total/$limit)]];
+ }
+ private static function attachServicePayable(array &$row): void {
+  $gross=max(0,(float)($row['students_monthly_total']??0));
+  $parts=OperationsService::driverDeductions($gross);
+  $row['driver_gross_monthly']=$gross;
+  $row['driver_net_monthly']=$parts['net_earned'];
+  $row['driver_deduction_total']=$parts['total_deductions'];
+  $row['driver_deduction_rate']=18.8;
+  foreach(['supervision_deduction','coordination_deduction','overhead_deduction','insurance_deduction'] as $field)$row[$field]=$parts[$field];
  }
  public static function serviceFilters(array $query,int $uid): array {
   $where=[];$params=[];
@@ -229,6 +242,11 @@ final class DomainService {
   $c=self::cfg($resource);self::scope($uid,$aid,$c['permission']);
   $s=Connection::get()->prepare('SELECT * FROM '.$c['table'].' WHERE id=:id AND agency_id=:a');$s->execute(['id'=>$id,'a'=>$aid]);
   $row=$s->fetch();if(!$row)throw new AuthException(404,'رکورد پیدا نشد.','NOT_FOUND');
+  if($resource==='services'){
+   $summary=Connection::get()->prepare("SELECT COALESCE(SUM(st.monthly_fee),0) AS students_monthly_total FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=:agency WHERE ss.service_id=:service");
+   $summary->execute(['agency'=>$aid,'service'=>$id]);$row=array_merge($row,$summary->fetch()?:[]);
+   self::attachServicePayable($row);
+  }
   if($resource==='students'){
    $annual=Connection::get()->prepare("SELECT (CASE WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'ابتدایی|دبستان|primary|elementary' THEN 8.5 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR TRIM(COALESCE(students.grade,'')) IN ('1','2','3','4','5','6','۱','۲','۳','۴','۵','۶') THEN 8.5 ELSE 9 END) AS annual_months, ROUND(COALESCE(students.monthly_fee,0) * (CASE WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'ابتدایی|دبستان|primary|elementary' THEN 8.5 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR TRIM(COALESCE(students.grade,'')) IN ('1','2','3','4','5','6','۱','۲','۳','۴','۵','۶') THEN 8.5 ELSE 9 END),0) AS annual_fee FROM students WHERE students.id=:id AND students.agency_id=:a");
    $annual->execute(['id'=>$id,'a'=>$aid]);$row=array_merge($row,$annual->fetch()?:[]);
@@ -278,10 +296,10 @@ final class DomainService {
    OperationsService::setServiceSchools($uid,$aid,(int)$service['id'],['schoolIds'=>$schools]);
    sort($students);foreach($students as $student)self::assignStudent($uid,$aid,(int)$service['id'],$student);
    if ($students && !array_key_exists('monthlyFee', $b)) {
-    $pdo->prepare('UPDATE services SET monthly_fee=(
-      SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss
-      JOIN students st ON st.id=ss.student_id WHERE ss.service_id=? AND st.agency_id=?
-     ) WHERE id=? AND agency_id=?')->execute([$service['id'],$aid,$service['id'],$aid]);
+    $grossQuery=$pdo->prepare('SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
+    $grossQuery->execute([$aid,$service['id']]);
+    $net=OperationsService::driverDeductions((float)$grossQuery->fetchColumn())['net_earned'];
+    $pdo->prepare('UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?')->execute([$net,$service['id'],$aid]);
     $service=self::get($uid,$aid,'services',(int)$service['id']);
    }
    return $service;
