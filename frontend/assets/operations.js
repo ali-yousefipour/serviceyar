@@ -1544,7 +1544,7 @@ async function newServicePage(token,initialDriverId){
   const valid=validAgreed(input.value)&&value.length<=15;
   input.setCustomValidity(valid?'':'مبلغ توافقی باید عدد صحیح ریالی و فاقد اعشار باشد.');
   form.elements.agreedAmount.value=valid?value:'';
-  if(valid)input.value=persianDigits(value.replace(/\\B(?=(\\d{3})+(?!\\d))/g,'٬'));
+  if(valid)input.value=persianDigits(value.replace(/\B(?=(\d{3})+(?!\d))/g,'٬'));
   return valid;
  };
  const canSubmit=()=>Boolean(driverId&&selectedSchools.length&&chosen.size&&!saving&&form.elements.title.value.trim()&&form.elements.capacity.checkValidity()&&chosen.size<=Number(form.elements.capacity.value)&&syncAgreed());
