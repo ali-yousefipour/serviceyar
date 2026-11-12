@@ -1,0 +1,47 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const src=fs.readFileSync(require('node:path').join(__dirname,'../frontend/assets/operations.js'),'utf8');
+const digits=x=>String(x).replace(/[0-9]/g,d=>'۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
+const start=src.indexOf(' const normalizeRialInput=');
+const end=src.indexOf(' rialInputs.forEach(',start);
+assert(start>=0&&end>start,'Rial input formatting functions not found');
+const ctx={
+ form:{querySelectorAll:()=>[]},
+ persianDigits:digits,
+};
+vm.runInNewContext(src.slice(start,end)+'\nthis.normalizeRialInput=normalizeRialInput;this.formatRialInput=formatRialInput;',ctx);
+const input=(value,required=true)=>({value,required,validityError:'',setCustomValidity(message){this.validityError=message;}});
+let field=input('۱۲۳٬۴۵۶');
+assert.equal(ctx.formatRialInput(field),true);
+assert.equal(ctx.normalizeRialInput(field.value),'123456');
+assert.equal(field.value,'۱۲۳٬۴۵۶');
+assert.equal(field.validityError,'');
+field=input('12000.5');
+assert.equal(ctx.formatRialInput(field),false,'Decimal rial amounts must not be silently rounded');
+assert.notEqual(field.validityError,'');
+field=input('');
+assert.equal(ctx.formatRialInput(field),false,'Required amount must be checked');
+field=input('',false);
+assert.equal(ctx.formatRialInput(field),true,'Optional empty amount allowed');
+field=input('۰۱۲۳۴۵');
+assert.equal(ctx.formatRialInput(field),true);
+assert.equal(ctx.normalizeRialInput(field.value),'12345');
+const bulkStart=src.indexOf(' const ascii=value=>',src.indexOf('function bulkFeeDialog(){'));
+const bulkEnd=src.indexOf(" mode.addEventListener('change'",bulkStart);
+assert(bulkStart>=0&&bulkEnd>bulkStart,'Bulk fee validation was not found');
+const display={value:'-۱۲.۵',validation:'',setCustomValidity(message){this.validation=message;}};
+const mode={value:'percent'},raw={value:''};
+const context={display,mode,raw,persianDigits:digits};
+vm.runInNewContext(src.slice(bulkStart,bulkEnd)+'\nthis.sync=sync;',context);
+assert.equal(context.sync(),true,'Valid negative percentage rejected');
+assert.equal(raw.value,'-12.5');
+display.value='-۱۰۱';
+assert.equal(context.sync(),false,'Percentage below -100 accepted');
+mode.value='set';display.value='۱٬۲۵۰٬۰۰۰';
+assert.equal(context.sync(),true);
+assert.equal(raw.value,'1250000');
+display.value='1.5';
+assert.equal(context.sync(),false,'Fractional rial amount accepted');
+console.log('Persian financial form and bulk adjustment validation passed');
