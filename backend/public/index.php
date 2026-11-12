@@ -61,6 +61,7 @@ try {
  if($method==='GET'&&$path==='/api/v1/reports/service-finance.xlsx')ExportService::serviceFinance($s['id'],$aid,$_GET);
  if($method==='GET'&&preg_match('#^/api/v1/students/(\d+)/service-finance$#',$path,$m))Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ServiceFinanceReport::report($s['id'],$aid,$_GET,(int)$m[1])]);
  if($method==='GET'&&$path==='/api/v1/operations/school-statement/rules'){Authorization::requirePermission($s['id'],'finance.view');Response::json(['ok'=>true,'data'=>json_decode(file_get_contents(__DIR__.'/../src/Domain/school-statement-template-1405.json'),true,512,JSON_THROW_ON_ERROR)]);}
+ if($method==='GET'&&preg_match('#^/api/v1/reports/school-statements/(\\d+)\\.xlsx$#',$path,$statementExport))\ServiceYar\\Reports\\MonthlyStatementWorkbook::download($s['id'],$aid,(int)$statementExport[1]);
  if($method==='GET'&&$path==='/api/v1/operations/school-statements')Response::json(['ok'=>true,'data'=>\ServiceYar\\Domain\\MonthlyStatements::list($s['id'],$aid,($_GET['includeDeleted']??'')==='1')]);
  if($method==='POST'&&$path==='/api/v1/operations/school-statements/preview'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\\Domain\\MonthlyStatements::preview($s['id'],$aid,Request::json())]);}
  if($method==='POST'&&$path==='/api/v1/operations/school-statements'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\\Domain\\MonthlyStatements::finalize($s['id'],$aid,Request::json())],201);}
