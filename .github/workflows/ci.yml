@@ -26,6 +26,7 @@ jobs:
           node tests/wizard-lookup.cjs
           node tests/finance-form-inputs.cjs
           node tests/new-service-wizard.cjs
+          node tests/journal-balance.cjs
           node tests/solar-date.cjs
   transport-integration:
     runs-on: ubuntu-latest
