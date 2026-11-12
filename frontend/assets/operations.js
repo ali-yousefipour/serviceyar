@@ -275,7 +275,7 @@ async function ledgerReportPage(token=pageToken){
     if(current!==version||token!==pageToken)return;
     total=d.pagination.total;totals=d.totals;items.push(...d.items);page++;
     if(total>5000){$('ledgerReportBody').innerHTML='<div class="error">تعداد اسناد بیش از ۵۰۰۰ مورد است؛ بازه گزارش را محدودتر کنید.</div>';return;}
-   }while(items.length<total);
+   }while(items.length<total&&items.length<5000&&page<=Math.ceil(total/200));
    reportRows=items;ready=true;
    const totalReceipt=Number(totals?.receipts||0),totalPayment=Number(totals?.payments||0);
    $('ledgerFilterSummary').textContent=number(total)+' سند در گزارش';
