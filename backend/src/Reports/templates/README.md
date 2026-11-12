@@ -5,18 +5,19 @@ The file must be a *data-scrubbed, macro-free* copy of the user's 14-sheet
 reference XLSM. Do not commit the original XLSM, student data, bank details,
 pivot-cache records, hidden personal data, or VBA macros to this repository.
 
-The GitHub code connector cannot upload a sandbox binary automatically.
-The sanitized template is available separately as a conversation artifact
-and must be added to this path using a binary-capable GitHub upload.
+The sanitized reference template is committed to this path as a 56,060-byte,
+14-sheet macro-free XLSX (Git blob SHA `4e3a5f2c6bc2581b818b4ecda0cb13d2b8c619ff`).
+The CI checks sheet order, external/unsafe attachments, relevant table parts,
+and produces a two-student synthetic reference export to test formulas.
 
-The exact-template exporter is **disabled by default**, even if the XLSX is installed.
-After validation by finance/operations, set `SCHOOL_STATEMENT_REFERENCE_TEMPLATE_ENABLED=1`
-in the hosting environment. This requires an explicit release decision; the old
-synthetic exporter continues to work while the flag is absent.
+Once deployed, the workbook export uses the validated reference format.
+Emergency rollback: set `SCHOOL_STATEMENT_REFERENCE_TEMPLATE_ENABLED=0`
+in the hosting environment. The synthetic 14-sheet fallback is retained.
 
-Until then, MonthlyStatementWorkbook retains the legacy synthetic 14-sheet
-output. A successful CI/deploy DOES NOT indicate the exact visual template
-is installed. The optional template exporter is ReferenceMonthlyStatementWorkbook.
+**Operational caveat:** Successful structural tests do not prove that financial
+account codes, insurance, eligibility, service days or historical assignments
+are correct on real production records. The XLSX is an exported statement, not
+an automatically posted or approved accounting journal.
 
 ## Financial audit requirements before production sign-off
 
