@@ -761,3 +761,28 @@ body.sy-menu-palette-open{overflow:hidden}
  #modal .wizard-progress button{flex:1 1 110px}
  #modal #saveRecord{width:100%}
 }
+
+/* Dedicated multi-step wizard experience for student, driver and service records */
+#modal .wizard-progress{display:flex;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;padding:4px 2px 12px;margin-bottom:8px;gap:8px;scroll-snap-type:x proximity}
+#modal .wizard-marker{flex:1 0 125px;display:flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:8px 12px;border:1px solid #dce8df;background:#f8faf8;color:#526a5c;border-radius:12px;font-size:12px;font-weight:700;scroll-snap-align:center}
+#modal .wizard-marker b{display:grid;place-items:center;width:25px;height:25px;flex:none;border-radius:50%;background:#e5eee8;color:#23633e;font-size:12px}
+#modal .wizard-marker[aria-current="step"]{border-color:#16784a;background:#e9f5ed;color:#085b34;box-shadow:0 0 0 1px #16784a20}
+#modal .wizard-marker[aria-current="step"] b{background:#08683f;color:white}
+#modal .wizard-marker.complete{background:#f1f9f3;border-color:#c5e4d0;color:#16613b}
+#modal .wizard-marker:disabled{opacity:.62;cursor:not-allowed}
+#modal .wizard-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;position:sticky;bottom:0;z-index:3;background:#fff;padding:14px 0 2px;margin-top:12px;border-top:1px solid #e0eae2}
+#modal .wizard-actions [data-wizard-position]{margin-inline:auto;color:#637d6c;font-size:12px}
+#modal .wizard-actions button{min-height:44px;padding-inline:16px}
+#modal .wizard-review .detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#modal .wizard-review .detail-grid>div{min-width:0;border:1px solid #e2ebe4;border-radius:12px;background:#f7faf8;padding:12px}
+#modal .wizard-review dt{font-size:12px;color:#627d6c;margin-bottom:5px}
+#modal .wizard-review dd{margin:0;font-size:14px;color:#184f32;font-weight:750;overflow-wrap:anywhere;white-space:pre-wrap}
+#modal .field-error{color:#b72e38;font-size:11px;line-height:1.8}
+#modal [aria-invalid="true"]{border-color:#cb4250!important;background:#fff9f9}
+@media(max-width:650px){
+ #modal .wizard-marker{flex-basis:110px;font-size:11px}
+ #modal .wizard-actions{gap:7px}
+ #modal .wizard-actions button{flex:1 1 110px}
+ #modal .wizard-actions [data-wizard-position]{order:-1;width:100%;text-align:center}
+ #modal .wizard-review .detail-grid{grid-template-columns:1fr}
+}
