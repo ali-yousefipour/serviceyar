@@ -17,6 +17,20 @@ const school=(await request(scoped('/api/v1/schools'),{method:'POST',body:{name:
 await request(scoped('/api/v1/students'),{method:'POST',body:{schoolId:school.id,firstName:'نام',lastName:'آزمون',mobile:'bad'},status:422});
 const student=(await request(scoped('/api/v1/students'),{method:'POST',body:{schoolId:school.id,firstName:'دانش‌آموز',lastName:'تست HTTP',mobile:'09120000111',monthlyFee:1000,academicYear:'1405/1406'},status:201})).data;
 assert.ok(student.uuid);checks++;
+const ledgerEntry=(await request(scoped('/api/v1/ledger'),{method:'POST',body:{partyType:'student',partyId:student.id,direction:'receipt',amount:12345,entryDate:'2026-11-01',method:'cash',referenceNo:'LEDGER-SEARCH-TEST'},status:201})).data;
+const ledgerSearch=async filters=>(await request(scoped('/api/v1/ledger?'+new URLSearchParams(filters)))).data.items;
+const byName=await ledgerSearch({partySearch:'دانش‌آموز تست HTTP'});
+assert.ok(byName.some(row=>Number(row.id)===Number(ledgerEntry.id)));checks++;
+assert.equal(byName.find(row=>Number(row.id)===Number(ledgerEntry.id))?.party_name,'دانش‌آموز تست HTTP');checks++;
+for(const filters of [{partyType:'student'},{direction:'receipt'},{method:'cash'},{dateFrom:'2026-11-01',dateTo:'2026-11-01'},{amountMin:'12345',amountMax:'12345'},{search:'LEDGER-SEARCH-TEST'}]){
+ const rows=await ledgerSearch(filters);assert.ok(rows.some(row=>Number(row.id)===Number(ledgerEntry.id)),JSON.stringify(filters));checks++;
+}
+for(const filters of [{partySearch:'نام غیرمرتبط قطعی'},{direction:'payment'},{amountMin:'12346'},{dateFrom:'2026-11-02'}]){
+ const rows=await ledgerSearch(filters);assert.ok(!rows.some(row=>Number(row.id)===Number(ledgerEntry.id)),JSON.stringify(filters));checks++;
+}
+await request(scoped('/api/v1/ledger?'+new URLSearchParams({dateFrom:'2026-11-03',dateTo:'2026-11-01'})),{status:422});
+await request(scoped('/api/v1/ledger?'+new URLSearchParams({amountMin:'200',amountMax:'100'})),{status:422});
+
 const service=(await request(scoped('/api/v1/services'),{method:'POST',body:{title:'سرویس HTTP',schoolId:school.id,capacity:1,status:'active'},status:201})).data;
 await request(scoped(`/api/v1/services/${service.id}/students`),{method:'POST',body:{studentId:student.id},status:201});
 const serviceListPath='/api/v1/services';
