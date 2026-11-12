@@ -108,14 +108,16 @@ final class MonthlyStatements
           LEFT JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id
           LEFT JOIN drivers dr ON dr.id=sv.driver_id AND dr.agency_id=sv.agency_id
           LEFT JOIN vehicles vh ON vh.id=dr.vehicle_id AND vh.agency_id=dr.agency_id
-          WHERE st.is_active=1 AND (st.academic_year=:academic OR st.academic_year IS NULL OR st.academic_year='')
+          WHERE st.is_active=1 AND (REPLACE(st.academic_year,'/','-')=:academic OR st.academic_year IS NULL OR st.academic_year='')
           ORDER BY dr.last_name,dr.first_name,sc.name,st.last_name,st.first_name");
         $q->execute(['a'=>$aid,'agency'=>$aid,'academic'=>$academic]);
         $rates=DriverDeductionPolicy::rates($aid);
-        $items=[];$drivers=[];$totals=['students'=>0,'drivers'=>0,'schools'=>0,'gross'=>0.0,'deductions'=>0.0,'net'=>0.0,
+        $items=[];$drivers=[];$seenStudents=[];$totals=['students'=>0,'drivers'=>0,'schools'=>0,'gross'=>0.0,'deductions'=>0.0,'net'=>0.0,
             'supervision'=>0.0,'coordination'=>0.0,'overhead'=>0.0,'insurance'=>0.0];
         $schools=[];
         foreach($q->fetchAll() as $row){
+            if(isset($seenStudents[$row['student_id']]))throw new AuthException(409,'یک دانش‌آموز به چند سرویس فعال تخصیص داده شده است؛ پیش از ثبت صورت‌وضعیت اصلاح کنید.','DUPLICATE_STUDENT_ASSIGNMENT');
+            $seenStudents[$row['student_id']]=true;
             $gross=max(0,(float)$row['monthly_fee']);
             $calc=DriverDeductionPolicy::calculate($gross,$rates);
             $row['gross']=$gross;
@@ -166,6 +168,7 @@ final class MonthlyStatements
         if(!$data['items'])throw new AuthException(422,'برای این ماه هیچ تخصیص فعال و قابل محاسبه‌ای وجود ندارد.','STATEMENT_EMPTY');
         $pdo=Connection::get();$pdo->beginTransaction();
         try{
+            $agencyLock=$pdo->prepare('SELECT id FROM agencies WHERE id=:a FOR UPDATE');$agencyLock->execute(['a'=>$aid]);
             $lock=$pdo->prepare("SELECT id FROM school_monthly_statements WHERE agency_id=:a AND jalali_year=:y AND jalali_month=:m AND status='final' LIMIT 1 FOR UPDATE");
             $lock->execute(['a'=>$aid,'y'=>$data['year'],'m'=>$data['month']]);
             if($lock->fetchColumn())throw new AuthException(409,'برای این ماه صورت‌وضعیت نهایی ثبت شده است.','STATEMENT_EXISTS');
