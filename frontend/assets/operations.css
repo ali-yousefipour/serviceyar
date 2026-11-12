@@ -1221,3 +1221,7 @@ body.sy-menu-palette-open{overflow:hidden}
 .sy-payroll-legacy-warning{padding:11px 14px;border:1px solid #e5d6a8;background:#fff9e9;color:#79540f;border-radius:10px;line-height:1.9;font-size:13px;font-weight:700}
 #operationResult .table-wrap{overflow-x:auto;max-width:100%}
 #operationResult [data-salary]{min-width:120px}
+
+/* Distinguish tuition collected from net monthly driver payment. */
+.sy-service-facts .sy-service-net,.sy-service-net-summary{background:#eff8f2;border:1px solid #cce6d4;border-radius:10px;padding:10px 12px;color:#165a36;font-weight:800;line-height:1.8}
+.sy-service-facts .sy-service-net dd{font-weight:900;font-size:16px;color:#14532d}
