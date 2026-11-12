@@ -998,3 +998,42 @@ body.sy-menu-palette-open{overflow:hidden}
  #modal .sy-record-details .sy-detail-grid>div{padding:8px 4px}
  #modal .sy-record-details .sy-detail-grid>div:nth-last-child(2){border-bottom:1px solid #edf2ee}
 }
+
+/* Ledger UI pass: compact forms, balanced filters, readable accounting tables */
+#content .ledger-filters{padding:12px 14px;display:flex;flex-direction:column;gap:10px;border-radius:11px}
+#content .ledger-filter-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 0 9px;border-bottom:1px solid #e2ebe4}
+#content .ledger-filter-header h3{font-size:14px;line-height:1.5;margin:2px 0}
+#content .ledger-filter-header p{font-size:11px;line-height:1.6;margin:0}
+#content .ledger-filter-primary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) auto auto;gap:9px;align-items:end}
+#content .ledger-filter-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px 12px;align-items:end}
+#content .ledger-filters label{display:flex;flex-direction:column;gap:5px;min-width:0;font-size:11px;line-height:1.5;font-weight:750}
+#content .ledger-filters :is(input,select){box-sizing:border-box;width:100%;min-width:0;min-height:39px;padding:7px 10px;font-size:12px;border-radius:9px;background:#fff}
+#content .ledger-filters button{min-height:39px;padding:7px 12px;font-size:12px}
+#content .ledger-filter-more{margin-top:1px;border-top:1px solid #e5ede7;padding-top:9px}
+#content .ledger-filter-more summary{cursor:pointer;font-size:12px;font-weight:800;line-height:1.6}
+#content .ledger-filter-more[open]>.ledger-filter-grid{padding-top:11px}
+#content .ledger-report-tabs{display:flex;gap:7px;flex-wrap:wrap;margin:9px 0 12px}
+#content .ledger-report-tabs button{min-height:36px;padding:6px 12px;font-size:12px}
+#content .table-wrap:has(.row-actions){scrollbar-width:thin}
+#content .table-wrap table th{font-size:11px;line-height:1.5;white-space:nowrap}
+#content .table-wrap table td{font-size:12px;line-height:1.6}
+#modal .modal:has(.sy-ledger-editor){width:min(760px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:hidden;display:flex;flex-direction:column}
+#modal .modal:has(.sy-ledger-editor) .modal-body{min-height:0;overflow-y:auto;padding:13px 16px}
+#modal .sy-ledger-editor>.form-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px}
+#modal .sy-ledger-editor>.form-grid>label{gap:5px;font-size:11px;line-height:1.6}
+#modal .sy-ledger-editor .sy-money-hint{font-size:10px;line-height:1.6}
+#modal .sy-ledger-editor>.muted{font-size:10px;margin:2px 0}
+#modal .sy-ledger-editor>#saveRecord{min-height:40px;padding:8px 16px}
+@media(max-width:1050px){
+ #content .ledger-filter-primary{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #content .ledger-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:650px){
+ #content .ledger-filters{padding:10px}
+ #content .ledger-filter-header{align-items:flex-start;flex-wrap:wrap}
+ #content .ledger-filter-primary{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #content .ledger-filter-primary>label{grid-column:1/-1}
+ #content .ledger-filter-grid{grid-template-columns:minmax(0,1fr)}
+ #modal .sy-ledger-editor>.form-grid{grid-template-columns:minmax(0,1fr);gap:10px}
+ #modal .modal:has(.sy-ledger-editor) .modal-body{padding:11px 12px}
+}
