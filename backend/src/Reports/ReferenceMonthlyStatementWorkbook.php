@@ -173,7 +173,13 @@ final class ReferenceMonthlyStatementWorkbook
             if($zip->open($temp)!==true)throw new \RuntimeException('Cannot open reference XLSX');
             try{
                 $items=$d['items'];
-                $students=[];$drivers=[];$parents=[];$final=[];
+                $students=[];$drivers=[];$parents=[];$final=[];$archive=[];
+                $driverRowNumber=[];$driverCounter=0;
+                foreach($items as $item){
+                    $driverId=(int)($item['driver_id']??0);
+                    if(!isset($driverRowNumber[$driverId]))$driverRowNumber[$driverId]=++$driverCounter;
+                }
+
                 foreach($items as $i=>$v){
                     $row=$i+1;$ref=$v['reference']??SchoolServiceStatement::fromWorkbookRate((string)$v['gross'],30,true,true);
                     $iban=(string)($v['driver_iban']??'');
@@ -184,6 +190,47 @@ final class ReferenceMonthlyStatementWorkbook
                         'J'=>$v['region']??'','K'=>(float)($v['tariff_distance_km']??0)
                     ];
                     $r=$i+3;
+                    $archive[]=[
+                        'A'=>$d['year'],'B'=>$d['month_name'].' '.$d['year'],
+                        'C'=>$row,'D'=>$v['student_name']??'',
+                        'E'=>(string)($v['student_national_code']??''),
+                        'F'=>$v['grade']??'',
+                        'G'=>trim(($v['guardian_first_name']??'').' '.($v['guardian_last_name']??'')),
+                        'H'=>(string)($v['mobile']??''),'J'=>$v['address']??'',
+                        'K'=>$v['school_name']??'','L'=>$v['region']??'',
+                        'M'=>(float)($v['tariff_distance_km']??0),
+                        'O'=>$driverRowNumber[(int)($v['driver_id']??0)],
+                        'P'=>$v['driver_name']??'',
+                        'Q'=>(string)($v['driver_national_code']??''),
+                        'R'=>(string)($v['driver_mobile']??''),
+                        'S'=>$v['vehicle_model']??'',
+                        'U'=>preg_replace('/^IR/i','',$iban),
+                        'V'=>$iban,'W'=>$v['bank_name']??'',
+                        'X'=>(string)($v['vehicle_plate']??''),
+                        'AA'=>$row,'AB'=>$v['student_name']??'',
+                        'AC'=>(string)($v['student_national_code']??''),
+                        'AD'=>$v['school_name']??'',
+                        'AE'=>$v['region']??'','AF'=>$v['driver_name']??'',
+                        'AG'=>$v['vehicle_model']??'',
+                        'AH'=>(float)($v['tariff_distance_km']??0),
+                        'AI'=>(float)($v['gross']??0),'AJ'=>30,
+                        'AK'=>(float)$ref['driver_fee'],
+                        'AL'=>(float)$ref['oversight_3pct'],
+                        'AM'=>(float)$ref['municipality_2_75pct'],
+                        'AN'=>(float)$ref['municipality_vat_10pct'],
+                        'AO'=>(float)$ref['road_police_0_25pct'],
+                        'AP'=>(float)$ref['education_1pct'],
+                        'AQ'=>(float)$ref['company_7pct'],
+                        'AR'=>(float)$ref['certificate_fee'],
+                        'AS'=>(float)$ref['parent_total']-(float)$ref['insurance_fee'],
+                        'AT'=>(float)$ref['insurance_fee'],
+                        'AU'=>(float)$ref['parent_total'],
+                        'AV'=>(float)$ref['statement_excluding_certificate_insurance'],
+                        'AW'=>$iban,'AX'=>$d['month_name'].' '.$d['year'],
+                        'AZ'=>$i===0?count($items):null,
+                        'BA'=>$i===0?count($driverRowNumber):null,
+                        'BB'=>$i===0?($d['totals']['schools']??0):null
+                    ];
                     $parents[]=[
                         'A'=>$row,'B'=>$v['student_name']??'','C'=>(string)($v['student_national_code']??''),
                         'D'=>$v['school_name']??'','E'=>$v['region']??'','F'=>$v['driver_name']??'',
@@ -231,11 +278,16 @@ final class ReferenceMonthlyStatementWorkbook
                         'E'=>['formula'=>"D{$r}*3%"],'F'=>['formula'=>"D{$r}*1%"],
                         'G'=>['formula'=>"D{$r}*7%"],'H'=>['formula'=>"SUM(D{$r}:G{$r})"]];
                 }
+                self::replaceRows($zip,3,2,$archive);
                 self::replaceRows($zip,4,3,$students);
                 self::replaceRows($zip,5,3,$drivers);
                 self::replaceRows($zip,6,3,$parents);
                 self::replaceRows($zip,7,4,$final,true);
-                self::replaceCells($zip,2,['B1'=>$agency,'B8'=>$d['month_name']]);
+                self::replaceCells($zip,2,[
+                    'B1'=>$agency,'B8'=>$d['month_name'],
+                    'B10'=>(int)$d['year'],'B11'=>count($items),
+                    'B12'=>count($driverRowNumber)
+                ]);
                 $t=$d['reference_totals']??[];
                 if(!$t){
                     $t=array_fill_keys(['driver_fee','oversight_3pct','municipality_2_75pct',
