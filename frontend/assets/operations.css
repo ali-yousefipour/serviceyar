@@ -892,3 +892,41 @@ body.sy-menu-palette-open{overflow:hidden}
  #modal .modal-body{padding:12px}
  #modal .sy-ledger-editor>.form-grid{gap:11px}
 }
+
+/* P1 directory layouts: students, drivers and service management */
+#content form.directory-filters{display:grid;grid-template-columns:minmax(220px,2fr) repeat(3,minmax(130px,1fr));gap:10px 12px;align-items:end;padding:12px;border:1px solid #e1e9e3;background:#f9fbfa;border-radius:11px;margin:0 0 12px}
+#content form.directory-filters>label{display:flex;flex-direction:column;justify-content:flex-end;gap:5px;min-width:0;color:#345943;font-size:11px;font-weight:750;line-height:1.5}
+#content form.directory-filters>label.directory-search{grid-column:auto}
+#content form.directory-filters :is(input,select){width:100%;min-width:0;min-height:39px;max-height:43px;padding:7px 10px;font-size:12px;border:1px solid #dce6df;border-radius:8px;background:#fff}
+#content form.directory-filters :is(button){min-height:39px;white-space:normal;line-height:1.5;padding:7px 12px}
+#content form.directory-filters .directory-search-button{align-self:end}
+#content form.directory-filters .directory-reset-button{align-self:end}
+#content form.directory-filters .vehicle-plate-filter{grid-column:1/-1;min-width:0}
+#content .status-tabs{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:0 0 10px;padding:0}
+#content .status-tabs button{min-height:34px;padding:5px 10px;font-size:11px;border-radius:8px}
+#content .bulk-toolbar{min-height:0;display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:8px 0}
+#content .bulk-toolbar:empty{display:none}
+#content .service-filters-v2{padding:12px;gap:10px;border-radius:11px}
+#content .service-filter-top{padding:0 0 8px;border-bottom:1px solid #e5ece7}
+#content .service-filter-search{display:grid;grid-template-columns:minmax(200px,1fr) auto auto;align-items:end;gap:9px}
+#content .service-filter-search .service-primary-search{min-width:0}
+#content .service-filter-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+#content .service-filter-advanced{margin-top:3px}
+#content .service-filter-advanced summary{cursor:pointer;font-size:12px;font-weight:750}
+@media(max-width:1180px){
+ #content form.directory-filters{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #content form.directory-filters>label.directory-search{grid-column:span 2}
+ #content .service-filter-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:760px){
+ #content form.directory-filters{grid-template-columns:repeat(2,minmax(0,1fr));padding:10px}
+ #content form.directory-filters>label.directory-search{grid-column:1/-1}
+ #content .service-filter-search{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #content .service-filter-search .service-primary-search{grid-column:1/-1}
+ #content .service-filter-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:480px){
+ #content form.directory-filters{grid-template-columns:minmax(0,1fr)}
+ #content form.directory-filters>label.directory-search{grid-column:auto}
+ #content .service-filter-fields{grid-template-columns:minmax(0,1fr)}
+}
