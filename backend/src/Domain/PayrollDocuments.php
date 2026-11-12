@@ -21,7 +21,7 @@ final class PayrollDocuments
         $nationalCode=$forWorkbook?',d.national_code':'';
         $q=$p->prepare('SELECT l.driver_id,l.earned,l.agreed,l.paid,l.salary,d.first_name,d.last_name,d.iban,d.bank_account,d.bank_name'.$nationalCode.' FROM payroll_document_lines l JOIN drivers d ON d.id=l.driver_id AND d.agency_id=:a WHERE l.document_id=:id ORDER BY d.last_name,d.first_name');$q->execute(['a'=>$aid,'id'=>$id]);$doc['lines']=$q->fetchAll();
         foreach($doc['lines'] as &$line){
-            $deductions=OperationsService::driverDeductions((float)$line['earned']);
+            $deductions=OperationsService::driverDeductions((float)$line['earned'],$aid);
             $line=array_merge($line,$deductions);
             $line['gross_earned']=(float)$line['earned'];
             $line['expected_net_salary']=$deductions['net_earned'];
