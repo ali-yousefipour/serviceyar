@@ -52,6 +52,12 @@ try{
  rejected(fn()=>D::get($viewer,$b,'students',(int)$foreign['id']),'SCOPE_FORBIDDEN');
  $av=D::save($uid,$a,'vehicles',['plate'=>'QA-'.$tag,'capacity'=>4]);$ad=D::save($uid,$a,'drivers',['firstName'=>'تخصیص','lastName'=>'آزمون','status'=>'active','vehicleId'=>$av['id']]);$as=D::save($uid,$a,'services',['title'=>'بدون راننده','schoolId'=>$school['id'],'capacity'=>4,'agreedAmount'=>'1250000','shift'=>'صبح']);
  check((int)$as['agreed_amount']===1250000,'Service agreed monthly driver amount persists');
+ $contract=D::save($uid,$a,'contracts',['title'=>'قرارداد آزمایشی','partyType'=>'student','partyId'=>$s1['id'],'startDate'=>'2026-10-01','endDate'=>'2027-06-01','amount'=>'1200000']);
+ check((int)$contract['amount']===1200000,'Contract integer rial amount stored');
+ rejected(fn()=>D::save($uid,$a,'contracts',['title'=>'بازه نامعتبر','partyType'=>'student','startDate'=>'2027-06-02','endDate'=>'2027-06-01','amount'=>'1000']),'INVALID_CONTRACT_DATES');
+ rejected(fn()=>D::save($uid,$a,'contracts',['title'=>'مبلغ نامعتبر','partyType'=>'student','startDate'=>'2026-10-01','endDate'=>'2027-06-01','amount'=>'100.5']),'INVALID_CONTRACT_AMOUNT');
+ rejected(fn()=>D::save($uid,$a,'contracts',['endDate'=>'2026-09-01'],(int)$contract['id']),'INVALID_CONTRACT_DATES');
+
  check($as['shift']==='صبح','Service shift persists from setup wizard');
  $updatedService=D::save($uid,$a,'services',['agreedAmount'=>'1250000.00'],(int)$as['id']);
  check((int)$updatedService['agreed_amount']===1250000,'Unchanged SQL decimal amount remains editable');
