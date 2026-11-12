@@ -76,6 +76,14 @@ try{
  check(D::list($uid,$a,'driver-work',array_replace($workFilters,['status'=>'approved']))['items']===[],'Work review status filters the matching dates');
  rejected(fn()=>D::list($uid,$a,'driver-work',['dateFrom'=>'2026-02-30']),'VALIDATION_ERROR');
  rejected(fn()=>D::list($uid,$a,'driver-work',['dateFrom'=>'2026-11-03','dateTo'=>'2026-11-02']),'VALIDATION_ERROR');
+ $defaultRates=\ServiceYar\Domain\DriverDeductionPolicy::rates($a);
+ check(array_sum($defaultRates)===18.8,'New companies use default 18.8 percent deductions');
+ $customRates=['supervision'=>4,'coordination'=>1,'overhead'=>7,'insurance'=>7.8];
+ \ServiceYar\Settings\SettingsService::put($uid,$a,['driver_deduction_rates'=>$customRates]);
+ $customDeduction=O::driverDeductions(10000.0,$a);
+ check((float)$customDeduction['deduction_rate']===19.8&&(float)$customDeduction['net_earned']===8020.0,'Saved agency deduction settings affect driver net amounts');
+ rejected(fn()=>\ServiceYar\Settings\SettingsService::put($uid,$a,['driver_deduction_rates'=>['supervision'=>99,'coordination'=>1,'overhead'=>7,'insurance'=>7.8]]),'INVALID_DEDUCTION_RATES');
+ \ServiceYar\Settings\SettingsService::put($uid,$a,['driver_deduction_rates'=>\ServiceYar\Domain\DriverDeductionPolicy::DEFAULTS]);
  $deductionSample=O::driverDeductions(43125000.0);
  check($deductionSample['supervision_deduction']===1293750.0&&$deductionSample['coordination_deduction']===431250.0&&$deductionSample['overhead_deduction']===3018750.0&&$deductionSample['insurance_deduction']===3363750.0&&$deductionSample['total_deductions']===8107500.0&&$deductionSample['net_earned']===35017500.0,'Default driver deductions are 3+1+7+7.8=18.8 percent');
  $pay=O::payroll($uid,$a,['from'=>$date,'to'=>$date]);$paid=array_values(array_filter($pay['items'],fn($r)=>(int)$r['id']===(int)$driver['id']))[0];check((float)$paid['gross_earned']===1000.0&&(float)$paid['total_deductions']===188.0&&(float)$paid['insurance_deduction']===78.0&&(float)$paid['balance']===512.0,'Payroll deducts 18.8 percent including 7.8 insurance before real payments');
