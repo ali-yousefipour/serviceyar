@@ -930,3 +930,30 @@ body.sy-menu-palette-open{overflow:hidden}
  #content form.directory-filters>label.directory-search{grid-column:auto}
  #content .service-filter-fields{grid-template-columns:minmax(0,1fr)}
 }
+
+/* Student and driver directory: dense desktop table, legible mobile cards */
+#content .sy-directory-table-wrap{width:100%;max-width:100%;overflow-x:auto;border:1px solid #e1e9e3;border-radius:10px;scrollbar-width:thin}
+#content .sy-directory-table{width:100%;border-collapse:separate;border-spacing:0;min-width:max-content;font-variant-numeric:tabular-nums}
+#content .sy-directory-table thead th{position:sticky;top:0;z-index:2;background:#edf5ef;color:#275a3e;font-weight:800;font-size:11px;white-space:nowrap;padding:9px 11px;border-bottom:1px solid #dce7df}
+#content .sy-directory-table tbody td{padding:8px 11px;line-height:1.65;font-size:12px;border-bottom:1px solid #edf1ee;vertical-align:middle}
+#content .sy-directory-table tbody tr:last-child td{border-bottom:0}
+#content .sy-directory-table tbody tr:hover{background:#f5faf6}
+#content .sy-directory-table .row-actions{min-width:190px;white-space:normal}
+#content .sy-directory-table .row-actions button{min-height:31px;padding:5px 9px;font-size:11px;border-radius:7px;margin:2px}
+#content .sy-directory-table input[type=checkbox]{width:16px;height:16px;accent-color:#16764a}
+@media(max-width:800px){
+ #content .sy-directory-table-wrap{border:0;overflow:visible;background:transparent}
+ #content .sy-directory-table{display:block;width:100%;min-width:0!important}
+ #content .sy-directory-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+ #content .sy-directory-table tbody{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,310px),1fr));gap:10px}
+ #content .sy-directory-table tbody tr{display:flex;flex-direction:column;min-width:0;padding:10px 12px;background:#fff;border:1px solid #dfe9e1;border-radius:11px;box-shadow:0 2px 8px #173c2709}
+ #content .sy-directory-table tbody td{display:flex;align-items:baseline;justify-content:space-between;gap:12px;width:100%;min-width:0;padding:7px 0;border:0;border-bottom:1px dashed #e7eee8;overflow-wrap:anywhere}
+ #content .sy-directory-table tbody td::before{content:attr(data-label);flex:0 0 38%;color:#627a6a;font-size:11px;font-weight:750}
+ #content .sy-directory-table tbody td:last-child{border-bottom:0}
+ #content .sy-directory-table tbody td.row-actions{display:flex;flex-wrap:wrap;justify-content:flex-start;align-items:center;gap:5px;min-width:0;padding-top:9px}
+ #content .sy-directory-table tbody td.row-actions::before{flex:0 0 100%}
+ #content .sy-directory-table tbody td.row-actions button{margin:0;flex:0 1 auto}
+ #content .sy-directory-table tbody tr:has(.sy-empty-results){grid-column:1/-1}
+ #content .sy-directory-table tbody td.empty{display:block;text-align:center}
+ #content .sy-directory-table tbody td.empty::before{display:none}
+}
