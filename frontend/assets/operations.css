@@ -1507,3 +1507,60 @@ body.sy-menu-palette-open{overflow:hidden}
  #content .sy-daily-schedule .sy-operation-filters :is(input,button){width:100%;min-width:0;font-size:16px;min-height:46px}
 }
 @media(max-width:370px){#content .sy-daily-summary{grid-template-columns:1fr}}
+
+
+/* New school service setup — guided, responsive flow */
+#content .sy-new-service{display:grid;gap:14px;min-width:0}
+#content .sy-new-service-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:18px 20px;background:#fff;border:1px solid #dde9e0;border-radius:16px}
+#content .sy-new-service-heading h2{font-size:20px;color:#19583a;line-height:1.5;margin:3px 0 5px}
+#content .sy-new-service-heading p{font-size:12px;color:#5c7966;line-height:1.9;margin:0;max-width:700px}
+#content .sy-new-service-progress{font-size:12px;font-weight:800;color:#175a39;background:#e9f7ed;border:1px solid #d4e9da;border-radius:11px;padding:10px 14px;white-space:normal}
+#content .sy-new-service-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:0 2px;margin:0}
+#content .sy-new-service-toolbar button{min-height:43px;padding:9px 16px;border-color:#b9d9c2;font-weight:800;color:#1e6440;background:#f4faf5}
+#content .sy-new-service-toolbar button:not(:disabled):hover{background:#e2f3e7}
+#content .sy-new-service-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:0}
+#content .sy-new-service-cards>.panel{margin:0;padding:19px;border:1px solid #dce9df;border-radius:15px}
+#content .sy-new-service-cards .panel h2,#content .sy-new-service-students h2,#content .sy-new-service-details h2{font-size:16px;font-weight:850;color:#19583a;line-height:1.6;margin:0 0 12px}
+#content .sy-new-service-cards .panel p{margin:0 0 17px;font-size:12px;line-height:1.9;color:#557563;min-height:44px;overflow-wrap:anywhere}
+#content .sy-new-service-cards .panel button{min-height:43px;min-width:150px;background:#eaf5ed;color:#175b3a;border:1px solid #cce2d3;font-weight:800}
+#content .sy-new-service-students,#content .sy-new-service-details{margin:0;padding:19px;border:1px solid #dce9df;border-radius:15px}
+#content .sy-new-service-section-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:9px}
+#content .sy-new-service-section-heading h2{margin:0}
+#content #serviceStudentsCount{padding:7px 11px;background:#f0f8f2;border:1px solid #d5e7da;border-radius:9px;color:#216442;font-size:12px;font-weight:750}
+#content #selectedServiceStudents{color:#365e45;font-size:12px;line-height:2;max-height:104px;overflow:auto;margin:9px 0 15px;overflow-wrap:anywhere}
+#content #serviceCapacityWarning:not([hidden]){padding:10px 12px;background:#fff0ef;border:1px solid #efc8c6;color:#9c3837;border-radius:9px;font-weight:800;font-size:12px;line-height:1.8}
+#content #changeServiceStudents{background:#f3faf5;color:#1e6d46;border:1px solid #c9e1d0;min-height:42px}
+#content .sy-new-service-details .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+#content .sy-new-service-details .form-grid>label{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:750;color:#345b41;min-width:0}
+#content .sy-new-service-details .form-grid input{box-sizing:border-box;width:100%;min-width:0;min-height:45px;border-radius:10px;border:1px solid #cbded1;background:#fff;font-size:14px;color:#1f402e;padding:9px 11px}
+#content .sy-new-service-details input[name=agreedAmountDisplay]{text-align:left;font-size:16px;font-variant-numeric:tabular-nums}
+#content .sy-new-service-details .form-grid small{font-size:11px;font-weight:450;color:#638070;line-height:1.8}
+#content .sy-new-service-details .sy-service-year-policy{grid-column:1/-1;font-size:12px;line-height:1.8;color:#52745f;padding:10px 12px;border:1px dashed #cfe4d5;border-radius:10px;background:#f8fbf9}
+#content .sy-new-service-details #serviceQuoteResult{margin-top:15px;max-width:100%;overflow-x:auto;scrollbar-width:thin}
+#content .sy-new-service-details #serviceQuoteResult .table-wrap{max-height:410px;overflow:auto;border:1px solid #dde9e1;border-radius:10px}
+#content .sy-new-service-details #serviceQuoteResult th{position:sticky;top:0;z-index:1;background:#eaf5ee}
+#content .sy-new-service-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px;padding-top:15px;border-top:1px solid #e4ede6}
+#content .sy-new-service-actions span{color:#557461;font-size:12px;line-height:1.8}
+#content .sy-new-service-actions button{min-height:46px;padding:10px 20px}
+#modal .service-picker-list{max-height:min(53dvh,460px);overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;border:1px solid #dfe9e1;border-radius:10px;padding:8px;background:#fbfdfb}
+#modal .service-picker-list>label{display:flex;align-items:flex-start;gap:10px;line-height:1.8;padding:10px 11px;background:#fff;border:1px solid #e5efe8;border-radius:9px;margin-bottom:6px;cursor:pointer}
+#modal .service-picker-list>label:hover{border-color:#a9d8b7;background:#f2faf4}
+#modal .service-picker-list>label input[type=checkbox]{flex:none;margin-top:4px;width:18px;height:18px;accent-color:#157245}
+#modal .service-picker-list .service-picker-assigned{opacity:.75;background:#f8f9f7}
+#modal .service-picker-list .service-picker-warning{display:block;margin-top:4px;color:#a34c37;font-size:11px;line-height:1.8}
+#modal .service-picker-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#modal .service-picker-tools>label{min-width:0}
+#modal .service-picker-tools #studentPickerStatus{min-width:0;width:100%}
+#modal .service-picker-actions{display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;padding-top:12px}
+#modal .service-picker-actions button{min-height:42px}
+@media(max-width:780px){#content .sy-new-service-cards{grid-template-columns:1fr}}
+@media(max-width:650px){
+ #content .sy-new-service-heading,#content .sy-new-service-cards>.panel,#content .sy-new-service-students,#content .sy-new-service-details{padding:13px}
+ #content .sy-new-service-heading h2{font-size:18px}
+ #content .sy-new-service-progress{width:100%;text-align:center}
+ #content .sy-new-service-toolbar button{flex:1 1 130px}
+ #content .sy-new-service-details .form-grid{grid-template-columns:1fr}
+ #content .sy-new-service-actions button{width:100%}
+ #modal .service-picker-tools{grid-template-columns:1fr}
+ #modal .service-picker-actions button{flex:1 1 42%;min-height:44px}
+}
