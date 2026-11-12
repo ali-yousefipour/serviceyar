@@ -9,6 +9,11 @@ if(!is_file($template)){
     echo "Reference template not installed: synthetic export remains active\n";
     exit(0);
 }
+$_ENV['SCHOOL_STATEMENT_REFERENCE_TEMPLATE_ENABLED']='0';
+if(Reference::available())throw new RuntimeException('Emergency rollback flag was ignored');
+$_ENV['SCHOOL_STATEMENT_REFERENCE_TEMPLATE_ENABLED']='1';
+if(!Reference::available())throw new RuntimeException('Installed template did not activate');
+unset($_ENV['SCHOOL_STATEMENT_REFERENCE_TEMPLATE_ENABLED']);
 $validation=Reference::validateTemplate($template);
 if(!($validation['valid']??false)){
     throw new RuntimeException('The installed reference template failed security/structure validation: '
