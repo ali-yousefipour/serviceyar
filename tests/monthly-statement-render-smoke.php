@@ -45,7 +45,8 @@ if($zip->open($path)!==true)throw new RuntimeException('Cannot open rendered wor
 try{
     foreach([3,4,5,6,7] as $sheet){
         $xml=(string)$zip->getFromName('xl/worksheets/sheet'.$sheet.'.xml');
-        if(!str_contains($xml,'دانش') && $sheet!==7)
+        $marker=in_array($sheet,[3,4,6],true)?'دانش':'راننده';
+        if(!str_contains($xml,$marker))
             throw new RuntimeException('Output does not populate sheet '.$sheet);
     }
     $parent=(string)$zip->getFromName('xl/worksheets/sheet6.xml');
