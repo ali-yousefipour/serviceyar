@@ -439,7 +439,7 @@ async function loadResource(key){
    <div class="sy-services-results-head"><div><h3>فهرست سرویس‌ها</h3><p>اطلاعات هر سرویس بدون پیمایش افقی نمایش داده می‌شود.</p></div><label class="sy-services-select-all"><input type="checkbox" id="selectPage"> انتخاب همه در این صفحه</label></div>
    <div class="sy-services-card-grid">${d.items.map((r,i)=>`<article class="sy-service-card">
     <header class="sy-service-card-head"><label class="sy-service-check"><input type="checkbox" data-select="${r.id}" aria-label="انتخاب سرویس ${esc(titleOf(r))}" ${state.selected.has(Number(r.id))?'checked':''}></label><div class="sy-service-identity"><span class="sy-service-index">سرویس ${number((state.page-1)*state.limit+i+1)}</span><h4>${esc(titleOf(r))}</h4><small>کد سرویس: ${esc(persianDigits(r.code||'ثبت نشده'))}</small></div><span class="sy-service-status" data-status="${esc(r.status||'unknown')}">${esc(statuses[r.status]||'نامشخص')}</span></header>
-    <dl class="sy-service-facts">${detailFields.map(f=>`<div><dt>${esc(labels[f]||f)}</dt><dd>${esc(persianDigits(display(r,f)))}</dd></div>`).join('')}</dl>
+    <dl class="sy-service-facts">${detailFields.map(f=>`<div><dt>${esc(labels[f]||f)}</dt><dd>${esc(persianDigits(display(r,f)))}</dd></div>`).join('')}<div><dt>جمع ماهانه دانش‌آموزان</dt><dd>${number(r.students_monthly_total)} ریال</dd></div><div class="sy-service-annual"><dt>مبلغ سالانه سرویس</dt><dd>${number(r.students_annual_total)} ریال</dd></div></dl>
     <footer class="sy-service-actions">${action(r.id,'data-view','جزئیات','sy-service-action-primary')}${can(key,'manage')?action(r.id,'data-edit','ویرایش'):''}${action(r.id,'data-service-schools','مدارس')}${action(r.id,'data-members','دانش‌آموزان')}${action(r.id,'data-service-map','نقشه')}${can(key,'manage')?action(r.id,'data-del',Number(r.is_active)===0?'بازیابی':'غیرفعال','sy-service-action-danger'):''}</footer>
    </article>`).join('')||'<div class="sy-services-empty"><strong>سرویسی پیدا نشد</strong><p>عبارت جست‌وجو یا فیلترها را تغییر دهید.</p><button type="button" data-clear-grid-filters>نمایش همه سرویس‌ها</button></div>'}</div>
    <div class="pager sy-services-pager"><button id="prevPage" ${state.page<=1?'disabled':''}>صفحه قبل</button><span>صفحه ${number(state.page)} از ${number(Math.max(1,d.pagination.pages))} · ${number(d.pagination.total)} سرویس</span><button id="nextPage" ${state.page>=d.pagination.pages?'disabled':''}>صفحه بعد</button><label>تعداد در صفحه <select id="pageSize" aria-label="تعداد سرویس در صفحه">${[10,25,50,100].map(n=>`<option value="${n}" ${state.limit===n?'selected':''}>${number(n)}</option>`).join('')}</select></label></div>
@@ -551,10 +551,12 @@ async function serviceMembers(id,back){
   const canAssign=canManageMembers&&Number(service.is_active)===1&&service.status!=='cancelled';
   const free=Math.max(0,Number(service.capacity)-rows.length);
   const monthlyTotal=rows.reduce((total,row)=>total+Number(row.monthly_fee||0),0);
+  const annualMonths=row=>/ابتدایی|دبستان|primary|elementary/i.test(String(row.school_type||'')+' '+String(row.student_grade||''))?8.5:9;
+  const annualTotal=rows.reduce((total,row)=>total+Math.round(Number(row.monthly_fee||0)*annualMonths(row)),0);
   dialog('دانش‌آموزان سرویس '+service.title,`<p>ظرفیت ${number(service.capacity)} · تخصیص ${number(rows.length)} · جای خالی ${number(free)}</p>
-   <p>جمع ماهانه دانش‌آموزان: ${number(monthlyTotal)} ریال</p>
+   <p>جمع ماهانه دانش‌آموزان: ${number(monthlyTotal)} ریال · جمع سالانه: ${number(annualTotal)} ریال</p>
    ${back?'<button type="button" id="backToDriverServices">بازگشت به سرویس‌های راننده</button>':''}
-   ${simpleTable(['نام','مسافت تعرفه','ماهیانه · ریال','ترتیب توقف','نشانی'],rows.map(r=>[person(r),km(r.tariff_distance_km),number(r.monthly_fee),r.pickup_order,r.pickup_address]))}
+   ${simpleTable(['نام','مسافت تعرفه','ماهیانه · ریال','مدت قرارداد','سالیانه · ریال','ترتیب توقف','نشانی'],rows.map(r=>[person(r),km(r.tariff_distance_km),number(r.monthly_fee),number(annualMonths(r))+' ماه',number(Math.round(Number(r.monthly_fee||0)*annualMonths(r))),r.pickup_order,r.pickup_address]))}
    ${canManageMembers?`<div class="member-actions sy-member-actions" aria-label="مدیریت دانش‌آموزان سرویس">${rows.map(r=>`<div class="sy-member-action-row"><span>${esc(person(r))}</span>${can('students','manage')?`<button type="button" data-edit-member="${r.id}">ویرایش دانش‌آموز</button>`:''}<button type="button" class="danger" data-remove-member="${r.id}">حذف از سرویس</button></div>`).join('')}</div>`:''}
    ${canAssign?`${free?`
    <form id="assignForm">
