@@ -36,6 +36,7 @@ jobs:
           php tests/static-smoke.php
           php tests/monthly-statement-period.php
           php tests/monthly-statement-reference.php
+          php tests/monthly-statement-template.php
           node --check frontend/assets/app.js
           node --check frontend/assets/operations.js
           python3 -m py_compile tools/deploy_serviceyar.py
