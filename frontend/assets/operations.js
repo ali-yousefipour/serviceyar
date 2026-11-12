@@ -1063,7 +1063,23 @@ async function operationPage(key,token){
  let request=0;const load=async()=>{const current=++request,result=$('operationResult'),status=$('operationResultStatus'),submit=$('operationSubmit'),print=$('printOperation');submit.disabled=true;print.disabled=true;status.textContent='در حال دریافت اطلاعات…';result.setAttribute('aria-busy','true');result.innerHTML='<div class="sy-operation-loading" role="status"><span class="sy-operation-spinner" aria-hidden="true"></span>در حال دریافت و آماده‌سازی گزارش…</div>';const query=new URLSearchParams(new FormData($('operationFilters'))),path=key==='monitoring'?'/api/v1/monitoring/activity':'/api/v1/operations/'+({'finance-report':'ledger','school-report':'schools'}[key]||key);
  try{const d=await api(scoped(path+'?'+query));if(token!==pageToken||current!==request)return;
  if(key==='payroll')await renderPayroll(d,token);
- if(key==='finance-report')result.innerHTML=simpleTable(['نوع طرف حساب','شناسه','دریافت (ریال)','پرداخت (ریال)','خالص دریافت'],d.items.map(r=>[({student:'دانش‌آموز',driver:'راننده',school:'مدرسه',agency:'شرکت',invoice:'فاکتور'})[r.party_type],r.party_id,number(r.receipts),number(r.payments),number(Number(r.receipts)-Number(r.payments))]));
+ if(key==='finance-report'){
+  const typeNames={student:'دانش‌آموز',driver:'راننده',school:'مدرسه',agency:'شرکت',invoice:'فاکتور'};
+  const sourceByType={student:'students',driver:'drivers',school:'schools'};
+  const involved=[...new Set((d.items||[]).map(item=>item.party_type))].filter(type=>sourceByType[type]);
+  const parties={};
+  await Promise.all(involved.map(async type=>{
+   try{const rows=await lookup(sourceByType[type],true);parties[type]=new Map(rows.map(row=>[String(row.id),person(row)]));}
+   catch{parties[type]=new Map();}
+  }));
+  if(token!==pageToken||current!==request)return;
+  const partyName=row=>row.party_name||(
+   row.party_type==='agency'&&String(row.party_id)===String(currentAgency?.id)?currentAgency.name:
+   parties[row.party_type]?.get(String(row.party_id))
+  )||('شماره '+persianDigits(row.party_id||'—'));
+  result.innerHTML=simpleTable(['نوع طرف حساب','نام طرف حساب','دریافت (ریال)','پرداخت (ریال)','خالص دریافت'],
+   (d.items||[]).map(row=>[typeNames[row.party_type]||row.party_type,partyName(row),number(row.receipts),number(row.payments),number(Number(row.receipts)-Number(row.payments))]));
+ }
  if(key==='school-report')result.innerHTML=simpleTable(['کد مدرسه','مدرسه','شیفت','نوع','دانش‌آموز','دارای سرویس','جمع ماهیانه'],d.items.map(r=>[r.code,r.name,r.shift,r.school_type,number(r.students),number(r.assigned),number(r.monthly_fees)]));if(key==='monitoring'){const users=await api(scoped('/api/v1/monitoring/users'));if(token!==pageToken||current!==request)return;result.innerHTML='<h3>وضعیت فعالیت کاربران شرکت</h3>'+simpleTable(['کاربر','وضعیت','آخرین ورود','آخرین فعالیت'],users.map(u=>[person(u),Number(u.online)?'آنلاین':'آفلاین',dateText(u.last_login_at),dateText(u.last_seen_at)]))+'<h3>رویدادهای عملیاتی</h3>'+simpleTable(['کاربر','عملیات','بخش','شناسه رکورد','تاریخ'],d.map(r=>[r.user_id,r.action,resourceName(r.entity_type),r.entity_id,dateText(r.created_at)]));}
  if(key==='distances')result.innerHTML='<p class="muted">فاصله مستقیم جغرافیایی است؛ فاصله مسیر جاده‌ای نیازمند سرویس نقشه است.</p>'+simpleTable(['دانش‌آموز','مدرسه','کیلومتر'],d.items.map(r=>[person(r),r.school,number(r.km)]));
  if(group){result.innerHTML='<p class="muted">پیشنهاد بر اساس نزدیک‌ترین مختصات و ظرفیت است. گروه‌ها را پیش از تخصیص بررسی کنید. مسیر جاده‌ای محاسبه نشده است.</p>'+d.groups.map((g,i)=>`<section class="group-card"><h3>گروه ${number(i+1)} · ${number(g.length)} نفر</h3>${simpleTable(['دانش‌آموز','نشانی'],g.map(r=>[person(r),r.address]))}<button data-use-group="${i}">تعریف سرویس برای این گروه</button></section>`).join('')+`<p>${number(d.unlocated.length)} دانش‌آموز فاقد مختصات است.</p>`;result.querySelectorAll('[data-use-group]').forEach(b=>{b.disabled=!can('services','manage');b.onclick=async()=>{const title=prompt('عنوان سرویس جدید:');if(!title?.trim())return;b.disabled=true;try{await write('/api/v1/operations/groups',{title,schoolId:query.get('schoolId'),capacity:query.get('capacity'),ids:d.groups[Number(b.dataset.useGroup)].map(st=>Number(st.id))});lookupCache={};notify('سرویس '+title+' ایجاد شد. راننده را از عملیات سرویس‌ها تعیین کنید.');await load();}catch(err){notify(err.message+'؛ سرویس‌های ایجادشده را در عملیات سرویس‌ها بررسی کنید.',true);b.disabled=false;}};});}
