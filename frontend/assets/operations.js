@@ -1607,11 +1607,27 @@ async function newServicePage(token,initialDriverId){
   const eligibleSchool=s=>selectedSchools.includes(Number(s.school_id));
   const blocked=s=>s.driver_name||Number(s.is_active)===0||s.service_status==='cancelled';
   const matching=()=>students.filter(s=>eligibleSchool(s)&&(status.value==='all'||(status.value==='available'?s.service_status!=='cancelled':!blocked(s)))&&(!history.checked||hasMehrDriver(s))&&[person(s),s.national_code].some(v=>matches(v,name.value))&&matches(s.address,address.value));
-  const render=()=>{const filtered=matching();rows.innerHTML=filtered.map(s=>`<label class="service-picker-student ${blocked(s)?'service-picker-assigned':''}"><input type="checkbox" value="${Number(s.id)}" ${pending.has(Number(s.id))?'checked':''} ${blocked(s)?'disabled':''}><span><strong>${esc(person(s))}</strong><small>${esc(s.address||'نشانی ثبت نشده')}${hasMehrDriver(s)?' · سابقه مهر':''}</small>${s.driver_name?`<small class="service-picker-warning">دارای سرویس فعال با راننده ${esc(s.driver_name)}؛ ابتدا تخصیص قبلی را حذف کنید.</small>`:''}${Number(s.is_active)===0?'<small class="service-picker-warning">پرونده دانش‌آموز غیرفعال است؛ ابتدا آن را فعال کنید.</small>':''}${s.service_status==='cancelled'?'<small class="service-picker-warning">وضعیت دانش‌آموز انصراف است؛ ابتدا وضعیت را اصلاح کنید.</small>':''}</span></label>`).join('');$('studentPickerCount').textContent='دانش‌آموزان مدرسه: '+number(students.filter(s=>selectedSchools.includes(Number(s.school_id))).length)+' · نتایج: '+number(filtered.length)+' · انتخاب‌شده: '+number(pending.size);if(!filtered.length){const other=students.filter(s=>!eligibleSchool(s)&&[person(s),s.national_code].some(v=>matches(v,name.value))&&name.value.trim());rows.innerHTML='<p class="empty">دانش‌آموزی با این فیلترها در مدارس انتخاب‌شده یافت نشد.</p>'+(other.length?'<p class="service-picker-warning">'+number(other.length)+' دانش‌آموز با این نام در مدرسه دیگری ثبت شده‌اند. مدرسه انتخابی را بررسی کنید.</p>':'');}};
+  const render=()=>{const filtered=matching();rows.innerHTML=filtered.map(s=>`<label class="service-picker-student ${blocked(s)?'service-picker-assigned':''}"><input type="checkbox" value="${Number(s.id)}" ${pending.has(Number(s.id))?'checked':''} ${blocked(s)?'disabled':''}><span><strong>${esc(person(s))}</strong><small>${esc(s.address||'نشانی ثبت نشده')}${hasMehrDriver(s)?' · سابقه مهر':''}</small>${s.driver_name?`<small class="service-picker-warning">دارای سرویس فعال با راننده ${esc(s.driver_name)}؛ ابتدا تخصیص قبلی را حذف کنید.</small>`:''}${Number(s.is_active)===0?'<small class="service-picker-warning">پرونده دانش‌آموز غیرفعال است؛ ابتدا آن را فعال کنید.</small>':''}${s.service_status==='cancelled'?'<small class="service-picker-warning">وضعیت دانش‌آموز انصراف است؛ ابتدا وضعیت را اصلاح کنید.</small>':''}</span></label>`).join('');$('studentPickerCount').textContent='دانش‌آموزان مدرسه: '+number(students.filter(s=>selectedSchools.includes(Number(s.school_id))).length)+' · نتایج: '+number(filtered.length)+' · انتخاب‌شده: '+number(pending.size)+' از ظرفیت '+number(form.elements.capacity.value);if(!filtered.length){const other=students.filter(s=>!eligibleSchool(s)&&[person(s),s.national_code].some(v=>matches(v,name.value))&&name.value.trim());rows.innerHTML='<p class="empty">دانش‌آموزی با این فیلترها در مدارس انتخاب‌شده یافت نشد.</p>'+(other.length?'<p class="service-picker-warning">'+number(other.length)+' دانش‌آموز با این نام در مدرسه دیگری ثبت شده‌اند. مدرسه انتخابی را بررسی کنید.</p>':'');}};
   name.oninput=address.oninput=history.onchange=status.onchange=render;rows.onchange=e=>{togglePick(e,pending);render();};
-  $('studentPickerSelectAll').onclick=()=>{matching().filter(s=>!blocked(s)).forEach(s=>pending.add(Number(s.id)));render();};
+  $('studentPickerSelectAll').onclick=()=>{
+   const limit=Number(form.elements.capacity.value);
+   for(const student of matching().filter(s=>!blocked(s))){
+    if(pending.size>=limit)break;
+    pending.add(Number(student.id));
+   }
+   render();
+   if(pending.size>=limit)notify('ظرفیت سرویس تکمیل شده است. برای انتخاب بیشتر، ابتدا ظرفیت را بررسی کنید.');
+  };
   $('studentPickerClear').onclick=()=>{pending.clear();render();};
-  $('confirmStudents').onclick=()=>{chosen.clear();for(const s of students)if(pending.has(Number(s.id))&&!blocked(s))chosen.add(Number(s.id));closeDialog();sync();};render();name.focus();
+  $('confirmStudents').onclick=()=>{
+   if(pending.size>Number(form.elements.capacity.value)){
+    notify('تعداد انتخاب‌ها از ظرفیت سرویس بیشتر است؛ چند دانش‌آموز را از انتخاب خارج کنید.',true);
+    return;
+   }
+   chosen.clear();
+   for(const s of students)if(pending.has(Number(s.id))&&!blocked(s))chosen.add(Number(s.id));
+   closeDialog();sync();
+  };render();name.focus();
  };
  form.elements.title.addEventListener('input',refreshSave);
  form.elements.agreedAmountDisplay.addEventListener('input',()=>{syncAgreed();refreshSave();});
