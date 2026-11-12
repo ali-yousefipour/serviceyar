@@ -51,6 +51,10 @@ final class MonthlyStatementWorkbook
         if($d['status']!=='final')throw new AuthException(409,'برای دریافت فایل، صورت‌وضعیت باید فعال باشد.','STATEMENT_DELETED');
         if(!class_exists(\ZipArchive::class))throw new AuthException(500,'افزونه ZIP برای اکسل فعال نیست.','EXPORT_DEPENDENCY_MISSING');
         $q=Connection::get()->prepare('SELECT name FROM agencies WHERE id=?');$q->execute([$aid]);$agency=(string)$q->fetchColumn();
+        // Prefer the real reference's layout and formula-bearing sheets when
+        // the scrubbed template has been installed. Legacy synthetic XLSX is
+        // retained as a safe fallback until the template is deployed.
+        ReferenceMonthlyStatementWorkbook::downloadIfAvailable($d,$agency,$id);
         $label=$d['month_name'].' '.$d['year'];
         $title=$label.' - '.$agency.' - صورت‌وضعیت سرویس مدارس (ریال)';
         $items=$d['items'];$drivers=$d['drivers'];$rates=$d['rates'];$t=$d['totals'];
