@@ -746,7 +746,7 @@ async function schoolStatementPage(token){
  const archive=$('statementArchive'),preview=$('statementPreviewArea');
  const details=d=>{
   const t=d.totals||{},r=d.reference_totals||{},refDrivers=d.reference_drivers||[],errors=d.validation_errors||[],warnings=d.reconciliation_warnings||[];
-  const hasReference=Object.keys(r).length>0;
+  const hasReference=Object.keys(r).length>0,missingDrivers=d.missing_driver_errors||[];
   const fmt=v=>number(Number(v||0));
   return `<div class="statement-summary" role="group" aria-label="خلاصه صورت‌وضعیت">
   ${[['دانش‌آموزان',fmt(t.students)],['رانندگان',fmt(t.drivers)],['مدارس',fmt(t.schools)],
@@ -760,6 +760,7 @@ async function schoolStatementPage(token){
     ['صورت‌وضعیت بدون بیمه و گواهی (ریال)',fmt(r.statement_excluding_certificate_insurance)]
   ].map(([k,v])=>`<span>${esc(k)}: <b>${esc(v)}</b></span>`).join('')}</div>
   ${errors.length?`<div class="error" role="alert"><strong>ثبت نهایی مسدود است:</strong> نرخ‌نامه ${number(errors.length)} دانش‌آموز معتبر نیست.<div class="table-wrap">${simpleTable(['دانش‌آموز','کلاس خودرو','مسافت','ناحیه','اشکال'],errors.map(x=>[x.student_name,x.vehicle_class||'ثبت نشده',x.distance_km,x.region,x.message]))}</div></div>`:''}
+  ${missingDrivers.length?`<div class="error" role="alert">تعداد ${number(missingDrivers.length)} دانش‌آموز به سرویس بدون راننده متصل هستند؛ پیش از ثبت، راننده‌های این سرویس‌ها را مشخص کنید.<div class="table-wrap">${simpleTable(['دانش‌آموز','شناسه سرویس','علت'],missingDrivers.map(x=>[x.student_name,x.service_id,x.message]))}</div></div>`:''}
   ${warnings.length?`<div class="muted" role="status">مبلغ ماهانه ثبت‌شده برای ${number(warnings.length)} دانش‌آموز با نرخ‌نامه مرجع تفاوت دارد؛ پیش از تأیید بررسی شود.<div class="table-wrap">${simpleTable(['دانش‌آموز','مبلغ ثبت‌شده','بهای محاسبه‌شده اولیا'],warnings.map(x=>[x.student_name,fmt(x.recorded_monthly_fee),fmt(x.reference_parent_fee)]))}</div></div>`:''}
   <h3>صورت‌وضعیت رانندگان</h3>
   <div class="table-wrap">${simpleTable(['راننده','دانش‌آموز','حق‌الزحمه راننده','نظارت ۳٪','هماهنگی ۱٪','سهم شرکت ۷٪','جمع صورت‌وضعیت'],(refDrivers.length?refDrivers:d.drivers||[]).map(x=>[x.driver_name,fmt(x.student_count),fmt(x.driver_fee??x.gross),fmt(x.oversight_3pct),fmt(x.education_1pct),fmt(x.company_7pct),fmt(x.statement_excluding_certificate_insurance??x.net)]))}</div>
@@ -785,7 +786,7 @@ async function schoolStatementPage(token){
   e.preventDefault();const button=form.querySelector('[type=submit]');button.disabled=true;preview.innerHTML='<p class="loading">در حال تهیه پیش‌نمایش…</p>';
   const payload={year:Number(form.elements.year.value),month:Number(form.elements.month.value),from:form.elements.from.value,to:form.elements.to.value};
   try{const d=await write('/api/v1/operations/school-statements/preview',payload,'POST');if(token!==pageToken)return;
-   preview.innerHTML=`<div class="toolbar"><h3>پیش‌نمایش ${esc(d.month_name)} ${number(d.year)}</h3><span class="badge">ثبت‌نشده</span></div>${details(d)}${allowed&&!d.validation_errors?.length?'<div class="member-actions"><button type="button" class="primary" id="finalizeStatement">تأیید و ثبت نهایی</button></div>':''}`;
+   preview.innerHTML=`<div class="toolbar"><h3>پیش‌نمایش ${esc(d.month_name)} ${number(d.year)}</h3><span class="badge">ثبت‌نشده</span></div>${details(d)}${allowed&&!d.validation_errors?.length&&!d.missing_driver_errors?.length&&!d.reconciliation_warnings?.length?'<div class="member-actions"><button type="button" class="primary" id="finalizeStatement">تأیید و ثبت نهایی</button></div>':''}`;
    $('finalizeStatement')?.addEventListener('click',async()=>{if(!confirm('صورت‌وضعیت این ماه با مبالغ نمایش‌داده‌شده نهایی و ثبت شود؟'))return;const b=$('finalizeStatement');b.disabled=true;try{const result=await write('/api/v1/operations/school-statements',payload,'POST');preview.innerHTML='<p class="ok">صورت‌وضعیت ماهانه ثبت شد.</p>';notify('صورت‌وضعیت نهایی ثبت شد.');await load();showDetail(result.id);}catch(err){notify(err.message,true);b.disabled=false;}});
   }catch(err){preview.innerHTML='<p class="error">'+esc(err.message)+'</p>';}finally{button.disabled=false;}
  };
