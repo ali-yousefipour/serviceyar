@@ -95,7 +95,7 @@ final class MonthlyStatements
         $academic=$month>=7?$year.'-'.($year+1):($year-1).'-'.$year;
         $pdo=Connection::get();
         $q=$pdo->prepare("SELECT st.id AS student_id,CONCAT_WS(' ',st.first_name,st.last_name) student_name,
-          st.national_code student_national_code,st.grade,st.monthly_fee,st.tariff_distance_km,
+          st.national_code student_national_code,st.grade,st.monthly_fee,st.tariff_distance_km,st.tariff_vehicle_class,
           st.guardian_first_name,st.guardian_last_name,st.mobile,st.address,
           sc.name school_name,sc.region,sc.school_type,
           sv.id service_id,sv.title service_name,sv.code service_code,
@@ -123,6 +123,7 @@ final class MonthlyStatements
             'statement_excluding_certificate_insurance'];
         $referenceTotals=array_fill_keys($referenceKeys,0.0);
         $referenceDrivers=[];
+        $validationErrors=[];$reconciliationWarnings=[];
         foreach($q->fetchAll() as $row){
             if(isset($seenStudents[$row['student_id']]))throw new AuthException(409,'یک دانش‌آموز به چند سرویس فعال تخصیص داده شده است؛ پیش از ثبت صورت‌وضعیت اصلاح کنید.','DUPLICATE_STUDENT_ASSIGNMENT');
             $seenStudents[$row['student_id']]=true;
@@ -133,7 +134,43 @@ final class MonthlyStatements
             // + qualification + 7.8% insurance on that subtotal.
             // Municipality / VAT / police are tracked separately, not
             // mistakenly deducted from the driver's net pay.
-            $reference=SchoolServiceStatement::fromWorkbookRate((string)$gross,30,true,true);
+            $region=trim((string)($row['region']??''));
+            $region=strtr($region,[
+                '۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4',
+                '۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9',
+                '٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4',
+                '٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9'
+            ]);
+            if(preg_match('/^[1-7]$/',$region))$region='ناحیه '.$region;
+            try{
+                $reference=SchoolServiceStatement::fromSchoolTariff(
+                    (string)($row['tariff_vehicle_class']??''),
+                    $row['tariff_distance_km']??null,$region,30
+                );
+                $row['reference_tariff_verified']=true;
+                if($gross>0 && abs((float)$reference['parent_total']-$gross)>1.0){
+                    $reconciliationWarnings[]=[
+                        'student_id'=>(int)$row['student_id'],
+                        'student_name'=>$row['student_name'],
+                        'recorded_monthly_fee'=>$gross,
+                        'reference_parent_fee'=>$reference['parent_total'],
+                        'message'=>'مبلغ ماهانه ذخیره‌شده با بهای خدمات محاسبه‌شده از نرخ‌نامه مرجع برابر نیست.'
+                    ];
+                }
+            }catch(AuthException $e){
+                $validationErrors[]=[
+                    'student_id'=>(int)$row['student_id'],
+                    'student_name'=>$row['student_name'],
+                    'vehicle_class'=>$row['tariff_vehicle_class']??null,
+                    'distance_km'=>$row['tariff_distance_km']??null,
+                    'region'=>$region,
+                    'message'=>'کلاس خودرو، مسافت یا ناحیه در جدول تعرفه مرجع معتبر نیست.'
+                ];
+                // Preview estimate only. This row may NOT be finalized as an
+                // official statement until the missing tariff is corrected.
+                $reference=SchoolServiceStatement::fromWorkbookRate((string)$gross,30,true,true);
+                $row['reference_tariff_verified']=false;
+            }
             $row['reference']=$reference;
             $row['gross']=$gross;
             $row['deductions']=$calc['total_deductions'];
@@ -178,9 +215,11 @@ final class MonthlyStatements
           'academic_year'=>$academic,'rates'=>$rates,'totals'=>$totals,'drivers'=>array_values($drivers),
           'items'=>$items,'reference_totals'=>$referenceTotals,
           'reference_drivers'=>array_values($referenceDrivers),
+          'validation_errors'=>$validationErrors,
+          'reconciliation_warnings'=>$reconciliationWarnings,
           'reference_basis'=>['service_days'=>30,'certificate_on_positive_fee'=>true,
               'insured'=>true,'currency'=>'IRR','tariff_source'=>'students.monthly_fee',
-              'review_required'=>true],
+              'review_required'=>true,'tariff_verified'=>!$validationErrors],
           'status'=>'preview','source'=>'current_active_service_assignments'];
     }
 
@@ -209,6 +248,9 @@ final class MonthlyStatements
         self::authorize($uid,$aid,true);
         $data=self::preview($uid,$aid,$input);
         if(!$data['items'])throw new AuthException(422,'برای این ماه هیچ تخصیص فعال و قابل محاسبه‌ای وجود ندارد.','STATEMENT_EMPTY');
+        if(!empty($data['validation_errors'])){
+            throw new AuthException(422,'تعدادی از دانش‌آموزان کلاس خودرو، مسافت یا ناحیه معتبر ندارند. پیش از ثبت نهایی، اطلاعات نرخ‌نامه را اصلاح کنید.','STATEMENT_TARIFF_UNVERIFIED');
+        }
         $pdo=Connection::get();$pdo->beginTransaction();
         try{
             $agencyLock=$pdo->prepare('SELECT id FROM agencies WHERE id=:a FOR UPDATE');$agencyLock->execute(['a'=>$aid]);
