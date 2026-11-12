@@ -1204,3 +1204,10 @@ body.sy-menu-palette-open{overflow:hidden}
 #modal .sy-member-action-row>span{flex:1 1 180px;min-width:0;font-size:12px;font-weight:750;overflow-wrap:anywhere}
 #modal .sy-member-action-row>button{min-height:34px;padding:6px 10px;font-size:11px;border-radius:8px}
 @media(max-width:580px){#modal .sy-member-actions{padding:7px}#modal .sy-member-action-row>span{flex-basis:100%}#modal .sy-member-action-row>button{flex:1 1 auto}}
+
+/* Annual service fee: clear monetary hierarchy on existing and new services */
+#content .sy-service-facts .sy-service-annual{background:#f0f8f2;border:1px solid #d7e8db;border-radius:9px;padding:10px 12px}
+#content .sy-service-facts .sy-service-annual dt{font-size:11px;font-weight:800;color:#315d41}
+#content .sy-service-facts .sy-service-annual dd{font-size:16px;font-weight:900;color:#17633c;line-height:1.6;overflow-wrap:anywhere}
+#content .sy-service-year-policy{grid-column:1/-1;padding:9px 12px;margin:0;background:#f3f9f5;border:1px solid #dcece0;border-radius:9px;font-size:12px;line-height:1.8;color:#315c40}
+@media(max-width:650px){#content .sy-service-facts .sy-service-annual dd{font-size:14px}}
