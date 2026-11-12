@@ -18,7 +18,12 @@ final class ReferenceMonthlyStatementWorkbook
 
     public static function available(): bool
     {
-        return is_file(self::TEMPLATE) && class_exists(\ZipArchive::class) && class_exists(\DOMDocument::class);
+        // Installing the XLSX is not sufficient to enable finance-facing output.
+        // Require explicit operational approval after template and account audits.
+        return (string)config('SCHOOL_STATEMENT_REFERENCE_TEMPLATE_ENABLED','0')==='1'
+            && is_file(self::TEMPLATE)
+            && class_exists(\ZipArchive::class)
+            && class_exists(\DOMDocument::class);
     }
 
     private static function col(int $number): string
