@@ -957,3 +957,29 @@ body.sy-menu-palette-open{overflow:hidden}
  #content .sy-directory-table tbody td.empty{display:block;text-align:center}
  #content .sy-directory-table tbody td.empty::before{display:none}
 }
+
+/* P1 dedicated record wizards: compact density, consistent controls, no wasted columns */
+#modal .sy-record-wizard{display:flex;flex-direction:column;gap:0;min-width:0}
+#modal .sy-record-wizard .wizard-step{padding:14px 15px;margin:7px 0 10px;border-radius:11px;background:#fff;border:1px solid #e2eae4}
+#modal .sy-record-wizard .wizard-step>h4{font-size:14px;line-height:1.5;margin:0 0 11px;color:#174c31}
+#modal .sy-record-wizard .sy-wizard-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px 14px;align-items:start}
+#modal .sy-record-wizard .sy-wizard-fields>label{display:flex;flex-direction:column;gap:5px;min-width:0;font-size:11px;line-height:1.5;font-weight:750;color:#3e5c48}
+#modal .sy-record-wizard .sy-wizard-fields>label :is(input,select,textarea){width:100%;min-width:0;min-height:40px;max-width:100%;padding:8px 10px;border:1px solid #dce7de;border-radius:9px;background:#fff;font-size:12px;line-height:1.6}
+#modal .sy-record-wizard .sy-wizard-fields>label textarea{min-height:75px;resize:vertical}
+#modal .sy-record-wizard .sy-wizard-extras{margin-top:12px;padding:0;border:1px solid #e2eae4;border-radius:9px;background:#f9fbfa}
+#modal .sy-record-wizard .sy-wizard-extras>summary{cursor:pointer;padding:10px 12px;font-size:12px;font-weight:800;color:#326246;list-style-position:inside}
+#modal .sy-record-wizard .sy-wizard-extras[open]>summary{border-bottom:1px solid #e2eae4}
+#modal .sy-record-wizard .sy-wizard-extras>.sy-wizard-fields{padding:12px}
+#modal .sy-record-wizard .wizard-progress{padding-bottom:7px;gap:6px}
+#modal .sy-record-wizard .wizard-marker{flex-basis:110px;min-height:38px;border-radius:9px}
+#modal .sy-record-wizard .wizard-marker b{width:22px;height:22px}
+#modal .sy-record-wizard .wizard-actions{margin-top:6px;padding-top:10px;gap:8px}
+#modal .sy-record-wizard .wizard-actions button{min-height:39px;padding:7px 13px}
+#modal .sy-record-wizard .wizard-review .detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+#modal .sy-record-wizard .wizard-review .detail-grid>div{padding:9px 11px}
+#modal .sy-record-wizard .wizard-review :is(dt,dd){line-height:1.6}
+@media(max-width:680px){
+ #modal .sy-record-wizard .sy-wizard-fields,#modal .sy-record-wizard .wizard-review .detail-grid{grid-template-columns:minmax(0,1fr)}
+ #modal .sy-record-wizard .wizard-step{padding:11px}
+ #modal .sy-record-wizard .sy-wizard-extras>.sy-wizard-fields{padding:10px}
+}
