@@ -1584,3 +1584,5 @@ body.sy-menu-palette-open{overflow:hidden}
 #content .sy-service-quote-footnote{margin:10px 0 15px;padding:10px 12px;border-radius:9px;background:#f7faf8;color:#587363;font-size:11px;line-height:1.8}
 @media(max-width:1070px){#content .sy-service-quote-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:550px){#content .sy-service-quote-metrics{grid-template-columns:1fr}#content .sy-service-quote-metrics strong{font-size:15px}}
+
+#modal .sy-service-picker-more{padding:10px 12px;margin:8px 0 0;background:#f4faf6;border:1px dashed #cbded1;border-radius:9px;color:#476c51;font-size:12px;line-height:1.8;text-align:center}
