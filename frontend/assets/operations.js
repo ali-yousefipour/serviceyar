@@ -725,10 +725,12 @@ function bulkFeeDialog(){
    <div class="member-actions"><button class="primary" type="submit">بررسی و ثبت تغییرات</button><button type="button" id="cancelBulkFee">انصراف</button></div>
   </form>`);
  const form=$('feeForm'),mode=form.elements.mode,display=$('bulkFeeAmountDisplay'),raw=form.elements.value;
- const ascii=value=>String(value).replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[٬,\s]/g,'');
+ const ascii=value=>String(value).replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
  const sync=()=>{
   const percentMode=mode.value==='percent',text=ascii(display.value);
-  const normalized=percentMode?text.replace(/[^0-9.\-]/g,''):text.replace(/\D/g,'');
+  // Preserve invalid characters for validation: never turn 1.5 into 15 rials
+  // or a negative amount into a positive one.
+  const normalized=percentMode?text.trim().replace(/[٫,]/g,'.'):text.replace(/[٬,\s]/g,'');
   const candidate=normalized.replace(/^(-?)0+(?=\d)/,'$1');
   const ok=percentMode?/^-?\d+(?:\.\d{0,2})?$/.test(candidate)&&Number(candidate)>=-100&&Number(candidate)<=100:/^\d{1,13}$/.test(candidate)&&Number(candidate)<=1000000000000;
   raw.value=ok?String(Number(candidate)):'';
