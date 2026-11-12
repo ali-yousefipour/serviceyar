@@ -60,7 +60,9 @@ final class ReferenceMonthlyStatementWorkbook
 
     public static function available(): bool
     {
-        if((string)config('SCHOOL_STATEMENT_REFERENCE_TEMPLATE_ENABLED','0')!=='1')return false;
+        // Default to the installed, CI-validated 14-sheet reference template.
+        // Emergency rollback: set SCHOOL_STATEMENT_REFERENCE_TEMPLATE_ENABLED=0.
+        if((string)config('SCHOOL_STATEMENT_REFERENCE_TEMPLATE_ENABLED','1')!=='1')return false;
         return self::validateTemplate(self::TEMPLATE)['valid']??false;
     }
 
@@ -428,6 +430,7 @@ final class ReferenceMonthlyStatementWorkbook
                 // The reference accounting sheet remains unposted until mapped.
                 $zip->close();
             }catch(\Throwable $e){$zip->close();throw $e;}
+            header('X-ServiceYar-Statement-Template: reference-14-sheet');
             header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             header('Content-Disposition: attachment; filename="school-statement-reference-'.$d['year'].'-'.str_pad((string)$d['month'],2,'0',STR_PAD_LEFT).'-'.$statementId.'.xlsx"');
             header('Cache-Control: private, no-store');
