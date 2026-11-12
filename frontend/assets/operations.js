@@ -821,6 +821,53 @@ async function settingsPage(){
  const edit=row=>{dialog(row?'ویرایش تعطیلی':'ثبت تعطیلی',`<form id="holidayForm" class="form-grid"><label>عنوان<input name="title" required value="${esc(row?.title||'')}"></label><label>تاریخ<input name="dateGregorian" type="date" required value="${esc(row?.date_gregorian||'')}"></label><label>تاریخ شمسی<input name="dateJalali" required pattern="[0-9]{4}/[0-9]{2}/[0-9]{2}" placeholder="1405/08/04" value="${esc(row?.date_jalali||'')}"></label><label>فعال<select name="isActive"><option value="1">بله</option><option value="0" ${row&&Number(row.is_active)===0?'selected':''}>خیر</option></select></label><button class="primary">ذخیره</button></form>`);const form=$('holidayForm');form.elements.dateGregorian.onchange=()=>{const parts=new Intl.DateTimeFormat('en-US-u-ca-persian',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'Asia/Tehran'}).formatToParts(new Date(form.elements.dateGregorian.value+'T12:00:00Z'));form.elements.dateJalali.value=['year','month','day'].map(k=>parts.find(p=>p.type===k).value).join('/');};form.onsubmit=async e=>{e.preventDefault();try{await write('/api/v1/holidays'+(row?'/'+row.id:''),Object.fromEntries(new FormData(form)),row?'PUT':'POST');closeDialog();await settingsPage();}catch(err){$('formError').textContent=err.message;$('formError').hidden=false;}};};$('newHoliday')?.addEventListener('click',()=>edit(null));$('holidayRows').querySelectorAll('[data-holiday]').forEach(b=>b.onclick=()=>edit(rows.find(r=>String(r.id)===b.dataset.holiday)));
  }catch(e){if(token===pageToken)$('holidayRows').innerHTML='<div class="error">'+esc(e.message)+'</div>';}}
  if(can('users')){try{const rows=await api(scoped('/api/v1/users'));if(token!==pageToken)return;userManagementTable($('companyUserRows'),rows,false);}catch(e){if(token===pageToken)$('companyUserRows').innerHTML='<div class="error">'+esc(e.message)+'</div>';}}
+
+ // Settings are separated into clear tabs; financial deduction rates are company-specific.
+ const defaults={supervision:3,coordination:1,overhead:7,insurance:7.8};
+ let savedRates={};
+ try{const parsed=typeof setting.driver_deduction_rates==='string'?JSON.parse(setting.driver_deduction_rates):setting.driver_deduction_rates;if(parsed&&typeof parsed==='object')savedRates=parsed;}catch{}
+ const rates={...defaults,...savedRates};
+ const deductionPanel=document.createElement('section');
+ deductionPanel.className='panel sy-settings-panel sy-deductions-panel';
+ deductionPanel.dataset.settingsTab='deductions';
+ deductionPanel.innerHTML=`<header class="sy-settings-section-head"><div><h2>کسورات رانندگان</h2><p>درصدهای کسرشونده از مجموع شهریه ماهانه سرویس؛ مبنای محاسبه مبلغ خالص قابل پرداخت به راننده</p></div></header>
+ <form id="driverDeductionSettings" class="sy-deduction-form">
+ <div class="form-grid sy-settings-grid">
+ ${Object.entries({supervision:'مدیریت، نظارت و بازرسی',coordination:'اطلاع‌رسانی و هماهنگی',overhead:'بالاسری شرکت',insurance:'بیمه راننده'}).map(([key,label])=>`<label>${label} (درصد)<input type="number" name="${key}" inputmode="decimal" min="0" max="100" step="0.001" required value="${esc(rates[key])}" ${can('settings','manage')?'':'disabled'}></label>`).join('')}
+ </div>
+ <div class="sy-deduction-summary" aria-live="polite"><span>جمع کسورات</span><strong id="deductionTotal"></strong><span>خالص راننده از هر ۱۰۰ ریال</span><strong id="deductionNet"></strong></div>
+ <p class="muted">درصدهای پیش‌فرض: ۳٪ + ۱٪ + ۷٪ + ۷٫۸٪ = ۱۸٫۸٪. تغییر درصدها بر محاسبات بعدی و نمایش محاسباتی سرویس‌ها اثر می‌گذارد؛ اسناد حقوق قطعی قبلی بدون اصلاحیه بازنویسی نمی‌شوند.</p>
+ ${can('settings','manage')?'<div class="member-actions"><button type="submit" class="primary">ذخیره درصد کسورات</button><button type="button" id="resetDeductionRates">بازگردانی مقادیر پیش‌فرض</button></div>':''}
+ <p id="deductionSaveStatus" role="status"></p>
+ </form>`;
+ $('content').append(deductionPanel);
+ const nav=document.createElement('nav');nav.className='sy-settings-tabs';nav.setAttribute('aria-label','تب‌های تنظیمات');
+ nav.innerHTML='<button type="button" data-settings-switch="general" class="active" aria-selected="true">تنظیمات عمومی</button><button type="button" data-settings-switch="deductions" aria-selected="false">کسورات</button>';
+ $('content').prepend(nav);
+ [...$('content').children].forEach(child=>{if(child!==nav&&child!==deductionPanel&&child.id!=='modal')child.dataset.settingsTab='general';});
+ const selectTab=tab=>{nav.querySelectorAll('button').forEach(btn=>{const selected=btn.dataset.settingsSwitch===tab;btn.classList.toggle('active',selected);btn.setAttribute('aria-selected',String(selected));});$('content').querySelectorAll('[data-settings-tab]').forEach(panel=>panel.hidden=panel.dataset.settingsTab!==tab);};
+ nav.querySelectorAll('button').forEach(btn=>btn.onclick=()=>selectTab(btn.dataset.settingsSwitch));
+ selectTab('general');
+ const deductionForm=$('driverDeductionSettings');
+ const updateDeductionTotal=()=>{
+  const values=Object.keys(defaults).map(k=>Number(deductionForm.elements[k].value||0));
+  const total=values.reduce((a,b)=>a+b,0);
+  $('deductionTotal').textContent=number(Math.round(total*1000)/1000)+'٪';
+  $('deductionNet').textContent=number(Math.round((100-total)*1000)/1000)+' ریال';
+  deductionForm.querySelector('button[type=submit]')?.toggleAttribute('disabled',total>100||values.some(x=>!Number.isFinite(x)||x<0||x>100));
+ };
+ deductionForm.addEventListener('input',updateDeductionTotal);
+ $('resetDeductionRates')?.addEventListener('click',()=>{Object.entries(defaults).forEach(([k,v])=>deductionForm.elements[k].value=v);updateDeductionTotal();});
+ deductionForm.onsubmit=async e=>{
+  e.preventDefault();if(!can('settings','manage'))return;
+  const payload=Object.fromEntries(Object.keys(defaults).map(k=>[k,Number(deductionForm.elements[k].value)]));
+  const button=deductionForm.querySelector('[type=submit]');button.disabled=true;
+  try{await write('/api/v1/settings',{driver_deduction_rates:payload},'PUT');$('deductionSaveStatus').textContent='درصد کسورات شرکت ذخیره شد.';notify('درصدهای کسورات ذخیره شدند.');}
+  catch(err){$('deductionSaveStatus').textContent=err.message;notify(err.message,true);}
+  finally{updateDeductionTotal();}
+ };
+ updateDeductionTotal();
+
 }
 
 let activeMaps=[];
