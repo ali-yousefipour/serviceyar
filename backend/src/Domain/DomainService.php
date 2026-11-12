@@ -44,6 +44,45 @@ final class DomainService {
   return $c;
  }
  private static function scope(int $uid,int $aid,string $permission): void { Authorization::requirePermission($uid,$permission.'.view'); Authorization::requireAgencyAccess($uid,$aid); }
+ /**
+  * Allowlisted, stable ordering: never concatenate user-provided SQL names.
+  * The primary key guarantees consistent pagination for equal values.
+  */
+ private static function listOrdering(string $resource,array $query): string {
+  $allowed=[
+   'schools'=>['id','name','code','region','school_type'],
+   'students'=>['id','first_name','last_name','national_code','monthly_fee','school_id','academic_year'],
+   'drivers'=>['id','first_name','last_name','national_code','status','mobile'],
+   'vehicles'=>['id','plate','model','capacity'],
+   'services'=>['id','title','code','capacity','status'],
+   'packs'=>['id','title','capacity','status'],
+   'contracts'=>['id','title','start_date','end_date','amount','status'],
+   'driver-work'=>['id','work_date','amount','status'],
+   'driver-payments'=>['id','payment_date','amount'],
+   'school-charges'=>['id','due_date','amount','title'],
+   'service-charges'=>['id','due_date','amount','title'],
+   'invoices'=>['id','issue_date','amount','status'],
+   'payments'=>['id','payment_date','amount'],
+   'accounts'=>['id','code','title'],
+   'accounting-documents'=>['id','document_date','total_amount','status'],
+   'wallets'=>['id','balance'],
+   'messages'=>['id','status','subject'],
+   'driver-changes'=>['id','status'],
+   'ledger'=>['id','entry_date','amount','direction','method'],
+   'driver-ratings'=>['id','score'],
+   'parent-reports'=>['id','status','subject']
+  ];
+  $column=$query['sortBy']??'id';
+  $direction=$query['sortDir']??'desc';
+  if(!is_string($column)||!in_array($column,$allowed[$resource]??['id'],true)
+     ||!is_string($direction)||!in_array(strtolower($direction),['asc','desc'],true)){
+   throw new AuthException(422,'ستون یا جهت مرتب‌سازی معتبر نیست.','INVALID_SORT');
+  }
+  $dir=strtoupper($direction);
+  // Prefix prevents ambiguity in subqueries, and the column was allowlisted.
+  $table=self::cfg($resource)['table'];
+  return $table.'.'.$column.' '.$dir.($column==='id'?'':', '.$table.'.id DESC');
+ }
  public static function list(int $uid,int $aid,string $resource,array $q): array {
   $c=self::cfg($resource); self::scope($uid,$aid,$c['permission']); $where='agency_id=:agency';$params=['agency'=>$aid];
   if($resource==='services'){
@@ -180,7 +219,8 @@ final class DomainService {
       AND f.academic_year=COALESCE(NULLIF(REPLACE(students.academic_year,'/','-'),''),'1405-1406') LIMIT 1) mehr_driver_id,
    (SELECT COALESCE(SUM(i.amount),0) FROM invoices i WHERE i.party_type='student' AND i.party_id=students.id AND i.agency_id=students.agency_id AND i.status<>'cancelled') invoice_total,
    (SELECT COALESCE(SUM(p.amount),0) FROM payments p JOIN invoices i ON i.id=p.invoice_id AND i.agency_id=p.agency_id WHERE i.party_type='student' AND i.party_id=students.id AND p.agency_id=students.agency_id) paid_total";
-  $s=$pdo->prepare("SELECT $select FROM {$c['table']} WHERE $where ORDER BY id DESC LIMIT $limit OFFSET $off");$s->execute($params);
+  $ordering=self::listOrdering($resource,$q);
+  $s=$pdo->prepare("SELECT $select FROM {$c['table']} WHERE $where ORDER BY $ordering LIMIT $limit OFFSET $off");$s->execute($params);
    $total=(int)$count->fetchColumn();$items=$s->fetchAll();if($resource==='services')foreach($items as &$item)self::attachServicePayable($item);unset($item);return ['items'=>$items,'pagination'=>['page'=>$page,'limit'=>$limit,'total'=>$total,'pages'=>(int)ceil($total/$limit)]];
  }
  private static function attachServicePayable(array &$row): void {
