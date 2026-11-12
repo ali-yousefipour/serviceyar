@@ -461,9 +461,36 @@ function resourceWizard(form,key){
  actions.querySelector('[data-wizard-prev]').onclick=()=>show(current-1);actions.querySelector('[data-wizard-next]').onclick=()=>{const field=invalid(steps[current].section);if(field){field.focus();field.scrollIntoView({block:'center'});return;}show(current+1);};
  form.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('input:not([type=submit]):not([type=button]):not([type=checkbox])')&&current<steps.length-1){e.preventDefault();actions.querySelector('[data-wizard-next]').click();}});form.addEventListener('submit',e=>{if(current<steps.length-1){e.preventDefault();e.stopImmediatePropagation();actions.querySelector('[data-wizard-next]').click();return;}for(let i=0;i<steps.length-1;i++){const field=invalid(steps[i].section);if(field){e.preventDefault();e.stopImmediatePropagation();show(i);field.focus();field.scrollIntoView({block:'center'});return;}}},true);show(0);
 }
+const ledgerPartyTypes={student:'دانش‌آموز',driver:'راننده',school:'مدرسه',agency:'شرکت'};
+const ledgerMethods={cash:'نقدی',card:'کارتخوان',bank:'انتقال بانکی',transfer:'حواله',cheque:'چک',wallet:'کیف پول'};
+const ledgerMoney=value=>Number(value||0).toLocaleString('fa-IR',{minimumFractionDigits:0,maximumFractionDigits:0});
+function ledgerDateTime(value){
+ if(!value)return 'ثبت نشده';
+ const str=String(value).trim().replace(' ','T'),hasTime=str.includes('T');
+ const date=new Date(str+(hasTime?'+03:30':'T12:00:00+03:30'));
+ if(Number.isNaN(date.getTime()))return 'ثبت نشده';
+ const options={year:'numeric',month:'2-digit',day:'2-digit',timeZone:'Asia/Tehran'};
+ if(hasTime){options.hour='2-digit';options.minute='2-digit';options.hourCycle='h23';}
+ return new Intl.DateTimeFormat('fa-IR-u-ca-persian',options).format(date);
+}
+function showLedgerDetails(row){
+ const receipt=row.direction==='receipt',kind=receipt?'دریافت':'پرداخت',partyRole=receipt?'پرداخت‌کننده':'دریافت‌کننده';
+ const party=String(row.party_name||'').trim()||'نام طرف حساب ثبت نشده';
+ const creator=String(row.creator_name||'').trim()||String(row.creator_username||'').trim()||'نام ثبت‌کننده موجود نیست';
+ const item=(label,value,extra='')=>'<div class="ledger-detail-item"><dt>'+esc(label)+'</dt><dd '+extra+'>'+esc(value||'—')+'</dd></div>';
+ dialog('جزئیات '+kind,`<article class="ledger-detail" aria-label="جزئیات سند مالی">
+  <div class="ledger-detail-hero ${receipt?'is-receipt':'is-payment'}"><span class="ledger-detail-kind">${receipt?'↙':'↗'} سند ${kind}</span><span class="ledger-detail-state">${Number(row.is_active)===0?'غیرفعال':'فعال'}</span><div class="ledger-detail-amount"><strong dir="ltr">${ledgerMoney(row.amount)}</strong><span>ریال</span></div><p>مبلغ ثبت‌شده برای این تراکنش</p></div>
+  <section class="ledger-detail-section"><h4>طرف حساب</h4><dl class="ledger-detail-grid">${item('نام '+partyRole,party)}${item('نوع طرف حساب',ledgerPartyTypes[row.party_type]||'نامشخص')}${item('نوع عملیات',kind)}</dl></section>
+  <section class="ledger-detail-section"><h4>مشخصات تراکنش</h4><dl class="ledger-detail-grid">${item('تاریخ '+kind,dateText(row.entry_date))}${item('روش '+kind,ledgerMethods[row.method]||'ثبت نشده')}${item('شماره پیگیری',persianDigits(row.reference_no||'ثبت نشده'),'dir="auto"')}${item('مبلغ (ریال)',ledgerMoney(row.amount))}</dl></section>
+  <section class="ledger-detail-section"><h4>ثبت و مستندات</h4><dl class="ledger-detail-grid">${item('ثبت‌کننده',creator)}${item('تاریخ و ساعت ثبت',ledgerDateTime(row.created_at))}</dl><div class="ledger-detail-note"><b>توضیحات</b><p>${esc(String(row.note||'').trim()||'توضیحی برای این سند ثبت نشده است.')}</p></div></section>
+  <div class="ledger-detail-actions"><button type="button" id="ledgerDetailClose">بستن جزئیات</button></div>
+ </article>`);
+ $('ledgerDetailClose').onclick=closeDialog;
+}
 async function viewRecord(key,id){
  try{
   const r=await api(scoped('/api/v1/'+key+'/'+id));
+  if(key==='ledger'){showLedgerDetails(r);return;}
   const showFinance=key==='students'&&can('school-statement');
   dialog('جزئیات '+resourceName(key),'<dl class="detail-grid">'+resources[key][1].map(f=>`<div><dt>${labels[f]||f}</dt><dd>${esc(val(r,f)||'—')}</dd></div>`).join('')+'</dl>'+(showFinance?'<section id="studentServiceFinance"></section>':''));
   if(showFinance)serviceFinancePanel($('studentServiceFinance'),{studentId:id,academicYear:r.academic_year||year()});
