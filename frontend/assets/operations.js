@@ -36,7 +36,7 @@ let pageToken=0,gridState=null,lookupCache={},initialSearch='',initialStudentSta
 const can=(key,action='view')=>session?.roles?.includes('super_admin')||session?.permissions?.includes((permissionFor[key]||key)+'.'+action);
 const scoped=url=>url+(url.includes('?')?'&':'?')+'agencyId='+encodeURIComponent(currentAgency?.id||'');
 const write=(url,body,method='POST')=>api(scoped(url),{method,headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify(body)});
-const number=v=>Number(v||0).toLocaleString('fa-IR');
+const number=v=>Number(v||0).toLocaleString('fa-IR',{maximumFractionDigits:0,minimumFractionDigits:0});
 const persianDigits=v=>String(v??'').replace(/[0-9]/g,d=>'۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
 const normalizePlate=v=>String(v??'').replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[\u200c\s]/g,'');
 function iranPlate(value){
@@ -48,7 +48,7 @@ function iranPlate(value){
 
 const year=()=>{const p=new Intl.DateTimeFormat('en-US-u-ca-persian',{year:'numeric',month:'numeric',timeZone:'Asia/Tehran'}).formatToParts(new Date()),y=Number(p.find(x=>x.type==='year').value),m=Number(p.find(x=>x.type==='month').value);return (m<7?y-1:y)+'/'+(m<7?y:y+1)};
 const todayISO=()=>{const p=new Intl.DateTimeFormat('en-US',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'Asia/Tehran'}).formatToParts(new Date());return ['year','month','day'].map(k=>p.find(x=>x.type===k).value).join('-');};
-const dateText=v=>v?new Intl.DateTimeFormat('fa-IR',{dateStyle:'medium',timeZone:'Asia/Tehran'}).format(new Date(String(v).slice(0,10)+'T12:00:00Z')):'—';
+const dateText=v=>{if(!v)return '—';const raw=String(v).slice(0,10);if(/^1[34]\d{2}[-/]\d{1,2}[-/]\d{1,2}$/.test(raw))return persianDigits(raw.replace(/-/g,'/'));const d=/^\d{4}-\d{2}-\d{2}$/.test(raw)?new Date(raw+'T12:00:00Z'):new Date(v);return Number.isNaN(d.getTime())?'—':new Intl.DateTimeFormat('fa-IR',{dateStyle:'medium',timeZone:'Asia/Tehran'}).format(d);};
 const person=r=>[r.first_name||r.firstName,r.last_name||r.lastName].filter(Boolean).join(' ')||r.name||r.title||r.plate||r.code||('#'+r.id);
 function notify(message,error=false){let box=$('notice');if(!box){box=document.createElement('div');box.id='notice';box.setAttribute('role','status');document.body.append(box);}box.textContent=message;box.className=error?'notice error':'notice';clearTimeout(notify.timer);notify.timer=setTimeout(()=>box.remove(),6500);}
 function renderNav(){
