@@ -1211,3 +1211,8 @@ body.sy-menu-palette-open{overflow:hidden}
 #content .sy-service-facts .sy-service-annual dd{font-size:16px;font-weight:900;color:#17633c;line-height:1.6;overflow-wrap:anywhere}
 #content .sy-service-year-policy{grid-column:1/-1;padding:9px 12px;margin:0;background:#f3f9f5;border:1px solid #dcece0;border-radius:9px;font-size:12px;line-height:1.8;color:#315c40}
 @media(max-width:650px){#content .sy-service-facts .sy-service-annual dd{font-size:14px}}
+
+/* Student annual tuition preview, shared by new and existing records */
+#modal .sy-student-annual-preview{grid-column:1/-1;padding:10px 14px;border:1px solid #cfe4d5;border-radius:10px;background:#f1f8f3;color:#195b38;font-size:13px;font-weight:800;line-height:1.8}
+#content .sy-directory-table td[data-label="مبلغ سالانه (ریال)"]{font-weight:800;white-space:nowrap;color:#17613c}
+@media(max-width:680px){#modal .sy-student-annual-preview{font-size:12px;padding:9px 11px}}
