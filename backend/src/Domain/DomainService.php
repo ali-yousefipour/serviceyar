@@ -189,8 +189,8 @@ final class DomainService {
   $row['driver_gross_monthly']=$gross;
   $row['driver_net_monthly']=$parts['net_earned'];
   $row['driver_deduction_total']=$parts['total_deductions'];
-  $row['driver_deduction_rate']=18.8;
-  foreach(['supervision_deduction','coordination_deduction','overhead_deduction','insurance_deduction'] as $field)$row[$field]=$parts[$field];
+  $row['driver_deduction_rate']=$parts['deduction_rate'];
+  foreach(['supervision_deduction','coordination_deduction','overhead_deduction','insurance_deduction','supervision_rate','coordination_rate','overhead_rate','insurance_rate'] as $field)$row[$field]=$parts[$field];
  }
  public static function serviceFilters(array $query,int $uid): array {
   $where=[];$params=[];
