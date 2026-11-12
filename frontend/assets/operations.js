@@ -506,7 +506,7 @@ async function viewRecord(key,id){
   const r=await api(scoped('/api/v1/'+key+'/'+id));
   if(key==='ledger'){showLedgerDetails(r);return;}
   const showFinance=key==='students'&&can('school-statement');
-  dialog('جزئیات '+resourceName(key),'<dl class="detail-grid">'+resources[key][1].map(f=>`<div><dt>${labels[f]||f}</dt><dd>${esc(val(r,f)||'—')}</dd></div>`).join('')+'</dl>'+(showFinance?'<section id="studentServiceFinance"></section>':''));
+  dialog('جزئیات '+resourceName(key),'<dl class="detail-grid sy-detail-grid">'+resources[key][1].map(f=>{const v=val(r,f),display=/Date$/.test(f)?dateText(v):/amount|fee|balance|total|capacity|score|rating/i.test(f)?number(v):['status','serviceStatus'].includes(f)?(statuses[v]||v||'—'):fieldOptions(key,f)?.find(x=>String(x[0])===String(v))?.[1]||persianDigits(v||'—');return `<div><dt>${esc(labels[f]||f)}</dt><dd>${esc(display)}</dd></div>`;}).join('')+'</dl>'+(showFinance?'<section id="studentServiceFinance"></section>':''));
   if(showFinance)serviceFinancePanel($('studentServiceFinance'),{studentId:id,academicYear:r.academic_year||year()});
  }catch(e){notify(e.message,true);}
 }
