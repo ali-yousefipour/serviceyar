@@ -50,7 +50,10 @@ try{
  rejected(fn()=>D::save($uid,$a,'students',['schoolId'=>$otherSchool['id'],'firstName'=>'x','lastName'=>'x','mobile'=>'09120000000']),'CROSS_SCOPE_REFERENCE');
  rejected(fn()=>D::save($viewer,$a,'students',['schoolId'=>$school['id'],'firstName'=>'x','lastName'=>'x','mobile'=>'09120000000']),'FORBIDDEN');
  rejected(fn()=>D::get($viewer,$b,'students',(int)$foreign['id']),'SCOPE_FORBIDDEN');
- $av=D::save($uid,$a,'vehicles',['plate'=>'QA-'.$tag,'capacity'=>4]);$ad=D::save($uid,$a,'drivers',['firstName'=>'تخصیص','lastName'=>'آزمون','status'=>'active','vehicleId'=>$av['id']]);$as=D::save($uid,$a,'services',['title'=>'بدون راننده','schoolId'=>$school['id'],'capacity'=>4]);
+ $av=D::save($uid,$a,'vehicles',['plate'=>'QA-'.$tag,'capacity'=>4]);$ad=D::save($uid,$a,'drivers',['firstName'=>'تخصیص','lastName'=>'آزمون','status'=>'active','vehicleId'=>$av['id']]);$as=D::save($uid,$a,'services',['title'=>'بدون راننده','schoolId'=>$school['id'],'capacity'=>4,'agreedAmount'=>'1250000','shift'=>'صبح']);
+ check((int)$as['agreed_amount']===1250000,'Service agreed monthly driver amount persists');
+ check($as['shift']==='صبح','Service shift persists from setup wizard');
+ rejected(fn()=>D::save($uid,$a,'services',['title'=>'مبلغ نامعتبر','schoolId'=>$school['id'],'agreedAmount'=>'12.5']),'INVALID_SERVICE_AMOUNT');
  $proposal=\ServiceYar\Domain\DriverAssignment::preview($uid,$a);check(count($proposal['items'])===1,'Assignment proposes available capacity');
  $assignment=['items'=>[['serviceId'=>(int)$as['id'],'driverId'=>(int)$ad['id']]]];
  rejected(fn()=>\ServiceYar\Domain\DriverAssignment::apply($viewer,$a,$assignment),'FORBIDDEN');
