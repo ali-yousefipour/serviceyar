@@ -1475,3 +1475,35 @@ body.sy-menu-palette-open{overflow:hidden}
  #content .sy-installment-summary strong{font-size:13px}
 }
 @media(max-width:365px){#content .sy-installment-summary{grid-template-columns:minmax(0,1fr)}}
+
+
+/* Daily service schedule - compact operational exception dashboard */
+#content .sy-daily-schedule{min-width:0;padding:clamp(14px,2vw,22px);border:1px solid #dfe9e3;border-radius:18px}
+#content .sy-daily-schedule .sy-operation-header{margin-bottom:17px}
+#content .sy-daily-schedule .sy-operation-header h2{font-size:19px;line-height:1.55;color:#194e34}
+#content .sy-daily-schedule .sy-operation-header p{font-size:12px;line-height:1.8;color:#5a7362}
+#content .sy-daily-schedule .sy-operation-filters{gap:11px;align-items:end}
+#content .sy-daily-schedule .sy-operation-filters label{min-width:170px;flex:1}
+#content .sy-daily-schedule .sy-operation-filters :is(input,button){min-height:43px}
+#content .sy-daily-schedule-note{margin:11px 0 16px;border:1px dashed #cadfd0;background:#f7fbf8;color:#56725e;padding:10px 13px;border-radius:10px;font-size:12px;line-height:1.85}
+#content .sy-daily-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin:12px 0 19px}
+#content .sy-daily-summary>div{padding:14px;background:#eef8f1;border:1px solid #d8e9de;border-radius:12px;display:flex;flex-direction:column;gap:5px}
+#content .sy-daily-summary span{font-size:11px;color:#5b7764;font-weight:750}
+#content .sy-daily-summary strong{font-size:23px;line-height:1.4;color:#175b3b}
+#content .sy-daily-summary .sy-daily-alert{background:#fff1ed;border-color:#f4d6d0}
+#content .sy-daily-summary .sy-daily-alert strong{color:#a34436}
+#content .sy-daily-summary .sy-daily-caution{background:#fff9eb;border-color:#f2e4bf}
+#content .sy-daily-summary .sy-daily-caution strong{color:#90611d}
+#content .sy-daily-section{margin:17px 0 0}
+#content .sy-daily-section h3{font-size:15px;color:#245b3d;margin:0 0 10px}
+#content .sy-daily-section .sy-report-table-wrap{max-height:355px;overflow:auto;border:1px solid #dde9e2;border-radius:10px}
+#content .sy-daily-section .sy-report-table th{position:sticky;top:0;z-index:1;background:#eaf5ed}
+#content .sy-daily-empty{border:1px dashed #cfe3d6;background:#f8fcf9;border-radius:10px;padding:12px 14px;color:#467052;font-size:12px;line-height:1.8}
+@media(max-width:650px){
+ #content .sy-daily-summary{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+ #content .sy-daily-summary>div{padding:10px 8px}
+ #content .sy-daily-summary span{font-size:10px;line-height:1.6}
+ #content .sy-daily-summary strong{font-size:20px}
+ #content .sy-daily-schedule .sy-operation-filters :is(input,button){width:100%;min-width:0;font-size:16px;min-height:46px}
+}
+@media(max-width:370px){#content .sy-daily-summary{grid-template-columns:1fr}}
