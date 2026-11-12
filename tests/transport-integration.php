@@ -97,6 +97,9 @@ try{
  $p->prepare('UPDATE students SET grade=? WHERE id=? AND agency_id=?')->execute(['ابتدایی',(int)$feeStudent['id'],$feeAgency]);
  $annualPrimary=D::list($uid,$feeAgency,'services',['search'=>'سرویس صورت‌وضعیت'])['items'][0];
  check((float)$annualPrimary['students_monthly_total']===1500000.0&&(float)$annualPrimary['students_annual_total']===12750000.0,'Primary annual service total uses 8.5 months');
+ check((float)$annualPrimary['driver_net_monthly']===1218000.0&&(float)$annualPrimary['driver_deduction_total']===282000.0,'Legacy service list computes net driver monthly payment after 18.8 percent deductions');
+ $serviceDetail=D::get($uid,$feeAgency,'services',(int)$feeService['id']);
+ check((float)$serviceDetail['driver_net_monthly']===1218000.0,'Legacy service detail exposes net driver monthly amount');
  $primaryStudent=D::get($uid,$feeAgency,'students',(int)$feeStudent['id']);
  check((float)$primaryStudent['annual_months']===8.5&&(float)$primaryStudent['annual_fee']===12750000.0,'Student detail shows 8.5-month annual fee');
  $primaryList=D::list($uid,$feeAgency,'students',['search'=>'آزمایشی'])['items'];
