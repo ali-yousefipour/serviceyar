@@ -9,6 +9,11 @@ The GitHub code connector cannot upload a sandbox binary automatically.
 The sanitized template is available separately as a conversation artifact
 and must be added to this path using a binary-capable GitHub upload.
 
+The exact-template exporter is **disabled by default**, even if the XLSX is installed.
+After validation by finance/operations, set `SCHOOL_STATEMENT_REFERENCE_TEMPLATE_ENABLED=1`
+in the hosting environment. This requires an explicit release decision; the old
+synthetic exporter continues to work while the flag is absent.
+
 Until then, MonthlyStatementWorkbook retains the legacy synthetic 14-sheet
 output. A successful CI/deploy DOES NOT indicate the exact visual template
 is installed. The optional template exporter is ReferenceMonthlyStatementWorkbook.
