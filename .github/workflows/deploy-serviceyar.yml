@@ -51,6 +51,7 @@ jobs:
           node tests/new-service-wizard.cjs
           node tests/journal-balance.cjs
           node tests/cheque-editor.cjs
+          node tests/accounting-report-ui.cjs
           python3 -m py_compile tools/deploy_serviceyar.py
           node tests/solar-date.cjs
           test -s frontend/assets/app.css
