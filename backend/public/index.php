@@ -24,6 +24,20 @@ try {
  }
  if($method==='GET'&&($path==='/api/health'||$path==='/api/v1/health'))Response::json(['ok'=>true,'service'=>config('APP_NAME','ServiceYar'),'environment'=>config('APP_ENV','local'),'version'=>'0.3.0','time'=>gmdate('c')]);
  if($method==='GET'&&$path==='/api/v1/health/ready'){try{Connection::get()->query('SELECT 1');Response::json(['ok'=>true,'data'=>['api'=>true,'database'=>true,'time'=>gmdate('c')]]);}catch(\Throwable $e){Response::json(['ok'=>false,'error'=>['code'=>'NOT_READY','message'=>'پایگاه داده آماده نیست.']],503);}}
+ if($method==='GET'&&$path==='/api/v1/public/overview'){
+  // Only aggregate, non-personal counts; no agency/user identifiers exposed.
+  try{
+   $pdo=Connection::get();$counts=[];
+   foreach(['agencies','schools','students','drivers','services'] as $table){
+    $counts[$table]=(int)$pdo->query('SELECT COUNT(*) FROM '.$table.' WHERE is_active=1')->fetchColumn();
+   }
+   header('Cache-Control: public, max-age=120');
+   Response::json(['ok'=>true,'data'=>['counts'=>$counts]]);
+  }catch(\\Throwable $e){
+   error_log('[ServiceYar][public-overview] aggregate query failed: '.$e->getMessage());
+   Response::json(['ok'=>false,'error'=>['code'=>'PUBLIC_STATS_UNAVAILABLE','message'=>'آمار عمومی موقتاً در دسترس نیست.']],503);
+  }
+ }
  $auth=new AuthService();
  if($method==='POST'&&$path==='/api/v1/auth/login'){ $b=Request::json();Response::json(['ok'=>true,'data'=>$auth->login((string)($b['username']??''),(string)($b['password']??''))]); }
  if($method==='POST'&&$path==='/api/v1/auth/logout'){ $s=$auth->current();$auth->requireCsrf($s);$auth->logout();Response::json(['ok'=>true,'data'=>['loggedOut'=>true]]); }
