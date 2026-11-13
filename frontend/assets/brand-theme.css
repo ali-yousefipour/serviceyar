@@ -222,3 +222,16 @@ body{background:var(--canvas);color:var(--ink)}
 #login :is(.showcase-kicker,.login-overline,.login-heading-icon){color:#caa24c}
 #login .login-card :is(h1,strong){color:#104a35}
 @media(prefers-reduced-motion:reduce){#app .sy-command-sidebar,#app .main{transition:none!important}}
+
+/* Charts, report metrics and showcase art share the same design tokens. */
+#app .samar-allocation-bar{background:#e4eddf!important}
+#app .samar-allocation-bar>span,
+#app .samar-allocation-bar>div{background:linear-gradient(90deg,#0a7854,#d2a750)!important}
+#app .ledger-report-kpis>div{background:#f5f8ef!important;border-color:#dae6d7!important}
+#app .ledger-report-kpis :is(b,strong){color:#0a6448!important}
+.sy-public .sy-v3-art-kpis>*,.sy-public .sy-v3-art-mini-chart{
+ background:#f5f8ef!important;border-color:#dce7d7!important;
+}
+.sy-public .sy-v3-kpi-glyph{background:#e0efdf!important;color:#0a7250!important}
+.sy-public .sy-v3-art-mini-chart :is(span,i,b):nth-child(odd){background-color:#0e8461!important}
+.sy-public .sy-v3-art-mini-chart :is(span,i,b):nth-child(even){background-color:#d1a349!important}
