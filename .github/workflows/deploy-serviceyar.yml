@@ -39,6 +39,7 @@ jobs:
           php tests/directory-sorting.php
           php tests/installments.php
           php tests/monthly-statement-period.php
+          php tests/monthly-statement-template-capacity.php
           php tests/monthly-statement-reference.php
           php tests/monthly-statement-template.php
           php tests/monthly-statement-preview-digest.php
