@@ -1587,13 +1587,13 @@ async function renderPayroll(data,token){
    showDriverPayslip({status:'preview',preview_only:true,document_no:'پیش‌نمایش',date_from:data.from,date_to:data.to,agency_name:currentAgency?.name},preview);
   }catch(e){notify('مشاهده فیش: '+e.message,true);}finally{if(button.isConnected)button.disabled=false;}
  });
- const total=()=>{let value=0,count=0;result.querySelectorAll('input[name="payrollSelected"]:checked').forEach(c=>{value+=Number(result.querySelector(`[data-salary="${c.value}"]`).value);count++;});$('payrollTotal').textContent=number(count)+' راننده · جمع حقوق انتخابی '+number(value)+' ریال';};total();
+ const total=()=>{let value=0,count=0;const eligible=[...result.querySelectorAll('[data-payroll-driver]:not([hidden]) input[name="payrollSelected"]')];result.querySelectorAll('input[name="payrollSelected"]:checked').forEach(c=>{const amount=Number(result.querySelector(`[data-salary="${c.value}"]`)?.value);if(Number.isFinite(amount)&&amount>=0)value+=amount;count++;});$('payrollTotal').textContent=number(count)+' راننده · جمع حقوق انتخابی '+number(value)+' ریال';const all=$('payrollSelectAll');all.checked=eligible.length>0&&eligible.every(c=>c.checked);all.indeterminate=eligible.some(c=>c.checked)&&!all.checked;};total();
  $('payrollSelectAll').onchange=e=>{result.querySelectorAll('input[name="payrollSelected"]').forEach(c=>{if(!c.closest('tr').hidden)c.checked=e.target.checked;});total();};result.querySelectorAll('input[name="payrollSelected"],[data-salary]').forEach(input=>input.oninput=total);
  $('payrollSearch').oninput=e=>{
   const q=e.target.value.trim().toLocaleLowerCase('fa');let visible=0;
   result.querySelectorAll('[data-payroll-driver]').forEach(row=>{
    const show=row.dataset.driverName.toLocaleLowerCase('fa').includes(q);row.hidden=!show;
-   if(!show){const detail=result.querySelector('[data-detail-for="'+row.dataset.payrollDriver+'"]');if(detail)detail.hidden=true;}
+   if(!show){const detail=result.querySelector('[data-detail-for="'+row.dataset.payrollDriver+'"]');if(detail)detail.hidden=true;}else{const detail=result.querySelector('[data-detail-for="'+row.dataset.payrollDriver+'"]');if(detail&&!detail.hidden)detail.hidden=false;}
    if(show)visible++;
   });$('payrollNoDrivers').hidden=visible!==0;total();
  };
@@ -1621,7 +1621,7 @@ function showDriverPayslip(doc,line){
  const item=(label,value)=>'<div class="sy-payslip-field"><dt>'+esc(label)+'</dt><dd>'+esc(value||'—')+'</dd></div>';
  const sumRow=(label,value,cls='')=>'<tr class="'+cls+'"><th scope="row">'+esc(label)+'</th><td>'+amount(value)+'</td></tr>';
  const agency=doc.agency_name||currentAgency?.name||'سرویس‌یار';
- dialog('فیش حقوق انفرادی · '+person(line),'<div class="sy-payslip-actions"><p>فیش از آخرین اطلاعات ذخیره‌شده سند تهیه می‌شود. برای خروجی PDF در پنجره چاپ، گزینه «ذخیره به‌صورت PDF» را انتخاب کنید.</p><button type="button" class="primary" id="payslipPrint">چاپ / ذخیره PDF</button><button type="button" id="payslipBack">بازگشت به سند حقوق</button></div>'+
+ dialog('فیش حقوق انفرادی · '+person(line),'<div class="sy-payslip-actions"><p>'+(isPreview?'پیش‌نمایش محاسباتی بر اساس فیلتر فعلی است و سند مالی تأییدشده محسوب نمی‌شود.':'اطلاعات این فیش از سند حقوق ذخیره‌شده تهیه شده است.')+' برای دریافت PDF در پنجره چاپ، «ذخیره به‌صورت PDF» را انتخاب کنید.</p><button type="button" class="primary" id="payslipPrint">چاپ / ذخیره PDF</button><button type="button" id="payslipBack">'+(isPreview?'بازگشت به فهرست رانندگان':'بازگشت به سند حقوق')+'</button></div>'+
  '<article class="sy-payslip-sheet" dir="rtl" aria-label="فیش حقوق '+esc(person(line))+'">'+
  '<header class="sy-payslip-header">'+agencyLogoImage('لوگوی '+agency,66)+'<div><strong>'+esc(agency)+'</strong><h2>فیش حقوق و کارکرد راننده</h2><p>سرویس حمل‌ونقل دانش‌آموزی · مبالغ به ریال</p></div><span class="sy-payslip-document-state">'+(isPreview?'پیش‌نمایش محاسباتی':doc.status==='approved'?'سند تأییدشده':'پیش‌نویس / تأییدنشده')+'</span></header>'+
  (isPreview?'<div class="sy-payslip-draft sy-payslip-preview-alert">نمونه محاسباتی ـ هنوز هیچ سند حقوقی برای این راننده در این دوره ثبت نشده است. این برگه سند حقوق تأییدشده یا رسید پرداخت نیست.</div>':doc.status!=='approved'?'<div class="sy-payslip-draft">پیش‌نویس ـ فاقد تأیید نهایی حسابداری</div>':'')+
@@ -1648,7 +1648,7 @@ function showDriverPayslip(doc,line){
   popup.document.write('<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>'+esc('فیش حقوق '+person(line))+'</title><link rel="stylesheet" href="/assets/operations.css"></head><body class="sy-payslip-print-window">'+slip.outerHTML+'</body></html>');
   popup.document.close();
  };
- $('payslipBack').onclick=()=>payrollDocument(Number(doc.id));
+ $('payslipBack').onclick=()=>{if(isPreview){closeDialog();return;}payrollDocument(Number(doc.id));};
 }
 async function payrollDocument(id){
  try{
