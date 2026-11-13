@@ -11,7 +11,7 @@ final class PayrollDocuments
     public static function list(int $uid,int $aid,array $filter): array
     {
         Authorization::requirePermission($uid,'finance.view');Authorization::requireAgencyAccess($uid,$aid);[$from,$to]=OperationsService::range($filter);
-        $q=Connection::get()->prepare('SELECT id,document_no,status,total_amount,created_at FROM payroll_documents WHERE agency_id=:a AND date_from=:f AND date_to=:t ORDER BY id DESC');$q->execute(['a'=>$aid,'f'=>$from,'t'=>$to]);return $q->fetchAll();
+        $q=Connection::get()->prepare('SELECT id,document_no,date_from,date_to,status,total_amount,created_at,(SELECT COUNT(*) FROM payroll_document_lines l WHERE l.document_id=payroll_documents.id) AS driver_count FROM payroll_documents WHERE agency_id=:a AND date_from=:f AND date_to=:t ORDER BY id DESC');$q->execute(['a'=>$aid,'f'=>$from,'t'=>$to]);return $q->fetchAll();
     }
 
     public static function get(int $uid,int $aid,int $id, bool $forWorkbook = false): array
@@ -19,15 +19,22 @@ final class PayrollDocuments
         Authorization::requirePermission($uid,'finance.view');Authorization::requireAgencyAccess($uid,$aid);$p=Connection::get();
         $q=$p->prepare('SELECT p.*,a.name AS agency_name FROM payroll_documents p JOIN agencies a ON a.id=p.agency_id WHERE p.id=:id AND p.agency_id=:a');$q->execute(['id'=>$id,'a'=>$aid]);$doc=$q->fetch();if(!$doc)throw new AuthException(404,'سند حقوق پیدا نشد.','NOT_FOUND');
         $nationalCode=$forWorkbook?',d.national_code':'';
-        $q=$p->prepare('SELECT l.driver_id,l.earned,l.agreed,l.paid,l.salary,d.first_name,d.last_name,d.iban,d.bank_account,d.bank_name'.$nationalCode.' FROM payroll_document_lines l JOIN drivers d ON d.id=l.driver_id AND d.agency_id=:a WHERE l.document_id=:id ORDER BY d.last_name,d.first_name');$q->execute(['a'=>$aid,'id'=>$id]);$doc['lines']=$q->fetchAll();
+        $q=$p->prepare('SELECT l.*,d.first_name,d.last_name,d.iban,d.bank_account,d.bank_name'.$nationalCode.' FROM payroll_document_lines l JOIN drivers d ON d.id=l.driver_id AND d.agency_id=:a WHERE l.document_id=:id ORDER BY d.last_name,d.first_name');$q->execute(['a'=>$aid,'id'=>$id]);$doc['lines']=$q->fetchAll();
         foreach($doc['lines'] as &$line){
             $deductions=OperationsService::driverDeductions((float)$line['earned'],$aid);
+            $snapshotFields=['supervision_deduction','coordination_deduction','overhead_deduction','insurance_deduction','total_deductions'];
+            $hasSnapshot=$line['total_deductions']!==null;
+            if($hasSnapshot){
+                foreach($snapshotFields as $field)$deductions[$field]=(float)$line[$field];
+                $deductions['net_earned']=(float)$line['earned']-(float)$line['total_deductions'];
+            }
             $line=array_merge($line,$deductions);
+            $line['deductions_historical']=$hasSnapshot;
             $line['gross_earned']=(float)$line['earned'];
             $line['expected_net_salary']=$deductions['net_earned'];
             $line['salary_differs_from_calculated_net']=abs((float)$line['salary']-$deductions['net_earned'])>=1;
         }unset($line);
-        $doc['deduction_policy']='پیش‌فرض ۱۸٫۸٪ شامل نظارت ۳٪، هماهنگی ۱٪، بالاسری ۷٪ و بیمه ۷٫۸٪؛ برای اسناد قدیمی، مبلغ حقوق ثبت‌شده بدون تغییر باقی می‌ماند.';
+        $doc['deduction_policy']='کسورات اسناد جدید هنگام ثبت ثابت می‌شوند. کسورات اسناد قدیمی که نسخه تاریخی ندارند صرفاً برآورد با نرخ فعلی هستند.';
         return $doc;
     }
 
@@ -42,7 +49,7 @@ final class PayrollDocuments
             $chosen=[];$total=0;
             foreach($lines as $line){if(!is_array($line))throw new AuthException(422,'ردیف حقوق نامعتبر است.','VALIDATION_ERROR');$id=(int)($line['driverId']??0);$amount=$line['amount']??null;if(!isset($actual[$id])||isset($chosen[$id]))throw new AuthException(422,'راننده تکراری یا خارج از شرکت است.','CROSS_SCOPE_REFERENCE');if(!is_numeric($amount)||!is_finite((float)$amount)||(float)$amount<0||(float)$amount>1000000000000)throw new AuthException(422,'حقوق نامعتبر است.','VALIDATION_ERROR');$chosen[$id]=['row'=>$actual[$id],'salary'=>round((float)$amount,2)];$total+=round((float)$amount,2);}
             $no='PAY-'.str_replace('-','',$from).'-'.bin2hex(random_bytes(3));$p->prepare('INSERT INTO payroll_documents(agency_id,document_no,date_from,date_to,total_amount,created_by) VALUES(:a,:n,:f,:t,:v,:u)')->execute(['a'=>$aid,'n'=>$no,'f'=>$from,'t'=>$to,'v'=>$total,'u'=>$uid]);$doc=(int)$p->lastInsertId();
-            $q=$p->prepare('INSERT INTO payroll_document_lines(document_id,driver_id,earned,agreed,paid,salary) VALUES(:doc,:driver,:earned,:agreed,:paid,:salary)');foreach($chosen as $driver=>$item){$r=$item['row'];$q->execute(['doc'=>$doc,'driver'=>$driver,'earned'=>$r['earned'],'agreed'=>$r['agreed'],'paid'=>$r['paid'],'salary'=>$item['salary']]);}
+            $q=$p->prepare('INSERT INTO payroll_document_lines(document_id,driver_id,earned,agreed,paid,salary,supervision_deduction,coordination_deduction,overhead_deduction,insurance_deduction,total_deductions) VALUES(:doc,:driver,:earned,:agreed,:paid,:salary,:supervision,:coordination,:overhead,:insurance,:total)');foreach($chosen as $driver=>$item){$r=$item['row'];$q->execute(['doc'=>$doc,'driver'=>$driver,'earned'=>$r['earned'],'agreed'=>$r['agreed'],'paid'=>$r['paid'],'salary'=>$item['salary'],'supervision'=>$r['supervision_deduction'],'coordination'=>$r['coordination_deduction'],'overhead'=>$r['overhead_deduction'],'insurance'=>$r['insurance_deduction'],'total'=>$r['total_deductions']]);}
             OperationsService::audit($uid,$aid,'create_payroll','payroll_documents',$doc);return ['id'=>$doc,'documentNo'=>$no,'total'=>$total,'status'=>'draft'];
         });
     }
