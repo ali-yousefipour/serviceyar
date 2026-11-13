@@ -63,6 +63,11 @@ assert.ok(brandCss.includes('.sy-public-v3 #syPublicSchools .leaflet-marker-icon
 assert.ok(js.includes('/api/v1/public/map-config')&&js.includes('static.neshan.org/sdk')&&js.includes('invalidateSize(true)'),'Public map must use configured Neshan web key');
 assert.ok(html.includes('syCatalogAdvantageTitle')&&html.includes('فهرست بسیاری از مدارس'),'Catalog advantage must be visible');
 assert.ok(html.includes('dashboard-real-capture.webp')&&html.includes('sy-v3-real-preview')&&html.includes('sy-v3-map-intro'),'Landing must show the authentic dashboard capture and map introduction');
+assert.ok(html.includes('name="educationLevel"')&&html.includes('value="elementary"')&&html.includes('value="secondary"'),'Public fare form must allow elementary and secondary selection');
+assert.ok(html.includes('placeholder="مثلاً ۳"')&&!html.includes('placeholder="مثلاً ۸٫۵"'),'Distance placeholder should show 3 kilometers');
+assert.ok(js.includes("educationLevel==='elementary'?8.5:educationLevel==='secondary'?9:null")&&js.includes("Math.round(monthlyFee*annualFactor)"),'Annual quote must multiply approved monthly fee by 8.5 or 9 months');
+assert.ok(js.includes("مبلغ کامل سال تحصیلی")&&js.includes("مبلغ ماهیانه")&&brandCss.includes('.sy-quote-amounts'),'Monthly and full school-year amounts must both be presented in distinct responsive cards');
+
 assert.ok(!html.includes('sy-v3-dashboard-art')&&!html.includes('sy-v3-art-kpis')&&!html.includes('sy-v3-float sy-v3-float-school'),'Fake dashboard showcase artwork must be removed');
 assert.ok(brandCss.includes('.sy-v3-real-dashboard-image')&&brandCss.includes('.sy-v3-real-preview-heading'),'Screenshot must have responsive hero framing');
 assert.ok(html.includes('sy-v3-feature-school')&&html.includes('sy-v3-feature-route')&&html.includes('sy-v3-feature-money'),'All three feature cards need purpose-specific icon containers');
