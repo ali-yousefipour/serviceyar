@@ -1777,3 +1777,20 @@ body.sy-menu-palette-open{overflow:hidden}
  #content .sy-account-statement-table tbody td:last-child{border:0}
 }
 @media(max-width:390px){#content .sy-account-totals{grid-template-columns:1fr}}
+
+/* Print-only accounting journal: isolated A4 document rather than the whole dashboard. */
+@page sy-journal{size:A4 portrait;margin:14mm}
+@media print{
+ body:has(.journal-print) .journal-print{page:sy-journal;direction:rtl;font-size:11px;line-height:1.8;break-inside:auto}
+ body:has(.journal-print) :is(.sidebar,.header,.toolbar,.nav-group,.modal-head,.modal-head button,#journalDoPrint){display:none!important}
+ body:has(.journal-print) :is(.main,#content,.panel,.modal-backdrop,.modal,.modal-body){width:100%!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:visible!important;background:#fff!important}
+ body:has(.journal-print) .journal-print header{display:flex;align-items:center;border-bottom:2px solid #333;padding:0 0 10px;margin-bottom:14px}
+ body:has(.journal-print) .journal-print h2{font-size:18px;color:#111}
+ body:has(.journal-print) .journal-print :is(table,th,td){border:1px solid #777;border-collapse:collapse;color:#111}
+ body:has(.journal-print) .journal-print table{width:100%;table-layout:fixed;min-width:0}
+ body:has(.journal-print) .journal-print :is(th,td){padding:6px;text-align:right;overflow-wrap:anywhere}
+ body:has(.journal-print) .journal-print thead{display:table-header-group}
+ body:has(.journal-print) .journal-print tr{break-inside:avoid}
+ body:has(.journal-print) .journal-signatures{break-inside:avoid;gap:16px}
+ body:has(.journal-print) .journal-signatures span{min-width:25%;text-align:center;border-top:1px solid #777;padding-top:8px}
+}
