@@ -2542,3 +2542,51 @@ body.sy-menu-palette-open{overflow:hidden}
 #dashboardSchoolMap .leaflet-marker-icon.sy-map-school.sy-marker-fallback .sy-map-marker-photo{
  display:none!important;
 }
+
+
+/* Frameless map artwork only when a company has no logo or a school has no photo.
+   The labels and map hit targets remain usable; genuine images retain their frames. */
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-school.sy-school-default-photo .sy-map-marker-bubble,
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-company.sy-company-default-photo .sy-map-marker-bubble{
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ box-sizing:border-box!important;
+ background:transparent!important;border:0!important;
+ border-radius:0!important;box-shadow:none!important;
+ overflow:visible!important;transform:none!important;
+ padding:0!important;margin:0 auto!important;
+}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-school.sy-school-default-photo .sy-map-marker-bubble {
+ width:52px!important;height:52px!important;
+ min-width:52px!important;min-height:52px!important;
+ max-width:52px!important;max-height:52px!important;
+}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-company.sy-company-default-photo .sy-map-marker-bubble {
+ width:56px!important;height:56px!important;
+ min-width:56px!important;min-height:56px!important;
+ max-width:56px!important;max-height:56px!important;
+}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-school.sy-school-default-photo .sy-map-marker-photo,
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-company.sy-company-default-photo .sy-map-marker-photo {
+ display:block!important;
+ position:static!important;
+ box-sizing:border-box!important;
+ width:100%!important;height:100%!important;
+ max-width:100%!important;max-height:100%!important;
+ min-width:0!important;min-height:0!important;
+ object-fit:contain!important;
+ border:0!important;border-radius:0!important;
+ background:transparent!important;box-shadow:none!important;
+ padding:0!important;margin:0!important;transform:none!important;
+}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-school.sy-school-default-photo .sy-map-marker-bubble:after,
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-company.sy-company-default-photo .sy-map-marker-bubble:after{
+ display:none!important;
+}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-school.sy-school-default-photo .sy-map-marker-symbol,
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-company.sy-company-default-photo .sy-map-marker-symbol{
+ display:none!important;
+}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-school.sy-school-default-photo.sy-marker-fallback .sy-map-marker-symbol,
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-company.sy-company-default-photo.sy-marker-fallback .sy-map-marker-symbol{
+ display:flex!important;
+}
