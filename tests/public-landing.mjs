@@ -24,4 +24,9 @@ assert.ok(api.includes("foreach(['agencies','schools','students','drivers','serv
 assert.ok(!html.includes('example.com'),'Do not publish made-up contact details');
 for(const path of ['frontend/assets/logo.png','frontend/assets/Vazirmatn-Regular.woff2'])
  assert.ok(existsSync(new URL(path,root)),'Missing asset: '+path);
+
+for(const marker of ['syScrollProgress','syBackToTop','data-reveal','data-reveal-group','sy-scroll-cue','data-scroll-target="syCapabilities"'])assert.ok(html.includes(marker),'Missing interaction markup: '+marker);
+for(const feature of ['IntersectionObserver','requestAnimationFrame','prefers-reduced-motion','scrollIntoView','aria-expanded','sy-page-enter','sy-in-view','toLocaleString'])assert.ok(js.includes(feature),'Missing accessible animation: '+feature);
+for(const cssHook of ['sy-page-in','sy-dashboard-sheen','sy-bars-rise','sy-scroll-progress','sy-backtop','prefers-reduced-motion:reduce','sy-scroll-cue'])assert.ok(css.includes(cssHook),'Missing motion system: '+cssHook);
+assert.ok(!js.includes('setInterval('),'Do not use polling or unbounded timers for scroll animation');
 console.log('Public landing pages, accessibility structure, real statistics and login integration OK');
