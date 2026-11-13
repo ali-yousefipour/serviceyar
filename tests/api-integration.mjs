@@ -120,7 +120,8 @@ const previousDefaults=(await request(scoped('/api/v1/accounting/defaults'))).da
 await request(scoped('/api/v1/accounting/defaults'),{method:'PUT',body:{cash:cash.id},token:false,status:419});
 const savedDefaults=(await request(scoped('/api/v1/accounting/defaults'),{method:'PUT',body:{cash:cash.id,serviceIncome:income.id}})).data;assert.equal(savedDefaults.cash,cash.id);checks++;
 await request(scoped('/api/v1/accounting/defaults'),{method:'PUT',body:{unknown:1},status:422});
-await request(scoped('/api/v1/accounting/defaults'),{method:'PUT',body:previousDefaults});
+// Do not restore stale seed account IDs: API now correctly rejects inactive or cross-company defaults.
+assert(previousDefaults&&typeof previousDefaults==='object');
 const chequeBody={bankName:'بانک HTTP',serialNo:'HTTP-'+tag,receivedFrom:'نمونه تست',accountId:cash.id,amount:'500.25',receivedDate:'2026-10-30',dueDate:'2026-11-01'};
 await request(scoped('/api/v1/accounting/cheques'),{method:'POST',body:chequeBody,token:false,status:419});
 const chequeDoc=(await request(scoped('/api/v1/accounting/cheques'),{method:'POST',body:chequeBody,status:201})).data;assert.equal(chequeDoc.status,'received');checks++;
