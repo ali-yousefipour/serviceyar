@@ -207,7 +207,7 @@ final class DomainService {
    ROUND((SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id WHERE ss.service_id=services.id)*0.01,0) AS coordination_deduction,
    ROUND((SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id WHERE ss.service_id=services.id)*0.07,0) AS overhead_deduction,
    ROUND((SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id WHERE ss.service_id=services.id)*0.078,0) AS insurance_deduction";
-  if($resource==='vehicles')$select="vehicles.*, (SELECT GROUP_CONCAT(CONCAT_WS(' ',vd.first_name,vd.last_name) ORDER BY vd.id DESC SEPARATOR '، ') FROM drivers vd WHERE vd.vehicle_id=vehicles.id AND vd.agency_id=vehicles.agency_id AND vd.is_active=1) AS driver_name";
+  if($resource==='vehicles')$select="vehicles.*, (SELECT GROUP_CONCAT(CONCAT_WS(' ',vd.first_name,vd.last_name) ORDER BY vd.id DESC SEPARATOR '، ') FROM drivers vd WHERE vd.vehicle_id=vehicles.id AND vd.agency_id=vehicles.agency_id AND vd.is_active=1) AS driver_name, COALESCE(NULLIF(TRIM(vehicles.owner_name),''),(SELECT NULLIF(TRIM(CONCAT_WS(' ',vd.first_name,vd.last_name)),'') FROM drivers vd WHERE vd.vehicle_id=vehicles.id AND vd.agency_id=vehicles.agency_id AND vd.is_active=1 ORDER BY vd.id DESC LIMIT 1)) AS effective_owner_name";
   if($resource==='students')$select="students.*,
    (CASE WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'ابتدایی|دبستان|primary|elementary' THEN 8.5 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR TRIM(COALESCE(students.grade,'')) IN ('1','2','3','4','5','6','۱','۲','۳','۴','۵','۶') THEN 8.5 ELSE 9 END) AS annual_months,
    ROUND(COALESCE(students.monthly_fee,0) * (CASE WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'ابتدایی|دبستان|primary|elementary' THEN 8.5 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR TRIM(COALESCE(students.grade,'')) IN ('1','2','3','4','5','6','۱','۲','۳','۴','۵','۶') THEN 8.5 ELSE 9 END),0) AS annual_fee,
@@ -283,6 +283,14 @@ final class DomainService {
   $c=self::cfg($resource);self::scope($uid,$aid,$c['permission']);
   $s=Connection::get()->prepare('SELECT * FROM '.$c['table'].' WHERE id=:id AND agency_id=:a');$s->execute(['id'=>$id,'a'=>$aid]);
   $row=$s->fetch();if(!$row)throw new AuthException(404,'رکورد پیدا نشد.','NOT_FOUND');
+  if($resource==='vehicles'){
+   $owner=trim((string)($row['owner_name']??''));
+   $q=Connection::get()->prepare("SELECT NULLIF(TRIM(CONCAT_WS(' ',first_name,last_name)),'') AS name FROM drivers WHERE vehicle_id=? AND agency_id=? AND is_active=1 ORDER BY id DESC LIMIT 1");
+   $q->execute([$id,$aid]);
+   $driverName=$q->fetchColumn()?:null;
+   $row['driver_name']=$driverName;
+   $row['effective_owner_name']=$owner!==''?$owner:$driverName;
+  }
   if($resource==='services'){
    $summary=Connection::get()->prepare("SELECT COALESCE(SUM(st.monthly_fee),0) AS students_monthly_total FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=:agency WHERE ss.service_id=:service");
    $summary->execute(['agency'=>$aid,'service'=>$id]);$row=array_merge($row,$summary->fetch()?:[]);
@@ -363,6 +371,12 @@ final class DomainService {
   if($id&&$resource==='messages'&&$existing['status']!=='queued')throw new AuthException(409,'پیام پردازش‌شده قابل ویرایش یا ارسال مجدد از این فرم نیست.','MESSAGE_LOCKED');
   if($id&&$resource==='payments'&&$existing['method']==='bale')throw new AuthException(409,'پرداخت استعلام‌شده بله قابل ویرایش نیست.','VERIFIED_PAYMENT_LOCKED');
   foreach($data as $f=>&$v){if($v==='')$v=null;}unset($v);
+  if($resource==='vehicles'){
+   if(array_key_exists('owner_name',$data)&&$data['owner_name']===null){
+    $driver=$pdo->prepare("SELECT NULLIF(TRIM(CONCAT_WS(' ',first_name,last_name)),'') FROM drivers WHERE vehicle_id=? AND agency_id=? AND is_active=1 ORDER BY id DESC LIMIT 1");
+    if($id){$driver->execute([$id,$aid]);$name=$driver->fetchColumn();if($name)$data['owner_name']=$name;}
+   }
+  }
   if($resource==='services'){
    foreach(['agreed_amount','monthly_fee'] as $moneyField){
     if(!array_key_exists($moneyField,$data)||$data[$moneyField]===null)continue;
