@@ -798,6 +798,14 @@ async function formResource(key,id,onSaved){
  };
  rialInputs.forEach(input=>input.addEventListener('input',()=>formatRialInput(input)));
  if(key==='ledger'){const display=form.querySelector('[data-money-display]'),raw=form.elements.amount;const normalize=v=>String(v??'').replace(/[۰-۹]/g,c=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/[٠-٩]/g,c=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(c))).replace(/[^0-9]/g,'');const sync=()=>{const digits=normalize(display.value).replace(/^0+(?=\d)/,'');raw.value=digits;display.value=digits?digits.replace(/\B(?=(\d{3})+(?!\d))/g,'٬').replace(/[0-9]/g,c=>'۰۱۲۳۴۵۶۷۸۹'[Number(c)]):'';display.setCustomValidity(digits&&Number(digits)>0?'':'مبلغ معتبر و بزرگ‌تر از صفر وارد کنید.');};display.addEventListener('input',sync);display.addEventListener('blur',sync);sync();form.addEventListener('submit',e=>{sync();if(!display.checkValidity()){e.preventDefault();e.stopImmediatePropagation();display.reportValidity();}},true);}
+ if(key==='ledger'){
+   const direction=form.elements.direction,account=form.elements.companyAccountId;
+   const accountLabel=account?.closest('label');
+   const updateCaption=()=>{
+     if(accountLabel?.firstChild?.nodeType===Node.TEXT_NODE)accountLabel.firstChild.textContent=(direction.value==='payment'?'حساب مبدأ شرکت':'حساب مقصد شرکت')+(account.required?' *':'');
+   };
+   direction?.addEventListener('change',updateCaption);updateCaption();
+ }
  if(key==='accounts'){
    for(const name of ['bankAccount','iban']){
      const input=form.elements[name];if(!input)continue;input.dir='ltr';input.placeholder=name==='iban'?'IR000000000000000000000000':'شماره حساب';input.autocomplete='off';
