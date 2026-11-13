@@ -32,4 +32,9 @@ assert.ok(!js.includes('setInterval('),'Do not use polling or unbounded timers f
 assert.ok(api.includes('school_catalog')&&api.includes('COUNT(DISTINCT'),'The school count must include a de-duplicated central catalog');
 assert.ok(js.includes('basemaps.cartocdn.com')&&js.includes('tileerror')&&js.includes('invalidateSize(true)'),'Public map requires visible basemap and resize/failover handling');
 assert.ok(html.includes('syCatalogAdvantageTitle')&&html.includes('فهرست بسیاری از مدارس'),'Catalog advantage must be visible');
+const operations=read('frontend/assets/operations.js');
+assert.ok(operations.includes('function dashboardCompanyPin(')&&operations.includes('function dashboardSchoolPin('),'Dashboard marker functions must be defined before use');
+assert.ok(operations.includes('icon:dashboardCompanyPin(config.hasCustomLogo)')&&operations.includes('icon:dashboardSchoolPin(sc)'),'Dashboard markers must use dedicated image icons');
+assert.ok(css.includes('Prevent blank sections in full-page screenshots'),'Public page content must never be hidden by reveal animation');
+assert.ok(js.includes('tile.openstreetmap.fr/hot')&&js.includes('sy-map-tile-status'),'Public map must have visible fallback for failed map tiles');
 console.log('Public landing pages, accessibility structure, real statistics and login integration OK');
