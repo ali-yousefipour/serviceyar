@@ -2283,3 +2283,36 @@ body.sy-menu-palette-open{overflow:hidden}
 .sy-school-photo-name{display:flex;align-items:center;gap:9px;min-width:170px}
 .sy-school-photo-name img{width:46px;height:46px;object-fit:cover;border-radius:9px;border:1px solid #d7e4de;flex:none}
 .sy-school-photo-name img[hidden]{display:none}
+
+/* School details — clear hierarchy, private photo, accessible map and upload. */
+.sy-school-details{display:grid;gap:22px;direction:rtl}
+.sy-school-details-hero{display:grid;grid-template-columns:minmax(150px,240px) minmax(0,1fr);gap:22px;padding:16px;border-radius:18px;background:linear-gradient(135deg,#e8f5ef,#f7fbf8);border:1px solid #d5e6db;align-items:center}
+.sy-school-details-cover{height:180px;border-radius:14px;background:#dbe9e2;overflow:hidden;display:grid;place-items:center}
+.sy-school-details-image{width:100%;height:100%;object-fit:cover}
+.sy-school-photo-placeholder{display:grid;place-items:center;min-height:120px;min-width:120px;text-align:center;padding:16px;color:#527163;background:repeating-linear-gradient(45deg,#eaf1ed,#eaf1ed 10px,#e0ebe4 10px,#e0ebe4 20px);border-radius:12px;font-size:.85rem}
+.sy-school-details-cover .sy-school-photo-placeholder{height:100%;width:100%}
+.sy-school-details-kicker{font-size:.81rem;font-weight:750;color:#13765b}
+.sy-school-details-summary h2{font-size:clamp(1.35rem,2.7vw,1.85rem);line-height:1.55;color:#153e31;margin:6px 0}
+.sy-school-details-summary p{margin:0 0 20px;color:#557568;line-height:1.85}
+.sy-school-details-summary button{border-radius:11px}
+.sy-school-details-section{padding:20px;border:1px solid #e0e9e4;background:#fff;border-radius:17px}
+.sy-school-details-section h3{margin:0 0 15px;font-size:1.03rem;color:#23463b}
+.sy-school-details-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0}
+.sy-school-details-facts>div{padding:13px;background:#f6faf8;border:1px solid #edf2ee;border-radius:11px;min-width:0}
+.sy-school-details-facts dt{font-size:.77rem;color:#71877d;margin:0 0 6px}
+.sy-school-details-facts dd{font-weight:650;line-height:1.7;color:#203c30;overflow-wrap:anywhere;margin:0}
+.sy-school-details-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sy-school-details-section-head span{font-size:.78rem;color:#2d8063;background:#e8f5ed;padding:4px 9px;border-radius:20px}
+.sy-school-details-map{min-height:305px;width:100%;border-radius:13px;overflow:hidden;background:#e7efe9;border:1px solid #d2e3d9;z-index:0}
+.sy-school-map-empty{padding:25px 10px;text-align:center;color:#657d71;background:#f8faf8;border-radius:13px}
+.sy-school-photo-editor{margin:15px 0 20px;padding:16px;border:1px solid #dbe9df;background:#f5faf6;border-radius:15px;display:flex;gap:18px;align-items:center}
+.sy-school-photo-editor-preview{width:140px;height:110px;flex:none;border-radius:12px;overflow:hidden;background:#e2ebe5;display:grid;place-items:center}
+.sy-school-photo-editor-preview img{height:100%;width:100%;object-fit:cover}
+.sy-school-photo-editor-controls{flex:1;min-width:0}
+.sy-school-photo-editor-controls h4{margin:0 0 6px;color:#164e3a}
+.sy-school-photo-editor-controls p{margin:0 0 12px;color:#607769;font-size:.83rem;line-height:1.85}
+.sy-school-photo-choose{display:inline-flex!important;align-items:center;cursor:pointer;padding:9px 15px!important;background:#0a6d4d;color:#fff;border-radius:10px;font-size:.88rem!important;position:relative;overflow:hidden}
+.sy-school-photo-choose input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.sy-school-photo-choose:focus-within{outline:3px solid #46ae8d;outline-offset:2px}
+#sySchoolPhotoFileName{display:block;font-size:.79rem;overflow-wrap:anywhere;margin-top:8px;color:#537567}
+@media(max-width:700px){.sy-school-details-hero{grid-template-columns:1fr}.sy-school-details-cover{height:190px}.sy-school-details-facts{grid-template-columns:1fr}.sy-school-photo-editor{flex-direction:column;align-items:stretch}.sy-school-photo-editor-preview{width:100%;height:170px}.sy-school-details-section{padding:14px}.sy-school-details-map{min-height:250px}}
