@@ -157,3 +157,21 @@
 .sy-public.sy-motion-ready .sy-stat-grid article.sy-in-view:hover{transform:translateY(-8px)}
 .sy-public.sy-motion-ready .sy-flow-grid>div.sy-in-view:hover{transform:translateY(-7px)}
 @media(hover:none){.sy-feature-grid article:hover,.sy-contact-grid article:hover,.sy-stat-grid article:hover,.sy-flow-grid>div:hover{transform:none!important}}
+
+/* Public school search and tariff calculator */
+.sy-school-search{display:grid;gap:7px;margin:20px 0}
+.sy-school-search input,.sy-public-quote input,.sy-public-quote select{font:inherit;border:1px solid #c8dad3;border-radius:10px;background:white;padding:10px 12px;width:100%;min-width:0;color:#153d32}
+.sy-schools-layout{display:grid;grid-template-columns:minmax(250px,1fr) minmax(0,1.8fr);gap:16px;align-items:stretch}
+.sy-school-results{max-height:410px;overflow:auto;background:#fff;border:1px solid #e2ede8;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.sy-school-choice{background:#f8fbfa;border:1px solid #e2eae6;border-radius:9px;padding:12px;text-align:right;cursor:pointer;color:#193c31;font:inherit;display:grid;gap:3px}
+.sy-school-choice:hover,.sy-school-choice:focus-visible,.sy-school-choice.sy-selected-school{background:#e4f3ec;border-color:#087453;outline-offset:2px}
+.sy-school-choice small,.sy-school-choice span{font-size:.84rem;color:#526f65}
+.sy-school-map{min-height:410px;border-radius:12px;overflow:hidden;background:#e9f1ec;border:1px solid #dde7e2;z-index:0}
+.sy-school-map .leaflet-control{direction:ltr}
+.sy-public-quote{margin-top:18px;background:#fff;border:1px solid #e2ede8;border-radius:12px;padding:20px}
+.sy-public-quote h3{margin:0 0 10px}
+.sy-quote-fields{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:12px;align-items:end}
+.sy-quote-fields label{display:grid;gap:5px;font-size:.85rem}
+#syQuoteResult{margin:12px 0 0;color:#15513b}
+@media(max-width:800px){.sy-schools-layout{grid-template-columns:1fr}.sy-school-results{max-height:270px}.sy-school-map{min-height:320px}.sy-quote-fields{grid-template-columns:1fr 1fr}.sy-quote-fields label:first-child{grid-column:1/-1}}
+@media(max-width:520px){.sy-quote-fields{grid-template-columns:1fr}}
