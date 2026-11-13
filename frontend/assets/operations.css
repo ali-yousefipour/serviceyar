@@ -2002,3 +2002,24 @@ body.sy-menu-palette-open{overflow:hidden}
  body:has(.sy-payslip-sheet) .sy-payslip-sheet :is(h2,h3,thead,tfoot){break-after:avoid}
  body:has(.sy-payslip-sheet) .sy-payslip-sheet :is(section,table,tr,.sy-payslip-field){break-inside:avoid}
 }
+
+/* Compact service cards with on-demand financial breakdown */
+#content .sy-services-card-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,350px),1fr));gap:10px;align-items:start}
+#content .sy-service-card{border-radius:12px;box-shadow:none}
+#content .sy-service-card-head{padding:11px 13px 8px;gap:8px;align-items:center}
+#content .sy-service-identity h4{font-size:14px;line-height:1.5;margin:2px 0}
+#content .sy-service-identity small,#content .sy-service-index{font-size:10px}
+#content .sy-service-status{font-size:10px;padding:4px 7px}
+#content .sy-service-facts-primary{padding:9px 13px;gap:6px;grid-template-columns:repeat(2,minmax(0,1fr))}
+#content .sy-service-facts-primary>div{min-width:0;padding:4px 0}
+#content .sy-service-facts-primary dt{font-size:10px;color:#617568}
+#content .sy-service-facts-primary dd{font-size:12px;font-weight:750;overflow-wrap:anywhere}
+#content .sy-service-facts-primary>div:last-child{grid-column:1/-1;background:#eaf6ed;padding:8px;border-radius:8px}
+#content .sy-service-more{margin:0 12px 10px;border:1px solid #d9e6de;border-radius:8px;background:#fafdfb}
+#content .sy-service-more>summary{cursor:pointer;padding:8px 11px;font-size:11px;font-weight:750;color:#236345}
+#content .sy-service-more>summary:focus-visible{outline:3px solid #7ab991;outline-offset:2px}
+#content .sy-service-facts-secondary{padding:9px;gap:7px}
+#content .sy-service-actions{display:flex;flex-wrap:wrap;gap:5px;padding:9px 11px}
+#content .sy-service-actions :is(button,a){min-height:34px;padding:6px 9px;font-size:11px;flex:0 1 auto}
+@media(max-width:550px){#content .sy-services-card-grid{grid-template-columns:1fr}#content .sy-service-actions :is(button,a){flex:1 1 auto}}
+@media print{#content .sy-service-more{display:none!important}}
