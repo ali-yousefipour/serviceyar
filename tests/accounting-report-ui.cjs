@@ -20,4 +20,9 @@ assert(source.includes('id="statementPrint"'),'Account statement should have a d
 assert(source.includes("$('statementPrint')?.addEventListener('click',()=>window.print())"),'Report print action should be wired');
 assert(source.includes('چاپ صفحه فعلی'),'Printed report must clearly identify its pagination scope');
 assert(source.includes('خروجی اکسل (کل بازه)'),'Export should clearly identify its full-range scope');
+assert(source.includes('class="panel sy-quick-journal"'),'Quick journal should use the dedicated guided layout');
+for(const section of ['quickPeopleTitle','quickDocumentTitle','quickRowsTitle'])assert(source.includes('aria-labelledby="'+section+'"'),'Quick journal section '+section+' must be labelled');
+assert(source.includes('id="quickJournalHint"'),'Quick journal must explain why saving is unavailable');
+assert(source.includes('sy-quick-table-wrap" tabindex="0" role="region"'),'Quick journal person table must have a keyboard-scrollable region');
+assert(source.includes('data-label="مبلغ · ریال"'),'Quick journal mobile rows must preserve column names');
 console.log('Accounting account search and safe report filters passed');
