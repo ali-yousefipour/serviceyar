@@ -54,7 +54,7 @@ final class MonthlyStatementWorkbook
         // Prefer the real reference's layout and formula-bearing sheets when
         // the scrubbed template has been installed. Legacy synthetic XLSX is
         // retained as a safe fallback until the template is deployed.
-        ReferenceMonthlyStatementWorkbook::downloadIfAvailable($d,$agency,$id);
+        if(($_GET['workbookFormat']??'')!=='standard')ReferenceMonthlyStatementWorkbook::downloadIfAvailable($d,$agency,$id);
         $label=$d['month_name'].' '.$d['year'];
         $title=$label.' - '.$agency.' - صورت‌وضعیت سرویس مدارس (ریال)';
         $items=$d['items'];$drivers=$d['drivers'];$rates=$d['rates'];$t=$d['totals'];
