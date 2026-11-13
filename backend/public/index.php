@@ -31,12 +31,9 @@ try {
    foreach(['agencies','students','drivers','services'] as $table){
     $counts[$table]=(int)$pdo->query('SELECT COUNT(*) FROM '.$table.' WHERE is_active=1')->fetchColumn();
    }
-   // Registered schools: count physical rows, including inactive records. A catalog
-   // entry is not a registered school and must not inflate the homepage metric.
-   $schoolStats=$pdo->query('SELECT COUNT(*) AS total, COALESCE(SUM(CASE WHEN is_active=1 THEN 1 ELSE 0 END),0) AS active_count, COALESCE(SUM(CASE WHEN is_active=1 THEN 0 ELSE 1 END),0) AS inactive_count FROM schools')->fetch(\PDO::FETCH_ASSOC);
-   $counts['schools']=(int)$schoolStats['total'];
-   $counts['schoolsActive']=(int)$schoolStats['active_count'];
-   $counts['schoolsInactive']=(int)$schoolStats['inactive_count'];
+   // Public school directory consists of both registered and central-catalog schools.
+   // Include inactive registered schools and avoid double-counting shared identities.
+   $counts['schools']=\ServiceYar\Domain\PublicExplorer::countSchools();
    header('Cache-Control: no-store, max-age=0');
    Response::json(['ok'=>true,'data'=>['counts'=>$counts]]);
   }catch(\Throwable $e){
