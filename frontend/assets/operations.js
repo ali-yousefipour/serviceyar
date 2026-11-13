@@ -1306,6 +1306,40 @@ function attachFinancialCalculator(form,key,id=null,record={}){
  box.querySelector('[data-calculate]').onclick=async e=>{invalidate();const requestRevision=revision,button=e.currentTarget;button.disabled=true;try{if(key==='services'&&id&&String(record.code||'').startsWith('mehr1405-d')){const members=await api(scoped('/api/v1/services/'+id+'/students'));if(!box.isConnected||revision!==requestRevision)return;if(!Array.isArray(members)||!members.length)throw new Error('دانش‌آموزی برای این سرویس ثبت نشده است.');const missing=members.filter(m=>!Number.isFinite(Number(m.monthly_fee))||Number(m.monthly_fee)<=0);if(missing.length)throw new Error('مبلغ ماهیانه '+number(missing.length)+' دانش‌آموز ثبت نشده است؛ ابتدا فایل مبالغ مهر ۱۴۰۵ را ایمپورت کنید.');const total=members.reduce((sum,m)=>sum+Number(m.monthly_fee),0);quote={monthlyFee:Math.round(total),driverNet:Number(record.agreed_amount||0),imported:true};box.querySelector('[data-result]').innerHTML='<p>جمع هزینه ماهیانه '+number(members.length)+' دانش‌آموز طبق مبالغ ثبت‌شده: '+number(quote.monthlyFee)+' ریال</p><p>مبلغ توافقی راننده از اطلاعات ثبت‌شده سرویس حفظ می‌شود.</p>';box.querySelector('[data-apply]').hidden=false;}else{const d=await write('/api/v1/operations/financial-preview',{input:financeInput('formQuote')});if(!box.isConnected||revision!==requestRevision)return;quote=d;box.querySelector('[data-result]').innerHTML=financeResult(d);box.querySelector('[data-apply]').hidden=false;}}catch(err){if(box.isConnected)box.querySelector('[data-result]').textContent=err.message;}finally{button.disabled=false;}};
  box.querySelector('[data-apply]').onclick=()=>{if(!quote)return;if(key==='driver-work')form.elements.amount.value=quote.driverNet;else form.elements.monthlyFee.value=quote.monthlyFee;if(key==='services'&&!quote.imported)form.elements.agreedAmount.value=quote.driverNet;notify('نتیجه به فرم منتقل شد؛ برای ثبت، فرم را ذخیره کنید.');};
 }
+async function agencyPaymentMethodSettings(){
+ if(!can('ledger'))return;
+ const token=pageToken,agency=Number(currentAgency?.id);
+ const methods=await api(scoped('/api/v1/finance/payment-methods'));
+ if(token!==pageToken||agency!==Number(currentAgency?.id))return;
+ const editable=can('settings','manage');
+ const panel=document.createElement('section');panel.className='panel sy-settings-panel sy-payment-method-settings';
+ panel.innerHTML='<header class="sy-settings-section-head"><div><h2>روش‌های دریافت و پرداخت شرکت</h2><p>روش‌های فعال در فرم ثبت دریافت و پرداخت همین شرکت نمایش داده می‌شوند. غیرفعال‌کردن یک روش، سوابق قبلی را حذف نمی‌کند.</p></div></header><div id="agencyMethodRows" class="sy-method-settings-rows"></div>'+(editable?'<div class="sy-method-settings-actions"><button type="button" id="addAgencyMethod">افزودن روش جدید</button><button type="button" class="primary" id="saveAgencyMethods">ذخیره روش‌های شرکت</button></div>':'')+'<p id="agencyMethodsStatus" role="status" aria-live="polite"></p>';
+ $('transportSettings').closest('section').after(panel);
+ const rows=methods.map(item=>({...item}));
+ const render=()=>{
+  const host=panel.querySelector('#agencyMethodRows');
+  host.innerHTML=rows.map((m,i)=>'<div class="sy-method-setting"><span class="sy-method-code">'+esc(m.code)+'</span><label>عنوان روش<input type="text" data-method-name="'+i+'" value="'+esc(m.name)+'" maxlength="80" required '+(editable?'':'disabled')+'></label><span class="sy-method-state">'+(m.active?'فعال':'غیرفعال')+'</span>'+(editable?'<button type="button" data-method-toggle="'+i+'">'+(m.active?'حذف از فهرست فعال':'فعال‌سازی')+'</button>':'')+'</div>').join('');
+  host.querySelectorAll('[data-method-name]').forEach(input=>input.oninput=()=>{rows[Number(input.dataset.methodName)].name=input.value;});
+  host.querySelectorAll('[data-method-toggle]').forEach(button=>button.onclick=()=>{rows[Number(button.dataset.methodToggle)].active=!rows[Number(button.dataset.methodToggle)].active;render();});
+ };
+ render();
+ panel.querySelector('#addAgencyMethod')?.addEventListener('click',()=>{
+  let n=1;while(rows.some(r=>r.code==='custom_'+n))n++;
+  rows.push({code:'custom_'+n,name:'',active:true});render();panel.querySelector('[data-method-name="'+(rows.length-1)+'"]')?.focus();
+ });
+ panel.querySelector('#saveAgencyMethods')?.addEventListener('click',async event=>{
+  const button=event.currentTarget;
+  if(rows.some(r=>!r.name.trim())){panel.querySelector('#agencyMethodsStatus').textContent='عنوان تمام روش‌ها را تکمیل کنید.';return;}
+  if(!rows.some(r=>r.active)){panel.querySelector('#agencyMethodsStatus').textContent='حداقل یک روش فعال لازم است.';return;}
+  button.disabled=true;
+  try{
+   await write('/api/v1/settings',{finance_payment_methods:rows},'PUT');
+   agencyMethodChoices=rows.map(r=>({...r}));
+   panel.querySelector('#agencyMethodsStatus').textContent='روش‌های دریافت و پرداخت این شرکت ذخیره شدند.';
+  }catch(e){panel.querySelector('#agencyMethodsStatus').textContent=e.message;}
+  finally{button.disabled=false;}
+ });
+}
 async function settingsPage(){
  const token=pageToken;const setting=await api(scoped('/api/v1/settings'));if(token!==pageToken)return;
  const fields={company_phone:'تلفن شرکت',company_address:'نشانی شرکت',academic_year:'سال تحصیلی',support_phone:'شماره پشتیبانی'};
@@ -1321,6 +1355,7 @@ async function settingsPage(){
  const updateMapStatus=async()=>{const c=await api(scoped('/api/v1/maps/config'));if(token!==pageToken)return;if(!Object.prototype.hasOwnProperty.call(setting,'neshan_web_key'))$('neshanSettings').elements.neshan_web_key.value=c.webKey||'';$('neshanConfigStatus').textContent='کلید سرویس: '+(c.serviceConfigured?'تنظیم شده':'تنظیم نشده')+' · کلید نمایش: '+(c.webKey?'تنظیم شده':'تنظیم نشده');};updateMapStatus().catch(e=>notify(e.message,true));
  $('neshanSettings').onsubmit=async e=>{e.preventDefault();if(!can('settings','manage'))return;const button=e.target.querySelector('button');button.disabled=true;try{await write('/api/v1/settings',Object.fromEntries(new FormData(e.target)),'PUT');e.target.elements.neshan_service_key.value='';await updateMapStatus();notify('تنظیمات نقشه ذخیره شد.');}catch(e){notify(e.message,true);}finally{button.disabled=false;}};
  financialSettings(setting);
+ agencyPaymentMethodSettings().catch(e=>notify('دریافت روش‌های پرداخت شرکت ناموفق بود: '+e.message,true));
  if(can('agencies','manage')){const f=$('transportSettings'),label=document.createElement('label');label.textContent='نام شرکت';const input=document.createElement('input');input.value=currentAgency.name;input.required=true;label.append(input);const button=document.createElement('button');button.type='button';button.textContent='ذخیره نام شرکت';button.onclick=async()=>{button.disabled=true;try{await write('/api/v1/agencies/'+currentAgency.id,{name:input.value,code:currentAgency.code,cityId:currentAgency.city_id,isActive:currentAgency.is_active},'PUT');currentAgency.name=input.value;renderNav();notify('نام شرکت ذخیره شد.');}catch(err){notify(err.message,true);}finally{button.disabled=false;}};label.append(button);f.prepend(label);}
  api(scoped('/api/v1/integrations/status')).then(d=>{if(token===pageToken&&$('providerStatus'))$('providerStatus').innerHTML=simpleTable(['سرویس','وضعیت'],[['پیامک نگین',d.sms?'تنظیم شده':'نیازمند تنظیمات سرور'],['کیف پول بله',d.bale?'تنظیم شده':'نیازمند تنظیمات سرور'],['Google Maps',d.google?'کلید تنظیم شده':'نیازمند کلید سرور'],['OpenStreetMap','آماده']]);}).catch(e=>notify(e.message,true));$('transportSettings').onsubmit=async e=>{e.preventDefault();try{await write('/api/v1/settings',Object.fromEntries(new FormData(e.target)),'PUT');notify('تنظیمات ذخیره شد.');}catch(err){notify(err.message,true);}};
  if(can('holidays')){try{const rows=await api(scoped('/api/v1/holidays'));if(token!==pageToken)return;$('holidayRows').innerHTML=simpleTable(['عنوان','تاریخ شمسی','وضعیت'],rows.map(r=>[r.title,r.date_jalali,Number(r.is_active)?'فعال':'غیرفعال']))+(can('holidays','manage')?'<div class="member-actions"><button id="newHoliday">ثبت تعطیلی</button>'+rows.map(r=>`<button data-holiday="${r.id}">ویرایش ${esc(r.title)}</button>`).join('')+'</div>':'');
