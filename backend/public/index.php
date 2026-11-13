@@ -150,7 +150,11 @@ try {
   imagesavealpha($overlay,true);
   $transparent=imagecolorallocatealpha($overlay,0,0,0,127);
   imagefill($overlay,0,0,$transparent);
-  $ink=imagecolorallocatealpha($overlay,255,255,255,108);
+  // White with a faint dark edge remains visible on both bright and dark facades.
+  // Alpha is 0=opaque, 127=invisible. The former 108 was almost imperceptible.
+  $outline=imagecolorallocatealpha($overlay,12,50,43,106);
+  $ink=imagecolorallocatealpha($overlay,255,255,255,75);
+  imagestring($overlay,$font,16,13,$watermark,$outline);
   imagestring($overlay,$font,15,12,$watermark,$ink);
   $rotated=imagerotate($overlay,18,$transparent);
   imagedestroy($overlay);
