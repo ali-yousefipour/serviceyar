@@ -63,4 +63,12 @@ assert(source.includes('finance_payment_methods:rows'),'Company payment method s
 assert(source.includes('/api/v1/finance/banks'),'Accounting bank selector must use server directory');
 assert(source.includes('companyAccountId'),'New receipts and payments need a company account');
 assert(source.includes('حساب مبدأ شرکت')&&source.includes('حساب مقصد شرکت'),'Account label should reflect transaction direction');
+assert(source.includes('id="payrollDriversTab"')&&source.includes('id="payrollDocsTab"'),'Payroll workspace must expose driver and saved-document tabs');
+assert(source.includes('data-preview-driver'),'Every driver must have a direct payslip preview button');
+assert(source.includes('data-details-driver'),'Payroll table should allow on-demand deduction breakdowns');
+assert(source.includes("isPreview){closeDialog();return;"),'Unregistered preview must return safely to driver list');
+assert(source.includes('sy-payslip-preview-alert'),'Unregistered payslips must be unmistakably labeled');
+assert(source.includes('id="payrollDocumentDriverSearch"'),'Saved document detail needs driver search');
+assert(source.includes('data-expand-payroll'),'Saved document rows should keep deductions collapsed');
+assert(source.includes('checkbox.checked=false'),'Filtering must clear invisible driver selections');
 console.log('Accounting account search and safe report filters passed');
