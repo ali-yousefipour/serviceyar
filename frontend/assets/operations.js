@@ -339,6 +339,20 @@ async function journalEditor(id,token=pageToken,back=null){
  $('journalForm').onsubmit=async e=>{e.preventDefault();if(!editable)return;if(!totals()){notify('برای ذخیره، حساب هر ردیف و تراز بدهکار/بستانکار را اصلاح کنید.',true);return;}const button=$('journalSave');button.disabled=true;try{const f=e.currentTarget,body={referenceNo:f.elements.referenceNo.value,subsidiaryNo:f.elements.subsidiaryNo.value,documentNo:f.elements.documentNo.value,documentDate:f.elements.documentDate.value,description:f.elements.documentDescription.value,lines:[...$('journalLines').querySelectorAll('tr')].map(r=>Object.fromEntries([...r.querySelectorAll('input,select')].map(i=>[i.name,i.value])))};const saved=await write('/api/v1/accounting/journal'+(id?'/'+id:''),body,id?'PUT':'POST');notify('پیش‌نویس سند ذخیره شد.');if(token===pageToken)await journalEditor(saved.id,token);}catch(err){notify(err.message,true);}finally{if(button.isConnected)button.disabled=false;}};
  $('journalApprove')?.addEventListener('click',async e=>{if(!confirm('سند تأیید و غیرقابل ویرایش شود؟'))return;e.target.disabled=true;try{await write('/api/v1/accounting/journal/'+id+'/approve',{});notify('سند تأیید شد.');if(token===pageToken)await journalEditor(id,token);}catch(err){notify(err.message,true);if(e.target.isConnected)e.target.disabled=false;}});
 }
+
+function syLocationSvg(color){
+ return '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" fill="'+color+'"><path d="M12 2a8 8 0 0 0-8 8c0 5.6 8 12 8 12s8-6.4 8-12a8 8 0 0 0-8-8zm0 11.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4z"/></svg>';
+}
+function dashboardCompanyPin(hasLogo){
+ const img=hasLogo?'<img class="sy-map-marker-photo" alt="" src="'+esc(agencyLogoUrl())+'" onerror="this.remove();this.parentElement.classList.add(\'sy-marker-fallback\')">':'';
+ return L.divIcon({className:'sy-map-marker sy-map-company '+(!hasLogo?'sy-marker-fallback':''),html:'<span class="sy-map-marker-bubble">'+img+'<span class="sy-map-marker-symbol">'+syLocationSvg('#0b985b')+'</span></span>',iconSize:[56,64],iconAnchor:[28,62],popupAnchor:[0,-58]});
+}
+function dashboardSchoolPin(sc){
+ const url=Number(sc.id)>0&&sc.photo_path?scoped('/api/v1/schools/'+encodeURIComponent(sc.id)+'/photo'):null;
+ const img=url?'<img class="sy-map-marker-photo" alt="" loading="lazy" src="'+esc(url)+'" onerror="this.remove();this.parentElement.classList.add(\'sy-marker-fallback\')">':'';
+ return L.divIcon({className:'sy-map-marker sy-map-school '+(!img?'sy-marker-fallback':''),html:'<span class="sy-map-marker-bubble">'+img+'<span class="sy-map-marker-symbol">'+syLocationSvg('#e5ae0a')+'</span></span>',iconSize:[52,62],iconAnchor:[26,60],popupAnchor:[0,-55]});
+}
+
 async function dashboard(token=pageToken){
  const d=await api(scoped('/api/v1/operations/dashboard'));if(token!==pageToken)return;
  const totalStudents=Math.max(0,Number(d.counts?.students)||0),assignedStudents=Math.max(0,Number(d.statuses?.find(s=>s.service_status==='assigned')?.total)||0),assignedPercent=totalStudents?Math.max(0,Math.min(100,assignedStudents/totalStudents*100)):0;
