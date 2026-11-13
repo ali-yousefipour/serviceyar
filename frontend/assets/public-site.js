@@ -220,8 +220,11 @@
  }
  function focusPoints(points){
   if(!schoolMap||!points.length)return;
-  if(points.length===1)schoolMap.setView(points[0],14);
-  else schoolMap.fitBounds(L.latLngBounds(points).pad(.22),{maxZoom:14});
+  if(points.length===1)schoolMap.setView(points[0],16);
+  else {
+   schoolMap.fitBounds(L.latLngBounds(points).pad(.22),{maxZoom:16});
+   schoolMap.setZoom(Math.min(18,schoolMap.getZoom()+2));
+  }
  }
  function renderCompanyDirectory(){
   const root=document.getElementById('syCompanyDirectoryItems');
@@ -242,7 +245,7 @@
    item.append(name,state);
    item.addEventListener('click',()=>{
     showCompany(company);
-    if(hasLocation&&schoolMap)schoolMap.setView([Number(company.latitude),Number(company.longitude)],15);
+    if(hasLocation&&schoolMap)schoolMap.setView([Number(company.latitude),Number(company.longitude)],17);
    });
    root.append(item);
   }
@@ -346,7 +349,7 @@
    });
   }
   await window.__syPublicNeshanPromise;
-  schoolMap=new L.Map(mapNode,{key:result.data.webKey,maptype:'dreamy',center:[36.3,59.6],zoom:12,scrollWheelZoom:false});
+  schoolMap=new L.Map(mapNode,{key:result.data.webKey,maptype:'dreamy',center:[36.3,59.6],zoom:14,scrollWheelZoom:false});
   publicCompanyMarkers=L.layerGroup().addTo(schoolMap);schoolMarkers=L.layerGroup().addTo(schoolMap);
   requestAnimationFrame(()=>schoolMap?.invalidateSize(true));
  }
