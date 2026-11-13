@@ -2316,3 +2316,19 @@ body.sy-menu-palette-open{overflow:hidden}
 .sy-school-photo-choose:focus-within{outline:3px solid #46ae8d;outline-offset:2px}
 #sySchoolPhotoFileName{display:block;font-size:.79rem;overflow-wrap:anywhere;margin-top:8px;color:#537567}
 @media(max-width:700px){.sy-school-details-hero{grid-template-columns:1fr}.sy-school-details-cover{height:190px}.sy-school-details-facts{grid-template-columns:1fr}.sy-school-photo-editor{flex-direction:column;align-items:stretch}.sy-school-photo-editor-preview{width:100%;height:170px}.sy-school-details-section{padding:14px}.sy-school-details-map{min-height:250px}}
+
+
+/* Map pin system: customized agency and school identity */
+.dashboard-school-map .sy-map-marker{background:none;border:0}
+.dashboard-school-map .sy-map-marker-bubble{position:relative;display:grid;place-items:center;width:52px;height:52px;border-radius:17px;background:#fff;box-shadow:0 6px 19px #173d2e55;border:3px solid #e5ae0a;transform:rotate(-3deg);transition:transform .2s,box-shadow .2s;overflow:visible}
+.dashboard-school-map .sy-map-marker:hover .sy-map-marker-bubble{transform:translateY(-5px) rotate(0);box-shadow:0 10px 25px #173d2e55}
+.dashboard-school-map .sy-map-company .sy-map-marker-bubble{width:56px;height:56px;border-color:#0b985b}
+.dashboard-school-map .sy-map-marker-photo{display:block;width:100%;height:100%;object-fit:cover;border-radius:13px;background:#fff;transform:rotate(3deg)}
+.dashboard-school-map .sy-map-marker-symbol{display:none;align-items:center;justify-content:center;width:100%;height:100%;background:#fff;border-radius:14px}
+.dashboard-school-map .sy-marker-fallback .sy-map-marker-symbol{display:flex}
+.dashboard-school-map .sy-marker-fallback .sy-map-marker-bubble{border-color:#d8b043}
+.dashboard-school-map .sy-map-company.sy-marker-fallback .sy-map-marker-bubble{border-color:#0b985b}
+.dashboard-school-map .sy-map-marker-bubble:after{content:'';position:absolute;left:calc(50% - 6px);bottom:-9px;width:12px;height:12px;background:#e5ae0a;transform:rotate(45deg);z-index:-1}
+.dashboard-school-map .sy-map-company .sy-map-marker-bubble:after{background:#0b985b}
+.dashboard-map-panel .dashboard-school-map{border-radius:19px;overflow:hidden}
+@media(max-width:640px){.dashboard-school-map .sy-map-marker-bubble{box-shadow:0 3px 12px #173d2e38}}
