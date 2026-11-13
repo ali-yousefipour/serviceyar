@@ -308,9 +308,9 @@ final class ExportService
             $s=''; while($n>0){$n--; $s=chr(65+$n%26).$s; $n=intdiv($n,26);} return $s;
         };
         $safeText=static function(mixed $v):string {
-            $v=preg_replace('/[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]/u','',(string)($v??''))??'';
+            $v=preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/u','',(string)($v??''))??'';
             // Raw values prevent implicit date, formula, URL and number conversion.
-            return "\\0".$v;
+            return chr(0).$v;
         };
         $grid=[];
         $grid[]=array_map(static fn($heading)=>'<b><style color="#FFFFFF" bgcolor="#165F3C"><wraptext>'.htmlspecialchars((string)$heading,ENT_XML1|ENT_QUOTES,'UTF-8').'</wraptext></style></b>',array_values($columns));
