@@ -161,6 +161,7 @@
    const body=await response.json();
    if(!response.ok||!body.ok)throw Error(body.error?.message||'خطا در دریافت اطلاعات');
    publicSchoolList=body.data.schools||[];
+   if(!term){status.textContent='برای مشاهده فهرست مدارس، حداقل سه حرف از نام مدرسه یا شرکت را وارد کنید.';return;}
    drawPublicSchools(publicSchoolList);
   }catch(error){status.textContent=error.message||'خطا در دریافت مدارس';}
  }
@@ -170,7 +171,19 @@
   mapNode.dataset.initialized='1';
   if(window.L){
    schoolMap=L.map(mapNode,{scrollWheelZoom:false}).setView([36.3,59.6],11);
-   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(schoolMap);
+   // Prefer a light, readable basemap. Fail over once if tile requests are blocked
+   // by a hosting/network policy; district outlines alone are not a basemap.
+   const base=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+    subdomains:'abcd',maxZoom:19,attribution:'© OpenStreetMap contributors · © CARTO'
+   }).addTo(schoolMap);
+   let fallbackUsed=false;
+   base.on('tileerror',()=>{
+    if(fallbackUsed||!schoolMap)return;
+    fallbackUsed=true;schoolMap.removeLayer(base);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+     maxZoom:19,attribution:'© OpenStreetMap contributors'
+    }).addTo(schoolMap);
+   });
    schoolMarkers=L.layerGroup().addTo(schoolMap);
    fetch('/assets/school-district-boundaries.geojson',{credentials:'omit'}).then(r=>r.ok?r.json():null).then(geo=>{
     if(!geo||!schoolMap)return;
@@ -178,7 +191,8 @@
     L.control.layers(null,{'مرزبندی نواحی آموزش‌وپرورش':layer},{collapsed:true}).addTo(schoolMap);
     layer.addTo(schoolMap);
    }).catch(()=>{});
-   requestAnimationFrame(()=>schoolMap?.invalidateSize());
+   // Leaflet must remeasure after the public page becomes visible.
+   requestAnimationFrame(()=>schoolMap?.invalidateSize(true));
   }else mapNode.textContent='نمایش نقشه در دسترس نیست.';
   const search=document.getElementById('sySchoolSearch');
   search?.addEventListener('input',()=>{
@@ -238,7 +252,7 @@
   }
   requestAnimationFrame(()=>{
    if(generation!==pageGeneration)return;
-   setupReveals();showStatistics();updateScroll();
+   setupReveals();showStatistics();updateScroll();if(selected==='home')schoolMap?.invalidateSize(true);
   });
  }
  async function mount(){
