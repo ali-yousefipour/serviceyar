@@ -64,7 +64,7 @@ try {
    }
    header('Cache-Control: public, max-age=120');
    Response::json(['ok'=>true,'data'=>['schools'=>$rows]]);
-  }catch(\\Throwable $e){
+  }catch(\Throwable $e){
    error_log('[ServiceYar][public-schools] '.$e->getMessage());
    Response::json(['ok'=>false,'error'=>['code'=>'PUBLIC_SCHOOLS_UNAVAILABLE','message'=>'اطلاعات مدارس فعلاً در دسترس نیست.']],503);
   }
