@@ -2115,3 +2115,62 @@ body.sy-menu-palette-open{overflow:hidden}
 @media print{#content .sy-payroll-list-controls{display:none!important}}
 
 #content .sy-payroll-list-table tbody tr[hidden]{display:none!important}
+
+/* Compact payroll workspace: driver-first payslip entry, RTL mobile cards */
+#content .sy-payroll-workspace{min-width:0;padding:0;margin:0}
+#content .sy-payroll-overview{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin:0 0 18px;padding:17px 20px;background:linear-gradient(110deg,#f1f8f4,#fff);border:1px solid #d8e7dc;border-radius:15px}
+#content .sy-payroll-overview>div:first-child{max-width:520px}
+#content .sy-payroll-overview h3{font-size:21px;font-weight:850;color:#1d5237;margin:5px 0}
+#content .sy-payroll-overview p{color:#637d6b;line-height:1.85;font-size:12px;margin:5px 0}
+#content .sy-payroll-summary{display:grid;grid-template-columns:repeat(3,minmax(140px,1fr));gap:9px}
+#content .sy-payroll-summary>div{display:grid;gap:5px;border:1px solid #d5e6db;border-radius:11px;padding:10px 12px;background:#fff}
+#content .sy-payroll-summary span{font-size:11px;color:#607868}
+#content .sy-payroll-summary strong{font-size:14px;line-height:1.7;color:#19583b;font-variant-numeric:tabular-nums}
+#content .sy-payroll-tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid #dbe7de;margin-bottom:15px}
+#content .sy-payroll-tabs button{min-height:44px;padding:9px 17px;background:transparent;border:0;border-bottom:3px solid transparent;border-radius:0;color:#517360;font-weight:800;font-size:13px}
+#content .sy-payroll-tabs button[aria-selected=true]{color:#185738;border-bottom-color:#197e50;background:#f3f9f5}
+#content .sy-payroll-filterbar{display:flex;align-items:end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:12px}
+#content .sy-payroll-filterbar label{display:grid;gap:6px;min-width:min(100%,280px);color:#395f48;font-size:12px;font-weight:750}
+#content .sy-payroll-filterbar input{min-height:44px;padding:8px 12px;border:1px solid #cadfd0;border-radius:10px;box-sizing:border-box;background:#fff}
+#content .sy-payroll-filterbar p{font-size:12px;color:#698270;margin:0;line-height:1.8}
+#content .sy-payroll-driver-scroll{overflow:auto;max-height:520px;border:1px solid #dce7de;border-radius:12px;scrollbar-gutter:stable}
+#content .sy-payroll-driver-table{border-collapse:separate;border-spacing:0;width:100%;min-width:930px}
+#content .sy-payroll-driver-table th{position:sticky;top:0;background:#eaf4ed;z-index:2;font-size:11px;text-align:right;color:#29583f;padding:12px 10px;white-space:nowrap}
+#content .sy-payroll-driver-table td{padding:9px 10px;font-size:12px;color:#334a3b;border-bottom:1px solid #e8efe9;vertical-align:middle}
+#content .sy-payroll-driver-table tr:has(input[name=payrollSelected]:checked){background:#f0f9f3}
+#content .sy-payroll-driver-table tr:hover:not(.sy-payroll-detail-row){background:#f6faf7}
+#content .sy-payroll-driver-table input[type=checkbox]{accent-color:#186542;width:18px;height:18px}
+#content .sy-payroll-driver-table input[data-salary]{width:140px;max-width:100%;min-height:40px;box-sizing:border-box;border-radius:9px;border:1px solid #c9ddce;padding:7px 9px;background:#fff;direction:ltr;text-align:right}
+#content .sy-payroll-money{color:#17633e;font-weight:850;white-space:nowrap}
+#content .sy-payroll-row-actions{white-space:nowrap}
+#content .sy-payroll-row-actions button{min-height:38px;padding:7px 10px;border-radius:8px;font-size:11px;margin-inline-end:4px}
+#content .sy-payroll-detail-row td{background:#f6faf7;padding:12px 15px!important}
+#content .sy-payroll-detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 14px;font-size:12px}
+#content .sy-payroll-detail-grid span{padding:7px;border:1px solid #dfeae2;border-radius:8px;background:#fff;overflow-wrap:anywhere}
+#content .sy-payroll-detail-row[hidden],#content .sy-payroll-driver-table tr[data-payroll-driver][hidden]{display:none!important}
+#content .sy-payroll-selection{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:14px;padding:14px;border:1px solid #d2e5d8;border-radius:12px;background:#f3faf5}
+#content .sy-payroll-selection p{font-weight:800;color:#23543b;margin:0}
+#content .sy-payroll-selection button{min-height:44px}
+#content .sy-payroll-workspace :is(button,input,.sy-payroll-driver-scroll):focus-visible{outline:3px solid #83be99;outline-offset:2px}
+.sy-payslip-preview-alert{border:2px solid #ba7432;background:#fff2de!important;color:#834910!important}
+@media(max-width:1100px){#content .sy-payroll-overview{flex-wrap:wrap}#content .sy-payroll-summary{width:100%}}
+@media(max-width:750px){
+ #content .sy-payroll-overview{padding:13px}#content .sy-payroll-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #content .sy-payroll-driver-scroll{max-height:none;overflow:visible;border:0}
+ #content .sy-payroll-driver-table{display:block!important;min-width:0!important}
+ #content .sy-payroll-driver-table thead{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+ #content .sy-payroll-driver-table tbody{display:grid;gap:12px}
+ #content .sy-payroll-driver-table tbody tr[data-payroll-driver]{display:grid;gap:4px;border:1px solid #d8e7dc;border-radius:12px;padding:12px;background:#fff}
+ #content .sy-payroll-driver-table tbody tr[data-payroll-driver] td{display:flex;justify-content:space-between;align-items:center;gap:9px;padding:5px 0;border:0;min-width:0}
+ #content .sy-payroll-driver-table tbody tr[data-payroll-driver] td::before{content:attr(data-label);font-size:11px;color:#5e7866;font-weight:750;flex:0 0 31%}
+ #content .sy-payroll-driver-table input[data-salary]{flex:1;min-width:0;width:100%}
+ #content .sy-payroll-row-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));white-space:normal}
+ #content .sy-payroll-row-actions::before{display:none}
+ #content .sy-payroll-row-actions button{margin:0}
+ #content .sy-payroll-detail-row{display:block}
+ #content .sy-payroll-detail-row[hidden]{display:none!important}
+ #content .sy-payroll-detail-grid{grid-template-columns:1fr}
+ #content .sy-payroll-selection{align-items:stretch;flex-direction:column}
+ #content .sy-payroll-selection button{width:100%}
+}
+@media print{body:has(.sy-payroll-workspace) .sy-payroll-tabs,body:has(.sy-payroll-workspace) .sy-payroll-selection{display:none!important}}
