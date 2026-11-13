@@ -700,3 +700,59 @@
  max-width:100%!important;max-height:100%!important;
  object-fit:contain!important;
 }
+
+
+/* Public detail cards: keep the tiny bundled icon artwork at a crisp, modest size.
+   Never stretch the 72px icon to fill the photo column. */
+#syPublicSchools .sy-public-modal-visual.sy-public-default-art{
+ position:relative!important;
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ width:100%!important;max-width:none!important;
+ height:100%!important;min-height:255px!important;
+ max-height:none!important;aspect-ratio:auto!important;
+ padding:28px!important;box-sizing:border-box!important;
+ border-radius:0!important;
+ background:linear-gradient(145deg,#edf7f0,#f8fbf9)!important;
+ overflow:hidden!important;
+}
+#syPublicSchools .sy-public-modal-visual.sy-public-default-art img{
+ position:static!important;
+ display:block!important;
+ box-sizing:border-box!important;
+ width:108px!important;height:108px!important;
+ min-width:0!important;min-height:0!important;
+ max-width:108px!important;max-height:108px!important;
+ object-fit:contain!important;object-position:center!important;
+ margin:auto!important;padding:0!important;
+ border:0!important;border-radius:0!important;
+ background:transparent!important;box-shadow:none!important;
+}
+/* Legible, quiet overlay even when legacy/proxy image responses lack a watermark.
+   The server's own watermark remains embedded in each resized JPEG. */
+#syPublicSchools .sy-public-modal-visual.sy-public-watermarked-photo{
+ position:relative!important;isolation:isolate;
+}
+#syPublicSchools .sy-public-modal-visual.sy-public-watermarked-photo:after{
+ content:"service-yar.ir";
+ position:absolute!important;
+ top:50%!important;left:50%!important;right:auto!important;bottom:auto!important;
+ z-index:2!important;pointer-events:none!important;user-select:none!important;
+ transform:translate(-50%,-50%) rotate(-18deg)!important;
+ color:rgba(255,255,255,.32)!important;
+ text-shadow:0 1px 2px rgba(0,34,23,.30)!important;
+ font:800 clamp(13px,2vw,20px)/1.4 Vazirmatn,Tahoma,sans-serif!important;
+ letter-spacing:.065em!important;white-space:nowrap!important;
+}
+#syPublicSchools .sy-public-modal-visual.sy-public-default-art:after{
+ content:none!important;display:none!important;
+}
+@media(max-width:590px){
+ #syPublicSchools .sy-public-modal-visual.sy-public-default-art{
+  min-height:170px!important;max-height:200px!important;
+  padding:20px!important;
+ }
+ #syPublicSchools .sy-public-modal-visual.sy-public-default-art img{
+  width:100px!important;height:100px!important;
+  max-width:100px!important;max-height:100px!important;
+ }
+}
