@@ -105,33 +105,43 @@ function renderNav(){
  if(!$('ownPassword')){const b=document.createElement('button');b.id='ownPassword';b.type='button';b.className='account-password';b.textContent='تغییر رمز من';b.onclick=()=>passwordDialog({id:session.user.id,username:session.user.username},false,true);document.querySelector('.header-actions').append(b);}
  if(!$('navigationToggle')){const button=document.createElement('button');button.id='navigationToggle';button.type='button';button.innerHTML='<span aria-hidden="true">☰</span>';button.setAttribute('aria-label','باز کردن منوی اصلی');button.setAttribute('aria-expanded','false');document.querySelector('.header').prepend(button);const shade=document.createElement('button');shade.id='navigationShade';shade.type='button';shade.setAttribute('aria-label','بستن منوی اصلی');shade.hidden=true;document.querySelector('#app').append(shade);const toggle=open=>{document.querySelector('.sidebar').classList.toggle('nav-open',open);shade.hidden=!open;button.setAttribute('aria-expanded',String(open));};button.onclick=()=>toggle(button.getAttribute('aria-expanded')!=='true');shade.onclick=()=>toggle(false);document.addEventListener('keydown',e=>{if(e.key==='Escape'&&button.getAttribute('aria-expanded')==='true'){toggle(false);$('nav').querySelectorAll('details').forEach(d=>d.open=false);button.focus();}});}
  renderAgencySelector();$('nav').innerHTML=`<a class="nav" href="#dashboard" title="داشبورد">${samarMenuIcon('dashboard')}<span>داشبورد</span></a>`+menus.map(([icon,title,items])=>{const visible=items.filter(([key])=>can(key.split('/')[0],(key.endsWith('/new')||key.endsWith('/quick')||key.endsWith('/fees')||key==='driver-assignment')?'manage':'view'));return visible.length?`<details class="nav-group"><summary title="${esc(title)}">${samarMenuIcon(icon)}<span>${esc(title)}</span></summary><div class="nav-popup" aria-label="${esc(title)}">${visible.map(([key,text])=>`<a href="#${key}" aria-label="${esc(text)}">${samarMenuIcon(key)}<span>${esc(text)}</span></a>`).join('')}</div></details>`:''}).join('')+(session?.roles?.includes('super_admin')?`<a class="nav" href="#companies" title="تنظیمات سامانه">${navIcon('settings')}<span>تنظیمات سامانه</span></a>`:'');
- const navSearchButton=document.createElement('button');navSearchButton.type='button';navSearchButton.id='syMenuSearchTrigger';navSearchButton.className='sy-menu-search-trigger';navSearchButton.title='جست‌وجوی منو (Ctrl + K)';navSearchButton.setAttribute('aria-label','جست‌وجوی صفحات و منوهای سامانه');navSearchButton.innerHTML='<span class="sy-nav-search-icon" aria-hidden="true">⌕</span><span>جست‌وجوی سریع صفحات</span><kbd>Ctrl K</kbd>';$('nav').prepend(navSearchButton);
- const navSearch=document.createElement('label');navSearch.className='sy-nav-search';navSearch.innerHTML='<span>جست‌وجوی بخش‌های سامانه</span><input type="search" id="syNavSearch" placeholder="نام صفحه یا عملیات…" autocomplete="off" aria-label="جست‌وجوی منو"><small id="syNavSearchStatus" role="status"></small>';
+ // Put the finance action immediately below Dashboard, within the permission-controlled menu.
+ document.getElementById('quickReceipt')?.remove();
+ if(can('ledger','manage')){
+  const receiptLink=document.createElement('a');
+  receiptLink.className='nav sy-nav-receipt';receiptLink.href='#ledger';receiptLink.dataset.page='ledger';
+  receiptLink.title='ثبت دریافت و پرداخت';
+  receiptLink.innerHTML=navIcon('payments')+'<span>ثبت دریافت و پرداخت</span>';
+  $('nav').querySelector('a[href="#dashboard"]')?.after(receiptLink);
+ }
+ const navSearch=document.createElement('label');
+ navSearch.className='sy-nav-search';navSearch.setAttribute('for','syNavSearch');
+ navSearch.innerHTML='<span class="sy-nav-search-label">جست‌وجوی منو</span><span class="sy-nav-search-field"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><input type="search" id="syNavSearch" placeholder="نام بخش را تایپ کنید…" autocomplete="off" aria-label="فیلتر زنده بخش‌های منو"><kbd>Ctrl K</kbd></span><small id="syNavSearchStatus" role="status" aria-live="polite"></small>';
  $('nav').prepend(navSearch);
- const normalizeMenuText=value=>String(value||'').replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').replace(/[\u200c\s]+/g,' ').trim().toLocaleLowerCase('fa');
+ const normalizeMenuText=value=>String(value||'').replace(/ي/g,'ی').replace(/ك/g,'ک').replace(/[آأإ]/g,'ا').replace(/[\u200c\s]+/g,' ').trim().toLocaleLowerCase('fa');
  const navSearchInput=navSearch.querySelector('input');
- let menuPalette=document.getElementById('syMenuPalette');
- if(!menuPalette){menuPalette=document.createElement('div');menuPalette.id='syMenuPalette';menuPalette.className='sy-menu-palette';menuPalette.hidden=true;menuPalette.innerHTML='<div class="sy-menu-palette-shade" data-menu-close></div><section class="sy-menu-palette-dialog" role="dialog" aria-modal="true" aria-labelledby="syMenuPaletteTitle"><div class="sy-menu-palette-head"><h2 id="syMenuPaletteTitle">جست‌وجوی بخش‌های سامانه</h2><button type="button" data-menu-close aria-label="بستن جست‌وجو">×</button></div><input type="search" id="syMenuPaletteInput" autocomplete="off" placeholder="نام صفحه، عملیات یا بخش را بنویسید…" aria-label="جست‌وجوی بخش‌های سامانه"><div id="syMenuPaletteResults" class="sy-menu-palette-results" role="listbox" aria-label="نتایج جست‌وجوی منو"></div><p class="sy-menu-palette-help">↑ ↓ انتخاب نتیجه · Enter بازکردن صفحه · Esc بستن</p></section>';document.body.append(menuPalette);}
- const paletteInput=menuPalette.querySelector('#syMenuPaletteInput'),paletteResults=menuPalette.querySelector('#syMenuPaletteResults');
- const normalizePalette=value=>String(value||'').replace(/ي/g,'ی').replace(/ك/g,'ک').replace(/[\u200c\s]+/g,' ').trim().toLocaleLowerCase('fa');
- const getPaletteItems=()=>[...$('nav').querySelectorAll('a[href^="#"]')].map(a=>({href:a.getAttribute('href'),title:a.getAttribute('aria-label')||a.querySelector('span')?.textContent||a.textContent.trim(),group:a.closest('.nav-group')?.querySelector('summary span')?.textContent||'دسترسی سریع'})).filter(a=>a.title);
- let paletteActive=0;
- const paintPalette=()=>{
-  const query=normalizePalette(paletteInput.value);const items=getPaletteItems().filter(x=>!query||normalizePalette(x.title+' '+x.group).includes(query)).slice(0,30);
-  paletteResults.innerHTML=items.length?items.map((item,i)=>'<a role="option" aria-selected="'+(i===paletteActive)+'" class="sy-menu-palette-result '+(i===paletteActive?'selected':'')+'" href="'+esc(item.href)+'" data-palette-index="'+i+'"><span><strong>'+esc(item.title)+'</strong><small>'+esc(item.group)+'</small></span><span aria-hidden="true">↵</span></a>').join(''):'<p class="sy-menu-palette-empty">موردی با این عنوان پیدا نشد.</p>';
-  paletteResults.querySelectorAll('a').forEach(a=>a.onclick=()=>closePalette());
- };
- const closePalette=()=>{menuPalette.hidden=true;document.body.classList.remove('sy-menu-palette-open');navSearchButton.focus();};
- const openPalette=()=>{paletteActive=0;paletteInput.value='';menuPalette.hidden=false;document.body.classList.add('sy-menu-palette-open');paintPalette();paletteInput.focus();};
- navSearchButton.onclick=openPalette;
- menuPalette.querySelectorAll('[data-menu-close]').forEach(b=>b.onclick=closePalette);
- paletteInput.oninput=()=>{paletteActive=0;paintPalette();};
- paletteInput.onkeydown=e=>{
-  const items=[...paletteResults.querySelectorAll('a')];
-  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(!items.length)return;paletteActive=(paletteActive+(e.key==='ArrowDown'?1:-1)+items.length)%items.length;paintPalette();paletteResults.querySelector('.selected')?.scrollIntoView({block:'nearest'});}
-  if(e.key==='Enter'&&items.length){e.preventDefault();location.hash=items[paletteActive]?.getAttribute('href')||items[0].getAttribute('href');closePalette();}
- };
- if(!window.syMenuPaletteKeys){window.syMenuPaletteKeys=true;document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();document.getElementById('syMenuSearchTrigger')?.click();}else if(e.key==='Escape'&&!document.getElementById('syMenuPalette')?.hidden){document.querySelector('#syMenuPalette [data-menu-close]')?.click();}});}
+ if(!window.syInlineMenuShortcut){
+  window.syInlineMenuShortcut=true;
+  document.addEventListener('keydown',event=>{
+   if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'&&session){
+    event.preventDefault();
+    const input=document.getElementById('syNavSearch'),side=document.querySelector('.sy-command-sidebar');
+    if(side&&matchMedia('(max-width: 960px)').matches){
+     side.classList.add('nav-open');
+     document.getElementById('navigationShade')?.removeAttribute('hidden');
+     document.getElementById('navigationToggle')?.setAttribute('aria-expanded','true');
+    }
+    input?.focus();input?.select();
+   }
+   if(event.key==='Escape'&&document.activeElement?.id==='syNavSearch'){
+    document.activeElement.value='';
+    document.activeElement.dispatchEvent(new Event('input',{bubbles:true}));
+    document.activeElement.blur();
+   }
+  });
+ }
+ document.getElementById('syMenuPalette')?.remove();
+ document.body.classList.remove('sy-menu-palette-open');
 
  navSearchInput.addEventListener('input',()=>{
   const query=normalizeMenuText(navSearchInput.value);
@@ -150,7 +160,6 @@ function renderNav(){
   navSearch.querySelector('small').textContent=query?(matches?'نتایج مرتبط: '+number(matches):'بخشی با این نام پیدا نشد.'):'';
  });
   $('nav').querySelectorAll('details').forEach(d=>d.addEventListener('toggle',()=>{if(d.open){if(navSearchInput.value.trim())return;const popup=d.querySelector('.nav-popup');popup.style.removeProperty('top');$('nav').querySelectorAll('details').forEach(other=>{if(other!==d)other.open=false;});}}));
- if(!$('quickReceipt')){const button=document.createElement('button');button.id='quickReceipt';button.title='ثبت دریافت و پرداخت';button.innerHTML=navIcon('payments');button.onclick=()=>{if(location.hash!=='#ledger')location.hash='ledger';else resourcePage('ledger',pageToken);};$('nav').before(button);} $('quickReceipt').hidden=!can('ledger','manage');
  const side=document.querySelector('.sy-command-sidebar');
  if(side){
   side.setAttribute('aria-label','منوی اصلی سرویس‌یار');
