@@ -90,8 +90,11 @@ try{
         }
         foreach([3=>752,4=>242,5=>753,6=>257] as $sheetIndex=>$endRow){
             $range=$printAreas[$sheetIndex]??'';
-            if(!str_contains($range,'
-    // formula base was replaced or removed.
+            if(!str_contains($range,chr(36).$endRow))
+                throw new RuntimeException('Original print area is truncated: '.$sheetIndex.' = '.$range);
+        }
+    }
+    // Repair-regression: shared formula followers require existing anchors.
     foreach([7,12] as $sheetId){
         $sheetXml=(string)$zip->getFromName('xl/worksheets/sheet'.$sheetId.'.xml');
         if(preg_match('/<f[^>]*t="shared"/',$sheetXml))
