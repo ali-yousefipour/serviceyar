@@ -16,4 +16,8 @@ assert.equal(context.normalizeAccount('abc ۱۲۳'),context.normalizeAccount('AB
 assert(source.includes("request++;form.reset();"),'Reset must invalidate earlier financial response');
 assert(source.includes("if(filters.from&&filters.to&&filters.to<filters.from)"),'Reverse date range must be rejected');
 assert(source.includes('sy-account-statement-table'),'Statement table should preserve mobile labels');
+assert(source.includes('id="statementPrint"'),'Account statement should have a dedicated print button');
+assert(source.includes("$('statementPrint')?.addEventListener('click',()=>window.print())"),'Report print action should be wired');
+assert(source.includes('چاپ صفحه فعلی'),'Printed report must clearly identify its pagination scope');
+assert(source.includes('خروجی اکسل (کل بازه)'),'Export should clearly identify its full-range scope');
 console.log('Accounting account search and safe report filters passed');
