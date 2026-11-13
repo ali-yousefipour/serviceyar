@@ -456,7 +456,7 @@
   if(hydrated)return;
   if(pendingMount)return pendingMount;
   pendingMount=(async()=>{
-   const r=await fetch('/assets/public-site-content.html',{credentials:'omit',cache:'no-cache'});
+   const r=await fetch('/assets/public-site-content.html?v=20261114-real-dashboard',{credentials:'omit',cache:'no-store'});
    if(!r.ok)throw new Error('Public content unavailable');
    root.innerHTML=await r.text();
    hydrated=true;root.classList.add('sy-motion-ready');
