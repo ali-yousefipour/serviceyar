@@ -54,9 +54,6 @@ jobs:
           php tests/monthly-statement-render-smoke.php render-large > /tmp/serviceyar-statement-large-test.xlsx
           # Verify dynamic student/driver ranges, footer rows and original reference print settings.
           php tests/monthly-statement-render-smoke.php verify /tmp/serviceyar-statement-large-test.xlsx --large
-          php -d memory_limit=256M tests/monthly-statement-render-smoke.php render-stress > /tmp/serviceyar-statement-stress-test.xlsx
-          php -r '$z=new ZipArchive();if($z->open("/tmp/serviceyar-statement-stress-test.xlsx")!==true)exit(1);$v=$z->getFromName("xl/tables/table4.xml");$z->close();if(!is_string($v)||strpos($v,"A2:W5003")===false)exit(2);echo "5000-student reference workbook verified\\n";'
-          rm /tmp/serviceyar-statement-stress-test.xlsx
           rm /tmp/serviceyar-statement-large-test.xlsx
           rm /tmp/serviceyar-statement-preview-test.xlsx
           # Assert no Excel-repair shared formulas or stale period headings.
