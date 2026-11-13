@@ -76,4 +76,12 @@ assert.ok(adminApp.includes('data-company-disable')&&adminApp.includes('sy-agenc
 assert.ok(adminApp.includes('syAgencyExcel')&&adminApp.includes('syAgencyPrint')&&adminApp.includes('syAgencyStatus'),'Agency list needs export, print and status controls');
 assert.ok(agencyExport.includes('function companies(')&&agencyExport.includes('serviceyar-agencies.xlsx'),'Styled company workbook endpoint required');
 assert.ok(read('frontend/assets/app.css').includes('.sy-agency-data-table thead th'),'Company table should have sticky accessible headers');
+// Regression: transparent map artwork is frameless only when a photo/logo is absent.
+const publicCss=read('frontend/assets/public-site.css');
+const operationsCss=read('frontend/assets/operations.css');
+assert.ok(js.includes('sy-public-pin-no-frame')&&js.includes('sy-public-pin-default'),'Public map must distinguish default artwork from photos');
+assert.ok(js.includes("face?.classList.toggle('sy-public-pin-no-frame',isDefault())"),'Public map must update no-frame state after image load');
+assert.ok(publicCss.includes('.sy-public-pin-face.sy-public-pin-no-frame')&&publicCss.includes('background:transparent!important'),'Public default artwork needs transparent borderless styling');
+assert.ok(operationsCss.includes('.sy-map-school.sy-school-default-photo .sy-map-marker-bubble')&&operationsCss.includes('.sy-map-company.sy-company-default-photo .sy-map-marker-bubble'),'Dashboard school/company defaults need frameless styles');
+assert.ok(operations.includes("sy-school-default-photo")&&operations.includes("sy-company-default-photo"),'Dashboard must apply default classes when images are missing');
 console.log('Public landing pages, accessibility structure, real statistics and login integration OK');
