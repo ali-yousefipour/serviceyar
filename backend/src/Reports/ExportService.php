@@ -36,6 +36,43 @@ final class ExportService
             'amount'=>'مبلغ کارکرد','status'=>'وضعیت','note'=>'توضیحات','created_at'=>'تاریخ ثبت']],
     ];
 
+    /** Complete or filtered agency directory for the platform administrator. */
+    public static function companies(int $uid,array $filter): never
+    {
+        if(!Authorization::isSuperAdmin($uid))self::jsonError(403,'SUPER_ADMIN_REQUIRED','فقط مدیر کل مجاز به خروجی شرکت‌هاست.');
+        Authorization::requirePermission($uid,'agencies.view');
+        $search=trim((string)($filter['search']??''));
+        $status=(string)($filter['status']??'all');
+        if(!in_array($status,['all','active','inactive'],true)||mb_strlen($search)>150)
+            self::jsonError(422,'VALIDATION_ERROR','فیلتر گزارش معتبر نیست.');
+        $rows=\ServiceYar\Agency\AgencyService::list($uid);
+        $rows=array_values(array_filter($rows,static function(array $row) use($search,$status):bool {
+            if($status==='active'&&(int)$row['is_active']!==1)return false;
+            if($status==='inactive'&&(int)$row['is_active']!==0)return false;
+            if($search!==''){
+                $text=implode(' ',array_map(static fn($v)=>(string)$v,[
+                    $row['name']??'',$row['code']??'',$row['manager_name']??'',$row['office_phone']??'',$row['office_address']??''
+                ]));
+                if(mb_stripos($text,$search)===false)return false;
+            }
+            return true;
+        }));
+        $records=[];
+        foreach($rows as $row)$records[]=[
+            'id'=>(string)$row['id'],'name'=>$row['name'],'code'=>$row['code']??'',
+            'manager'=>$row['manager_name']??'','mobile'=>$row['manager_mobile']??'',
+            'phone'=>$row['office_phone']??'','address'=>$row['office_address']??'',
+            'location'=>isset($row['latitude'],$row['longitude'])?$row['latitude'].' , '.$row['longitude']:'',
+            'status'=>(int)$row['is_active']===1?'فعال':'غیرفعال',
+            'created'=>(string)($row['created_at']??'')
+        ];
+        self::downloadRows([
+            'id'=>'شناسه','name'=>'نام شرکت','code'=>'کد شرکت','manager'=>'مدیر شرکت',
+            'mobile'=>'همراه مدیر','phone'=>'تلفن دفتر','address'=>'نشانی دفتر',
+            'location'=>'مختصات دفتر','status'=>'وضعیت','created'=>'تاریخ ثبت'
+        ],$records,'serviceyar-agencies.xlsx',true);
+    }
+
     public static function xlsx(int $uid, int $aid, string $resource): never
     {
         Authorization::requirePermission($uid, 'reports.view');
