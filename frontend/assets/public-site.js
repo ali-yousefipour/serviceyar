@@ -162,7 +162,11 @@
   const icon=marker.getElement();
   const img=icon?.querySelector('img');
   if(!img)return;
-  const fallback=()=>{img.remove();icon.querySelector('.sy-public-pin-face')?.classList.add('sy-public-pin-fallback');};
+  const fallback=()=>{
+   const defaultUrl=icon.classList.contains('sy-public-pin-green')?DEFAULT_COMPANY_IMAGE:DEFAULT_SCHOOL_IMAGE;
+   if(!img.src.endsWith(defaultUrl)){img.src=defaultUrl;return;}
+   img.remove();icon.querySelector('.sy-public-pin-face')?.classList.add('sy-public-pin-fallback');
+  };
   if(img.complete&&img.naturalWidth===0)fallback();
   else img.addEventListener('error',fallback,{once:true});
  }
