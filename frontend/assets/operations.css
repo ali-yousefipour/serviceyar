@@ -2349,3 +2349,20 @@ body.sy-menu-palette-open{overflow:hidden}
  .sy-vehicle-edit-form .vehicle-plate-entry [data-plate-region]{flex-basis:38px;width:38px}
  .sy-vehicle-edit-form .vehicle-plate-entry [data-plate-letter]{flex-basis:50px;width:50px}
 }
+
+
+/* One source of truth: all editable/search plates reuse the list's .iran-plate. */
+.iran-plate.iran-plate-input{display:flex;direction:ltr;width:min(100%,355px);min-width:0;height:49px;margin-inline:auto;border:2px solid #171717;border-radius:5px;background:#fff;overflow:hidden;box-sizing:border-box}
+.iran-plate-input .iran-plate-blue{flex:0 0 28px;min-width:28px}
+.iran-plate-input .iran-plate-main{display:flex;direction:ltr;flex:1 1 auto;min-width:0;justify-content:space-between;align-items:stretch;gap:0;padding:0 3px}
+.iran-plate-input .iran-plate-main :is(input,select){flex:1 1 0;min-width:0!important;width:0!important;max-width:none!important;height:45px!important;min-height:45px!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important;text-align:center!important;direction:ltr;color:#171717;font:800 17px/1.2 Vazirmatn,Tahoma,sans-serif!important;padding:0 2px!important}
+.iran-plate-input .iran-plate-main input:first-child{flex:0 0 55px;width:55px!important}
+.iran-plate-input .iran-plate-main select{flex:0 0 54px;width:54px!important;font-size:14px!important;cursor:pointer}
+.iran-plate-input .iran-plate-region{min-width:52px;flex:0 0 52px;gap:1px;padding:2px}
+.iran-plate-input .iran-plate-region small{font-size:9px}
+.iran-plate-input .iran-plate-region input{width:100%!important;max-width:100%!important;min-width:0!important;height:25px!important;min-height:25px!important;padding:0!important;border:0!important;background:transparent!important;text-align:center!important;font:800 17px/1.1 Vazirmatn,Tahoma,sans-serif!important;color:#171717}
+.iran-plate-input :is(input,select):focus-visible{outline:2px solid #098663!important;outline-offset:-2px!important}
+.vehicle-plate-filter .iran-plate-input{max-width:355px}
+.sy-vehicle-edit-form .sy-vehicle-plate-editor{grid-column:1/-1}
+.sy-vehicle-edit-form .sy-vehicle-plate-editor .iran-plate-input{width:min(100%,355px)}
+@media(max-width:410px){.iran-plate.iran-plate-input{width:100%;height:45px}.iran-plate-input .iran-plate-main :is(input,select){height:41px!important;min-height:41px!important;font-size:15px!important}.iran-plate-input .iran-plate-main input:first-child{flex-basis:40px;width:40px!important}.iran-plate-input .iran-plate-main select{flex-basis:45px;width:45px!important}.iran-plate-input .iran-plate-region{min-width:47px;flex-basis:47px}.iran-plate-input .iran-plate-blue{flex-basis:24px;min-width:24px}}
