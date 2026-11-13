@@ -1320,7 +1320,28 @@ function userEditor(row,global){
  $('userEditor').onsubmit=async e=>{e.preventDefault();const button=e.target.querySelector('button');button.disabled=true;try{const body=Object.fromEntries(new FormData(e.target));if(!body.role)delete body.role;await write((global?'/api/v1/admin/users':'/api/v1/users')+(row?'/'+row.id:''),body,row?'PUT':'POST');closeDialog();notify('کاربر ذخیره شد.');if(global)await companiesPage();else await settingsPage();}catch(err){$('formError').textContent=err.message;$('formError').hidden=false;button.disabled=false;}};
 }
 const originalCompaniesPage=companiesPage;
-companiesPage=async function(){await originalCompaniesPage();if(!session.roles?.includes('super_admin'))return;const token=pageToken;const rows=await api('/api/v1/admin/users');if(token!==pageToken)return;const section=[...$('content').querySelectorAll('section')].find(s=>s.querySelector('h2')?.textContent==='کاربران سامانه');if(section)userManagementTable(section.querySelector('.table-wrap'),rows,true);};
+companiesPage=async function(){
+ await originalCompaniesPage();if(!session.roles?.includes('super_admin'))return;
+ const token=pageToken;
+ try{
+  const [rows,platform]=await Promise.all([api('/api/v1/admin/users'),api('/api/v1/admin/platform-settings')]);
+  if(token!==pageToken)return;
+  const section=[...$('content').querySelectorAll('section')].find(s=>s.querySelector('h2')?.textContent==='کاربران سامانه');
+  if(section)userManagementTable(section.querySelector('.table-wrap'),rows,true);
+  const adminPanel=document.createElement('section');adminPanel.className='panel sy-platform-settings';
+  adminPanel.innerHTML='<header class="sy-settings-section-head"><div><h2>تنظیمات سامانه · سرویس‌دهنده‌ها</h2><p>این کلیدها در سطح سامانه تعریف می‌شوند و در تنظیمات شرکت‌ها نمایش داده نمی‌شوند.</p></div></header>'+
+   '<div class="sy-platform-status"><span>کلید سرویس نشان: '+(platform.neshanServiceConfigured?'تنظیم شده':'تنظیم نشده')+'</span><span>کلید وب نشان: '+(platform.neshanWebConfigured?'تنظیم شده':'تنظیم نشده')+'</span><span>پیامک نگین: '+(platform.smsConfigured?'فعال':'نیازمند تنظیم سرور')+'</span><span>درگاه بله: '+(platform.baleConfigured?'فعال':'نیازمند تنظیم سرور')+'</span></div>'+
+   '<form id="platformSettingsForm" class="form-grid sy-settings-grid"><label>کلید سرویس نشان<input name="neshan_service_key" type="password" autocomplete="off" placeholder="برای حفظ کلید فعلی خالی بگذارید"></label><label>کلید وب نشان<input name="neshan_web_key" type="password" autocomplete="off" placeholder="برای حفظ کلید فعلی خالی بگذارید"></label><div class="sy-platform-explanation">اطلاعات محرمانه پیامک نگین و درگاه بله در تنظیمات امن سرور نگهداری می‌شوند؛ وضعیت اتصال از این بخش قابل بررسی است.</div><button class="primary" type="submit">ذخیره کلیدهای نشان</button><p role="status" id="platformSaveStatus"></p></form>';
+  $('content').prepend(adminPanel);
+  const form=$('platformSettingsForm');
+  form.onsubmit=async e=>{
+   e.preventDefault();const button=form.querySelector('[type=submit]');button.disabled=true;
+   try{const payload=Object.fromEntries(new FormData(form));await write('/api/v1/admin/platform-settings',payload,'PUT');form.reset();$('platformSaveStatus').textContent='کلیدهای سامانه ذخیره شدند.';}
+   catch(err){$('platformSaveStatus').textContent=err.message;}
+   finally{button.disabled=false;}
+  };
+ }catch(e){if(token===pageToken)notify('دریافت تنظیمات سامانه: '+e.message,true);}
+};
 function financeInput(prefix){return {distanceKm:Math.round(Number($(prefix+'Km').value||0)),days:$(prefix+'Days').value,tripsPerDay:$(prefix+'Trips').value};}
 function financeResult(d){return simpleTable(['عنوان','مبلغ · ریال'],[['هزینه سرویس',number(d.monthlyFee)],['سهم ناخالص راننده',number(d.driverGross)],['کسورات راننده',number(d.deductions)],['خالص راننده',number(d.driverNet)],['سهم شرکت پیش از کسورات',number(d.companyShare)]]);}
 function financialSettings(setting){
