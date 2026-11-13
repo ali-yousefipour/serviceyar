@@ -773,8 +773,7 @@ async function viewRecord(key,id){
    const lat=Number(r.latitude),lon=Number(r.longitude);
    const coordsValid=r.latitude!==null&&r.longitude!==null&&r.latitude!==''&&r.longitude!==''&&Number.isFinite(lat)&&Number.isFinite(lon)&&Math.abs(lat)<=90&&Math.abs(lon)<=180;
    const text=v=>esc(String(v===null||v===undefined||v===''?'—':v));
-   const photoHtml=photo?`<img id="sySchoolDetailsPhoto" class="sy-school-details-image" src="${esc(photo)}" alt="تصویر مدرسه ${esc(name)}" loading="lazy">`:
-    '<div class="sy-school-photo-placeholder" role="img" aria-label="مدرسه تصویری ندارد">تصویری ثبت نشده است</div>';
+   const photoHtml=`<img id="sySchoolDetailsPhoto" class="sy-school-details-image" src="${esc(photo||'/assets/school-placeholder.png')}" alt="تصویر مدرسه ${esc(name)}" loading="lazy">`;
    const info=[['کد آموزشگاه',r.code],['نوع مدرسه',r.school_type],['ناحیه',r.region],['مدیر مدرسه',r.manager_name],['نشانی',r.address],['تلفن',r.phone]];
    dialog('جزئیات مدرسه',`<div class="sy-school-details">
     <div class="sy-school-details-hero"><div class="sy-school-details-cover">${photoHtml}</div>
@@ -793,7 +792,7 @@ async function viewRecord(key,id){
    document.getElementById('syDetailsEditSchool')?.addEventListener('click',()=>formResource('schools',id));
    const image=document.getElementById('sySchoolDetailsPhoto');
    image?.addEventListener('error',()=>{
-    image.replaceWith(Object.assign(document.createElement('div'),{className:'sy-school-photo-placeholder',textContent:'تصویر مدرسه در دسترس نیست'}));
+    if(!image.src.endsWith('/assets/school-placeholder.png'))image.src='/assets/school-placeholder.png';
    });
    if(coordsValid){
     const node=document.getElementById('sySchoolDetailsMap');
@@ -886,7 +885,7 @@ async function formResource(key,id,onSaved){
  if(key==='schools'&&id){
   const section=document.createElement('section');section.className='sy-school-photo-editor';
   const photo=schoolPhotoUrl(row);
-  section.innerHTML=`<div class="sy-school-photo-editor-preview">${photo?`<img id="sySchoolEditorPreview" src="${esc(photo)}" alt="تصویر فعلی مدرسه">`:'<div id="sySchoolEditorEmpty" class="sy-school-photo-placeholder">هنوز تصویری ثبت نشده است</div>'}</div><div class="sy-school-photo-editor-controls"><h4>تصویر مدرسه</h4><p>می‌توانید تصویر مدرسه را بارگذاری یا با تصویر جدید جایگزین کنید. JPG، PNG یا WebP تا ۵ مگابایت.</p><label class="sy-school-photo-choose">انتخاب تصویر<input type="file" id="sySchoolPhotoUpload" accept="image/jpeg,image/png,image/webp"></label><span id="sySchoolPhotoFileName" role="status"></span></div>`;
+  section.innerHTML=`<div class="sy-school-photo-editor-preview">`<img id="sySchoolEditorPreview" src="${esc(photo||'/assets/school-placeholder.png')}" alt="تصویر مدرسه">`</div><div class="sy-school-photo-editor-controls"><h4>تصویر مدرسه</h4><p>می‌توانید تصویر مدرسه را بارگذاری یا با تصویر جدید جایگزین کنید. JPG، PNG یا WebP تا ۵ مگابایت.</p><label class="sy-school-photo-choose">انتخاب تصویر<input type="file" id="sySchoolPhotoUpload" accept="image/jpeg,image/png,image/webp"></label><span id="sySchoolPhotoFileName" role="status"></span></div>`;
   form.querySelector('.form-grid')?.after(section);
   const fileInput=section.querySelector('#sySchoolPhotoUpload');
   fileInput?.addEventListener('change',()=>{
