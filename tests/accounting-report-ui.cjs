@@ -48,4 +48,12 @@ assert(source.includes("form.addEventListener('input',invalidate);form.addEventL
 assert(source.includes("version++;ready=false;exportQuery=''"),'Changing report filters must discard pending responses and previous export snapshot');
 assert(source.includes("$('ledgerReportPrint').disabled=true;$('ledgerReportExcel').disabled=true"),'Outdated financial report must not remain printable/exportable');
 assert(source.includes('فیلترهای گزارش تغییر کرده‌اند.'),'Old report content must be replaced with an update prompt');
+assert(source.includes('function showDriverPayslip(doc,line){'),'Individual driver payslip preview function missing');
+assert(source.includes('data-driver-payslip'),'Payroll document should offer individual payslips for each driver');
+assert(source.includes('id="payslipPrint"'),'Driver payslip should offer print / PDF operation');
+assert(source.includes('class="sy-payslip-sheet"'),'Driver payslip must have a dedicated printable sheet');
+for(const field of ['supervision_deduction','coordination_deduction','overhead_deduction','insurance_deduction','total_deductions','expected_net_salary'])assert(source.includes(field),'Payroll slip must retain deduction detail '+field);
+assert(source.includes('فیش فقط بر اساس سند حقوق ثبت‌شده'),'Payslip should not imply confirmed bank transfer');
+assert(source.includes("doc.status==='approved'?'سند تأییدشده':'پیش‌نویس / تأییدنشده'"),'Draft payslips must be visibly identified');
+assert(source.includes('sy-payslip-discrepancy'),'Payslip must warn when stored salary differs from calculated net');
 console.log('Accounting account search and safe report filters passed');
