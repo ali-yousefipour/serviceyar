@@ -82,7 +82,7 @@ final class MonthlyStatementWorkbook
         }
         if(!ReferenceMonthlyStatementWorkbook::fitsTemplateCapacity($d)){
             throw new AuthException(422,
-                'تعداد رکوردهای این ماه از ظرفیت قالب اصلی بیشتر است. برای حفظ ظاهر مرجع، قالب باید بدون تغییر چیدمان توسعه داده شود.',
+                'تعداد ردیف‌های این دوره از حداکثر مجاز در یک شیت Excel بیشتر است (۱٬۰۴۸٬۵۷۶ ردیف). دوره را به بازه‌های کوچک‌تر تقسیم کنید.',
                 'STATEMENT_REFERENCE_TEMPLATE_CAPACITY');
         }
         try{
