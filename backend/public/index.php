@@ -52,7 +52,7 @@ try {
    $stmt=$pdo->prepare($sql);
    $stmt->execute(['empty'=>$query===''?1:0,'q1'=>'%'.$query.'%','q2'=>'%'.$query.'%','q3'=>'%'.$query.'%']);
    $rows=[];
-   foreach($stmt->fetchAll(\\PDO::FETCH_ASSOC) as $row){
+   foreach($stmt->fetchAll(\PDO::FETCH_ASSOC) as $row){
     $pathValue=(string)($row['photo_path']??'');
     $photo=null;
     if(preg_match('~^(?:uploads/)?schools/(?:[0-9]{4}/[0-9]{2}/)?[a-zA-Z0-9_.-]+\\.(?:jpg|jpeg|png|webp)$~i',$pathValue)){
