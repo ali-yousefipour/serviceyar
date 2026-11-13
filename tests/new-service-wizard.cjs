@@ -23,4 +23,7 @@ agreed.value='۰';assert.equal(ctx.syncAgreed(),true);assert.equal(ctx.form.elem
 assert(source.includes('id="serviceCapacityWarning"'),'Missing capacity feedback');
 assert(source.includes("visible=filtered.slice(0,100)"),'Student picker needs render limit');
 assert(source.includes('if(pending.size>Number(form.elements.capacity.value))'),'Student picker needs capacity validation');
+assert(source.includes('id="syServiceAddStudent"')&&source.includes('canAssign&&free>0'),'Member modal must expose add-student action when seats are available');
+assert(source.includes("form.scrollIntoView({behavior:")&&source.includes("form.querySelector('#memberSearch')?.focus"),'Add-student action must open the assignment form');
+assert(source.includes("Number(service.capacity)-rows.length"),'Available seats must derive from current service capacity');
 console.log('New-service wizard financial and capacity checks passed');
