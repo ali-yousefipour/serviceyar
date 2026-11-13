@@ -220,11 +220,8 @@
  }
  function focusPoints(points){
   if(!schoolMap||!points.length)return;
-  if(points.length===1)schoolMap.setView(points[0],16);
-  else {
-   schoolMap.fitBounds(L.latLngBounds(points).pad(.22),{maxZoom:16});
-   schoolMap.setZoom(Math.min(18,schoolMap.getZoom()+2));
-  }
+  if(points.length===1)schoolMap.setView(points[0],14);
+  else schoolMap.fitBounds(L.latLngBounds(points).pad(.22),{maxZoom:14});
  }
  function renderCompanyDirectory(){
   const root=document.getElementById('syCompanyDirectoryItems');
@@ -245,7 +242,7 @@
    item.append(name,state);
    item.addEventListener('click',()=>{
     showCompany(company);
-    if(hasLocation&&schoolMap)schoolMap.setView([Number(company.latitude),Number(company.longitude)],17);
+    if(hasLocation&&schoolMap)schoolMap.setView([Number(company.latitude),Number(company.longitude)],14);
    });
    root.append(item);
   }
