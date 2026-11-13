@@ -6,12 +6,12 @@ use ServiceYar\Reports\ReferenceMonthlyStatementWorkbook as Template;
 use ServiceYar\Domain\SchoolServiceStatement;
 
 $action=$argv[1]??'';
-if(in_array($action,['render','render-preview','render-large'],true)){
+if(in_array($action,['render','render-preview','render-large','render-stress'],true)){
     $_ENV['SCHOOL_STATEMENT_REFERENCE_TEMPLATE_ENABLED']='1';
     $ref=SchoolServiceStatement::fromSchoolTariff('2',4,'ناحیه 6',30);
     $items=[];
-    $studentCount=$action==='render-large'?750:2;
-    $driverCount=$action==='render-large'?240:1;
+    $studentCount=$action==='render-stress'?5000:($action==='render-large'?750:2);
+    $driverCount=$action==='render-stress'?1200:($action==='render-large'?240:1);
     for($i=1;$i<=$studentCount;$i++){
         $driverId=(($i-1)%$driverCount)+1;
         $items[]=[
