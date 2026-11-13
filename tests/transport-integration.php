@@ -81,7 +81,19 @@ try{
  O::bulkFees($uid,$a,['ids'=>[$s1['id'],$s2['id']],'mode'=>'percent','value'=>10]);check((float)D::get($uid,$a,'students',(int)$s1['id'])['monthly_fee']===1100.0,'Percentage change persisted');
  rejected(fn()=>O::bulkFees($uid,$a,['ids'=>[$s1['id'],$foreign['id']],'mode'=>'set','value'=>5]),'CROSS_SCOPE_REFERENCE');check((float)D::get($uid,$a,'students',(int)$s1['id'])['monthly_fee']===1100.0,'Cross-company bulk write is atomic');
  rejected(fn()=>O::bulkFees($uid,$a,['ids'=>[$s1['id'],$s2['id']],'mode'=>'decrease','value'=>2000]),'VALIDATION_ERROR');check((float)D::get($uid,$a,'students',(int)$s1['id'])['monthly_fee']===1100.0,'Failed bulk write rolls back');
- $companyAccount=D::save($uid,$a,'accounts',['code'=>'BANK-'.$tag,'title'=>'حساب بانکی شرکت']);$foreignAccount=D::save($uid,$b,'accounts',['code'=>'BANK-'.$tag,'title'=>'حساب شرکت دیگر']);
+ $companyAccount=D::save($uid,$a,'accounts',['code'=>'BANK-'.$tag,'title'=>'حساب بانکی شرکت','bankName'=>'بانک ملی ایران','bankAccount'=>'1234567890']);$foreignAccount=D::save($uid,$b,'accounts',['code'=>'BANK-'.$tag,'title'=>'حساب شرکت دیگر']);
+ check(D::get($uid,$a,'accounts',(int)$companyAccount['id'])['bank_name']==='بانک ملی ایران','Agency bank metadata stored on accounting account');
+ check((string)D::get($uid,$a,'accounts',(int)$companyAccount['id'])['bank_account']==='1234567890','Agency bank account number roundtrips');
+ rejected(fn()=>D::save($uid,$a,'accounts',['code'=>'INVALID-IBAN-'.$tag,'title'=>'حساب نامعتبر','bankName'=>'بانک ملی ایران','iban'=>'IR123']),'INVALID_IBAN');
+ check(count(\ServiceYar\Domain\AgencyPaymentMethods::get($uid,$a))===6,'Companies start with default payment methods');
+ $customMethods=[['code'=>'cash','name'=>'پرداخت نقد','active'=>true],['code'=>'custom_1','name'=>'درگاه اختصاصی','active'=>true]];
+ \ServiceYar\Settings\SettingsService::put($uid,$a,['finance_payment_methods'=>$customMethods]);
+ check(count(\ServiceYar\Domain\AgencyPaymentMethods::get($uid,$a))===2,'Company can replace its method catalogue');
+ check(count(\ServiceYar\Domain\AgencyPaymentMethods::get($uid,$b))===6,'Company payment methods are isolated');
+ rejected(fn()=>D::save($uid,$a,'ledger',['partyType'=>'driver','partyId'=>$driver['id'],'direction'=>'payment','amount'=>10,'entryDate'=>'2026-11-01','method'=>'bank','companyAccountId'=>$companyAccount['id']]),'PAYMENT_METHOD_DISABLED');
+ \ServiceYar\Settings\SettingsService::put($uid,$a,['finance_payment_methods'=>\ServiceYar\Domain\AgencyPaymentMethods::DEFAULTS]);
+ rejected(fn()=>D::save($uid,$a,'ledger',['partyType'=>'driver','partyId'=>$driver['id'],'direction'=>'payment','amount'=>10,'entryDate'=>'2026-11-01','method'=>'cash']),'COMPANY_ACCOUNT_REQUIRED');
+
  rejected(fn()=>D::save($uid,$a,'ledger',['partyType'=>'driver','partyId'=>$driver['id'],'direction'=>'payment','amount'=>10,'entryDate'=>'2026-11-01','method'=>'cash','companyAccountId'=>$foreignAccount['id']]),'CROSS_SCOPE_REFERENCE');
  $date=(new DateTimeImmutable('now',new DateTimeZone('Asia/Tehran')))->format('Y-m-d');D::save($uid,$a,'driver-work',['driverId'=>$driver['id'],'workDate'=>$date,'amount'=>1000]);D::save($uid,$a,'driver-payments',['driverId'=>$driver['id'],'paymentDate'=>$date,'amount'=>200]);D::save($uid,$a,'ledger',['partyType'=>'driver','partyId'=>$driver['id'],'direction'=>'payment','amount'=>100,'entryDate'=>$date,'method'=>'cash','companyAccountId'=>$companyAccount['id']]);
  $workFilters=['driverId'=>$driver['id'],'dateFrom'=>$date,'dateTo'=>$date,'status'=>'pending'];
