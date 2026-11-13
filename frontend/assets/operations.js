@@ -360,7 +360,7 @@ function ledgerFilterForm(){
   <div class="ledger-filter-grid">
    <label>نوع عملیات<select name="direction"><option value="">دریافت و پرداخت</option><option value="receipt">دریافت</option><option value="payment">پرداخت</option></select></label>
    <label>طرف حساب<select name="partyType"><option value="">همه طرف حساب‌ها</option><option value="student">دانش‌آموز</option><option value="driver">راننده</option><option value="school">مدرسه</option><option value="agency">شرکت</option></select></label>
-   <label>روش پرداخت<select name="method"><option value="">همه روش‌ها</option><option value="cash">نقدی</option><option value="card">کارت به کارت</option><option value="bank">پایا</option><option value="transfer">ساتنا</option><option value="cheque">چک</option><option value="wallet">کیف پول</option></select></label>
+   <label>روش دریافت / پرداخت<select name="method"><option value="">همه روش‌ها</option>${(agencyMethodChoices||Object.entries(ledgerMethods).map(([code,name])=>({code,name,active:true}))).map(m=>`<option value="${esc(m.code)}">${esc(m.name)}${m.active===false?" (غیرفعال)":""}</option>`).join("")}</select></label>
    <label>وضعیت سند<select name="active"><option value="1">فعال</option><option value="0">غیرفعال</option><option value="">همه سوابق</option></select></label>
   </div>
   <details class="ledger-filter-more"><summary>فیلتر بازه زمانی و مبلغ <span>تاریخ شروع و پایان، حداقل و حداکثر مبلغ</span></summary><div class="ledger-filter-grid">
@@ -395,6 +395,8 @@ function serviceFilterForm(schoolFilter){
 }
 async function ledgerReportPage(token=pageToken){
  if(!can('reports')||!can('ledger')){notify('مجوز مشاهده گزارش مالی وجود ندارد.',true);return;}
+ try{agencyMethodChoices=await api(scoped('/api/v1/finance/payment-methods'));}catch(e){notify(e.message,true);}
+ if(token!==pageToken)return;
  const saved=window.__ledgerReportFilters||'';
  $('content').innerHTML=`<section class="toolbar"><div><h2>دریافت و پرداخت</h2><p>گزارش مالی بر اساس فیلترهای انتخابی</p></div></section><nav class="ledger-report-tabs" aria-label="بخش‌های دریافت و پرداخت"><button type="button" id="ledgerTabRecords">ثبت و مدیریت اسناد</button><button type="button" class="active" aria-current="page">گزارش‌گیری</button></nav><section class="panel ledger-report-panel"><header class="sy-ledger-report-intro"><span class="sy-operation-kicker">مرکز گزارش‌های مالی</span><h2>گزارش دریافت‌ها و پرداخت‌ها</h2><p>فیلترهای دلخواه را اعمال کنید و پس از تهیه گزارش، اطلاعات را چاپ یا به اکسل صادر کنید.</p></header>${ledgerFilterForm()}<div class="ledger-report-actions"><button type="button" class="primary" id="ledgerReportApply">تهیه گزارش</button><button type="button" id="ledgerReportPrint" disabled>چاپ گزارش</button><button type="button" id="ledgerReportExcel" disabled>خروجی Excel</button></div><p id="ledgerReportFreshness" class="sy-ledger-report-freshness" role="status" aria-live="polite">گزارش بر اساس فیلترهای فعلی تهیه می‌شود.</p><div id="ledgerReportBody" aria-live="polite" aria-busy="false"><p class="muted">برای تهیه گزارش، فیلترها را انتخاب کنید.</p></div></section>`;
  const form=$('gridFilters');$('ledgerTabRecords').onclick=()=>resourcePage('ledger',token);
@@ -462,6 +464,7 @@ const resourceSortFields={
 const sortDataField={fullName:'last_name',firstName:'first_name',lastName:'last_name',nationalCode:'national_code',monthlyFee:'monthly_fee',schoolId:'school_id',entryDate:'entry_date',paymentDate:'payment_date',workDate:'work_date',issueDate:'issue_date',documentDate:'document_date',totalAmount:'total_amount',dueDate:'due_date',contractNo:'contract_no',vehicleId:'vehicle_id'};
 async function resourcePage(key,token=pageToken,options={}){
  gridState={key,token,page:1,limit:25,rows:[],selected:new Set(),previous:options.previous};
+ if(key==='ledger'){try{agencyMethodChoices=await api(scoped('/api/v1/finance/payment-methods'));}catch(e){notify(e.message,true);}if(token!==pageToken)return;}
  const schoolFilter=['students','services'].includes(key)&&can('schools'),isStudents=key==='students',isDrivers=key==='drivers',isVehicles=key==='vehicles',isLedger=key==='ledger';
  const pageIntroductions={
  students:['پرونده دانش‌آموزان','جست‌وجو بر اساس نام، مدرسه، وضعیت سرویس و سال تحصیلی.'],
