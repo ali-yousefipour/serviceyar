@@ -39,7 +39,7 @@ assert.ok(operations.includes('${iranPlateInput("filter")}')&&operations.include
 assert.ok(read('frontend/assets/operations.css').includes('.iran-plate.iran-plate-input'),'Editable plate should reuse the list plate visual system');
 
 assert.ok(operations.includes('function dashboardCompanyPin(')&&operations.includes('function dashboardSchoolPin('),'Dashboard marker functions must be defined before use');
-assert.ok(operations.includes('icon:dashboardCompanyPin(config.hasCustomLogo)')&&operations.includes('icon:dashboardSchoolPin(sc)'),'Dashboard markers must use dedicated image icons');
+assert.ok(operations.includes('icon:dashboardCompanyPin(config.hasCustomLogo)')&&operations.includes('dashboardSchoolMarker(map,point,sc)'),'Dashboard markers must use dedicated image icons');
 assert.ok(css.includes('Prevent blank sections in full-page screenshots'),'Public page content must never be hidden by reveal animation');
 assert.ok(js.includes('drawCompanies()')&&js.includes('clearMapForSearch()')&&js.includes('selectPublicSchool('),'Initial companies and selection transitions must exist');
 assert.ok(html.includes('syPublicDetails')&&html.includes('syPublicMapStatus'),'Map modal and status needed');
