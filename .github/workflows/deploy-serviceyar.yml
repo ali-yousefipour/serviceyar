@@ -16,7 +16,8 @@ permissions:
 
 concurrency:
   group: serviceyar-production-deploy
-  cancel-in-progress: false
+  # Supersede stalled/obsolete deploy runs so the newest main revision reaches production.
+  cancel-in-progress: true
 
 jobs:
   validate:
