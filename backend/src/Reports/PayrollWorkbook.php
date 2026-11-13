@@ -66,13 +66,14 @@ final class PayrollWorkbook
     {
         require_once __DIR__.'/../Vendor/SimpleXLSXGen.php';
         $headers=['ردیف','نام','نام خانوادگی','کد ملی','شماره حساب','شبا','کارکرد ناخالص','نظارت و بازرسی ۳٪','اطلاع‌رسانی ۱٪','بالاسری ۷٪','بیمه راننده ۷٫۸٪','جمع کسورات','خالص محاسباتی','حقوق سند'];
-        $rows=[array_map(static fn($name)=>'<b><style color="#FFFFFF" bgcolor="#165F3C"><wraptext>'.htmlspecialchars($name,ENT_XML1|ENT_QUOTES,'UTF-8').'</wraptext></style></b>',$headers)];
+        require_once __DIR__.'/ExcelLocalization.php';
+        $rows=[array_map(static fn($name)=>'<b><style color="#FFFFFF" bgcolor="#165F3C"><wraptext>'.htmlspecialchars(ExcelLocalization::header($name),ENT_XML1|ENT_QUOTES,'UTF-8').'</wraptext></style></b>',$headers)];
         $totals=array_fill(0,count($headers),0);
         foreach($payroll['lines'] as $i=>$line){
             $row=[$i+1,(string)($line['first_name']??''),(string)($line['last_name']??''),(string)($line['national_code']??''),(string)($line['bank_account']??''),(string)($line['iban']??''),(float)($line['earned']??0),(float)($line['supervision_deduction']??0),(float)($line['coordination_deduction']??0),(float)($line['overhead_deduction']??0),(float)($line['insurance_deduction']??0),(float)($line['total_deductions']??0),(float)($line['net_earned']??0),(float)($line['salary']??0)];
             foreach($row as $col=>$value){
                 if($col>=6)$totals[$col]+=$value;
-                elseif($col>0)$row[$col]=\Shuchkin\SimpleXLSXGen::raw($value);
+                elseif($col>0)$row[$col]=\Shuchkin\SimpleXLSXGen::raw((string)ExcelLocalization::value($value));
             }
             $rows[]=$row;
         }
@@ -169,6 +170,8 @@ final class PayrollWorkbook
 
     private static function put(DOMElement $row, string $column, string|int|float $value, ?string $formula = null): void
     {
+        require_once __DIR__.'/ExcelLocalization.php';
+        if($formula===null)$value=ExcelLocalization::value($value,$column);
         $sheet = $row->ownerDocument;
         $ref = $column.$row->getAttribute('r');
         foreach ($row->getElementsByTagName('c') as $cell) {
