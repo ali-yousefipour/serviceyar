@@ -17,7 +17,8 @@ const school=(await request(scoped('/api/v1/schools'),{method:'POST',body:{name:
 await request(scoped('/api/v1/students'),{method:'POST',body:{schoolId:school.id,firstName:'نام',lastName:'آزمون',mobile:'bad'},status:422});
 const student=(await request(scoped('/api/v1/students'),{method:'POST',body:{schoolId:school.id,firstName:'دانش‌آموز',lastName:'تست HTTP',mobile:'09120000111',monthlyFee:1000,academicYear:'1405/1406'},status:201})).data;
 assert.ok(student.uuid);checks++;
-const ledgerEntry=(await request(scoped('/api/v1/ledger'),{method:'POST',body:{partyType:'student',partyId:student.id,direction:'receipt',amount:12345,entryDate:'2026-11-01',method:'cash',referenceNo:'LEDGER-SEARCH-TEST'},status:201})).data;
+const companyBankAccount=(await request(scoped('/api/v1/accounts'),{method:'POST',body:{code:'HTTP-BANK-'+Date.now(),title:'حساب آزمون شرکت'},status:201})).data;
+const ledgerEntry=(await request(scoped('/api/v1/ledger'),{method:'POST',body:{partyType:'student',partyId:student.id,direction:'receipt',amount:12345,entryDate:'2026-11-01',method:'cash',companyAccountId:companyBankAccount.id,referenceNo:'LEDGER-SEARCH-TEST'},status:201})).data;
 const ledgerSearch=async filters=>(await request(scoped('/api/v1/ledger?'+new URLSearchParams(filters)))).data.items;
 const byName=await ledgerSearch({partySearch:'دانش‌آموز تست HTTP'});
 assert.ok(byName.some(row=>Number(row.id)===Number(ledgerEntry.id)));checks++;
