@@ -11,8 +11,8 @@ if(!str_contains($source,'ReferenceMonthlyStatementWorkbook::downloadIfAvailable
 if(!str_contains($source,'STATEMENT_REFERENCE_TEMPLATE_CAPACITY')||
    !str_contains($source,'STATEMENT_REFERENCE_TEMPLATE_UNAVAILABLE'))
     throw new RuntimeException('Reference-only export must fail clearly rather than change visual layout');
-if(Reference::fitsTemplateCapacity(['items'=>array_fill(0,631,[]),'reference_drivers'=>[]]))
-    throw new RuntimeException('Oversized months must not use the reference layout without extending it');
+if(!Reference::fitsTemplateCapacity(['items'=>array_fill(0,2500,[]),'reference_drivers'=>array_fill(0,160,[])]))
+    throw new RuntimeException('Reference layout must accept expanded monthly data');
 $frontend=file_get_contents(__DIR__.'/../frontend/assets/operations.js');
 if(str_contains($frontend,'اکسل استاندارد ۱۴ شیتی'))
     throw new RuntimeException('Unapproved alternate statement layout still visible');
