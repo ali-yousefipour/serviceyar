@@ -269,3 +269,158 @@ body{background:var(--canvas);color:var(--ink)}
 }
 @media(max-width:920px){#app .header{justify-content:space-between!important}}
 @media(prefers-reduced-motion:reduce){#app .sy-account-chevron,#app .sy-account-actions button{transition:none!important}}
+
+
+/* Public site rhythm/legibility polish — restrained hierarchy, no oversized gaps. */
+.sy-public-v3{font-size:13px!important;line-height:1.8!important;color:#1c4334!important}
+.sy-public-v3 .sy-hero-v3 .sy-hero-layout{
+ min-height:0!important;padding-block:48px 60px!important;
+ gap:clamp(22px,3vw,44px)!important;
+}
+.sy-public-v3 .sy-hero-v3 .sy-hero-copy h1{
+ font-size:clamp(29px,3.1vw,46px)!important;
+ line-height:1.42!important;letter-spacing:-.022em!important;
+ margin:13px 0 14px!important;
+}
+.sy-public-v3 .sy-hero-v3 .sy-hero-copy>p{
+ font-size:clamp(12px,1.05vw,14px)!important;line-height:2!important;
+ max-width:620px;color:#e1f1e8!important;
+}
+.sy-public-v3 .sy-hero-v3 .sy-hero-copy :is(.sy-v3-eyebrow,.sy-v3-hero-footnote,.sy-v3-hero-trust){color:#e8f1dd!important}
+.sy-public-v3 .sy-hero-v3 .sy-hero-copy h1 em{color:#f0d089!important}
+.sy-public-v3 .sy-hero-v3 .sy-v3-hero-more{color:#ddeddf!important}
+.sy-public-v3 .sy-hero-buttons{margin-block:18px 14px!important;gap:10px!important}
+.sy-public-v3 :is(.sy-stat-section,.sy-site-section){padding-block:38px 48px!important}
+.sy-public-v3 #syPublicSchools.sy-v3-map-section{padding-block:35px 40px!important}
+.sy-public-v3 :is(.sy-section-heading,.sy-v3-map-intro){margin-block:0 15px!important;gap:15px!important}
+.sy-public-v3 :is(.sy-section-heading h2,.sy-v3-map-intro h2,.sy-site-section h2,.sy-inner-heading h1){
+ font-size:clamp(19px,2vw,28px)!important;line-height:1.45!important;
+ letter-spacing:-.012em!important;color:#124b36!important;
+}
+.sy-public-v3 :is(.sy-section-heading p,.sy-v3-map-intro p,.sy-site-section p){
+ font-size:12px!important;line-height:1.85!important;
+}
+.sy-public-v3 .sy-v3-map-intro h2 em{color:#ae8024!important;-webkit-text-fill-color:currentColor!important}
+.sy-public-v3 .sy-stat-grid{gap:10px!important}
+.sy-public-v3 .sy-stat-grid article{padding:14px 12px!important;min-height:95px!important}
+.sy-public-v3 .sy-stat-grid strong{font-size:clamp(21px,2.2vw,29px)!important;line-height:1.3!important}
+.sy-public-v3 .sy-stat-grid article p{font-size:11px!important;margin-block:3px 0!important;color:#42614d!important}
+.sy-public-v3 .sy-stat-footnote{font-size:10.5px!important;line-height:1.9!important;color:#607766!important}
+.sy-public-v3 .sy-v3-catalog-card{margin-block:18px 22px!important;padding:20px 24px!important;gap:15px!important}
+.sy-public-v3 .sy-v3-catalog-card h2{font-size:clamp(18px,1.9vw,25px)!important}
+.sy-public-v3 .sy-feature-grid article,.sy-public-v3 .sy-contact-grid article{padding:19px 18px!important}
+.sy-public-v3 .sy-feature-grid article :is(h2,h3){font-size:15px!important}
+.sy-public-v3 .sy-v3-map-badge{padding:7px 10px!important}
+.sy-public-v3 .sy-v3-map-badge img{width:32px!important;height:32px!important}
+.sy-public-v3 :is(.sy-v3-section-kicker,.sy-v3-upper,.sy-overline){font-size:10.5px!important;color:#977126!important}
+.sy-public-v3 .sy-stat-section .sy-section-heading{align-items:center!important}
+.sy-public-v3 .sy-stat-section #syStatsStatus{font-size:10px!important;color:#567465!important}
+.sy-public-v3 #syPublicSchools .sy-school-map{height:clamp(300px,31vw,430px)!important}
+.sy-public-v3 #syPublicSchools :is(.sy-school-search,.sy-tariff-panel,.sy-explorer-panel){font-size:12px!important}
+.sy-public-v3 #syPublicSchools :is(.sy-directory-panel,.sy-explorer-panel){border-radius:16px!important}
+/* Public map: override conflicting legacy 54/64px fixed pins (including placeholders). */
+.sy-public-v3 #syPublicSchools .leaflet-marker-icon.sy-public-pin{
+ width:38px!important;height:42px!important;max-width:38px!important;max-height:42px!important;
+ margin:0!important;background:transparent!important;border:0!important;overflow:visible!important;
+}
+.sy-public-v3 #syPublicSchools .sy-public-pin .sy-public-pin-face,
+.sy-public-v3 #syPublicSchools .sy-public-pin .sy-public-pin-face.sy-public-pin-no-frame{
+ box-sizing:border-box!important;position:relative!important;inset:auto!important;
+ width:36px!important;height:36px!important;
+ min-width:36px!important;min-height:36px!important;
+ max-width:36px!important;max-height:36px!important;
+ border-width:2px!important;border-radius:10px!important;
+ box-shadow:0 3px 9px rgba(6,59,39,.2)!important;
+}
+.sy-public-v3 #syPublicSchools .sy-public-pin .sy-public-pin-face.sy-public-pin-no-frame{
+ background:transparent!important;border:0!important;box-shadow:none!important;
+}
+.sy-public-v3 #syPublicSchools .sy-public-pin .sy-public-pin-face img,
+.sy-public-v3 #syPublicSchools .sy-public-pin .sy-public-pin-face.sy-public-pin-no-frame img{
+ display:block!important;width:32px!important;height:32px!important;
+ min-width:0!important;min-height:0!important;
+ max-width:32px!important;max-height:32px!important;
+ object-fit:contain!important;margin:auto!important;padding:0!important;
+}
+.sy-public-v3 #syPublicSchools .sy-public-pin.sy-photo-portrait:not(.sy-public-pin-default) .sy-public-pin-face{
+ top:0!important;left:8px!important;width:28px!important;min-width:28px!important;max-width:28px!important;
+ height:36px!important;min-height:36px!important;max-height:36px!important;
+}
+.sy-public-v3 #syPublicSchools .sy-public-pin.sy-photo-landscape:not(.sy-public-pin-default) .sy-public-pin-face{
+ top:8px!important;left:1px!important;width:36px!important;min-width:36px!important;max-width:36px!important;
+ height:27px!important;min-height:27px!important;max-height:27px!important;
+}
+.sy-public-v3 #syPublicSchools .sy-public-pin.sy-photo-portrait:not(.sy-public-pin-default) img,
+.sy-public-v3 #syPublicSchools .sy-public-pin.sy-photo-landscape:not(.sy-public-pin-default) img{
+ width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;
+}
+/* Dashboard: fit icon geometry to the map, and make tooltips/popups branded. */
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-school{
+ box-sizing:border-box!important;width:78px!important;height:59px!important;
+ max-width:78px!important;max-height:59px!important;
+}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-school .sy-map-marker-bubble{
+ box-sizing:border-box!important;flex:0 0 34px!important;
+ width:34px!important;height:34px!important;min-width:34px!important;min-height:34px!important;
+ max-width:34px!important;max-height:34px!important;border:2px solid #c89b3b!important;
+ border-radius:9px!important;box-shadow:0 3px 9px rgba(6,59,39,.2)!important;
+}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-school .sy-map-marker-photo{
+ width:30px!important;height:30px!important;min-width:0!important;min-height:0!important;
+ max-width:30px!important;max-height:30px!important;border-radius:7px!important;
+}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-school .sy-map-school-label{
+ max-width:78px!important;min-width:0!important;max-height:20px!important;
+ padding:2px 5px!important;margin:2px auto 0!important;
+ font:600 9px/13px Vazirmatn,Tahoma,sans-serif!important;
+ border-radius:6px!important;box-shadow:0 2px 4px rgba(6,59,39,.12)!important;
+}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-school .sy-map-marker-symbol svg{width:19px!important;height:19px!important}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-school.sy-school-default-photo .sy-map-marker-bubble{
+ width:34px!important;height:34px!important;min-width:34px!important;min-height:34px!important;
+ max-width:34px!important;max-height:34px!important;
+}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-company{
+ width:38px!important;height:42px!important;max-width:38px!important;max-height:42px!important;
+}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-company .sy-map-marker-bubble,
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-company.sy-company-default-photo .sy-map-marker-bubble{
+ width:38px!important;height:38px!important;min-width:38px!important;min-height:38px!important;
+ max-width:38px!important;max-height:38px!important;border-radius:10px!important;
+ border-width:2px!important;
+}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-company .sy-map-marker-photo{
+ width:34px!important;height:34px!important;max-width:34px!important;max-height:34px!important;
+ border-radius:8px!important;
+}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-company .sy-map-marker-symbol svg{width:20px!important;height:20px!important}
+#dashboardSchoolMap .leaflet-popup.sy-dashboard-popup .leaflet-popup-content-wrapper,
+#dashboardSchoolMap .leaflet-popup .leaflet-popup-content-wrapper{
+ border:1px solid #dae6d7!important;border-radius:12px!important;
+ box-shadow:0 8px 25px rgba(5,60,38,.2)!important;
+ background:#fffefa!important;color:#184934!important;
+}
+#dashboardSchoolMap .leaflet-popup .leaflet-popup-content{
+ margin:9px 12px!important;min-width:110px!important;max-width:230px!important;
+ font:500 11px/1.85 Vazirmatn,Tahoma,sans-serif!important;text-align:right!important;direction:rtl!important;
+}
+#dashboardSchoolMap .leaflet-popup .sy-map-popup{display:grid;gap:2px;text-align:right;direction:rtl}
+#dashboardSchoolMap .leaflet-popup .sy-map-popup strong{
+ font:750 12px/1.6 Vazirmatn,Tahoma,sans-serif!important;color:#12513a!important;
+}
+#dashboardSchoolMap .leaflet-popup .sy-map-popup small{
+ font:500 10px/1.7 Vazirmatn,Tahoma,sans-serif!important;color:#738477!important;
+}
+#dashboardSchoolMap .leaflet-popup .leaflet-popup-tip{background:#fffefa!important}
+#dashboardSchoolMap .leaflet-popup .leaflet-popup-close-button{font-family:Vazirmatn,Tahoma,sans-serif!important;font-size:17px!important;color:#7c8e7e!important}
+@media(max-width:800px){
+ .sy-public-v3 .sy-hero-v3 .sy-hero-layout{padding-block:30px 45px!important}
+ .sy-public-v3 .sy-hero-v3 .sy-hero-copy h1{font-size:clamp(27px,6vw,37px)!important}
+ .sy-public-v3 :is(.sy-stat-section,.sy-site-section){padding-block:26px 34px!important}
+ .sy-public-v3 .sy-v3-catalog-card{padding:16px!important;gap:12px!important}
+}
+@media(max-width:540px){
+ .sy-public-v3 .sy-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ .sy-public-v3 .sy-stat-grid article{min-height:88px!important}
+ .sy-public-v3 .sy-v3-map-intro h2{font-size:20px!important}
+}
