@@ -153,7 +153,7 @@ try {
   $class=(string)($_GET['vehicleClass']??'');
   $allowed=['economy','standard','van'];
   if(!$district||$district<1||$district>8||!in_array($class,$allowed,true)
-    ||!preg_match('/^(?:[0-9]{1,3})(?:\\.[0-9]{1,2})?$/D',$distanceRaw)
+    ||!preg_match('/^(?:[0-9]{1,3})(?:\.[0-9]{1,2})?$/D',$distanceRaw)
     ||(float)$distanceRaw<=0||(float)$distanceRaw>200){
    Response::json(['ok'=>false,'error'=>['code'=>'INVALID_QUOTE_INPUT','message'=>'ناحیه، کلاس خودرو و مسافت معتبر (تا ۲۰۰ کیلومتر) را وارد کنید.']],422);
   }
@@ -182,7 +182,7 @@ try {
  $s=$auth->current(); $aid=null;
 
  // Agency-scoped school photo endpoint: no public listing or direct object-store URL.
- if(preg_match('#^/api/v1/schools/(\\d+)/photo$#',$path,$photoMatch)){
+ if(preg_match('#^/api/v1/schools/(\d+)/photo$#',$path,$photoMatch)){
   $s=$auth->current();$photoAgency=agencyId($s);$schoolId=(int)$photoMatch[1];
   if($method==='GET')\ServiceYar\Domain\SchoolPhotos::stream($s['id'],$photoAgency,$schoolId);
   if($method==='POST'){
@@ -222,12 +222,12 @@ try {
  if($method==='GET'&&$path==='/api/v1/reports/service-finance.xlsx')ExportService::serviceFinance($s['id'],$aid,$_GET);
  if($method==='GET'&&preg_match('#^/api/v1/students/(\d+)/service-finance$#',$path,$m))Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ServiceFinanceReport::report($s['id'],$aid,$_GET,(int)$m[1])]);
  if($method==='GET'&&$path==='/api/v1/operations/school-statement/rules'){Authorization::requirePermission($s['id'],'finance.view');Response::json(['ok'=>true,'data'=>json_decode(file_get_contents(__DIR__.'/../src/Domain/school-statement-template-1405.json'),true,512,JSON_THROW_ON_ERROR)]);}
- if($method==='GET'&&preg_match('#^/api/v1/reports/school-statements/(\\d+)\\.xlsx$#',$path,$statementExport))\ServiceYar\Reports\MonthlyStatementWorkbook::download($s['id'],$aid,(int)$statementExport[1]);
+ if($method==='GET'&&preg_match('#^/api/v1/reports/school-statements/(\d+)\.xlsx$#',$path,$statementExport))\ServiceYar\Reports\MonthlyStatementWorkbook::download($s['id'],$aid,(int)$statementExport[1]);
  if($method==='GET'&&$path==='/api/v1/operations/school-statements')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\MonthlyStatements::list($s['id'],$aid,($_GET['includeDeleted']??'')==='1')]);
  if($method==='POST'&&$path==='/api/v1/operations/school-statements/preview'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\MonthlyStatements::preview($s['id'],$aid,Request::json())]);}
  if($method==='POST'&&$path==='/api/v1/reports/school-statements/preview.xlsx'){$auth->requireCsrf($s);\ServiceYar\Reports\MonthlyStatementWorkbook::downloadPreview($s['id'],$aid,Request::json());}
  if($method==='POST'&&$path==='/api/v1/operations/school-statements'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\MonthlyStatements::finalize($s['id'],$aid,Request::json())],201);}
- if(preg_match('#^/api/v1/operations/school-statements/(\\d+)(?:/(delete|restore))?$#',$path,$sm)){
+ if(preg_match('#^/api/v1/operations/school-statements/(\d+)(?:/(delete|restore))?$#',$path,$sm)){
   if($method==='GET'&&empty($sm[2]))Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\MonthlyStatements::get($s['id'],$aid,(int)$sm[1])]);
   if($method==='POST'&&in_array($sm[2]??'',['delete','restore'],true)){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\MonthlyStatements::changeStatus($s['id'],$aid,(int)$sm[1],$sm[2]==='restore')]);}
  }
@@ -328,24 +328,36 @@ try {
   if($method==='GET'){
    Authorization::requirePermission($s['id'],'settings.view');
    $q=Connection::get()->prepare("SELECT setting_key,setting_value FROM agency_settings
-    WHERE agency_id=? AND setting_key IN ('public_contact_enabled','public_office_address','public_manager_name','public_manager_mobile')");
-   $q->execute([$aid]);Response::json(['ok'=>true,'data'=>$q->fetchAll(\PDO::FETCH_KEY_PAIR)]);
+    WHERE agency_id=? AND setting_key IN (
+     'public_contact_type','public_office_address','public_manager_name','public_manager_mobile',
+     'company_ceo_mobile','company_phone','company_office_phone','company_address','company_manager_name')");
+   $q->execute([$aid]);$data=$q->fetchAll(\PDO::FETCH_KEY_PAIR);
+   $data['public_contact_type']=($data['public_contact_type']??'mobile')==='landline'?'landline':'mobile';
+   $data['effective_mobile']=($data['public_manager_mobile']??'')?:($data['company_ceo_mobile']??'');
+   $data['effective_office_phone']=($data['company_office_phone']??'')?:($data['company_phone']??'');
+   Response::json(['ok'=>true,'data'=>$data]);
   }
   if($method==='PUT'){
    $auth->requireCsrf($s);Authorization::requirePermission($s['id'],'settings.manage');
-   $body=Request::json();$keys=['public_contact_enabled','public_office_address','public_manager_name','public_manager_mobile'];
+   $body=Request::json();
+   $keys=['public_contact_type','public_office_address','public_manager_name','public_manager_mobile'];
    if(array_diff(array_keys($body),$keys))throw new AuthException(422,'فیلد ناشناخته مجاز نیست.','VALIDATION_ERROR');
-   $on=$body['public_contact_enabled']??'0';
-   if(!in_array($on,['0','1',0,1,false,true],true))throw new AuthException(422,'وضعیت انتشار نامعتبر است.','VALIDATION_ERROR');
-   foreach($keys as $key){
-    $value=$key==='public_contact_enabled'?(in_array($on,['1',1,true],true)?'1':'0'):trim((string)($body[$key]??''));
-    if(mb_strlen($value)>($key==='public_office_address'?450:120))throw new AuthException(422,'طول اطلاعات تماس بیش از حد مجاز است.','VALIDATION_ERROR');
-    if($key==='public_manager_mobile'&&$value!==''&&!preg_match('/^[0-9+۰-۹ -]{7,25}$/uD',$value))throw new AuthException(422,'شماره همراه معتبر نیست.','VALIDATION_ERROR');
-    $q=Connection::get()->prepare('INSERT INTO agency_settings(agency_id,setting_key,setting_value) VALUES(?,?,?)
-     ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)');
-    $q->execute([$aid,$key,$value]);
+   $type=$body['public_contact_type']??'mobile';
+   if(!in_array($type,['mobile','landline'],true))
+    throw new AuthException(422,'نوع شماره تماس نامعتبر است.','VALIDATION_ERROR');
+   foreach($body as $key=>$raw){
+    if(!is_string($raw))throw new AuthException(422,'مشخصات تماس نامعتبر است.','VALIDATION_ERROR');
+    $value=trim($raw);
+    if(mb_strlen($value,'UTF-8')>($key==='public_office_address'?450:120))
+     throw new AuthException(422,'طول اطلاعات تماس بیش از حد مجاز است.','VALIDATION_ERROR');
+    if($key==='public_manager_mobile'&&$value!==''&&!preg_match('/^[0-9+۰-۹ -]{7,25}$/uD',$value))
+     throw new AuthException(422,'شماره همراه معتبر نیست.','VALIDATION_ERROR');
    }
-   Response::json(['ok'=>true,'data'=>['updated'=>true]]);
+   $body['public_contact_type']=$type;
+   $pdo=Connection::get();$q=$pdo->prepare('INSERT INTO agency_settings(agency_id,setting_key,setting_value) VALUES(?,?,?)
+     ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)');
+   foreach($body as $key=>$raw)$q->execute([$aid,$key,trim($raw)]);
+   Response::json(['ok'=>true,'data'=>['updated'=>true,'contactType'=>$type]]);
   }
  }
  if($path==='/api/v1/agency/logo'){
@@ -368,7 +380,7 @@ try {
  if($method==='GET'&&$path==='/api/v1/reports/export'){ExportService::xlsx($s['id'],$aid,(string)($_GET['resource']??'schools'));}
  if($method==='GET'&&$path==='/api/v1/reports/summary')Response::json(['ok'=>true,'data'=>ReportService::summary($s['id'],$aid)]);
  if($method==='GET'&&$path==='/api/v1/monitoring/activity')Response::json(['ok'=>true,'data'=>MonitoringService::activity($s['id'],$aid)]);
- if($method==='GET'&&preg_match('#^/api/v1/monitoring/services/(\\d+)/locations$#',$path,$mm))Response::json(['ok'=>true,'data'=>MonitoringService::locations($s['id'],$aid,(int)$mm[1])]);
+ if($method==='GET'&&preg_match('#^/api/v1/monitoring/services/(\d+)/locations$#',$path,$mm))Response::json(['ok'=>true,'data'=>MonitoringService::locations($s['id'],$aid,(int)$mm[1])]);
  if($method==='GET'&&$path==='/api/v1/ai/history')Response::json(['ok'=>true,'data'=>AiService::history($s['id'],$aid)]);
  if($method==='POST'&&$path==='/api/v1/ai/conversations'){ $auth->requireCsrf($s);$b=Request::json();Response::json(['ok'=>true,'data'=>AiService::create($s['id'],$aid,(string)($b['title']??'گفتگو'))],201); }
  if($method==='GET'&&$path==='/api/v1/dashboard/summary'){
@@ -377,7 +389,7 @@ try {
   Response::json(['ok'=>true,'data'=>['agencyId'=>$aid,'counts'=>$counts]]);
  }
 
- if(preg_match('#^/api/v1/services/(\\d+)/students$#',$path,$mm)){ $serviceId=(int)$mm[1]; if($method==='GET')Response::json(['ok'=>true,'data'=>DomainService::serviceStudents($s['id'],$aid,$serviceId)]); if($method==='POST'){ $auth->requireCsrf($s);$b=Request::json();DomainService::assignStudent($s['id'],$aid,$serviceId,(int)($b['studentId']??0),isset($b['pickupAddress'])?(string)$b['pickupAddress']:null,isset($b['pickupOrder'])?(int)$b['pickupOrder']:null);Response::json(['ok'=>true,'data'=>['assigned'=>true]],201);} if($method==='DELETE'){ $auth->requireCsrf($s);$studentId=(int)($_GET['studentId']??0);DomainService::removeStudent($s['id'],$aid,$serviceId,$studentId);Response::json(['ok'=>true,'data'=>['removed'=>true]]);} }
+ if(preg_match('#^/api/v1/services/(\d+)/students$#',$path,$mm)){ $serviceId=(int)$mm[1]; if($method==='GET')Response::json(['ok'=>true,'data'=>DomainService::serviceStudents($s['id'],$aid,$serviceId)]); if($method==='POST'){ $auth->requireCsrf($s);$b=Request::json();DomainService::assignStudent($s['id'],$aid,$serviceId,(int)($b['studentId']??0),isset($b['pickupAddress'])?(string)$b['pickupAddress']:null,isset($b['pickupOrder'])?(int)$b['pickupOrder']:null);Response::json(['ok'=>true,'data'=>['assigned'=>true]],201);} if($method==='DELETE'){ $auth->requireCsrf($s);$studentId=(int)($_GET['studentId']??0);DomainService::removeStudent($s['id'],$aid,$serviceId,$studentId);Response::json(['ok'=>true,'data'=>['removed'=>true]]);} }
  if($method==='POST'&&$path==='/api/v1/services/bulk-status'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ServiceBulkStatus::apply($s['id'],$aid,Request::json())]);}
  if($method==='POST'&&$path==='/api/v1/drivers/bulk-status'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\DriverBulkStatus::apply($s['id'],$aid,Request::json())]);}
  if($method==='GET'&&$path==='/api/v1/operations/mehr-assignments/preview')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\MehrWorkbookAssignments::run($s['id'],$aid,false)]);
