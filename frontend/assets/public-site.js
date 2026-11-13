@@ -140,8 +140,8 @@
  function showCompany(company){
   publicModal(company.name,[
    ['نام شرکت',company.name],['مدیر شرکت',company.managerName],
-   ['نشانی دفتر',company.address],['تلفن دفتر',company.officePhone],
-   ['شماره همراه مدیر (با مجوز انتشار)',company.managerMobile]
+   ['نشانی دفتر',company.address],
+   [company.contactType==='landline'?'تلفن ثابت دفتر':'شماره همراه مدیر',company.contactNumber]
   ],company.logoUrl,DEFAULT_COMPANY_IMAGE);
  }
  function showSchool(school){
