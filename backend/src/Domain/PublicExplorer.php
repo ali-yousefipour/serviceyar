@@ -16,21 +16,27 @@ final class PublicExplorer {
  }
  private static function settings(PDO $pdo,int $agency): array {
   $q=$pdo->prepare("SELECT setting_key,setting_value FROM agency_settings WHERE agency_id=? AND setting_key IN
-    ('company_location','public_contact_enabled','public_office_address','public_manager_name','public_manager_mobile')");
+    ('company_location','company_manager_name','company_phone','company_office_phone','company_address','company_office_address',
+     'public_contact_enabled','public_office_address','public_manager_name','public_manager_mobile','company_ceo_mobile')");
   $q->execute([$agency]);return $q->fetchAll(PDO::FETCH_KEY_PAIR);
  }
  private static function safeCompany(array $agency,array $settings): array {
   $location=json_decode((string)($settings['company_location']??''),true);
   $point=is_array($location)?self::point($location['latitude']??null,$location['longitude']??null):['latitude'=>null,'longitude'=>null];
   $published=($settings['public_contact_enabled']??'0')==='1';
+  // Institutional contact and address from the verified Madares import.
+  // Personal manager mobile remains opt-in; private settings are never exposed wholesale.
+  $address=(string)($settings['public_office_address']?:$settings['company_address']??$settings['company_office_address']??'');
+  $manager=(string)($settings['public_manager_name']?:$settings['company_manager_name']??'');
+  $officePhone=(string)($settings['company_office_phone']?:$settings['company_phone']??'');
+  $mobile=$published?(string)($settings['public_manager_mobile']?:$settings['company_ceo_mobile']??''):null;
   return [
    'id'=>(int)$agency['id'],'name'=>(string)$agency['name'],
    'latitude'=>$point['latitude'],'longitude'=>$point['longitude'],
    'logoUrl'=>\ServiceYar\Agency\AgencyLogo::hasCustomLogo((int)$agency['id'])?
      '/api/v1/public/company-logo?id='.(int)$agency['id']:null,
-   'address'=>$published?(string)($settings['public_office_address']??''):null,
-   'managerName'=>$published?(string)($settings['public_manager_name']??''):null,
-   'managerMobile'=>$published?(string)($settings['public_manager_mobile']??''):null,
+   'address'=>$address?:null,'officePhone'=>$officePhone?:null,
+   'managerName'=>$manager?:null,'managerMobile'=>$mobile?:null,
    'contactPublished'=>$published
   ];
  }
