@@ -1513,6 +1513,21 @@ companiesPage=async function(){
   $('content').classList.add('sy-super-admin-workspace');
   $('content').querySelectorAll('section.panel').forEach(panel=>panel.classList.add('sy-super-admin-card'));
   $('content').prepend(adminPanel);
+  const workspace=$('content');
+  const agencySection=workspace.querySelector('.sy-admin-agency-panel');
+  const userSection=[...workspace.querySelectorAll('section.panel')].find(node=>node.querySelector('h2')?.textContent==='کاربران سامانه');
+  if(agencySection)agencySection.id='syAdminAgencies';
+  if(userSection){userSection.id='syAdminUsers';userSection.classList.add('sy-admin-users-panel');}
+  adminPanel.id='syAdminIntegrations';
+  const nav=document.createElement('nav');nav.className='sy-admin-section-nav';nav.setAttribute('aria-label','دسترسی سریع به تنظیمات ادمین کل');
+  nav.innerHTML='<a href="#syAdminIntegrations" data-admin-jump="syAdminIntegrations">ارتباطات و سرویس‌ها</a><a href="#syAdminAgencies" data-admin-jump="syAdminAgencies">مدیریت شرکت‌ها</a><a href="#syAdminUsers" data-admin-jump="syAdminUsers">کاربران سامانه</a>';
+  nav.querySelectorAll('[data-admin-jump]').forEach(link=>link.addEventListener('click',event=>{
+   const target=workspace.querySelector('#'+link.dataset.adminJump);if(!target)return;
+   event.preventDefault();target.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+   target.setAttribute('tabindex','-1');target.focus({preventScroll:true});
+  }));
+  workspace.prepend(nav);
+
   const form=$('platformSettingsForm');
   form.onsubmit=async e=>{
    e.preventDefault();const button=form.querySelector('[type=submit]');button.disabled=true;
