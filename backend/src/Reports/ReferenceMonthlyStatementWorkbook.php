@@ -480,6 +480,20 @@ final class ReferenceMonthlyStatementWorkbook
                 self::normalizeSharedFormulas($zip,12);
                 require_once __DIR__.'/ExcelLocalization.php';
                 $periodLabel=ExcelLocalization::digits($d['month_name'].' '.$d['year']);
+                // Show the month/year in worksheet titles, not merely in the
+                // filename. Keep original class/vehicle tariff descriptions.
+                self::replaceCells($zip,1,['A1'=>'راهنمای صورت‌وضعیت سرویس مدارس | دوره '.$periodLabel]);
+                self::replaceCells($zip,2,['A8'=>'صورت‌وضعیت ماه '.$periodLabel]);
+                self::replaceCells($zip,3,['AX1'=>'ماه عملکرد | دوره '.$periodLabel]);
+                self::replaceCells($zip,8,['A1'=>'پیوست‌های صورت‌وضعیت | دوره '.$periodLabel]);
+                foreach([9,10,11] as $tariffSheet){
+                    $tariffDoc=self::document($zip,$tariffSheet);
+                    $original='';
+                    foreach($tariffDoc->getElementsByTagNameNS(self::NS,'c') as $cell){
+                        if($cell->getAttribute('r')==='A1'){$original=trim($cell->textContent);break;}
+                    }
+                    self::replaceCells($zip,$tariffSheet,['A1'=>$original.' | دوره '.$periodLabel]);
+                }
                 // Replace fixed template headings, never the month-specific
                 // tariff formulas or the original reference workbook itself.
                 foreach([
@@ -533,7 +547,7 @@ final class ReferenceMonthlyStatementWorkbook
                     // Visible, non-posting notice in the reference guide sheet.
                     // Keep all 14 sheets, formulas, and original template intact.
                     self::replaceCells($zip,1,[
-                        'A1'=>'پیش‌نمایش آزمایشی صورت‌وضعیت ـ ثبت‌نشده',
+                        'A1'=>'پیش‌نمایش آزمایشی صورت‌وضعیت '.$periodLabel.' ـ ثبت‌نشده',
                         'A2'=>'این فایل فقط برای بررسی محاسبات ماه انتخابی است و سند مالی نهایی محسوب نمی‌شود.'
                     ]);
                 }
