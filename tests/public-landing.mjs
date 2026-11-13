@@ -53,8 +53,11 @@ for(const marker of ['syScrollProgress','syBackToTop','data-reveal','data-reveal
 for(const feature of ['IntersectionObserver','requestAnimationFrame','prefers-reduced-motion','scrollIntoView','aria-expanded','sy-page-enter','sy-in-view','toLocaleString'])assert.ok(js.includes(feature),'Missing accessible animation: '+feature);
 for(const cssHook of ['sy-page-in','sy-dashboard-sheen','sy-bars-rise','sy-scroll-progress','sy-backtop','prefers-reduced-motion:reduce','sy-scroll-cue'])assert.ok(css.includes(cssHook),'Missing motion system: '+cssHook);
 assert.ok(!js.includes('setInterval('),'Do not use polling or unbounded timers for scroll animation');
-assert.ok(api.includes("$counts['schools']=\\ServiceYar\\Domain\\PublicExplorer::countSchools()"),'Public school counts must include registered and central catalog schools');
+assert.ok(api.includes("$counts['schools']=(int)$schoolStats['total']")&&api.includes("FROM schools')->fetch"),'Public school count must reflect every registered school row, active or inactive, without adding the external catalog');
 assert.ok(!read('backend/src/Domain/PublicExplorer.php').includes('FROM schools WHERE is_active=1'),'School count must include both active and inactive records');
+assert.ok(js.includes('iconSize:[38,42],iconAnchor:[19,40]'),'Public map markers must remain compact and anchored');
+assert.ok(operations.includes("iconSize:[78,59],iconAnchor:[39,40]")&&operations.includes("className:'sy-dashboard-popup'"),'Dashboard map markers and Persian popup must have controlled size');
+assert.ok(brandCss.includes('.sy-public-v3 #syPublicSchools .leaflet-marker-icon.sy-public-pin')&&brandCss.includes('.leaflet-popup .sy-map-popup'),'Public pins and dashboard popup need compact themed CSS');
 assert.ok(js.includes('/api/v1/public/map-config')&&js.includes('static.neshan.org/sdk')&&js.includes('invalidateSize(true)'),'Public map must use configured Neshan web key');
 assert.ok(html.includes('syCatalogAdvantageTitle')&&html.includes('فهرست بسیاری از مدارس'),'Catalog advantage must be visible');
 assert.ok(html.includes('sy-v3-dashboard-art')&&html.includes('sy-v3-map-intro'),'Landing should show the redesigned dashboard showcase and map introduction');
