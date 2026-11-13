@@ -98,13 +98,14 @@
   statsLoaded=true;
   const status=document.getElementById('syStatsStatus');
   try{
-   const r=await fetch('/api/v1/public/overview',{credentials:'omit',headers:{Accept:'application/json'}});
+   const r=await fetch('/api/v1/public/overview',{credentials:'omit',cache:'no-store',headers:{Accept:'application/json'}});
    const body=await r.json();
    if(!r.ok||!body.ok||!body.data?.counts)throw new Error('no data');
    statistics=body.data.counts;
    if(status)status.textContent='آمار ثبت‌شده و به‌روز';
    showStatistics();
   }catch(_){
+   statsLoaded=false;
    if(status)status.textContent='آمار موقتاً در دسترس نیست';
   }
  }
