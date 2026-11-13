@@ -1574,16 +1574,19 @@ async function settingsPage(){
  logoPanel.innerHTML='<header class="sy-settings-section-head"><div><h2>لوگوی اختصاصی شرکت</h2><p>لوگو در داشبورد، سربرگ اسناد و خروجی چاپ و PDF شرکت استفاده می‌شود.</p></div></header><div class="sy-agency-logo-layout">'+agencyLogoImage('نشان شرکت '+(currentAgency?.name||''),100)+'<form id="agencyLogoForm"><label>انتخاب تصویر (PNG، JPG یا WebP؛ حداکثر ۱ مگابایت)<input type="file" name="companyLogo" accept="image/png,image/jpeg,image/webp" '+(can('settings','manage')?'':'disabled')+'></label>'+(can('settings','manage')?'<div class="sy-agency-logo-actions"><button class="primary" type="submit">ثبت لوگو</button><button type="button" id="removeAgencyLogo">حذف لوگوی اختصاصی</button></div>':'')+'<p id="agencyLogoStatus" role="status" aria-live="polite">در صورت ثبت‌نشدن لوگو، نشان پیش‌فرض سرویس‌یار استفاده می‌شود.</p></form></div>';
  $('transportSettings').closest('section').after(logoPanel);
 
- // A company's public map card must not leak private user profiles.
+ // Each company controls whether its public contact is the manager mobile (default)
+ // or the office landline. The saved choice is applied by the public API.
  const publicPanel=document.createElement('section');
  publicPanel.className='panel sy-settings-panel sy-public-company-settings';
- publicPanel.innerHTML='<header class="sy-settings-section-head"><div><h2>اطلاعات عمومی شرکت روی نقشه سایت</h2><p>نام، نشانی و شماره همراه مدیر فقط پس از تأیید شما در صفحه عمومی نمایش داده می‌شود.</p></div></header>'+
- '<form id="syPublicCompanyForm" class="form-grid sy-settings-grid">'+
- '<label>نشانی عمومی دفتر<input name="public_office_address" maxlength="450" placeholder="نشانی قابل انتشار دفتر شرکت"></label>'+
- '<label>نام مدیر شرکت<input name="public_manager_name" maxlength="120" placeholder="نام مدیری که مجاز به معرفی است"></label>'+
- '<label>شماره همراه عمومی مدیر<input name="public_manager_mobile" maxlength="25" inputmode="tel" placeholder="شماره‌ای که اجازه انتشار آن وجود دارد"></label>'+
- '<label class="sy-public-consent"><input type="checkbox" name="public_contact_enabled" value="1"><span>با انتشار این اطلاعات در صفحه عمومی سرویس‌یار موافقم.</span></label>'+
- (can('settings','manage')?'<button class="primary" type="submit">ذخیره اطلاعات عمومی</button>':'')+
+ publicPanel.innerHTML='<header class="sy-settings-section-head"><div><h2>شماره تماس قابل نمایش در نقشه عمومی</h2><p>شماره موبایل مدیر به‌صورت پیش‌فرض نمایش داده می‌شود. برای جایگزینی آن، «تلفن ثابت شرکت» را انتخاب کنید.</p></div></header>'+
+ '<form id="syPublicCompanyForm" class="sy-public-contact-form">'+
+ '<fieldset class="sy-public-contact-options"><legend>شماره‌ای که بازدیدکنندگان مشاهده می‌کنند</legend>'+
+ '<label class="sy-public-contact-option"><input type="radio" name="public_contact_type" value="mobile" checked><span><strong>شماره همراه مدیر (پیش‌فرض)</strong><small id="syContactMobilePreview">در حال دریافت اطلاعات…</small></span></label>'+
+ '<label class="sy-public-contact-option"><input type="radio" name="public_contact_type" value="landline"><span><strong>شماره ثابت دفتر شرکت</strong><small id="syContactOfficePreview">در حال دریافت اطلاعات…</small></span></label></fieldset>'+
+ '<div class="form-grid sy-settings-grid"><label>نشانی دفتر برای نمایش در نقشه<input name="public_office_address" maxlength="450" placeholder="در صورت نیاز نشانی عمومی را تکمیل کنید"></label>'+
+ '<label>نام مدیر شرکت<input name="public_manager_name" maxlength="120" placeholder="در صورت نیاز نام مدیر را تکمیل کنید"></label>'+
+ '<label>شماره همراه مدیر (اختیاری برای اصلاح)<input name="public_manager_mobile" maxlength="25" inputmode="tel" placeholder="مثلاً ۰۹۱۵…"></label></div>'+
+ (can('settings','manage')?'<button class="primary" type="submit">ذخیره تنظیمات نمایش شماره تماس</button>':'')+
  '<p id="syPublicCompanyStatus" role="status" aria-live="polite"></p></form>';
  logoPanel.after(publicPanel);
  const publicForm=publicPanel.querySelector('form');
@@ -1593,16 +1596,24 @@ async function settingsPage(){
   for(const key of ['public_office_address','public_manager_name','public_manager_mobile']){
    if(publicForm.elements[key])publicForm.elements[key].value=data?.[key]||'';
   }
-  publicForm.elements.public_contact_enabled.checked=String(data?.public_contact_enabled||'0')==='1';
+  const type=data?.public_contact_type==='landline'?'landline':'mobile';
+  publicForm.querySelector('input[name="public_contact_type"][value="'+type+'"]').checked=true;
+  publicPanel.querySelector('#syContactMobilePreview').textContent=data?.effective_mobile||'شماره همراه ثبت نشده است';
+  publicPanel.querySelector('#syContactOfficePreview').textContent=data?.effective_office_phone||'شماره ثابت ثبت نشده است';
  }).catch(error=>{if(publicForm.isConnected)publicForm.querySelector('#syPublicCompanyStatus').textContent=error.message;});
  if(can('settings','manage'))publicForm.onsubmit=async event=>{
   event.preventDefault();const button=publicForm.querySelector('[type=submit]');button.disabled=true;
   const data=Object.fromEntries(new FormData(publicForm));
-  data.public_contact_enabled=publicForm.elements.public_contact_enabled.checked?'1':'0';
+  const type=data.public_contact_type||'mobile';
+  const profilePhone=type==='landline'?publicPanel.querySelector('#syContactOfficePreview')?.textContent:'';
+  if(type==='landline'&&(!profilePhone||profilePhone==='شماره ثابت ثبت نشده است')){
+   publicForm.querySelector('#syPublicCompanyStatus').textContent='ابتدا شماره تلفن ثابت شرکت را در بخش اطلاعات شرکت ثبت کنید.';
+   button.disabled=false;return;
+  }
   try{
    await write('/api/v1/agency/public-profile',data,'PUT');
-   publicForm.querySelector('#syPublicCompanyStatus').textContent='اطلاعات انتشار عمومی ذخیره شد.';
-   notify('تنظیمات نمایش عمومی شرکت ذخیره شد.');
+   publicForm.querySelector('#syPublicCompanyStatus').textContent='تنظیمات نمایش شماره تماس ذخیره شد.';
+   notify('شماره تماس انتخابی در نقشه عمومی نمایش داده می‌شود.');
   }catch(error){publicForm.querySelector('#syPublicCompanyStatus').textContent=error.message;}
   finally{button.disabled=false;}
  };
