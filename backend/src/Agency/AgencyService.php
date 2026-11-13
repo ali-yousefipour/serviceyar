@@ -18,9 +18,30 @@ final class AgencyService {
  }
  public static function list(int $userId): array {
   Authorization::requirePermission($userId,'agencies.view');
-  if (Authorization::isSuperAdmin($userId)) return Connection::get()->query('SELECT id,uuid,name,code,city_id,is_active,created_at,updated_at FROM agencies ORDER BY name')->fetchAll();
-  $ids=self::ids($userId); if(!$ids)return [];
-  $in=implode(',',array_fill(0,count($ids),'?')); $s=Connection::get()->prepare("SELECT id,uuid,name,code,city_id,is_active,created_at,updated_at FROM agencies WHERE id IN ($in) ORDER BY name"); $s->execute($ids); return $s->fetchAll();
+  $pdo=Connection::get();
+  $where='';$args=[];
+  if(!Authorization::isSuperAdmin($userId)){
+   $ids=self::ids($userId);if(!$ids)return [];
+   $where=' WHERE a.id IN ('.implode(',',array_fill(0,count($ids),'?')).')';
+   $args=$ids;
+  }
+  $sql="SELECT a.id,a.uuid,a.name,a.code,a.city_id,a.is_active,a.created_at,a.updated_at,
+    (SELECT st.setting_value FROM agency_settings st WHERE st.agency_id=a.id AND st.setting_key='company_manager_name') AS manager_name,
+    (SELECT st.setting_value FROM agency_settings st WHERE st.agency_id=a.id AND st.setting_key='company_ceo_mobile') AS manager_mobile,
+    (SELECT st.setting_value FROM agency_settings st WHERE st.agency_id=a.id AND st.setting_key='company_phone') AS office_phone,
+    (SELECT st.setting_value FROM agency_settings st WHERE st.agency_id=a.id AND st.setting_key='company_address') AS office_address,
+    (SELECT st.setting_value FROM agency_settings st WHERE st.agency_id=a.id AND st.setting_key='company_location') AS location_json
+    FROM agencies a".$where." ORDER BY a.name";
+  $stmt=$pdo->prepare($sql);$stmt->execute($args);
+  $rows=$stmt->fetchAll(\PDO::FETCH_ASSOC);
+  foreach($rows as &$row){
+   $loc=json_decode((string)($row['location_json']??''),true);
+   $row['latitude']=is_array($loc)&&is_numeric($loc['latitude']??null)?(float)$loc['latitude']:null;
+   $row['longitude']=is_array($loc)&&is_numeric($loc['longitude']??null)?(float)$loc['longitude']:null;
+   unset($row['location_json']);
+  }
+  unset($row);
+  return $rows;
  }
  public static function sessionList(int $userId): array {
   // /auth/me must return the caller's own agency scope even when their role
@@ -42,7 +63,15 @@ final class AgencyService {
   if(isset($b['isActive'])&&(int)$b['isActive']!==(int)$old&&!Authorization::isSuperAdmin($userId))throw new \ServiceYar\Auth\AuthException(403,'فقط مدیر کل می‌تواند وضعیت شرکت را تغییر دهد.','FORBIDDEN');
   $name=trim((string)($b['name']??'')); if($name==='') throw new \ServiceYar\Auth\AuthException(422,'نام شرکت الزامی است.','VALIDATION_ERROR');
   $p=Connection::get()->prepare('UPDATE agencies SET name=:n,code=:c,city_id=:city,is_active=:active WHERE id=:id'); $p->execute(['n'=>$name,'c'=>trim((string)($b['code']??''))!==''?$b['code']:null, 'city'=>isset($b['cityId'])&&$b['cityId']!==''?(int)$b['cityId']:null,'active'=>isset($b['isActive'])?(int)$b['isActive']:(int)$old,'id'=>$id]);
-  $s=Connection::get()->prepare('SELECT id,uuid,name,code,city_id,is_active,created_at,updated_at FROM agencies WHERE id=:id'); $s->execute(['id'=>$id]); return $s->fetch() ?: [];
+  $profileKeys=['company_manager_name','company_ceo_mobile','company_phone','company_address'];
+ $profile=[];
+ foreach($profileKeys as $key){if(array_key_exists($key,$b)){$value=trim((string)$b[$key]);if(mb_strlen($value,'UTF-8')>450)throw new \ServiceYar\\Auth\\AuthException(422,'اطلاعات شرکت بیش از حد طولانی است.','VALIDATION_ERROR');$profile[$key]=$value;}}
+ if(array_key_exists('latitude',$b)||array_key_exists('longitude',$b)){
+  if($b['latitude']!==''&&$b['longitude']!==''&&$b['latitude']!==null&&$b['longitude']!==null)
+   $profile['company_location']=\ServiceYar\\Integrations\\Neshan::coordinate($b['latitude'],$b['longitude']);
+ }
+ if($profile)\ServiceYar\\Settings\\SettingsService::put($userId,$id,$profile);
+ $s=Connection::get()->prepare('SELECT id,uuid,name,code,city_id,is_active,created_at,updated_at FROM agencies WHERE id=:id'); $s->execute(['id'=>$id]); return $s->fetch() ?: [];
  }
  public static function create(int $userId,array $b): array {
   Authorization::requirePermission($userId,'agencies.manage'); $name=trim((string)($b['name']??'')); if($name==='') throw new \ServiceYar\Auth\AuthException(422,'نام شرکت الزامی است.','VALIDATION_ERROR');
