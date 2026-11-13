@@ -257,6 +257,8 @@
    const marker=L.marker(position,{icon:publicPin('agency',company.logoUrl),title:company.name});
    marker.on('click',()=>showCompany(company));marker.addTo(publicCompanyMarkers);attachPinFallback(marker);points.push(position);
   });
+  // Restore original behavior: frame all valid company locations, rather than
+  // locking the map to a forced city-center zoom introduced by later patches.
   if(points.length)focusPoints(points);
   publicMapStatus(points.length?faNumber(points.length)+' شرکت دارای مختصات معتبر از '+faNumber(publicCompanies.length)+' شرکت فعال نمایش داده می‌شوند.':'هنوز مختصات معتبری برای شرکت‌ها ثبت نشده است.');
  }
