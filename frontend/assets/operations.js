@@ -1593,7 +1593,7 @@ async function renderPayroll(data,token){
   const q=e.target.value.trim().toLocaleLowerCase('fa');let visible=0;
   result.querySelectorAll('[data-payroll-driver]').forEach(row=>{
    const show=row.dataset.driverName.toLocaleLowerCase('fa').includes(q);row.hidden=!show;
-   if(!show){const detail=result.querySelector('[data-detail-for="'+row.dataset.payrollDriver+'"]');if(detail)detail.hidden=true;}else{const detail=result.querySelector('[data-detail-for="'+row.dataset.payrollDriver+'"]');if(detail&&!detail.hidden)detail.hidden=false;}
+   if(!show){const detail=result.querySelector('[data-detail-for="'+row.dataset.payrollDriver+'"]');if(detail)detail.hidden=true;const checkbox=row.querySelector('input[name="payrollSelected"]');if(checkbox)checkbox.checked=false;}
    if(show)visible++;
   });$('payrollNoDrivers').hidden=visible!==0;total();
  };
