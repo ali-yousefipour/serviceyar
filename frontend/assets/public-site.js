@@ -383,9 +383,11 @@
    const district=form.elements.district.value;
    const distance=form.elements.distanceKm.value.replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
    const vehicleClass=form.elements.vehicleClass.value;
+   const educationLevel=form.elements.educationLevel.value;
+   const annualFactor=educationLevel==='elementary'?8.5:educationLevel==='secondary'?9:null;
    const button=form.querySelector('button[type=submit]');
-   if(!district||!vehicleClass||!Number.isFinite(Number(distance))||Number(distance)<=0){
-    status.textContent='ناحیه، نوع خودرو و مسافت معتبر را وارد کنید.';return;
+   if(!district||!vehicleClass||annualFactor===null||!Number.isFinite(Number(distance))||Number(distance)<=0){
+    status.textContent='ناحیه، مقطع تحصیلی، نوع خودرو و مسافت معتبر را وارد کنید.';return;
    }
    status.textContent='در حال محاسبه تعرفه مصوب…';
    if(button)button.disabled=true;
@@ -394,11 +396,25 @@
     const response=await fetch('/api/v1/public/service-quote?'+params,{credentials:'omit'});
     const body=await response.json();
     if(!response.ok||!body.ok)throw Error(body.error?.message||'محاسبه انجام نشد');
+    const monthlyFee=Number(body.data.monthlyFee);
+    if(!Number.isFinite(monthlyFee)||monthlyFee<0)throw Error('مبلغ ماهانه معتبر از سرور دریافت نشد.');
+    // Keep the approved monthly amount; calculate the educational-year total by selected duration.
+    const annualFee=Math.round(monthlyFee*annualFactor);
     status.replaceChildren();
-    const amount=document.createElement('strong');amount.textContent=faNumber(body.data.monthlyFee)+' ریال';
-    const detail=document.createElement('span');
-    detail.textContent='مبلغ ماهانه · مسافت مبنا: '+faNumber(body.data.distanceAppliedKm)+' کیلومتر · ضریب ترافیک: '+faNumber(body.data.trafficPercent)+'٪';
-    status.append(amount,detail);status.classList.add('sy-quote-success');
+    const figures=document.createElement('div');figures.className='sy-quote-amounts';
+    const monthly=document.createElement('div');monthly.className='sy-quote-amount-card';
+    const monthlyTitle=document.createElement('span');monthlyTitle.textContent='مبلغ ماهیانه';
+    const monthlyValue=document.createElement('strong');monthlyValue.textContent=faNumber(monthlyFee)+' ریال';
+    monthly.append(monthlyTitle,monthlyValue);
+    const annual=document.createElement('div');annual.className='sy-quote-amount-card sy-quote-annual';
+    const annualTitle=document.createElement('span');annualTitle.textContent='مبلغ کامل سال تحصیلی';
+    const annualValue=document.createElement('strong');annualValue.textContent=faNumber(annualFee)+' ریال';
+    const annualNote=document.createElement('small');annualNote.textContent=educationLevel==='elementary'?'ابتدایی · ۸٫۵ ماه':'متوسطه · ۹ ماه';
+    annual.append(annualTitle,annualValue,annualNote);
+    figures.append(monthly,annual);
+    const detail=document.createElement('span');detail.className='sy-quote-details';
+    detail.textContent='مسافت مبنا: '+faNumber(body.data.distanceAppliedKm)+' کیلومتر · ضریب ترافیک: '+faNumber(body.data.trafficPercent)+'٪';
+    status.append(figures,detail);status.classList.add('sy-quote-success');
    }catch(error){status.classList.remove('sy-quote-success');status.textContent=error.message||'خطا در محاسبه مبلغ';}
    finally{if(button)button.disabled=false;}
   });
