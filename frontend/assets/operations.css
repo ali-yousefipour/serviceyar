@@ -1944,3 +1944,61 @@ body.sy-menu-palette-open{overflow:hidden}
 #content .ledger-report-actions button:focus-visible,#content .ledger-filters :is(input,select,button,summary):focus-visible{outline:3px solid #77b896;outline-offset:2px}
 @media(max-width:750px){#content .sy-ledger-report-freshness{margin:0 0 13px;padding:10px 12px}#content .ledger-report-actions{margin-bottom:10px}}
 @media print{body:has(.ledger-print-sheet) .sy-ledger-report-freshness{display:none!important}}
+
+/* Individual driver payroll slip: accounting-grade A4 print */
+.modal:has(.sy-payslip-sheet){width:min(1040px,100%);max-width:1040px}
+.sy-payroll-doc-intro{display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:14px 18px;background:#eff7f1;border:1px solid #d3e5d7;border-radius:12px;margin-bottom:14px}
+.sy-payroll-doc-intro p{margin:0;font-size:13px;color:#23543a;line-height:1.8}
+.sy-payroll-doc-table{max-height:490px;overflow:auto}
+.sy-payroll-doc-table thead th{position:sticky;top:0;z-index:1;background:#eaf4ed}
+.sy-payroll-doc-table button[data-driver-payslip]{min-height:40px;border:1px solid #bad8c5;border-radius:9px;background:#ecf7f0;color:#105b35;font-weight:800;white-space:nowrap;padding:8px 12px}
+.sy-payslip-actions{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap;margin-bottom:20px;padding:13px 16px;background:#f2f8f3;border-radius:12px;border:1px solid #d8e6db}
+.sy-payslip-actions p{flex:1 1 290px;font-size:12px;color:#496454;margin:0;line-height:1.9}
+.sy-payslip-actions button{min-height:44px}
+.sy-payslip-sheet{box-sizing:border-box;width:100%;max-width:900px;margin:auto;padding:28px;border:1px solid #cbd8d0;border-radius:10px;background:white;color:#172c20;font-family:Vazir,Vazirmatn,Tahoma,sans-serif;font-size:12px;line-height:1.9}
+.sy-payslip-header{display:flex;align-items:center;gap:18px;border-bottom:2px solid #24553a;padding:0 0 18px;margin-bottom:17px}
+.sy-payslip-header img{object-fit:contain;flex:none}
+.sy-payslip-header>div{flex:1}
+.sy-payslip-header strong{font-size:13px}
+.sy-payslip-header h2{font-size:21px;line-height:1.5;margin:2px 0;color:#1b5235}
+.sy-payslip-header p{margin:0;color:#557263;font-size:11px}
+.sy-payslip-document-state{border:1px solid #c6d8cb;border-radius:8px;padding:7px 12px;background:#f2f8f3;color:#2e6948;font-size:11px;font-weight:800;white-space:nowrap}
+.sy-payslip-draft,.sy-payslip-discrepancy{padding:10px 14px;border:1px solid #e5c39d;border-radius:7px;background:#fff8e9;color:#855112;font-weight:750;margin:12px 0}
+.sy-payslip-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;border:1px solid #bdcfc2;border-radius:5px;overflow:hidden;margin:0 0 20px}
+.sy-payslip-field{display:flex;gap:8px;align-items:baseline;justify-content:space-between;padding:9px 12px;border-bottom:1px solid #d9e3db;min-width:0}
+.sy-payslip-field:nth-child(odd){border-left:1px solid #d9e3db}
+.sy-payslip-field dt{color:#536a59;font-weight:700;flex:none}
+.sy-payslip-field dd{margin:0;overflow-wrap:anywhere;font-weight:800;text-align:left}
+.sy-payslip-columns{display:grid;grid-template-columns:1fr 1fr;gap:17px;margin:0 0 18px}
+.sy-payslip-columns section{min-width:0}
+.sy-payslip-columns h3,.sy-payslip-settlement h3{font-size:14px;margin:0;padding:9px 12px;color:#164b31;background:#e9f3eb;border:1px solid #bdcfbf}
+.sy-payslip-sheet table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+.sy-payslip-sheet :is(th,td){padding:9px 11px;border:1px solid #bdcfc2;text-align:right;font-size:11px}
+.sy-payslip-sheet td{text-align:left;white-space:nowrap}
+.sy-payslip-sheet thead th{background:#f6f9f6}
+.sy-payslip-sheet tfoot{background:#edf5ef;font-weight:800}
+.sy-payslip-settlement{border:1px solid #bdcfc2;margin-top:14px}
+.sy-payslip-settlement h3{border:0;border-bottom:1px solid #bdcfc2}
+.sy-payslip-settlement>div{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:12px 16px;border-bottom:1px solid #e0e9e2}
+.sy-payslip-settlement strong{font-size:15px;white-space:nowrap}
+.sy-payslip-settlement .sy-payslip-net{background:#e7f3e9;color:#145432;font-weight:850}
+.sy-payslip-settlement .sy-payslip-net strong{font-size:20px}
+.sy-payslip-settlement .sy-payslip-discrepancy{margin:10px 12px}
+.sy-payslip-signatures{display:grid;grid-template-columns:repeat(3,1fr);gap:30px;margin:38px 0 20px;text-align:center}
+.sy-payslip-signatures>div{font-weight:750}
+.sy-payslip-signatures span{display:block;min-height:46px;border-bottom:1px dashed #667d6b}
+.sy-payslip-footnote{text-align:center;font-size:10px;color:#526759;margin:15px 0 0}
+.sy-payslip-actions :is(button):focus-visible,.sy-payroll-doc-table button:focus-visible{outline:3px solid #73b68d;outline-offset:2px}
+@media(max-width:720px){.sy-payslip-sheet{padding:14px}.sy-payslip-header{flex-wrap:wrap}.sy-payslip-document-state{white-space:normal}.sy-payslip-meta,.sy-payslip-columns{grid-template-columns:1fr}.sy-payslip-field:nth-child(odd){border-left:0}.sy-payslip-signatures{gap:10px}.sy-payslip-header h2{font-size:18px}.sy-payslip-settlement .sy-payslip-net strong{font-size:16px}}
+@page sy-driver-payslip{size:A4 portrait;margin:12mm}
+@media print{
+ body:has(.sy-payslip-sheet) .sy-payslip-sheet{page:sy-driver-payslip;display:block!important;max-width:none!important;width:100%!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;break-inside:avoid;color:#000!important;font-size:10px}
+ body:has(.sy-payslip-sheet) :is(.sidebar,.header,.toolbar,.modal-head,.sy-payslip-actions,#closeModal,#sessionFooter){display:none!important}
+ body:has(.sy-payslip-sheet) :is(.main,#content,.panel,#modal,.modal-backdrop,.modal,.modal-body){display:block!important;position:static!important;max-width:none!important;max-height:none!important;width:100%!important;height:auto!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:#fff!important;overflow:visible!important}
+ body:has(.sy-payslip-sheet) .sy-payslip-meta{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ body:has(.sy-payslip-sheet) .sy-payslip-columns{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ body:has(.sy-payslip-sheet) .sy-payslip-header h2{font-size:18px}
+ body:has(.sy-payslip-sheet) .sy-payslip-signatures{break-inside:avoid}
+ body:has(.sy-payslip-sheet) .sy-payslip-sheet :is(h2,h3,thead,tfoot){break-after:avoid}
+ body:has(.sy-payslip-sheet) .sy-payslip-sheet :is(section,table,tr,.sy-payslip-field){break-inside:avoid}
+}
