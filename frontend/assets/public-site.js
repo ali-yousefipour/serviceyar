@@ -149,7 +149,7 @@
    }
    const action=document.createElement('button');action.type='button';action.textContent='انتخاب برای محاسبه';
    action.addEventListener('click',()=>selectPublicSchool(school));popup.append(action);
-   marker.bindPopup(popup);positions.push([school.latitude,school.longitude]);
+   marker.bindPopup(popup);marker.on('click',()=>selectPublicSchool(school));positions.push([school.latitude,school.longitude]);
   });
   if(positions.length)schoolMap.fitBounds(L.latLngBounds(positions).pad(.12),{maxZoom:13});
  }
@@ -161,7 +161,7 @@
    const body=await response.json();
    if(!response.ok||!body.ok)throw Error(body.error?.message||'خطا در دریافت اطلاعات');
    publicSchoolList=body.data.schools||[];
-   if(!term){status.textContent='برای مشاهده فهرست مدارس، حداقل سه حرف از نام مدرسه یا شرکت را وارد کنید.';return;}
+   if(!term){status.textContent='برای مشاهده عکس و موقعیت مدارس، حداقل سه حرف از نام مدرسه یا شرکت را وارد کنید.';return;}
    drawPublicSchools(publicSchoolList);
   }catch(error){status.textContent=error.message||'خطا در دریافت مدارس';}
  }
@@ -285,6 +285,17 @@
     target.scrollIntoView({behavior:animate()?'smooth':'instant',block:'start'});
     setMenu(false);
    }));
+   // Public-page only deterrents; browsers/OS can still capture visible content.
+   document.addEventListener('contextmenu',event=>{
+    if(!root.hidden&&root.contains(event.target))event.preventDefault();
+   });
+   document.addEventListener('keydown',event=>{
+    if(root.hidden||!root.contains(document.activeElement))return;
+    const key=event.key.toLowerCase();
+    if((event.ctrlKey||event.metaKey)&&['s','p','u'].includes(key)){event.preventDefault();event.stopPropagation();}
+   },true);
+   addEventListener('beforeprint',()=>{if(!root.hidden)root.classList.add('sy-print-blocked');});
+   addEventListener('afterprint',()=>root.classList.remove('sy-print-blocked'));
    addEventListener('scroll',scheduleScroll,{passive:true});
    addEventListener('resize',scheduleScroll,{passive:true});
    reduced?.addEventListener?.('change',()=>{setupReveals();updateScroll();});
