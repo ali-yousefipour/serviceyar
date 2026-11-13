@@ -126,7 +126,7 @@ function renderNav(){
    if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'&&session){
     event.preventDefault();
     const input=document.getElementById('syNavSearch'),side=document.querySelector('.sy-command-sidebar');
-    if(side&&matchMedia('(max-width: 960px)').matches){
+    if(side&&matchMedia('(max-width: 920px)').matches){
      side.classList.add('nav-open');
      document.getElementById('navigationShade')?.removeAttribute('hidden');
      document.getElementById('navigationToggle')?.setAttribute('aria-expanded','true');
