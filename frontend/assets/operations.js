@@ -1509,7 +1509,7 @@ async function agencyPaymentMethodSettings(){
 }
 async function settingsPage(){
  const token=pageToken;const setting=await api(scoped('/api/v1/settings'));if(token!==pageToken)return;
- const fields={company_phone:'تلفن شرکت',company_address:'نشانی شرکت',academic_year:'سال تحصیلی',support_phone:'شماره پشتیبانی'};
+ const fields={company_manager_name:'نام مدیر شرکت',company_ceo_mobile:'تلفن همراه مدیر (داخلی)',company_phone:'تلفن دفتر شرکت',company_address:'نشانی دفتر شرکت',academic_year:'سال تحصیلی',support_phone:'شماره پشتیبانی'};
  const saveLogo=async(form)=>{
   const file=form.querySelector('[name=companyLogo]').files?.[0];
   if(!file)throw new Error('ابتدا تصویر لوگو را انتخاب کنید.');
