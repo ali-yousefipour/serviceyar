@@ -2174,3 +2174,47 @@ body.sy-menu-palette-open{overflow:hidden}
  #content .sy-payroll-selection button{width:100%}
 }
 @media print{body:has(.sy-payroll-workspace) .sy-payroll-tabs,body:has(.sy-payroll-workspace) .sy-payroll-selection{display:none!important}}
+
+/* Saved payroll document: condensed driver slips and detailed rows */
+.sy-payroll-doc-detail{min-width:0}
+.sy-payroll-doc-intro{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;border:1px solid #d5e6d9;border-radius:13px;background:#f3faf5;padding:16px 20px;margin-bottom:11px}
+.sy-payroll-doc-intro h3{font-size:19px;color:#1b5b39;margin:4px 0 2px}
+.sy-payroll-doc-intro p{color:#577361;font-size:12px;margin:0;line-height:1.8}
+.sy-payroll-doc-guide{font-size:12px;color:#556e5d;line-height:1.9;margin:10px 0}
+.sy-payroll-doc-search{display:grid;gap:6px;max-width:360px;font-size:12px;color:#345a40;font-weight:750;margin:14px 0}
+.sy-payroll-doc-search input{width:100%;box-sizing:border-box;min-height:44px;border-radius:10px;border:1px solid #c7ddcd;padding:9px 12px;background:white}
+.sy-payroll-detail-table-wrap{max-height:510px;overflow:auto;border:1px solid #dae8df;border-radius:12px}
+.sy-payroll-detail-table{min-width:850px;width:100%;border-collapse:collapse}
+.sy-payroll-detail-table th{position:sticky;top:0;z-index:2;background:#edf6ef;font-size:12px;font-weight:800;color:#285a3e;text-align:right;padding:12px 9px}
+.sy-payroll-detail-table td{padding:10px;border-bottom:1px solid #e9f0e9;vertical-align:middle;font-size:12px}
+.sy-payroll-detail-table td strong{color:#1e5138}
+.sy-payroll-detail-table td input[data-doc-salary]{width:145px;max-width:100%;min-height:42px;padding:9px;border:1px solid #cbdcd0;border-radius:9px;direction:ltr;text-align:right;box-sizing:border-box}
+.sy-payroll-detail-table td button{min-height:39px;padding:7px 9px;margin:3px;border-radius:9px;font-size:11px}
+.sy-payroll-detail-table tr[data-doc-driver][hidden],.sy-payroll-detail-table tr[data-doc-details][hidden]{display:none!important}
+.sy-payroll-detail-table .sy-payroll-detail-row td{background:#f7faf8}
+.sy-payroll-doc-save{position:sticky;bottom:0;display:flex;justify-content:flex-end;padding:14px 0;background:linear-gradient(0deg,#fff 85%,transparent)}
+.sy-payroll-doc-detail :is(input,button,.sy-payroll-detail-table-wrap):focus-visible{outline:3px solid #80b995;outline-offset:2px}
+.sy-payslip-print-window{margin:0;background:#fff;color:#152a1d}
+.sy-payslip-print-window>.sy-payslip-sheet{max-width:900px;margin:18px auto}
+@media(max-width:720px){
+ .sy-payroll-doc-intro{padding:12px}
+ .sy-payroll-detail-table-wrap{overflow:visible;max-height:none;border:0}
+ .sy-payroll-detail-table{display:block;min-width:0}
+ .sy-payroll-detail-table thead{position:absolute;clip:rect(0,0,0,0);width:1px;height:1px;overflow:hidden;white-space:nowrap}
+ .sy-payroll-detail-table tbody{display:grid;gap:12px}
+ .sy-payroll-detail-table tr[data-doc-driver]{display:grid;gap:6px;padding:13px;border:1px solid #d9e7dd;border-radius:12px;background:#fff}
+ .sy-payroll-detail-table tr[data-doc-driver] td{display:flex;justify-content:space-between;align-items:center;gap:10px;border:0;padding:4px 0;min-width:0}
+ .sy-payroll-detail-table tr[data-doc-driver] td::before{content:attr(data-label);flex:0 0 28%;color:#627a69;font-size:11px;font-weight:750}
+ .sy-payroll-detail-table tr[data-doc-driver] td input{flex:1;min-width:0}
+ .sy-payroll-detail-table tr[data-doc-driver] td:last-child{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .sy-payroll-detail-table tr[data-doc-driver] td:last-child::before{display:none}
+ .sy-payroll-detail-table tr[data-doc-driver] td:last-child button{white-space:normal}
+ .sy-payroll-detail-table .sy-payroll-detail-row{display:block}
+ .sy-payroll-doc-save button{width:100%;min-height:45px}
+}
+@media print{
+ .sy-payslip-print-window>.sy-payslip-sheet{margin:0!important;width:100%!important;max-width:none!important;padding:0!important;border:0!important;box-shadow:none!important}
+ .sy-payslip-print-window .sy-payslip-columns{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ .sy-payslip-print-window .sy-payslip-meta{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ .sy-payslip-print-window :is(.sy-payslip-header,.sy-payslip-signatures){break-inside:avoid}
+}
