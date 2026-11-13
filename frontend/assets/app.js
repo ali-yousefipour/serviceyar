@@ -149,6 +149,12 @@ async function companiesPage(){
    tr.dataset.status=Number(agency.is_active)===1?'active':'inactive';
    tr.dataset.query=[agency.name,agency.code,agency.manager_name,agency.office_phone,agency.office_address].join(' ').replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').toLowerCase();
    if(tr.cells[0])tr.cells[0].textContent=fa(agency.id);
+   for(const cell of [...tr.cells].slice(1,8)){
+    if(!cell)continue;
+    const walker=document.createTreeWalker(cell,NodeFilter.SHOW_TEXT);
+    while(walker.nextNode())walker.currentNode.nodeValue=walker.currentNode.nodeValue.replace(/[0-9]/g,d=>'۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
+   }
+
    if(tr.dataset.status==='inactive'){
     const button=document.createElement('button');button.type='button';button.className='sy-agency-activate';button.textContent='فعال‌سازی مجدد';
     tr.lastElementChild?.append(button);
