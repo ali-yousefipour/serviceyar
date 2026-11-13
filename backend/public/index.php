@@ -251,6 +251,7 @@ try {
   $users=$pdo->query('SELECT u.id,u.username,u.first_name,u.last_name,u.is_active,u.last_login_at,GROUP_CONCAT(DISTINCT r.title ORDER BY r.id SEPARATOR ", ") roles,GROUP_CONCAT(DISTINCT a.name ORDER BY a.name SEPARATOR ", ") agencies FROM users u LEFT JOIN user_roles ur ON ur.user_id=u.id LEFT JOIN roles r ON r.id=ur.role_id LEFT JOIN agency_users au ON au.user_id=u.id LEFT JOIN agencies a ON a.id=au.agency_id GROUP BY u.id ORDER BY u.id DESC LIMIT 100')->fetchAll();
   Response::json(['ok'=>true,'data'=>['counts'=>$counts,'roles'=>$roles,'permissions'=>$permissions,'agencies'=>AgencyService::list($s['id']),'users'=>$users]]);
  }
+ if($method==='PUT'&&$path==='/api/v1/auth/profile'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>UserService::updateOwnProfile($s['id'],Request::json())]);}
  if($method==='POST'&&$path==='/api/v1/auth/password'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>UserService::changePassword($s['id'],0,$s['id'],Request::json())]);}
  if(preg_match('#^/api/v1/admin/users(?:/(\d+)(?:/(password))?)?$#',$path,$m)){
   if(!Authorization::isSuperAdmin($s['id']))throw new AuthException(403,'فقط مدیر کل مجاز است.','FORBIDDEN');
