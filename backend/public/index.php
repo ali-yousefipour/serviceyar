@@ -354,7 +354,13 @@ try {
      throw new AuthException(422,'شماره همراه معتبر نیست.','VALIDATION_ERROR');
    }
    $body['public_contact_type']=$type;
-   $pdo=Connection::get();$q=$pdo->prepare('INSERT INTO agency_settings(agency_id,setting_key,setting_value) VALUES(?,?,?)
+   $pdo=Connection::get();
+   if($type==='landline'){
+    $phone=$pdo->prepare("SELECT setting_value FROM agency_settings WHERE agency_id=? AND setting_key IN ('company_office_phone','company_phone') AND TRIM(COALESCE(setting_value,''))<>'' ORDER BY (setting_key='company_office_phone') DESC LIMIT 1");
+    $phone->execute([$aid]);
+    if(!$phone->fetchColumn())throw new AuthException(422,'برای نمایش تلفن ثابت ابتدا شماره دفتر شرکت را در تنظیمات ثبت کنید.','OFFICE_PHONE_REQUIRED');
+   }
+   $q=$pdo->prepare('INSERT INTO agency_settings(agency_id,setting_key,setting_value) VALUES(?,?,?)
      ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)');
    foreach($body as $key=>$raw)$q->execute([$aid,$key,trim($raw)]);
    Response::json(['ok'=>true,'data'=>['updated'=>true,'contactType'=>$type]]);
