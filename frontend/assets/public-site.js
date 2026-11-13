@@ -134,13 +134,25 @@
   const details=document.getElementById('syPublicDetails');
   heading.textContent=title;details.replaceChildren();
   const visual=document.getElementById('syPublicModalVisual');visual.replaceChildren();
+  const isSchool=fallbackUrl===DEFAULT_SCHOOL_IMAGE;
+  const hasOriginal=Boolean(imageUrl);
+  const useDefault=()=>{
+   visual.classList.add('sy-public-default-art');
+   visual.classList.remove('sy-school-photo-frame','sy-public-watermarked-photo','sy-photo-portrait','sy-photo-landscape','sy-photo-square');
+   visual.style.removeProperty('--sy-school-aspect');
+  };
+  visual.classList.toggle('sy-school-photo-frame',isSchool&&hasOriginal);
+  visual.classList.toggle('sy-public-watermarked-photo',isSchool&&hasOriginal);
+  visual.classList.toggle('sy-public-default-art',!hasOriginal);
   const img=document.createElement('img');
-  img.src=imageUrl||fallbackUrl;img.alt=title;img.loading='lazy';
-  visual.classList.toggle('sy-school-photo-frame',fallbackUrl===DEFAULT_SCHOOL_IMAGE&&!!imageUrl);
-  img.addEventListener('load',()=>adjustSchoolPhotoFrame(img));
+  img.src=imageUrl||fallbackUrl;img.alt=title;img.loading='lazy';img.decoding='async';
+  img.addEventListener('load',()=>{
+   if(img.getAttribute('src')===fallbackUrl){useDefault();return;}
+   if(isSchool)adjustSchoolPhotoFrame(img);
+  });
   img.addEventListener('error',()=>{
-   if(img.src.endsWith(fallbackUrl)){img.remove();visual.textContent='تصویر در دسترس نیست';}
-   else img.src=fallbackUrl;
+   if(img.getAttribute('src')===fallbackUrl){img.remove();visual.textContent='تصویر در دسترس نیست';}
+   else{useDefault();img.src=fallbackUrl;}
   });
   visual.append(img);
   for(const [key,value] of items){
