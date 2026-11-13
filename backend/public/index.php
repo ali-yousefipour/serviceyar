@@ -33,7 +33,7 @@ try {
    }
    header('Cache-Control: public, max-age=120');
    Response::json(['ok'=>true,'data'=>['counts'=>$counts]]);
-  }catch(\\Throwable $e){
+  }catch(\Throwable $e){
    error_log('[ServiceYar][public-overview] aggregate query failed: '.$e->getMessage());
    Response::json(['ok'=>false,'error'=>['code'=>'PUBLIC_STATS_UNAVAILABLE','message'=>'آمار عمومی موقتاً در دسترس نیست.']],503);
   }
