@@ -2590,3 +2590,51 @@ body.sy-menu-palette-open{overflow:hidden}
 #dashboardSchoolMap .leaflet-marker-icon.sy-map-company.sy-company-default-photo.sy-marker-fallback .sy-map-marker-symbol{
  display:flex!important;
 }
+
+
+/* School images keep their natural portrait/landscape proportions instead of cropping. */
+.sy-school-photo-name img{
+ box-sizing:border-box!important;
+ width:clamp(35px,calc(50px * var(--sy-school-aspect,1)),75px)!important;
+ height:50px!important;max-height:50px!important;
+ max-width:75px!important;object-fit:contain!important;
+ background:#f6faf7!important;flex:0 0 auto!important;
+}
+.sy-school-details-cover:has(.sy-school-details-image){
+ box-sizing:border-box!important;align-self:center!important;
+ width:min(100%,calc(320px * var(--sy-school-aspect,1)))!important;
+ max-width:100%!important;height:auto!important;
+ min-height:0!important;max-height:330px!important;
+ aspect-ratio:var(--sy-school-aspect,1)!important;
+ background:#f5faf7!important;
+}
+.sy-school-details-cover .sy-school-details-image{
+ display:block!important;width:100%!important;height:100%!important;
+ min-height:0!important;max-height:330px!important;
+ object-fit:contain!important;object-position:center!important;
+}
+.sy-school-photo-editor-preview:has(img){
+ width:clamp(75px,calc(142px * var(--sy-school-aspect,1)),190px)!important;
+ min-width:75px!important;max-width:190px!important;
+ height:142px!important;max-height:142px!important;
+ flex:0 0 auto!important;box-sizing:border-box!important;
+}
+.sy-school-photo-editor-preview img{
+ width:100%!important;height:100%!important;
+ min-width:0!important;max-width:100%!important;
+ object-fit:contain!important;object-position:center!important;
+}
+/* Keep Leaflet anchors fixed; change only the visible photograph inside the school marker. */
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-school:not(.sy-school-default-photo):not(.sy-marker-fallback) .sy-map-marker-photo{
+ object-fit:contain!important;object-position:center!important;
+}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-school.sy-photo-portrait:not(.sy-school-default-photo) .sy-map-marker-photo{
+ width:34px!important;max-width:34px!important;height:46px!important;max-height:46px!important;
+}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-school.sy-photo-landscape:not(.sy-school-default-photo) .sy-map-marker-photo{
+ width:46px!important;max-width:46px!important;height:34px!important;max-height:34px!important;
+}
+@media(max-width:650px){
+ .sy-school-photo-editor-preview:has(img){width:min(100%,calc(210px * var(--sy-school-aspect,1)))!important;max-width:100%!important;height:180px!important}
+ .sy-school-details-cover:has(.sy-school-details-image){width:min(100%,calc(290px * var(--sy-school-aspect,1)))!important;max-height:290px!important}
+}
