@@ -112,14 +112,17 @@ final class PublicExplorer {
  }
  public static function countSchools(): int {
   $pdo=Connection::get();
-  $registered=(int)$pdo->query("SELECT COUNT(DISTINCT COALESCE(NULLIF(code,''),CONCAT(name,'|',COALESCE(region,''))))
-    FROM schools WHERE is_active=1")->fetchColumn();
+  // Every registered school is counted, including inactive ones. Use a stable
+  // school identity so a record present in both sources is counted only once.
+  $registered=(int)$pdo->query("SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(code),''),CONCAT(TRIM(name),'|',COALESCE(TRIM(region),''))))
+    FROM schools")->fetchColumn();
   try{
-   // Count unique education codes in catalog that do not already exist in registered schools.
-   $catalog=(int)$pdo->query("SELECT COUNT(*) FROM school_catalog c WHERE NOT EXISTS
-     (SELECT 1 FROM schools s WHERE s.is_active=1 AND
-      ((s.code IS NOT NULL AND s.code<>'' AND s.code=c.education_code)
-       OR (s.name=c.name AND COALESCE(s.region,'')=COALESCE(c.region,''))))")->fetchColumn();
+   $catalog=(int)$pdo->query("SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(c.education_code),''),CONCAT(TRIM(c.name),'|',COALESCE(TRIM(c.region),''))))
+     FROM school_catalog c WHERE NOT EXISTS (
+      SELECT 1 FROM schools s WHERE
+       (s.code IS NOT NULL AND TRIM(s.code)<>'' AND TRIM(s.code)=TRIM(c.education_code))
+       OR (TRIM(s.name)=TRIM(c.name) AND COALESCE(TRIM(s.region),'')=COALESCE(TRIM(c.region),''))
+     )")->fetchColumn();
    return $registered+$catalog;
   }catch(\PDOException $e){
    if($e->getCode()==='42S02'||(int)($e->errorInfo[1]??0)===1146)return $registered;
