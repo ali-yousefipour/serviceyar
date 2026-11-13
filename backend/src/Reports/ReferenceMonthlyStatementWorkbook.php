@@ -53,7 +53,7 @@ final class ReferenceMonthlyStatementWorkbook
             }
             // Data ranges are expanded at export time. Excel's physical sheet
             // limit (1,048,576 rows) remains the only hard row ceiling.
-            return ['valid'=>true,'max_student_rows'=>1048569,'max_driver_rows'=>1048560];
+            return ['valid'=>true,'max_student_rows'=>1048569,'max_driver_rows'=>1048559];
         }finally{$zip->close();}
     }
 
@@ -410,7 +410,7 @@ final class ReferenceMonthlyStatementWorkbook
         // business-sized months, retaining room for headers and the driver
         // statement's moved footer. This replaces the historical 630/122 cap.
         return count($d['items']??[])<=1048569
-            && count($d['reference_drivers']??$d['drivers']??[])<=1048560;
+            && count($d['reference_drivers']??$d['drivers']??[])<=1048559;
     }
 
     public static function downloadIfAvailable(array $d,string $agency,int $statementId,bool $preview=false): bool
