@@ -39,7 +39,11 @@ final class PlatformSettings
         $pdo=Connection::get();
         // Shared-hosting releases can precede SQL migration deployment.
         // Only super admins reach this write path; create the fixed platform table if missing.
-        $pdo->exec("CREATE TABLE IF NOT EXISTS platform_settings (setting_key VARCHAR(150) NOT NULL PRIMARY KEY, setting_value TEXT NOT NULL, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        try{
+            $pdo->exec("CREATE TABLE IF NOT EXISTS platform_settings (setting_key VARCHAR(150) NOT NULL PRIMARY KEY, setting_value TEXT NOT NULL, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        }catch(\PDOException $e){
+            throw new AuthException(503,'جدول تنظیمات سامانه آماده نیست؛ مهاجرت 0032 را با دسترسی دیتابیس اجرا کنید.','PLATFORM_SETTINGS_MIGRATION_REQUIRED');
+        }
         foreach($payload as $key=>$value){
             if(!is_string($value))throw new AuthException(422,'کلید سرویس معتبر نیست.','VALIDATION_ERROR');
             if($value==='')continue;
