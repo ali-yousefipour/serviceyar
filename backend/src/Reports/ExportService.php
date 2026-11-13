@@ -130,12 +130,12 @@ final class ExportService
         $report=ReportService::ledger($uid,$aid,$filter,true);
         $rows=[];
         $type=['student'=>'دانش‌آموز','driver'=>'راننده','school'=>'مدرسه','agency'=>'شرکت'];
-        $methods=['cash'=>'نقدی','card'=>'کارتخوان','bank'=>'انتقال بانکی','transfer'=>'حواله','cheque'=>'چک','wallet'=>'کیف پول'];
+        $methods=['cash'=>'نقدی','card'=>'کارت به کارت','bank'=>'پایا','transfer'=>'ساتنا','cheque'=>'چک','wallet'=>'کیف پول'];foreach(\ServiceYar\Domain\AgencyPaymentMethods::forAgency($aid) as $method)$methods[$method['code']]=$method['name'];
         foreach($report['items'] as $i=>$row){
-            $rows[]=['n'=>$i+1,'date'=>$row['entry_date'],'direction'=>$row['direction']==='receipt'?'دریافت':'پرداخت','party'=>(string)($row['party_name']??''),'type'=>$type[$row['party_type']]??$row['party_type'],'receipt'=>$row['direction']==='receipt'?(float)$row['amount']:0,'payment'=>$row['direction']==='payment'?(float)$row['amount']:0,'method'=>$methods[$row['method']??'']??(string)($row['method']??''),'reference'=>(string)($row['reference_no']??''),'note'=>(string)($row['note']??''),'status'=>(int)$row['is_active']===1?'فعال':'غیرفعال'];
+            $rows[]=['n'=>$i+1,'date'=>$row['entry_date'],'direction'=>$row['direction']==='receipt'?'دریافت':'پرداخت','party'=>(string)($row['party_name']??''),'type'=>$type[$row['party_type']]??$row['party_type'],'receipt'=>$row['direction']==='receipt'?(float)$row['amount']:0,'payment'=>$row['direction']==='payment'?(float)$row['amount']:0,'method'=>$methods[$row['method']??'']??(string)($row['method']??''),'company_account'=>(string)($row['company_account_name']??'حساب قدیمی نامشخص'),'reference'=>(string)($row['reference_no']??''),'note'=>(string)($row['note']??''),'status'=>(int)$row['is_active']===1?'فعال':'غیرفعال'];
         }
         $rows[]=['n'=>'جمع کل','receipt'=>$report['totals']['receipts'],'payment'=>$report['totals']['payments'],'note'=>'خالص: '.number_format($report['totals']['balance']).' ریال'];
-        self::downloadRows(['n'=>'ردیف','date'=>'تاریخ','direction'=>'نوع عملیات','party'=>'نام دریافت‌کننده / پرداخت‌کننده','type'=>'طرف حساب','receipt'=>'دریافت (ریال)','payment'=>'پرداخت (ریال)','method'=>'روش پرداخت','reference'=>'شماره پیگیری','note'=>'توضیحات','status'=>'وضعیت سند'],$rows,'serviceyar-ledger-report.xlsx',true);
+        self::downloadRows(['n'=>'ردیف','date'=>'تاریخ','direction'=>'نوع عملیات','party'=>'نام دریافت‌کننده / پرداخت‌کننده','type'=>'طرف حساب','receipt'=>'دریافت (ریال)','payment'=>'پرداخت (ریال)','method'=>'روش دریافت / پرداخت','company_account'=>'حساب شرکت (مبدأ / مقصد)','reference'=>'شماره پیگیری','note'=>'توضیحات','status'=>'وضعیت سند'],$rows,'serviceyar-ledger-report.xlsx',true);
     }
 
     public static function accountStatement(int $uid,int $aid,array $filter): never
