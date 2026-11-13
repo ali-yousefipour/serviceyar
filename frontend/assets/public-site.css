@@ -719,9 +719,9 @@
  position:static!important;
  display:block!important;
  box-sizing:border-box!important;
- width:108px!important;height:108px!important;
+ width:184px!important;height:184px!important;
  min-width:0!important;min-height:0!important;
- max-width:108px!important;max-height:108px!important;
+ max-width:184px!important;max-height:184px!important;
  object-fit:contain!important;object-position:center!important;
  margin:auto!important;padding:0!important;
  border:0!important;border-radius:0!important;
@@ -752,7 +752,7 @@
   padding:20px!important;
  }
  #syPublicSchools .sy-public-modal-visual.sy-public-default-art img{
-  width:100px!important;height:100px!important;
-  max-width:100px!important;max-height:100px!important;
+  width:140px!important;height:140px!important;
+  max-width:140px!important;max-height:140px!important;
  }
 }
