@@ -44,6 +44,7 @@ jobs:
           php tests/monthly-statement-preview-digest.php
           php tests/monthly-statement-installed-template.php
           php tests/inspect-reference-structure.php
+          # Validate normalized UTF-8 table headers against worksheet headers.
           php tests/monthly-statement-render-smoke.php render > /tmp/serviceyar-statement-reference-test.xlsx
           php tests/monthly-statement-render-smoke.php verify /tmp/serviceyar-statement-reference-test.xlsx
           rm /tmp/serviceyar-statement-reference-test.xlsx
