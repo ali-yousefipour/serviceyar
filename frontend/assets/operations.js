@@ -101,8 +101,11 @@ const dateText=v=>{if(!v)return '—';const raw=String(v).slice(0,10);if(/^1[34]
 const person=r=>[r.first_name||r.firstName,r.last_name||r.lastName].filter(Boolean).join(' ')||r.name||r.title||r.plate||r.code||('#'+r.id);
 function notify(message,error=false){let box=$('notice');if(!box){box=document.createElement('div');box.id='notice';box.setAttribute('role','status');document.body.append(box);}box.textContent=message;box.className=error?'notice error':'notice';clearTimeout(notify.timer);notify.timer=setTimeout(()=>box.remove(),6500);}
 function renderNav(){
- document.querySelector('.eyebrow').innerHTML='<img class="site-wordmark" src="/assets/logo.png" alt="سرویس یار">';
- if(!$('ownPassword')){const b=document.createElement('button');b.id='ownPassword';b.type='button';b.className='account-password';b.textContent='تغییر رمز من';b.onclick=()=>passwordDialog({id:session.user.id,username:session.user.username},false,true);document.querySelector('.header-actions').append(b);}
+ const accountMenu=document.getElementById('syAccountMenu');
+ const ownPassword=document.getElementById('ownPassword');
+ if(ownPassword)ownPassword.onclick=()=>{if(accountMenu)accountMenu.open=false;passwordDialog({id:session.user.id,username:session.user.username},false,true);};
+ const editProfile=document.getElementById('syEditProfile');
+ if(editProfile)editProfile.onclick=()=>{if(accountMenu)accountMenu.open=false;ownProfileDialog();};
  if(!$('navigationToggle')){const button=document.createElement('button');button.id='navigationToggle';button.type='button';button.innerHTML='<span aria-hidden="true">☰</span>';button.setAttribute('aria-label','باز کردن منوی اصلی');button.setAttribute('aria-expanded','false');document.querySelector('.header').prepend(button);const shade=document.createElement('button');shade.id='navigationShade';shade.type='button';shade.setAttribute('aria-label','بستن منوی اصلی');shade.hidden=true;document.querySelector('#app').append(shade);const toggle=open=>{document.querySelector('.sidebar').classList.toggle('nav-open',open);shade.hidden=!open;button.setAttribute('aria-expanded',String(open));};button.onclick=()=>toggle(button.getAttribute('aria-expanded')!=='true');shade.onclick=()=>toggle(false);document.addEventListener('keydown',e=>{if(e.key==='Escape'&&button.getAttribute('aria-expanded')==='true'){toggle(false);$('nav').querySelectorAll('details').forEach(d=>d.open=false);button.focus();}});}
  // Desktop compact rail: persisted per browser, independent from the mobile drawer.
  const sidebar=document.querySelector('.sy-command-sidebar');
@@ -202,7 +205,13 @@ function renderNav(){
   side.setAttribute('aria-label','منوی اصلی سرویس‌یار');
   const brand=side.querySelector('.sy-sidebar-brand-copy small');
   if(brand)brand.textContent=currentAgency?.name||'مدیریت یکپارچه سرویس مدارس';
-  const sideName=side.querySelector('.sy-sidebar-support strong');
+  const displayName=[session?.user?.firstName,session?.user?.lastName].filter(Boolean).join(' ')||session?.user?.username||'کاربر سامانه';
+  const sideName=document.getElementById('syAccountName');
+  if(sideName)sideName.textContent=displayName;
+  const avatar=document.getElementById('syAccountAvatar');
+  if(avatar)avatar.textContent=displayName.charAt(0);
+  const role=document.getElementById('syAccountRole');
+  if(role)role.textContent=(session?.roles||[]).includes('super_admin')?'مدیر کل سامانه':(session?.roles||[]).includes('agency_admin')?'مدیر شرکت':'حساب کاربری';
   if(sideName)sideName.textContent=[session?.user?.firstName,session?.user?.lastName].filter(Boolean).join(' ')||session?.user?.username||'کاربر سامانه';
   side.querySelector('#nav')?.addEventListener('click',event=>{
    if(event.target.closest('a[href^="#"]'))side.classList.remove('nav-open');
@@ -211,7 +220,7 @@ function renderNav(){
  document.querySelector('.logo').title='سرویس‌یار';document.querySelector('.main').classList.add('transport-main');
  if(!$('sessionFooter')){const footer=document.createElement('footer');footer.id='sessionFooter';document.querySelector('.main').append(footer);}
  $('sessionFooter').textContent='سال تحصیلی '+year()+' • '+(currentAgency?.name||'مدیریت سامانه')+' • '+(session?.user?.firstName||session?.user?.username||'')+' • '+new Intl.DateTimeFormat('fa-IR',{dateStyle:'full',timeZone:'Asia/Tehran'}).format(new Date());
- $('userName').textContent=[session?.user?.firstName,session?.user?.lastName].filter(Boolean).join(' ')||session?.user?.username||'';
+
 }
 function render(){
  if(!session)return;if(!document.getElementById('syMenuPalette')?.hidden)document.querySelector('#syMenuPalette [data-menu-close]')?.click();if($('modal')?.firstElementChild)closeDialog();disposeMaps();$('dashboardBackdrop')?.remove();const token=++pageToken;const [raw,action,recordId]=location.hash.slice(1).split('/');let key=raw||'dashboard';if(key==='admin')key='companies';if(!titles[key])key='dashboard';
@@ -1591,6 +1600,21 @@ function financeInputFields(prefix='quote'){
 function userManagementTable(box,rows,global){
  const manage=global||can('users','manage');box.innerHTML=`${!global&&manage?'<button data-new-user>کاربر جدید</button>':''}<div class="table-wrap"><table><thead><tr><th>نام کاربری</th><th>نام</th><th>نقش</th><th>وضعیت</th><th>عملیات</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.username)}</td><td>${esc(person(r))}</td><td>${esc(r.roles||r.role_names)}</td><td>${Number(r.is_active)?'فعال':'غیرفعال'}</td><td>${manage?`<button data-edit-user="${r.id}">ویرایش</button><button data-user-password="${r.id}">تغییر رمز</button>`:''}</td></tr>`).join('')}</tbody></table></div>`;
  box.querySelector('[data-new-user]')?.addEventListener('click',()=>userEditor(null,false));box.querySelectorAll('[data-edit-user]').forEach(b=>b.onclick=()=>userEditor(rows.find(r=>String(r.id)===b.dataset.editUser),global));box.querySelectorAll('[data-user-password]').forEach(b=>b.onclick=()=>passwordDialog(rows.find(r=>String(r.id)===b.dataset.userPassword),global));
+}
+function ownProfileDialog(){
+ const self=session?.user||{};
+ dialog('ویرایش پروفایل من',`<form id="syOwnProfileForm" class="sy-own-profile-form"><p class="muted">اطلاعات حساب کاربری شما</p><label>نام کاربری<input value="${esc(self.username)}" disabled autocomplete="username"></label><div class="form-grid"><label>نام<input name="firstName" maxlength="100" value="${esc(self.firstName||'')}" required></label><label>نام خانوادگی<input name="lastName" maxlength="120" value="${esc(self.lastName||'')}"></label></div><button class="primary" type="submit">ذخیره تغییرات</button></form>`);
+ const form=document.getElementById('syOwnProfileForm');
+ if(!form)return;
+ form.onsubmit=async event=>{
+  event.preventDefault();
+  const button=form.querySelector('[type="submit"]');button.disabled=true;
+  try{
+   const data=await write('/api/v1/auth/profile',{firstName:form.elements.firstName.value.trim(),lastName:form.elements.lastName.value.trim()},'PUT');
+   session.user.firstName=data.firstName;session.user.lastName=data.lastName;
+   closeDialog();renderNav();notify('اطلاعات پروفایل با موفقیت ذخیره شد.');
+  }catch(error){const box=document.getElementById('formError');if(box){box.textContent=error.message;box.hidden=false;}button.disabled=false;}
+ };
 }
 function passwordDialog(row,global=false,self=Number(row.id)===Number(session.user.id)){
  dialog('تغییر رمز '+row.username,`<form id="changePasswordForm"><p class="muted">پس از تغییر رمز، همه نشست‌های قبلی این کاربر بسته می‌شوند.</p>${self?'<label>رمز فعلی<input name="currentPassword" type="password" autocomplete="current-password" required></label>':''}<label>رمز جدید<input name="password" type="password" autocomplete="new-password" minlength="8" maxlength="72" required></label><label>تکرار رمز جدید<input name="passwordConfirmation" type="password" autocomplete="new-password" minlength="8" maxlength="72" required></label><button class="primary">ذخیره رمز جدید</button></form>`);
