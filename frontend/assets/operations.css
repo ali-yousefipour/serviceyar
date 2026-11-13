@@ -2332,3 +2332,23 @@ body.sy-menu-palette-open{overflow:hidden}
 .dashboard-school-map .sy-map-company .sy-map-marker-bubble:after{background:#0b985b}
 .dashboard-map-panel .dashboard-school-map{border-radius:19px;overflow:hidden}
 @media(max-width:640px){.dashboard-school-map .sy-map-marker-bubble{box-shadow:0 3px 12px #173d2e38}}
+
+
+/* Vehicle editor — compact true-to-form Iranian license plate */
+.sy-vehicle-edit-form .sy-vehicle-plate-editor{grid-column:1/-1;min-width:0;margin:0;border:1px solid #cce2d6;border-radius:16px;background:linear-gradient(110deg,#f4fbf7,#fff);padding:16px}
+.sy-vehicle-plate-editor legend{font-size:13px;font-weight:800;color:#15553e;padding:0 8px}
+.sy-plate-edit-layout{display:flex;direction:ltr;justify-content:center;align-items:stretch;margin:auto;width:max-content;max-width:100%;min-height:68px;overflow:hidden;border:2px solid #1b272b;border-radius:9px;background:#fff;box-shadow:0 8px 22px #1a4e3320}
+.sy-plate-edit-layout input,.sy-plate-edit-layout select{min-width:0!important;height:64px!important;line-height:1.5!important;font-size:clamp(16px,2.3vw,23px)!important;font-weight:850!important;text-align:center!important;color:#17292a!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:0 4px!important;direction:ltr;font-family:Vazirmatn,Tahoma,sans-serif}
+.sy-plate-edit-layout input:focus,.sy-plate-edit-layout select:focus{outline:3px solid #0b9564!important;outline-offset:-3px}
+.sy-plate-edit-layout [data-plate-first]{width:64px}
+.sy-plate-edit-layout [data-plate-middle]{width:82px}
+.sy-plate-edit-layout [data-plate-letter]{width:75px;cursor:pointer;appearance:auto}
+.sy-plate-edit-region{display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:2px solid #20272a;width:70px;padding:3px 4px}
+.sy-plate-edit-region>span{font-size:11px;font-weight:700;color:#26332e}
+.sy-plate-edit-region input{width:58px;height:35px!important}
+.sy-plate-edit-flag{display:grid;justify-items:center;align-content:center;gap:0;min-width:43px;background:#164989;color:#fff;font-size:19px}
+.sy-plate-edit-flag small{font:700 10px sans-serif}
+.sy-plate-edit-help{font-size:12px;line-height:1.8;color:#5f786c;margin:10px 0 0;text-align:center}
+.sy-plate-invalid .sy-plate-edit-help{color:#b45309}
+.sy-vehicle-owner-hint{display:block;margin-top:7px;color:#6c8178;line-height:1.8;font-size:11px}
+@media(max-width:530px){.sy-vehicle-edit-form .sy-vehicle-plate-editor{padding:11px 7px}.sy-plate-edit-layout [data-plate-first]{width:48px}.sy-plate-edit-layout [data-plate-middle]{width:65px}.sy-plate-edit-layout [data-plate-letter]{width:57px}.sy-plate-edit-region{width:57px}.sy-plate-edit-region input{width:48px}.sy-plate-edit-flag{min-width:29px}.sy-plate-edit-layout input,.sy-plate-edit-layout select{font-size:17px!important}}
