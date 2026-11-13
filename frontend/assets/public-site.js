@@ -134,6 +134,8 @@
   const details=document.getElementById('syPublicDetails');
   heading.textContent=title;details.replaceChildren();
   const visual=document.getElementById('syPublicModalVisual');visual.replaceChildren();
+  visual.classList.remove('sy-photo-portrait','sy-photo-landscape','sy-photo-square');
+  visual.style.removeProperty('--sy-school-aspect');
   const isSchool=fallbackUrl===DEFAULT_SCHOOL_IMAGE;
   const hasOriginal=Boolean(imageUrl);
   const useDefault=()=>{
