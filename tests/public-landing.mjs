@@ -54,7 +54,7 @@ const watermarkSource=read('backend/public/index.php');
 assert.ok(watermarkSource.includes("$watermark='service-yar.ir'")&&!watermarkSource.includes('ServiceYar | challi.ir'),'Public photos should have the new watermarked domain');
 assert.ok(!watermarkSource.includes('imagefilledrectangle($canvas,0,$th-32'),'Public photo must not add a bottom banner');
 
-assert.ok(operations.includes('icon:dashboardCompanyPin(config.hasCustomLogo)')&&operations.includes('dashboardSchoolMarker(map,point,sc)'),'Dashboard markers must use dedicated image icons');
+assert.ok(operations.includes('dashboardCompanyMarker(map,point,config.hasCustomLogo)')&&operations.includes('dashboardSchoolMarker(map,point,sc)'),'Dashboard markers must use dedicated image icons');
 assert.ok(css.includes('Prevent blank sections in full-page screenshots'),'Public page content must never be hidden by reveal animation');
 assert.ok(js.includes('drawCompanies()')&&js.includes('clearMapForSearch()')&&js.includes('selectPublicSchool('),'Initial companies and selection transitions must exist');
 assert.ok(html.includes('syPublicDetails')&&html.includes('syPublicMapStatus'),'Map modal and status needed');
