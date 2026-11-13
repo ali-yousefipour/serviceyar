@@ -1546,11 +1546,58 @@ async function balePaymentsPage(token){
 
 async function renderPayroll(data,token){
  const result=$('operationResult');
- result.innerHTML=`<p class="muted">کسورات پیش‌فرض راننده: مدیریت و نظارت ۳٪، هماهنگی ۱٪، بالاسری شرکت ۷٪ و بیمه ۷٫۸٪؛ مجموع ۱۸٫۸٪ از کارکرد ناخالص. مبلغ خالص و مانده پس از کسورات محاسبه می‌شوند. اسناد تأییدشده قبلی بدون اصلاحیه تغییر نمی‌کنند.</p><div class="filters"><input id="payrollSearch" placeholder="جستجوی راننده" aria-label="جستجوی راننده"><label><input type="checkbox" id="showBankColumns"> نمایش مشخصات بانکی</label></div><div class="table-wrap"><table><thead><tr><th><input type="checkbox" id="payrollSelectAll" aria-label="انتخاب همه رانندگان"></th><th>راننده</th><th>کارکرد ناخالص</th><th>نظارت ۳٪</th><th>هماهنگی ۱٪</th><th>بالاسری ۷٪</th><th>بیمه ۷٫۸٪</th><th>جمع کسورات ۱۸٫۸٪</th><th>خالص کارکرد</th><th>ماهیانه سرویس</th><th>پرداخت ثبت‌شده</th><th>مانده</th><th>مبلغ حقوق (ریال)</th><th class="bank-column" hidden>شبا</th><th class="bank-column" hidden>شماره حساب</th></tr></thead><tbody>${data.items.map(r=>`<tr data-payroll-driver="${r.id}"><td><input type="checkbox" name="payrollSelected" value="${r.id}" aria-label="انتخاب ${esc(person(r))}"></td><td>${esc(person(r))}</td><td>${number(r.earned)}</td><td>${number(r.supervision_deduction)}</td><td>${number(r.coordination_deduction)}</td><td>${number(r.overhead_deduction)}</td><td>${number(r.insurance_deduction)}</td><td>${number(r.total_deductions)}</td><td>${number(r.net_earned)}</td><td>${number(r.agreed)}</td><td>${number(r.paid)}</td><td>${number(r.balance)}</td><td><input type="number" min="0" max="1000000000000" step="0.01" data-salary="${r.id}" value="${Math.max(0,Number(r.net_earned))}" aria-label="حقوق ${esc(person(r))}"></td><td class="bank-column" hidden>${esc(r.iban||'—')}</td><td class="bank-column" hidden>${esc(r.bank_account||'—')}</td></tr>`).join('')||'<tr><td colspan="15" class="empty">راننده‌ای یافت نشد.</td></tr>'}</tbody></table></div><p id="payrollTotal"></p>${can('payroll','manage')?'<button class="primary" id="createPayrollDocument">ثبت سند فیش حقوق</button>':''}<h3>اسناد حقوق این بازه</h3><div id="payrollDocuments"></div>`;
+ const drivers=Array.isArray(data.items)?data.items:[];
+ const gross=drivers.reduce((sum,r)=>sum+Number(r.earned||0),0),netTotal=drivers.reduce((sum,r)=>sum+Number(r.net_earned||0),0);
+ const rowHtml=drivers.map(r=>{
+  const id=Number(r.id),name=person(r),label=esc(name);
+  return '<tr data-payroll-driver="'+id+'" data-driver-name="'+label+'"><td data-label="انتخاب"><input name="payrollSelected" type="checkbox" value="'+id+'" aria-label="انتخاب '+label+'"></td><td data-label="راننده"><strong>'+label+'</strong></td><td data-label="ناخالص">'+number(r.earned)+'</td><td data-label="کسورات">'+number(r.total_deductions)+'</td><td data-label="خالص" class="sy-payroll-money">'+number(r.net_earned)+'</td><td data-label="مبلغ سند"><input data-salary="'+id+'" type="number" min="0" max="1000000000000" step="0.01" value="'+Math.max(0,Number(r.net_earned||0))+'" aria-label="حقوق '+label+'" '+(can('payroll','manage')?'':'readonly')+'></td><td data-label="عملیات" class="sy-payroll-row-actions"><button type="button" data-preview-driver="'+id+'" class="primary">مشاهده فیش</button><button type="button" data-details-driver="'+id+'" aria-expanded="false">جزئیات</button></td></tr>'+
+  '<tr data-detail-for="'+id+'" class="sy-payroll-detail-row" hidden><td colspan="7"><div class="sy-payroll-detail-grid">'+
+  [['نظارت',r.supervision_deduction],['هماهنگی',r.coordination_deduction],['بالاسری شرکت',r.overhead_deduction],['بیمه',r.insurance_deduction],['ماهیانه سرویس',r.agreed],['پرداخت ثبت‌شده',r.paid],['مانده',r.balance]].map(item=>'<span>'+item[0]+': <b>'+number(item[1])+'</b></span>').join('')+
+  '<span>حساب: <b>'+esc(r.bank_account||'—')+'</b></span><span>شبا: <b>'+esc(r.iban||'—')+'</b></span></div></td></tr>';
+ }).join('');
+ result.innerHTML='<div class="sy-payroll-workspace"><header class="sy-payroll-overview"><div><span class="sy-operation-kicker">مدیریت حقوق و کارکرد رانندگان</span><h3>فیش حقوق رانندگان</h3><p>فیش هر راننده را مستقیم مشاهده کنید. فیش ذخیره‌نشده صرفاً پیش‌نمایش محاسباتی است.</p></div><div class="sy-payroll-summary"><div><span>تعداد رانندگان</span><strong>'+number(drivers.length)+'</strong></div><div><span>کارکرد ناخالص</span><strong>'+number(gross)+' ریال</strong></div><div><span>خالص محاسباتی</span><strong>'+number(netTotal)+' ریال</strong></div></div></header>'+
+ '<nav class="sy-payroll-tabs" role="tablist" aria-label="مدیریت حقوق"><button type="button" id="payrollDriversTab" role="tab" aria-controls="payrollDriversPane" aria-selected="true">فیش رانندگان</button><button type="button" id="payrollDocsTab" role="tab" aria-controls="payrollDocsPane" aria-selected="false">اسناد حقوق ثبت‌شده</button></nav>'+
+ '<section id="payrollDriversPane" role="tabpanel" aria-labelledby="payrollDriversTab"><div class="sy-payroll-filterbar"><label>جست‌وجوی راننده<input id="payrollSearch" type="search" placeholder="نام راننده" autocomplete="off"></label><p>برای بررسی کسورات و بانک، «جزئیات» را انتخاب کنید.</p></div>'+
+ '<div class="sy-payroll-driver-scroll" tabindex="0" role="region" aria-label="فهرست فیش رانندگان"><table class="sy-payroll-driver-table"><thead><tr><th scope="col"><input type="checkbox" id="payrollSelectAll" aria-label="انتخاب همه رانندگان نمایان"></th><th scope="col">راننده</th><th scope="col">کارکرد ناخالص</th><th scope="col">کسورات</th><th scope="col">خالص</th><th scope="col">مبلغ حقوق سند</th><th scope="col">عملیات</th></tr></thead><tbody>'+
+ (rowHtml||'<tr><td colspan="7" class="sy-payroll-empty">راننده‌ای در بازه انتخابی یافت نشد.</td></tr>')+'</tbody></table></div><p id="payrollNoDrivers" class="sy-payroll-empty" hidden>راننده‌ای مطابق جست‌وجو یافت نشد.</p>'+
+ '<footer class="sy-payroll-selection"><p id="payrollTotal" role="status" aria-live="polite"></p>'+(can('payroll','manage')?'<button class="primary" type="button" id="createPayrollDocument">ثبت سند حقوق انتخاب‌شده</button>':'')+'</footer></section>'+
+ '<section id="payrollDocsPane" role="tabpanel" aria-labelledby="payrollDocsTab" hidden><div id="payrollDocuments" aria-live="polite"></div></section></div>';
+ const selectTab=tab=>{
+  const show=tab==='drivers';$('payrollDriversPane').hidden=!show;$('payrollDocsPane').hidden=show;
+  $('payrollDriversTab').setAttribute('aria-selected',String(show));$('payrollDocsTab').setAttribute('aria-selected',String(!show));
+ };
+ $('payrollDriversTab').onclick=()=>selectTab('drivers');$('payrollDocsTab').onclick=()=>selectTab('docs');
+ let storedDocs=[];
+ result.querySelectorAll('[data-details-driver]').forEach(button=>button.onclick=()=>{
+  const detail=result.querySelector('[data-detail-for="'+button.dataset.detailsDriver+'"]');
+  detail.hidden=!detail.hidden;button.setAttribute('aria-expanded',String(!detail.hidden));
+ });
+ result.querySelectorAll('[data-preview-driver]').forEach(button=>button.onclick=async()=>{
+  const driverId=Number(button.dataset.previewDriver),row=drivers.find(d=>Number(d.id)===driverId);
+  if(!row)return;button.disabled=true;
+  try{
+   for(const item of storedDocs){
+    const doc=await api(scoped('/api/v1/operations/payroll-documents/'+item.id));
+    if(token!==pageToken)return;
+    const line=doc.lines?.find(r=>Number(r.driver_id)===driverId);
+    if(line){showDriverPayslip(doc,line);return;}
+   }
+   const input=result.querySelector('[data-salary="'+driverId+'"]'),amount=Number(input?.value);
+   const preview={...row,salary:Number.isFinite(amount)&&amount>=0?amount:Number(row.net_earned||0),expected_net_salary:Number(row.net_earned||0),deductions_historical:false};
+   showDriverPayslip({status:'preview',preview_only:true,document_no:'پیش‌نمایش',date_from:data.from,date_to:data.to,agency_name:currentAgency?.name},preview);
+  }catch(e){notify('مشاهده فیش: '+e.message,true);}finally{if(button.isConnected)button.disabled=false;}
+ });
  const total=()=>{let value=0,count=0;result.querySelectorAll('input[name="payrollSelected"]:checked').forEach(c=>{value+=Number(result.querySelector(`[data-salary="${c.value}"]`).value);count++;});$('payrollTotal').textContent=number(count)+' راننده · جمع حقوق انتخابی '+number(value)+' ریال';};total();
  $('payrollSelectAll').onchange=e=>{result.querySelectorAll('input[name="payrollSelected"]').forEach(c=>{if(!c.closest('tr').hidden)c.checked=e.target.checked;});total();};result.querySelectorAll('input[name="payrollSelected"],[data-salary]').forEach(input=>input.oninput=total);
- $('showBankColumns').onchange=e=>result.querySelectorAll('.bank-column').forEach(cell=>cell.hidden=!e.target.checked);$('payrollSearch').oninput=e=>result.querySelectorAll('[data-payroll-driver]').forEach(row=>row.hidden=!row.innerText.includes(e.target.value.trim()));
- const documentBox=$('payrollDocuments');const list=async()=>{const docs=await api(scoped('/api/v1/operations/payroll-documents?from='+data.from+'&to='+data.to));if(token!==pageToken||!documentBox.isConnected)return;
+ $('payrollSearch').oninput=e=>{
+  const q=e.target.value.trim().toLocaleLowerCase('fa');let visible=0;
+  result.querySelectorAll('[data-payroll-driver]').forEach(row=>{
+   const show=row.dataset.driverName.toLocaleLowerCase('fa').includes(q);row.hidden=!show;
+   if(!show){const detail=result.querySelector('[data-detail-for="'+row.dataset.payrollDriver+'"]');if(detail)detail.hidden=true;}
+   if(show)visible++;
+  });$('payrollNoDrivers').hidden=visible!==0;total();
+ };
+ const documentBox=$('payrollDocuments');const list=async()=>{const docs=await api(scoped('/api/v1/operations/payroll-documents?from='+data.from+'&to='+data.to));if(token!==pageToken||!documentBox.isConnected)return;storedDocs=docs;
  $('payrollDocuments').innerHTML='<section class="sy-payroll-documents"><header class="sy-payroll-list-heading"><div><h4>اسناد حقوق و فیش‌های رانندگان</h4><p>مشاهده فیش انفرادی، وضعیت سند و خروجی‌های حقوقی</p></div><strong>'+number(docs.length)+' سند</strong></header><div class="sy-payroll-list-controls"><label>جست‌وجوی شماره سند<input id="payrollDocumentSearch" type="search" placeholder="شماره سند…" autocomplete="off"></label><label>وضعیت سند<select id="payrollDocumentStatus"><option value="">همه وضعیت‌ها</option><option value="draft">پیش‌نویس</option><option value="approved">تأییدشده</option></select></label></div>'+(docs.length?'<div class="table-wrap sy-payroll-list-wrap" tabindex="0" role="region" aria-label="فهرست اسناد حقوق"><table class="sy-payroll-list-table"><thead><tr><th>شماره سند</th><th>وضعیت</th><th>تعداد رانندگان</th><th>مبلغ سند (ریال)</th><th>عملیات</th></tr></thead><tbody>'+docs.map(d=>'<tr data-payroll-doc-row data-status="'+esc(d.status)+'" data-doc-number="'+esc(d.document_no)+'"><td data-label="شماره سند"><strong>'+esc(d.document_no)+'</strong></td><td data-label="وضعیت"><span class="sy-payroll-status '+(d.status==='approved'?'is-approved':'is-draft')+'">'+(d.status==='approved'?'تأییدشده':'پیش‌نویس')+'</span></td><td data-label="تعداد رانندگان">'+number(d.driver_count||0)+'</td><td data-label="مبلغ سند (ریال)">'+number(d.total_amount)+'</td><td data-label="عملیات" class="sy-payroll-list-actions"><button data-document-view="'+Number(d.id)+'">فیش رانندگان</button>'+(d.status==='draft'&&can('payroll','manage')?'<button data-document-approve="'+Number(d.id)+'">تأیید سند</button>':'')+(d.status==='approved'?'<button data-document-bank="'+Number(d.id)+'">CSV بانک</button>':'')+(d.status==='approved'&&can('drivers')?'<button data-document-xlsx="'+Number(d.id)+'">اکسل حقوق</button>':'')+'</td></tr>').join('')+'</tbody></table></div><p class="sy-payroll-empty" id="payrollDocumentNoMatches" hidden>سندی مطابق جست‌وجو یافت نشد.</p>':'<p class="sy-payroll-empty">هنوز سند حقوقی برای این بازه ثبت نشده است.</p>')+'</section>';
  const applyListFilters=()=>{
   const q=String($('payrollDocumentSearch')?.value||'').trim().toLocaleLowerCase('fa'),status=$('payrollDocumentStatus')?.value||'';
@@ -1564,7 +1611,7 @@ async function renderPayroll(data,token){
  $('payrollDocuments').querySelectorAll('[data-document-xlsx]').forEach(b=>b.onclick=()=>downloadFile('/api/v1/operations/payroll-documents/'+b.dataset.documentXlsx+'/xlsx','payroll.xlsx'));
  $('payrollDocuments').querySelectorAll('[data-document-bank]').forEach(b=>b.onclick=()=>downloadFile('/api/v1/operations/payroll-documents/'+b.dataset.documentBank+'/bank','payroll-bank.csv'));
  };
- $('createPayrollDocument')?.addEventListener('click',async()=>{const lines=[...result.querySelectorAll('input[name="payrollSelected"]:checked')].map(c=>({driverId:Number(c.value),amount:result.querySelector(`[data-salary="${c.value}"]`).value}));if(!lines.length){notify('رانندگان را انتخاب کنید.',true);return;}$('createPayrollDocument').disabled=true;try{await write('/api/v1/operations/payroll-documents',{from:data.from,to:data.to,lines});await list();notify('سند پیش‌نویس حقوق ذخیره شد؛ هیچ انتقال وجهی انجام نشد.');}catch(e){notify(e.message,true);}finally{if($('createPayrollDocument'))$('createPayrollDocument').disabled=false;}});
+ $('createPayrollDocument')?.addEventListener('click',async()=>{const lines=[...result.querySelectorAll('input[name="payrollSelected"]:checked')].map(c=>({driverId:Number(c.value),amount:result.querySelector(`[data-salary="${c.value}"]`).value}));if(!lines.length){notify('رانندگان را انتخاب کنید.',true);return;}$('createPayrollDocument').disabled=true;try{await write('/api/v1/operations/payroll-documents',{from:data.from,to:data.to,lines});await list();selectTab('docs');notify('سند پیش‌نویس حقوق ذخیره شد؛ هیچ انتقال وجهی انجام نشد.');}catch(e){notify(e.message,true);}finally{if($('createPayrollDocument'))$('createPayrollDocument').disabled=false;}});
  await list();
 }
 function showDriverPayslip(doc,line){
