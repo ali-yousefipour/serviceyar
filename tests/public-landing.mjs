@@ -39,6 +39,21 @@ assert.ok(operations.includes('${iranPlateInput("filter")}')&&operations.include
 assert.ok(read('frontend/assets/operations.css').includes('.iran-plate.iran-plate-input'),'Editable plate should reuse the list plate visual system');
 
 assert.ok(operations.includes('function dashboardCompanyPin(')&&operations.includes('function dashboardSchoolPin('),'Dashboard marker functions must be defined before use');
+
+const markerStart=operations.indexOf('function dashboardCompanyPin(');
+const markerEnd=operations.indexOf('async function dashboard(',markerStart);
+const markerSource=operations.slice(markerStart,markerEnd);
+assert.ok(markerSource.includes('function dashboardCompanyMarker(')&&markerSource.includes("img.addEventListener('error',fallback"),'Company marker must attach CSP-safe image failure handler');
+assert.ok(!markerSource.includes('onerror='),'Map markers must not use inline handlers with CSP');
+assert.ok(markerSource.includes('/assets/school-placeholder.png'),'School markers should show the bundled placeholder picture');
+assert.ok(markerSource.includes('sy-map-school-label'),'School name should accompany map photo');
+assert.ok(operations.includes('dashboardCompanyMarker(map,point,config.hasCustomLogo)'),'Dashboard must call the bounded company marker');
+const dashboardCss=read('frontend/assets/operations.css');
+assert.ok(dashboardCss.includes('#dashboardSchoolMap .leaflet-marker-icon.sy-map-company .sy-map-marker-photo'),'Company marker dimensions must override global image styles');
+const watermarkSource=read('backend/public/index.php');
+assert.ok(watermarkSource.includes("$watermark='service-yar.ir'")&&!watermarkSource.includes('ServiceYar | challi.ir'),'Public photos should have the new watermarked domain');
+assert.ok(!watermarkSource.includes('imagefilledrectangle($canvas,0,$th-32'),'Public photo must not add a bottom banner');
+
 assert.ok(operations.includes('icon:dashboardCompanyPin(config.hasCustomLogo)')&&operations.includes('dashboardSchoolMarker(map,point,sc)'),'Dashboard markers must use dedicated image icons');
 assert.ok(css.includes('Prevent blank sections in full-page screenshots'),'Public page content must never be hidden by reveal animation');
 assert.ok(js.includes('drawCompanies()')&&js.includes('clearMapForSearch()')&&js.includes('selectPublicSchool('),'Initial companies and selection transitions must exist');
