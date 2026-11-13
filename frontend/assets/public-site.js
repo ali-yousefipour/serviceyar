@@ -188,7 +188,7 @@
   const faceClass='sy-public-pin-face'+(isDefault?' sy-public-pin-no-frame':'');
   return L.divIcon({className:'sy-public-pin sy-public-pin-'+color+(isDefault?' sy-public-pin-default':''),
    html:'<span class="'+faceClass+'">'+content+'<span class="sy-public-pin-symbol">⌖</span></span>',
-   iconSize:[64,68],iconAnchor:[32,64],popupAnchor:[0,-60]});
+   iconSize:[38,42],iconAnchor:[19,40],popupAnchor:[0,-36]});
  }
  function attachPinFallback(marker){
   const icon=marker.getElement();
