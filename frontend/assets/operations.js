@@ -1569,13 +1569,29 @@ function showDriverPayslip(doc,line){
  '<article class="sy-payslip-sheet" dir="rtl" aria-label="فیش حقوق '+esc(person(line))+'">'+
  '<header class="sy-payslip-header">'+agencyLogoImage('لوگوی '+agency,66)+'<div><strong>'+esc(agency)+'</strong><h2>فیش حقوق و کارکرد راننده</h2><p>سرویس حمل‌ونقل دانش‌آموزی · مبالغ به ریال</p></div><span class="sy-payslip-document-state">'+(doc.status==='approved'?'سند تأییدشده':'پیش‌نویس / تأییدنشده')+'</span></header>'+
  (doc.status!=='approved'?'<div class="sy-payslip-draft">پیش‌نویس ـ فاقد تأیید نهایی حسابداری</div>':'')+
+ (!line.deductions_historical?'<div class="sy-payslip-draft">توجه: کسورات این سند قدیمی با نرخ‌های فعلی برآورد شده‌اند؛ مقدار تاریخی کسورات ثبت نشده است.</div>':'')+
  '<dl class="sy-payslip-meta">'+item('نام و نام خانوادگی راننده',person(line))+item('شماره سند',doc.document_no)+item('تاریخ شروع دوره',dateText(doc.date_from))+item('تاریخ پایان دوره',dateText(doc.date_to))+item('نام بانک',line.bank_name)+item('شماره حساب',line.bank_account)+item('شماره شبا',line.iban)+'</dl>'+
  '<div class="sy-payslip-columns"><section><h3>مزایا و کارکرد</h3><table><thead><tr><th scope="col">شرح</th><th scope="col">مبلغ (ریال)</th></tr></thead><tbody>'+sumRow('کارکرد ناخالص',line.earned)+'</tbody><tfoot>'+sumRow('جمع کارکرد',line.earned)+'</tfoot></table></section>'+
  '<section><h3>کسورات</h3><table><thead><tr><th scope="col">شرح</th><th scope="col">مبلغ (ریال)</th></tr></thead><tbody>'+data.slice(1).map(([k,v])=>sumRow(k,v)).join('')+'</tbody><tfoot>'+sumRow('جمع کسورات',line.total_deductions)+'</tfoot></table></section></div>'+
  '<section class="sy-payslip-settlement"><h3>خلاصه تسویه</h3><div><span>خالص محاسباتی پس از کسورات</span><strong>'+amount(net)+' ریال</strong></div><div class="sy-payslip-net"><span>مبلغ حقوق ثبت‌شده در سند</span><strong>'+amount(saved)+' ریال</strong></div>'+
  (Math.abs(difference)>=1?'<p class="sy-payslip-discrepancy">توجه: مبلغ ثبت‌شده با خالص محاسباتی '+amount(Math.abs(difference))+' ریال مغایرت دارد. علت اختلاف باید توسط واحد مالی بررسی شود.</p>':'')+'</section>'+
  '<footer class="sy-payslip-signatures"><div>تنظیم‌کننده سند<span></span></div><div>مسئول مالی<span></span></div><div>مهر و امضای شرکت<span></span></div></footer><p class="sy-payslip-footnote">این فیش فقط بر اساس سند حقوق ثبت‌شده تهیه شده و به‌تنهایی به معنای انجام انتقال وجه نیست.</p></article>');
- $('payslipPrint').onclick=()=>window.print();
+ $('payslipPrint').onclick=()=>{
+  const slip=document.querySelector('#modal .sy-payslip-sheet');
+  if(!slip)return;
+  const popup=window.open('','_blank');
+  if(!popup){notify('اجازه بازشدن پنجره چاپ را در مرورگر فعال کنید.',true);return;}
+  popup.addEventListener('load',async()=>{
+   try{
+    await popup.document.fonts?.ready;
+    await Promise.all([...popup.document.images].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve;})));
+    popup.focus();popup.print();
+   }catch{popup.focus();popup.print();}
+  },{once:true});
+  popup.document.open();
+  popup.document.write('<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>'+esc('فیش حقوق '+person(line))+'</title><link rel="stylesheet" href="/assets/operations.css"></head><body class="sy-payslip-print-window">'+slip.outerHTML+'</body></html>');
+  popup.document.close();
+ };
  $('payslipBack').onclick=()=>payrollDocument(Number(doc.id));
 }
 async function payrollDocument(id){
