@@ -681,3 +681,22 @@
  }
  #syPublicSchools .sy-public-modal-visual.sy-school-photo-frame.sy-photo-landscape{max-width:min(100%,420px)!important}
 }
+
+
+/* Map photo frames follow the image's orientation without moving Leaflet anchors. */
+.sy-public-v3 #syPublicSchools .sy-public-pin.sy-photo-portrait:not(.sy-public-pin-default) .sy-public-pin-face{
+ position:absolute!important;top:0!important;left:12px!important;
+ width:40px!important;min-width:40px!important;max-width:40px!important;
+ height:54px!important;min-height:54px!important;max-height:54px!important;
+}
+.sy-public-v3 #syPublicSchools .sy-public-pin.sy-photo-landscape:not(.sy-public-pin-default) .sy-public-pin-face{
+ position:absolute!important;top:15px!important;left:5px!important;
+ width:54px!important;min-width:54px!important;max-width:54px!important;
+ height:39px!important;min-height:39px!important;max-height:39px!important;
+}
+.sy-public-v3 #syPublicSchools .sy-public-pin.sy-photo-portrait:not(.sy-public-pin-default) .sy-public-pin-face img,
+.sy-public-v3 #syPublicSchools .sy-public-pin.sy-photo-landscape:not(.sy-public-pin-default) .sy-public-pin-face img{
+ width:100%!important;height:100%!important;
+ max-width:100%!important;max-height:100%!important;
+ object-fit:contain!important;
+}
