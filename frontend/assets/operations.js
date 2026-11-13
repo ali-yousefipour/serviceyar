@@ -807,6 +807,21 @@ async function formResource(key,id,onSaved){
    direction?.addEventListener('change',updateCaption);updateCaption();
  }
  if(key==='accounts'){
+   form.classList.add('sy-company-account-editor');
+   const grid=form.querySelector('.form-grid');
+   if(grid){
+     const financial=document.createElement('fieldset');financial.className='sy-account-fieldset';
+     financial.innerHTML='<legend>مشخصات سرفصل حسابداری</legend><p>کد، عنوان و ساختار حساب را تعریف کنید.</p><div class="form-grid sy-account-fields"></div>';
+     const banking=document.createElement('fieldset');banking.className='sy-account-fieldset sy-account-banking';
+     banking.innerHTML='<legend>اطلاعات بانکی شرکت</legend><p>برای حساب بانکی، نام بانک را انتخاب کنید و شماره حساب و شبا را وارد کنید. این اطلاعات فقط برای شرکت جاری ذخیره می‌شوند.</p><div class="form-grid sy-account-fields"></div>';
+     for(const label of [...grid.children]){
+       const input=label.querySelector('input[name],select[name]');
+       (['bankName','bankAccount','iban'].includes(input?.name)?banking:financial).querySelector('.form-grid').append(label);
+     }
+     grid.replaceWith(financial,banking);
+   }
+ }
+ if(key==='accounts'){
    for(const name of ['bankAccount','iban']){
      const input=form.elements[name];if(!input)continue;input.dir='ltr';input.placeholder=name==='iban'?'IR000000000000000000000000':'شماره حساب';input.autocomplete='off';
      input.addEventListener('input',()=>{input.value=ServiceYarDates.digits(input.value).replace(/\s+/g,'').toUpperCase();});
