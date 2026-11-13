@@ -26,10 +26,10 @@ final class PublicExplorer {
   $published=($settings['public_contact_enabled']??'0')==='1';
   // Institutional contact and address from the verified Madares import.
   // Personal manager mobile remains opt-in; private settings are never exposed wholesale.
-  $address=(string)($settings['public_office_address']?:$settings['company_address']??$settings['company_office_address']??'');
-  $manager=(string)($settings['public_manager_name']?:$settings['company_manager_name']??'');
-  $officePhone=(string)($settings['company_office_phone']?:$settings['company_phone']??'');
-  $mobile=$published?(string)($settings['public_manager_mobile']?:$settings['company_ceo_mobile']??''):null;
+  $address=(string)(($settings['public_office_address']??'') ?: (($settings['company_address']??'') ?: ($settings['company_office_address']??'')));
+  $manager=(string)(($settings['public_manager_name']??'') ?: ($settings['company_manager_name']??''));
+  $officePhone=(string)(($settings['company_office_phone']??'') ?: ($settings['company_phone']??''));
+  $mobile=$published?(string)(($settings['public_manager_mobile']??'') ?: ($settings['company_ceo_mobile']??'')):null;
   return [
    'id'=>(int)$agency['id'],'name'=>(string)$agency['name'],
    'latitude'=>$point['latitude'],'longitude'=>$point['longitude'],
