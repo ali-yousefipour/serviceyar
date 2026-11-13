@@ -14,7 +14,7 @@ await request('/api/v1/auth/login',{method:'POST',body:{username:'preview',passw
 const me=(await request('/api/v1/auth/me')).data;csrf=me.csrfToken;aid=me.agencies[0].id;
 const logoResponse=await request(scoped('/api/v1/agency/logo'),{raw:true});
 assert.ok(logoResponse.data.length>100,'Company logo must have a fallback image');checks++;
-assert.match(logoResponse.response.headers.get('content-type')||'',/^image\\/(png|jpeg|webp)/);checks++;
+assert.ok(['image/png','image/jpeg','image/webp'].some(type=>(logoResponse.response.headers.get('content-type')||'').startsWith(type)));checks++;
 const platformStatus=(await request('/api/v1/admin/platform-settings')).data;
 assert.equal(typeof platformStatus.neshanServiceConfigured,'boolean');checks++;
 await request(scoped('/api/v1/schools'),{method:'POST',body:{name:'not allowed'},token:false,status:419});
