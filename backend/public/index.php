@@ -46,7 +46,7 @@ try {
    if(mb_strlen($query,'UTF-8')>100)Response::json(['ok'=>false,'error'=>['code'=>'INVALID_QUERY','message'=>'عبارت جستجو طولانی است.']],422);
    $sql="SELECT s.id,s.name,s.code,s.region,s.latitude,s.longitude,s.photo_path,a.name AS company_name
     FROM schools s JOIN agencies a ON a.id=s.agency_id AND a.is_active=1
-    WHERE s.is_active=1 AND s.latitude IS NOT NULL AND s.longitude IS NOT NULL
+    WHERE s.is_active=1
     AND (:empty=1 OR s.name LIKE :q1 OR s.code LIKE :q2 OR a.name LIKE :q3)
     ORDER BY s.name,s.id LIMIT 250";
    $stmt=$pdo->prepare($sql);
@@ -59,7 +59,7 @@ try {
      $photo='/schools/'.preg_replace('~^(?:uploads/)?schools/~','',$pathValue);
     }
     $rows[]=['id'=>(int)$row['id'],'name'=>$row['name'],'code'=>$row['code'],
-      'region'=>$row['region'],'latitude'=>(float)$row['latitude'],'longitude'=>(float)$row['longitude'],
+      'region'=>$row['region'],'latitude'=>$row['latitude']===null?null:(float)$row['latitude'],'longitude'=>$row['longitude']===null?null:(float)$row['longitude'],
       'company'=>$row['company_name'],'photoUrl'=>$photo];
    }
    header('Cache-Control: public, max-age=120');
