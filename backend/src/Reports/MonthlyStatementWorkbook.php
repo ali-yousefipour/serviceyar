@@ -75,7 +75,17 @@ final class MonthlyStatementWorkbook
         // Prefer the real reference's layout and formula-bearing sheets when
         // the scrubbed template has been installed. Legacy synthetic XLSX is
         // retained as a safe fallback until the template is deployed.
-        if(($_GET['workbookFormat']??'')!=='standard')ReferenceMonthlyStatementWorkbook::downloadIfAvailable($d,$agency,$id,$preview);
+        if(($_GET['workbookFormat']??'')!=='standard'){
+            try{
+                ReferenceMonthlyStatementWorkbook::downloadIfAvailable($d,$agency,$id,$preview);
+            }catch(\RuntimeException $e){
+                // A malformed or over-constrained reference must not break
+                // preview downloads. Keep the month's data and switch to the
+                // independent 14-sheet writer, without saving any document.
+                error_log('[ServiceYar][statement-export] Reference workbook unavailable; using standard 14-sheet fallback: '.$e->getMessage());
+                if(headers_sent())throw $e;
+            }
+        }
         $label=$d['month_name'].' '.$d['year'];
         $title=($preview?'پیش‌نمایش آزمایشی ـ ثبت‌نشده | ':'').$label.' - '.$agency.' - صورت‌وضعیت سرویس مدارس (ریال)';
         $items=$d['items'];$drivers=$d['drivers'];$rates=$d['rates'];$t=$d['totals'];
