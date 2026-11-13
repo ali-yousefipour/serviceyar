@@ -31,20 +31,7 @@ try {
    foreach(['agencies','schools','students','drivers','services'] as $table){
     $counts[$table]=(int)$pdo->query('SELECT COUNT(*) FROM '.$table.' WHERE is_active=1')->fetchColumn();
    }
-   // The landing page describes the entire preloaded school inventory, not just
-   // schools already linked to an agency. Count catalog entries plus unmatched
-   // registered schools, without double-counting schools selected from catalog.
-   try{
-    $catalogCount=(int)$pdo->query("SELECT COUNT(*) FROM school_catalog")->fetchColumn();
-    $unlinkedCount=(int)$pdo->query("SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(s.code),''), CONCAT(TRIM(s.name),'|',COALESCE(s.region,'')))) FROM schools s
-     WHERE s.is_active=1 AND NOT EXISTS (SELECT 1 FROM school_catalog c WHERE
-      (s.code IS NOT NULL AND s.code<>'' AND c.education_code=s.code)
-      OR (TRIM(c.name)=TRIM(s.name) AND COALESCE(c.region,'')=COALESCE(s.region,'')))")->fetchColumn();
-    $counts['schools']=$catalogCount+$unlinkedCount;
-   }catch(\Throwable $catalogError){
-    // Older installations may not have the catalog migration yet.
-    error_log('[ServiceYar][public-overview] school catalog not ready: '.$catalogError->getMessage());
-   }
+   $counts['schools']=\ServiceYar\Domain\PublicExplorer::countSchools();
    header('Cache-Control: public, max-age=120');
    Response::json(['ok'=>true,'data'=>['counts'=>$counts]]);
   }catch(\Throwable $e){
@@ -66,21 +53,29 @@ try {
    Response::json(['ok'=>true,'data'=>['provider'=>'osm','webKey'=>'']]);
   }
  }
- // Public school discovery: query-only, limited results, no bulk dump endpoint.
- // Coordinates are rounded for public display; original files are never served.
+
+ // Initial map: active transport companies with configured coordinates only.
+ if($method==='GET'&&$path==='/api/v1/public/companies'){
+  try{
+   header('Cache-Control: public, max-age=90');
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\PublicExplorer::companies()]);
+  }catch(\Throwable $e){
+   error_log('[ServiceYar][public-companies] '.$e->getMessage());
+   Response::json(['ok'=>false,'error'=>['code'=>'COMPANIES_UNAVAILABLE','message'=>'موقعیت شرکت‌ها موقتاً در دسترس نیست.']],503);
+  }
+ }
+ // Query-only school search; retain rate limits and no bulk school feed.
  if($method==='GET'&&$path==='/api/v1/public/schools'){
   try{
    $term=trim(str_replace(['ي','ك','‌'],['ی','ک',' '],(string)($_GET['q']??'')));
+   if($term===''){header('Cache-Control: no-store');Response::json(['ok'=>true,'data'=>['schools'=>[],'minimumSearchLength'=>3]]);}
    $len=mb_strlen($term,'UTF-8');
-   if($len===0){header('Cache-Control: no-store');Response::json(['ok'=>true,'data'=>['schools'=>[],'minimumSearchLength'=>3]]);}
    if($len<3||$len>80)Response::json(['ok'=>false,'error'=>['code'=>'INVALID_QUERY','message'=>'حداقل سه حرف وارد کنید.']],422);
-   // Bound the request frequency using a locked file outside public_html assets.
    $ip=(string)($_SERVER['REMOTE_ADDR']??'unknown');
    $rateDir=dirname(__DIR__,2).'/storage/cache/public-school-rate';
    if(!is_dir($rateDir))@mkdir($rateDir,0750,true);
    if(is_dir($rateDir)){
-    $rateFile=$rateDir.'/'.hash('sha256',$ip);
-    $handle=@fopen($rateFile,'c+');
+    $handle=@fopen($rateDir.'/'.hash('sha256',$ip),'c+');
     if($handle&&flock($handle,LOCK_EX)){
      $record=json_decode(stream_get_contents($handle)?:'{}',true);
      $now=time();$window=(int)($record['window']??0);$count=(int)($record['count']??0);
@@ -89,46 +84,19 @@ try {
      if($count>35){header('Retry-After: 60');Response::json(['ok'=>false,'error'=>['code'=>'RATE_LIMIT','message'=>'تعداد جستجوها بیش از حد مجاز است.']],429);}
     }elseif($handle)fclose($handle);
    }
-   $pdo=Connection::get();$needle='%'.$term.'%';$rows=[];$seen=[];
-   // The central catalog is the authoritative preloaded list.
-   try{
-    $stmt=$pdo->prepare("SELECT id,name,region,latitude,longitude,photo_path FROM school_catalog
-     WHERE REPLACE(REPLACE(name,'ي','ی'),'ك','ک') LIKE :q ORDER BY name LIMIT 16");
-    $stmt->execute(['q'=>$needle]);
-    foreach($stmt->fetchAll(\PDO::FETCH_ASSOC) as $school){
-     $lat=is_numeric($school['latitude'])?(float)$school['latitude']:null;
-     $lng=is_numeric($school['longitude'])?(float)$school['longitude']:null;
-     $hasPoint=$lat!==null&&$lng!==null&&abs($lat)<=90&&abs($lng)<=180&&$lat!=0&&$lng!=0;
-     $id='c'.(int)$school['id'];$key=trim((string)$school['name']).'|'.trim((string)($school['region']??''));
-     $seen[$key]=true;
-     $rows[]=['id'=>$id,'name'=>(string)$school['name'],'region'=>(string)($school['region']??''),'company'=>'فهرست آماده مدارس',
-      'latitude'=>$hasPoint?round($lat,4):null,'longitude'=>$hasPoint?round($lng,4):null,
-      'photoUrl'=>(string)($school['photo_path']??'')!==''?'/api/v1/public/school-photo?school='.$id.'&expires='.(time()+600).'&sig='.hash_hmac('sha256',$id.'|'.(time()+600),(string)config('APP_KEY','').(string)config('DB_PASSWORD','')):null];
-    }
-   }catch(\Throwable $catalogError){error_log('[ServiceYar][public-schools] catalog: '.$catalogError->getMessage());}
-   $stmt=$pdo->prepare("SELECT s.id,s.name,s.region,s.latitude,s.longitude,s.photo_path,a.name company_name
-      FROM schools s JOIN agencies a ON a.id=s.agency_id AND a.is_active=1
-      WHERE s.is_active=1 AND (REPLACE(REPLACE(s.name,'ي','ی'),'ك','ک') LIKE :school OR REPLACE(REPLACE(a.name,'ي','ی'),'ك','ک') LIKE :company)
-      ORDER BY s.name LIMIT 20");
-   $stmt->execute(['school'=>$needle,'company'=>$needle]);
-   foreach($stmt->fetchAll(\PDO::FETCH_ASSOC) as $school){
-    if(count($rows)>=20)break;
-    $key=trim((string)$school['name']).'|'.trim((string)($school['region']??''));
-    if(isset($seen[$key]))continue;$seen[$key]=true;
-    $lat=is_numeric($school['latitude'])?(float)$school['latitude']:null;
-    $lng=is_numeric($school['longitude'])?(float)$school['longitude']:null;
-    $hasPoint=$lat!==null&&$lng!==null&&abs($lat)<=90&&abs($lng)<=180&&$lat!=0&&$lng!=0;
-    $id='s'.(int)$school['id'];$expiry=time()+600;
-    $rows[]=['id'=>$id,'name'=>(string)$school['name'],'region'=>(string)($school['region']??''),'company'=>(string)$school['company_name'],
-     'latitude'=>$hasPoint?round($lat,4):null,'longitude'=>$hasPoint?round($lng,4):null,
-     'photoUrl'=>(string)($school['photo_path']??'')!==''?'/api/v1/public/school-photo?school='.$id.'&expires='.$expiry.'&sig='.hash_hmac('sha256',$id.'|'.$expiry,(string)config('APP_KEY','').(string)config('DB_PASSWORD','')):null];
-   }
    header('Cache-Control: private, no-store');header('X-Robots-Tag: noindex, nofollow, noarchive');
-   Response::json(['ok'=>true,'data'=>['schools'=>$rows,'minimumSearchLength'=>3]]);
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\PublicExplorer::schools($term)]);
   }catch(\Throwable $e){
    error_log('[ServiceYar][public-schools] '.$e->getMessage());
    Response::json(['ok'=>false,'error'=>['code'=>'PUBLIC_SCHOOLS_UNAVAILABLE','message'=>'جستجوی مدارس موقتاً در دسترس نیست.']],503);
   }
+ }
+ // Server-side publication setting: never expose internal user mobiles by default.
+ if($method==='GET'&&$path==='/api/v1/public/company-logo'){
+  $companyId=filter_var($_GET['id']??null,FILTER_VALIDATE_INT);
+  if(!$companyId||!\ServiceYar\Domain\PublicExplorer::company((int)$companyId))
+   Response::json(['ok'=>false,'error'=>['code'=>'NOT_FOUND']],404);
+  \ServiceYar\Agency\AgencyLogo::publicOutput((int)$companyId);
  }
  // Expiring signed photo endpoint: recompress, watermark and strip metadata.
  if($method==='GET'&&$path==='/api/v1/public/school-photo'){
@@ -342,6 +310,31 @@ try {
  if($path==='/api/v1/admin/platform-settings'){
    if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Settings\PlatformSettings::overview($s['id'])]);
    if($method==='PUT'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Settings\PlatformSettings::save($s['id'],Request::json())]);}
+ }
+ if($path==='/api/v1/agency/public-profile'){
+  Authorization::requireAgencyAccess($s['id'],$aid);
+  if($method==='GET'){
+   Authorization::requirePermission($s['id'],'settings.view');
+   $q=Connection::get()->prepare("SELECT setting_key,setting_value FROM agency_settings
+    WHERE agency_id=? AND setting_key IN ('public_contact_enabled','public_office_address','public_manager_name','public_manager_mobile')");
+   $q->execute([$aid]);Response::json(['ok'=>true,'data'=>$q->fetchAll(\PDO::FETCH_KEY_PAIR)]);
+  }
+  if($method==='PUT'){
+   $auth->requireCsrf($s);Authorization::requirePermission($s['id'],'settings.manage');
+   $body=Request::json();$keys=['public_contact_enabled','public_office_address','public_manager_name','public_manager_mobile'];
+   if(array_diff(array_keys($body),$keys))throw new AuthException(422,'فیلد ناشناخته مجاز نیست.','VALIDATION_ERROR');
+   $on=$body['public_contact_enabled']??'0';
+   if(!in_array($on,['0','1',0,1,false,true],true))throw new AuthException(422,'وضعیت انتشار نامعتبر است.','VALIDATION_ERROR');
+   foreach($keys as $key){
+    $value=$key==='public_contact_enabled'?(in_array($on,['1',1,true],true)?'1':'0'):trim((string)($body[$key]??''));
+    if(mb_strlen($value)>($key==='public_office_address'?450:120))throw new AuthException(422,'طول اطلاعات تماس بیش از حد مجاز است.','VALIDATION_ERROR');
+    if($key==='public_manager_mobile'&&$value!==''&&!preg_match('/^[0-9+۰-۹ -]{7,25}$/uD',$value))throw new AuthException(422,'شماره همراه معتبر نیست.','VALIDATION_ERROR');
+    $q=Connection::get()->prepare('INSERT INTO agency_settings(agency_id,setting_key,setting_value) VALUES(?,?,?)
+     ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)');
+    $q->execute([$aid,$key,$value]);
+   }
+   Response::json(['ok'=>true,'data'=>['updated'=>true]]);
+  }
  }
  if($path==='/api/v1/agency/logo'){
   if($method==='GET')\ServiceYar\Agency\AgencyLogo::output($s['id'],$aid);
