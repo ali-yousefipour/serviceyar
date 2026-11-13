@@ -147,32 +147,41 @@ final class ReferenceMonthlyStatementWorkbook
     {
         $doc=self::document($zip,$sheet);
         $bases=[];$followers=[];
-        $pos=static function(string $ref): array{
-            if(!preg_match('/^([A-Z]+)(\d+)$/',$ref,$m))return [0,0];
-            $col=0;foreach(str_split($m[1]) as $c)$col=$col*26+ord($c)-64;
-            return [$col,(int)$m[2]];
+        $position=static function(string $ref): array {
+            preg_match('/^([A-Z]+)([0-9]+)$/',$ref,$m);
+            $col=0;foreach(str_split($m[1]??'') as $char)$col=$col*26+ord($char)-64;
+            return [$col,(int)($m[2]??0)];
         };
-        foreach($doc->getElementsByTagNameNS(self::NS,'f') as $f){
-            if($f->getAttribute('t')!=='shared')continue;
-            $cell=$f->parentNode;
-            $ref=$cell instanceof \DOMElement?$cell->getAttribute('r'):'';
-            $si=$f->getAttribute('si');
-            if(trim($f->textContent)!=='')$bases[$si]=['ref'=>$ref,'text'=>$f->textContent];
-            $followers[]=[$f,$ref,$si];
+        foreach($doc->getElementsByTagNameNS(self::NS,'f') as $formula){
+            if($formula->getAttribute('t')!=='shared')continue;
+            $cell=$formula->parentNode;
+            $coord=$cell instanceof \DOMElement?$cell->getAttribute('r'):'';
+            $group=$formula->getAttribute('si');
+            if(trim($formula->textContent)!=='')$bases[$group]=[$coord,$formula->textContent];
+            $followers[]=[$formula,$coord,$group];
         }
-        foreach($followers as [$f,$ref,$si]){
-            if(!isset($bases[$si])){
-                // The base was in a deleted data range (sheet7 footer).
-                // Invalid shared formula metadata must not reach Excel.
-                $f->parentNode?->removeChild($f);
+        foreach($followers as [$formula,$coord,$group]){
+            if(!isset($bases[$group])){
+                $formula->parentNode?->removeChild($formula);
                 continue;
             }
-            $base=$bases[$si];[$bc,$br]=$pos($base['ref']);[$cc,$cr]=$pos($ref);
-            $dc=$cc-$bc;$dr=$cr-$br;
-            $formula=preg_replace_callback('/(?<![A-Za-z0-9_.])(\$?)([A-Z]{1,3})(\$?)([0-9]+)(?![A-Za-z0-9_.])/u',
-                static function(array $m) use ($dc,$dr): string{
-                    $n=0;foreach(str_split($m[2]) as $c)$n=$n*26+ord($c)-64;
-                    $n+=($m[1]==='
+            [$baseCoord,$baseFormula]=$bases[$group];
+            [$baseCol,$baseRow]=$position($baseCoord);
+            [$col,$row]=$position($coord);
+            $dCol=$col-$baseCol;$dRow=$row-$baseRow;
+            $expanded=preg_replace_callback('/([A-Z]{1,3})([0-9]+)/',
+                static function($match)use($dCol,$dRow):string{
+                    $n=0;foreach(str_split($match[1])as $c)$n=$n*26+ord($c)-64;
+                    return self::col($n+$dCol).((int)$match[2]+$dRow);
+                },$baseFormula);
+            foreach(['t','si','ref'] as $attribute)$formula->removeAttribute($attribute);
+            while($formula->firstChild)$formula->removeChild($formula->firstChild);
+            $formula->appendChild($doc->createTextNode((string)$expanded));
+        }
+        $zip->addFromString('xl/worksheets/sheet'.$sheet.'.xml',$doc->saveXML());
+    }
+
+    private static function replaceRows(\ZipArchive $zip,int $sheet,int $start,array $records,bool $withTotal=false): void
     {
         $doc=self::document($zip,$sheet);
         $body=self::body($doc);
