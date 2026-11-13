@@ -242,7 +242,7 @@
    item.append(name,state);
    item.addEventListener('click',()=>{
     showCompany(company);
-    if(hasLocation&&schoolMap)schoolMap.setView([Number(company.latitude),Number(company.longitude)],14);
+    if(hasLocation&&schoolMap)schoolMap.setView([Number(company.latitude),Number(company.longitude)],15);
    });
    root.append(item);
   }
@@ -257,10 +257,7 @@
    const marker=L.marker(position,{icon:publicPin('agency',company.logoUrl),title:company.name});
    marker.on('click',()=>showCompany(company));marker.addTo(publicCompanyMarkers);attachPinFallback(marker);points.push(position);
   });
-  // Initial company plotting must not call fitBounds: it overrides the requested
-  // two-click (+2) city zoom with a dynamically calculated zoom.
-  // Keep the map at exactly zoom 14 (original level 12 plus two '+' presses).
-  schoolMap.setView([36.3,59.6],14,{animate:false});
+  if(points.length)focusPoints(points);
   publicMapStatus(points.length?faNumber(points.length)+' شرکت دارای مختصات معتبر از '+faNumber(publicCompanies.length)+' شرکت فعال نمایش داده می‌شوند.':'هنوز مختصات معتبری برای شرکت‌ها ثبت نشده است.');
  }
  function clearMapForSearch(){
@@ -349,7 +346,7 @@
    });
   }
   await window.__syPublicNeshanPromise;
-  schoolMap=new L.Map(mapNode,{key:result.data.webKey,maptype:'dreamy',center:[36.3,59.6],zoom:14,scrollWheelZoom:false});
+  schoolMap=new L.Map(mapNode,{key:result.data.webKey,maptype:'dreamy',center:[36.3,59.6],zoom:12,scrollWheelZoom:false});
   publicCompanyMarkers=L.layerGroup().addTo(schoolMap);schoolMarkers=L.layerGroup().addTo(schoolMap);
   requestAnimationFrame(()=>schoolMap?.invalidateSize(true));
  }
