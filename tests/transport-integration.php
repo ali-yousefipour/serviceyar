@@ -359,6 +359,16 @@ try{
  rejected(fn()=>\ServiceYar\Users\UserService::save($manager,$a,['username'=>'illegal_admin_'.$tag,'password'=>'Valid-Only-123','role'=>'agency_admin']),'ROLE_ASSIGNMENT_FORBIDDEN');
  $p->prepare('INSERT INTO agency_users(agency_id,user_id) VALUES(?,?)')->execute([$b,$newUser['id']]);rejected(fn()=>\ServiceYar\Users\UserService::changePassword($manager,$a,(int)$newUser['id'],['password'=>'Reset-Password-123','passwordConfirmation'=>'Reset-Password-123']),'PROTECTED_USER');
  rejected(fn()=>\ServiceYar\Agency\AgencyService::update($manager,$a,['name'=>'شرکت','isActive'=>0]),'FORBIDDEN');
+
+ $inactiveAgency=insertFixture('agencies',['uuid'=>Uuid::v4(),'name'=>'شرکت بازیابی آزمایشی']);
+ \ServiceYar\Agency\AgencyService::deactivate($uid,$inactiveAgency);
+ check((int)$p->query('SELECT is_active FROM agencies WHERE id='.(int)$inactiveAgency)->fetchColumn()===0,'Super-admin can deactivate agency');
+ rejected(fn()=>\ServiceYar\Agency\AgencyService::activate($manager,$inactiveAgency),'SUPER_ADMIN_REQUIRED');
+ \ServiceYar\Agency\AgencyService::activate($uid,$inactiveAgency);
+ check((int)$p->query('SELECT is_active FROM agencies WHERE id='.(int)$inactiveAgency)->fetchColumn()===1,'Super-admin can reactivate agency without recreation');
+ \ServiceYar\Agency\AgencyService::activate($uid,$inactiveAgency);
+ check((int)$p->query('SELECT is_active FROM agencies WHERE id='.(int)$inactiveAgency)->fetchColumn()===1,'Reactivation is idempotent');
+
  $planBody=['studentId'=>$s1['id'],'requestKey'=>'installments-test-'.$tag,'total'=>'100','advance'=>'10','count'=>3,'issueDate'=>'2026-10-01','dates'=>['2026-11-01','2026-12-01','2027-01-01']];
  rejected(fn()=>\ServiceYar\Domain\InstallmentPlan::create($uid,$a,$planBody),'INSTALLMENT_PREVIEW_REQUIRED');
  $planBody['approvalDigest']=\ServiceYar\Domain\InstallmentPlan::preview($planBody)['approvalDigest'];
