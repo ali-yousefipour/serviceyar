@@ -35,6 +35,7 @@ jobs:
           set -euo pipefail
           find backend tests -name '*.php' -print0 | xargs -0 -n1 php -l
           php tests/static-smoke.php
+          php -r 'if (!extension_loaded("gd")) { fwrite(STDERR, "GD is required for school photos\\n"); exit(1); }'
           php tests/school-image-processing.php
           php tests/xlsx-writer.php
           php tests/excel-localization.php
