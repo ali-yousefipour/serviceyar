@@ -20,9 +20,9 @@ const transportFields={
 resources.accounts=['حساب‌ها',['code','title','bankName','bankAccount','iban','parentId','isActive']];resources.ledger=['دریافت و پرداخت',transportFields.ledger];resources['driver-ratings']=['امتیاز و گزارش',transportFields['driver-ratings']];resources['parent-reports']=['گزارشات والدین',transportFields['parent-reports']];
 for(const [key,fields] of Object.entries(transportFields))resources[key][1]=fields;
 function schoolPhotoUrl(row){
- const raw=String(row?.photo_path??row?.photoPath??'').trim();
- if(!/^(?:uploads\/)?schools\/(?:[0-9]{4}\/[0-9]{2}\/)?[a-zA-Z0-9_.-]+\.(?:jpe?g|png|webp)$/i.test(raw))return '';
- return '/schools/'+raw.replace(/^(?:uploads\/)?schools\//,'');
+ const path=String(row?.photo_path??row?.photoPath??'').trim();
+ if(!path||!row?.id||!currentAgency?.id)return '';
+ return '/api/v1/schools/'+encodeURIComponent(row.id)+'/photo?agencyId='+encodeURIComponent(currentAgency.id);
 }
 const columns={messages:['channel','recipientType','recipientId','subject','status','providerStatus','attempts'],schools:['code','name','shift','schoolType','region'],students:['fullName','schoolId','driverName','serviceStatus','paymentStatus','mobile','monthlyFee','annualFee','address'],drivers:['firstName','lastName','mobile','status','vehicleId','bankAccount'],vehicles:['plate','ownerName','driverName','model','capacity'],services:['code','title','driverId','schoolId','capacity','monthlyFee','agreedAmount','shift']};
 const relations={schoolId:'schools',driverId:'drivers',oldDriverId:'drivers',newDriverId:'drivers',studentId:'students',vehicleId:'vehicles',serviceId:'services',packId:'packs',invoiceId:'invoices',parentId:'accounts'};
@@ -754,6 +754,45 @@ async function viewRecord(key,id){
  try{
   const r=await api(scoped('/api/v1/'+key+'/'+id));
   if(key==='ledger'){showLedgerDetails(r);return;}
+  if(key==='schools'){
+   const name=String(r.name||'مدرسه'),photo=schoolPhotoUrl(r);
+   const lat=Number(r.latitude),lon=Number(r.longitude);
+   const coordsValid=r.latitude!==null&&r.longitude!==null&&r.latitude!==''&&r.longitude!==''&&Number.isFinite(lat)&&Number.isFinite(lon)&&Math.abs(lat)<=90&&Math.abs(lon)<=180;
+   const text=v=>esc(String(v===null||v===undefined||v===''?'—':v));
+   const photoHtml=photo?`<img id="sySchoolDetailsPhoto" class="sy-school-details-image" src="${esc(photo)}" alt="تصویر مدرسه ${esc(name)}" loading="lazy">`:
+    '<div class="sy-school-photo-placeholder" role="img" aria-label="مدرسه تصویری ندارد">تصویری ثبت نشده است</div>';
+   const info=[['کد آموزشگاه',r.code],['نوع مدرسه',r.school_type],['ناحیه',r.region],['مدیر مدرسه',r.manager_name],['نشانی',r.address],['تلفن',r.phone]];
+   dialog('جزئیات مدرسه',`<div class="sy-school-details">
+    <div class="sy-school-details-hero"><div class="sy-school-details-cover">${photoHtml}</div>
+     <div class="sy-school-details-summary"><span class="sy-school-details-kicker">پرونده مدرسه</span>
+      <h2>${esc(name)}</h2><p>${text(r.region)} · ${text(r.school_type)}</p>
+      ${can('schools','manage')?`<button type="button" class="primary" id="syDetailsEditSchool">ویرایش اطلاعات و تصویر</button>`:''}
+     </div>
+    </div>
+    <section class="sy-school-details-section"><h3>اطلاعات مدرسه</h3><dl class="sy-school-details-facts">
+     ${info.map(([key,value])=>`<div><dt>${esc(key)}</dt><dd>${text(value)}</dd></div>`).join('')}
+    </dl></section>
+    <section class="sy-school-details-section"><div class="sy-school-details-section-head"><h3>موقعیت مدرسه روی نقشه نشان</h3>${coordsValid?'<span>موقعیت ثبت‌شده</span>':''}</div>
+     ${coordsValid?'<div id="sySchoolDetailsMap" class="sy-school-details-map" aria-label="موقعیت مدرسه در نقشه نشان"></div>':'<p class="sy-school-map-empty">برای این مدرسه هنوز موقعیت جغرافیایی ثبت نشده است. از بخش ویرایش، مکان را مشخص کنید.</p>'}
+    </section>
+   </div>`);
+   document.getElementById('syDetailsEditSchool')?.addEventListener('click',()=>formResource('schools',id));
+   const image=document.getElementById('sySchoolDetailsPhoto');
+   image?.addEventListener('error',()=>{
+    image.replaceWith(Object.assign(document.createElement('div'),{className:'sy-school-photo-placeholder',textContent:'تصویر مدرسه در دسترس نیست'}));
+   });
+   if(coordsValid){
+    const node=document.getElementById('sySchoolDetailsMap');
+    const map=await makeMap(node,[lat,lon],15);
+    if(map&&node?.isConnected&&window.L){
+     const marker=L.marker([lat,lon],{title:name}).addTo(map);
+     marker.bindPopup(document.createTextNode(name)).openPopup();
+     requestAnimationFrame(()=>map.invalidateSize());
+    }
+   }
+   return;
+  }
+
   const showFinance=key==='students'&&can('school-statement');
   const detailFields=key==='students'?[...resources[key][1],'annualMonths','annualFee']:resources[key][1],detailGroups={students:[['مشخصات دانش‌آموز',['firstName','lastName','nationalCode','gender','fatherName','nationality','healthStatus']],['اطلاعات ولی',['guardianFirstName','guardianLastName','guardianNationalCode','guardianRelation','mobile','emergencyPhone']],['مدرسه و سرویس',['schoolId','grade','shift','academicYear','serviceStatus','monthlyFee','annualMonths','annualFee']],['نشانی و سایر اطلاعات',['address','returnAddress','latitude','longitude']]],drivers:[['مشخصات راننده',['firstName','lastName','nationalCode','mobile','status']],['خودرو و نشانی',['vehicleId','isRepresentative','address']],['اطلاعات بانکی',['bankName','bankAccount','iban']]],services:[['مشخصات سرویس',['title','code','status','capacity','shift']],['مدرسه و راننده',['schoolId','driverId','packId']],['مسیر و مبالغ',['startAddress','endAddress','monthlyFee','agreedAmount']]]};
   const detailValue=f=>{if(key==='services'&&f==='monthlyFee')return number(r.driver_net_monthly??r.monthly_fee)+' ریال';if(key==='students'&&f==='annualFee')return r.annual_fee==null?'—':number(r.annual_fee)+' ریال';if(key==='students'&&f==='annualMonths')return r.annual_months==null?'—':(Number(r.annual_months)===8.5?'۸٫۵':'۹')+' ماه';const v=val(r,f);return /Date$/.test(f)?dateText(v):/amount|fee|balance|total|capacity|score|rating/i.test(f)?number(v):['status','serviceStatus'].includes(f)?(statuses[v]||v||'—'):fieldOptions(key,f)?.find(x=>String(x[0])===String(v))?.[1]||persianDigits(v||'—');};
@@ -792,6 +831,24 @@ async function formResource(key,id,onSaved){
  const required={schools:['name'],students:['firstName','lastName','mobile','schoolId'],drivers:['firstName','lastName'],services:['title'],vehicles:['plate'],ledger:['partyType','partyId','direction','amount','entryDate'],'driver-work':['driverId','workDate','amount'],'driver-payments':['driverId','paymentDate','amount']};
  dialog((id?'ویرایش ':'ثبت ')+resourceName(key),`<form id="editForm" class="${key==='ledger'?'sy-ledger-editor':''}"><div class="form-grid">${resources[key][1].map(f=>{const defaults={academicYear:year(),nationality:'iranian',capacity:4,serviceStatus:'no_request',isRepresentative:0,direction:'receipt',channel:'internal',monthlyFee:0,agreedAmount:0};const original=val(row,f);const v=original!==''?original:(id?'':defaults[f]??''),options=f==='companyAccountId'&&key==='ledger'?companyAccountOptions:f==='bankName'&&key==='accounts'?bankOptions:f==='method'&&key==='ledger'&&id&&row.method&&!fieldOptions(key,f).some(([code])=>code===row.method)?[...fieldOptions(key,f),[row.method,methodLabel(row.method)+' (روش سابق)']]:fieldOptions(key,f),req=required[key]?.includes(f)||f==='companyAccountId'&&key==='ledger'&&!id?'required':'',text=/address|body|note|reason|description|response/i.test(f),relation=relations[f]||(['partyId','ownerId','recipientId'].includes(f)?'party':null),rialField=f==='amount'&&['invoices','payments','driver-payments','school-charges','service-charges','contracts'].includes(key);return `<label>${labels[f]||esc(f)}${req?' *':''}${f==='amount'&&key==='ledger'?`<div class="sy-money-field"><input type="text" name="amountDisplay" data-money-display inputmode="numeric" autocomplete="off" spellcheck="false" dir="ltr" placeholder="۰" aria-label="مبلغ به ریال" ${req} value="${esc(v!==''?number(v):'')}"><span class="sy-money-unit">ریال</span><input type="hidden" name="amount" value="${esc(v)}"></div><small class="sy-money-hint">مبلغ را بدون اعشار وارد کنید؛ ارقام به‌صورت سه‌رقمی جدا می‌شوند.</small>`:options?`<select name="${f}" ${req}><option value="">انتخاب کنید</option>${options.map(([value,title])=>`<option value="${esc(value)}" ${String(v)===String(value)?'selected':''}>${esc(title)}</option>`).join('')}</select>`:relation?`<input data-lookup-search="${f}" placeholder="جستجوی ${labels[f]}" aria-label="جستجوی ${labels[f]}"><select name="${f}" aria-label="${esc(labels[f]||f)}" data-relation="${relation}" ${req}><option value="">انتخاب کنید</option>${v?`<option value="${esc(v)}" selected>#${esc(v)}</option>`:''}</select>`:rialField?`<input type="text" name="${f}" data-rial-amount inputmode="numeric" autocomplete="off" dir="ltr" ${req} placeholder="۰" value="${esc(v!==''?number(v):'')}" aria-label="${esc(labels[f]||f)} به ریال"><small class="sy-money-hint">مبلغ به ریال؛ بدون اعشار و با جداکننده هزارگان</small>`:text?`<textarea name="${f}" maxlength="6000" ${req}>${esc(v)}</textarea>`:`<input name="${f}" ${req} ${/Date$/.test(f)?'type="date"':/distanceKm/i.test(f)?'type="number" min="0" step="1" inputmode="numeric"':/amount|fee|capacity|score|latitude|longitude|rating|balance/i.test(f)?'type="number" step="any"':/mobile|phone/i.test(f)?'inputmode="tel"':'maxlength="255"'} value="${esc(v)}">`}</label>`}).join('')}</div><p class="muted">مبالغ به ریال و تمام تاریخ‌های ورودی و نمایشی شمسی هستند.</p><button class="primary" id="saveRecord">ذخیره</button></form>`);
  const form=$('editForm');
+ if(key==='schools'&&id){
+  const section=document.createElement('section');section.className='sy-school-photo-editor';
+  const photo=schoolPhotoUrl(row);
+  section.innerHTML=`<div class="sy-school-photo-editor-preview">${photo?`<img id="sySchoolEditorPreview" src="${esc(photo)}" alt="تصویر فعلی مدرسه">`:'<div id="sySchoolEditorEmpty" class="sy-school-photo-placeholder">هنوز تصویری ثبت نشده است</div>'}</div><div class="sy-school-photo-editor-controls"><h4>تصویر مدرسه</h4><p>می‌توانید تصویر مدرسه را بارگذاری یا با تصویر جدید جایگزین کنید. JPG، PNG یا WebP تا ۵ مگابایت.</p><label class="sy-school-photo-choose">انتخاب تصویر<input type="file" id="sySchoolPhotoUpload" accept="image/jpeg,image/png,image/webp"></label><span id="sySchoolPhotoFileName" role="status"></span></div>`;
+  form.querySelector('.form-grid')?.after(section);
+  const fileInput=section.querySelector('#sySchoolPhotoUpload');
+  fileInput?.addEventListener('change',()=>{
+   const file=fileInput.files?.[0];if(!file)return;
+   if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024){fileInput.value='';notify('فرمت تصویر نامعتبر یا حجم فایل بیش از ۵ مگابایت است.',true);return;}
+   const newSrc=URL.createObjectURL(file);
+   let preview=section.querySelector('#sySchoolEditorPreview');
+   if(!preview){preview=document.createElement('img');preview.id='sySchoolEditorPreview';preview.alt='پیش‌نمایش تصویر جدید';section.querySelector('.sy-school-photo-editor-preview')?.replaceChildren(preview);}
+   const old=preview.dataset.tempUrl;if(old)URL.revokeObjectURL(old);
+   preview.src=newSrc;preview.dataset.tempUrl=newSrc;
+   section.querySelector('#sySchoolPhotoFileName').textContent=file.name;
+  });
+ }
+
  const rialAscii=value=>String(value??'').replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).trim();
  const normalizeRialInput=value=>rialAscii(value).replace(/[٬,]/g,'');
  const validRialGrouping=value=>/^(?:[0-9]+|[0-9]{1,3}(?:[٬,][0-9]{3})+)$/.test(rialAscii(value));
@@ -922,7 +979,19 @@ if(form.elements.mobile){const mobile=form.elements.mobile;mobile.pattern='09[0-
  });
  if(form.elements.latitude&&form.elements.longitude)await locationPicker(form,key);if(typeKey){const type=form.elements.partyType||form.elements.ownerType||form.elements.recipientType;type.onchange=()=>{const select=form.elements[typeKey],search=form.querySelector(`[data-lookup-search="${typeKey}"]`);select.value='';if(search)search.value='';populate(select);};}
  resourceWizard(form,key);
- form.onsubmit=async e=>{e.preventDefault();const button=$('saveRecord');button.disabled=true;$('formError').hidden=true;try{const body=Object.fromEntries(new FormData(form));for(const input of rialInputs){if(!formatRialInput(input)){input.reportValidity();button.disabled=false;return;}body[input.name]=normalizeRialInput(input.value);}if(key==='students'&&body.tariffDistanceKm!==undefined&&body.tariffDistanceKm!=='')body.tariffDistanceKm=Math.round(Number(body.tariffDistanceKm));if(key==='ledger')delete body.amountDisplay;await write('/api/v1/'+key+(id?'/'+id:''),body,id?'PUT':'POST');lookupCache={};closeDialog();notify('اطلاعات ذخیره شد.');if(onSaved)onSaved();else if(gridState?.key===key&&gridState.token===pageToken)await loadResource(key);else{location.hash=key;}}catch(err){if($('formError')){$('formError').textContent=err.message;$('formError').hidden=false;$('formError').focus();}}finally{if(button.isConnected)button.disabled=false;}};
+ form.onsubmit=async e=>{e.preventDefault();const button=$('saveRecord');button.disabled=true;$('formError').hidden=true;try{const body=Object.fromEntries(new FormData(form));for(const input of rialInputs){if(!formatRialInput(input)){input.reportValidity();button.disabled=false;return;}body[input.name]=normalizeRialInput(input.value);}if(key==='students'&&body.tariffDistanceKm!==undefined&&body.tariffDistanceKm!=='')body.tariffDistanceKm=Math.round(Number(body.tariffDistanceKm));if(key==='ledger')delete body.amountDisplay;await write('/api/v1/'+key+(id?'/'+id:''),body,id?'PUT':'POST');
+  if(key==='schools'&&id){
+   const file=form.querySelector('#sySchoolPhotoUpload')?.files?.[0];
+   if(file){
+    const payload=new FormData();payload.append('photo',file);
+    const uploadResponse=await fetch('/api/v1/schools/'+encodeURIComponent(id)+'/photo?agencyId='+encodeURIComponent(currentAgency.id),{
+     method:'POST',credentials:'same-origin',headers:{'X-CSRF-Token':session.csrfToken,'Accept':'application/json'},body:payload
+    });
+    const result=await uploadResponse.json().catch(()=>({}));
+    if(!uploadResponse.ok||!result.ok)throw Error(result.error?.message||'اطلاعات مدرسه ذخیره شد اما بارگذاری تصویر ناموفق بود.');
+   }
+  }
+  lookupCache={};closeDialog();notify('اطلاعات ذخیره شد.');if(onSaved)onSaved();else if(gridState?.key===key&&gridState.token===pageToken)await loadResource(key);else{location.hash=key;}}catch(err){if($('formError')){$('formError').textContent=err.message;$('formError').hidden=false;$('formError').focus();}}finally{if(button.isConnected)button.disabled=false;}};
  }catch(e){notify(e.message,true);}
 }
 function bulkFeeDialog(){
