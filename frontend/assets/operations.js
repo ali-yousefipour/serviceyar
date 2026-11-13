@@ -1366,9 +1366,10 @@ async function agencyPaymentMethodSettings(){
  const methods=await api(scoped('/api/v1/finance/payment-methods'));
  if(token!==pageToken||agency!==Number(currentAgency?.id))return;
  const editable=can('settings','manage');
- const panel=document.createElement('section');panel.className='panel sy-settings-panel sy-payment-method-settings';
+ const panel=document.createElement('section');panel.className='panel sy-settings-panel sy-payment-method-settings';panel.dataset.settingsTab='methods';
  panel.innerHTML='<header class="sy-settings-section-head"><div><h2>روش‌های دریافت و پرداخت شرکت</h2><p>روش‌های فعال در فرم ثبت دریافت و پرداخت همین شرکت نمایش داده می‌شوند. غیرفعال‌کردن یک روش، سوابق قبلی را حذف نمی‌کند.</p></div></header><div id="agencyMethodRows" class="sy-method-settings-rows"></div>'+(editable?'<div class="sy-method-settings-actions"><button type="button" id="addAgencyMethod">افزودن روش جدید</button><button type="button" class="primary" id="saveAgencyMethods">ذخیره روش‌های شرکت</button></div>':'')+'<p id="agencyMethodsStatus" role="status" aria-live="polite"></p>';
  $('transportSettings').closest('section').after(panel);
+ panel.hidden=$('content').querySelector('.sy-settings-tabs [aria-selected="true"]')?.dataset.settingsSwitch!=='methods';
  const rows=methods.map(item=>({...item}));
  const render=()=>{
   const host=panel.querySelector('#agencyMethodRows');
