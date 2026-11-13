@@ -46,7 +46,7 @@ const markerEnd=operations.indexOf('async function dashboard(',markerStart);
 const markerSource=operations.slice(markerStart,markerEnd);
 assert.ok(markerSource.includes('function dashboardCompanyMarker(')&&markerSource.includes("img.addEventListener('error',fallback"),'Company marker must attach CSP-safe image failure handler');
 assert.ok(!markerSource.includes('onerror='),'Map markers must not use inline handlers with CSP');
-assert.ok(markerSource.includes('/assets/school-map-icon.webp')&&markerSource.includes('/assets/company-map-icon.webp'),'Map markers must use user-supplied icon artwork');
+assert.ok(markerSource.includes('/assets/school-map-icon.svg')&&markerSource.includes('/assets/company-map-icon.svg'),'Map markers must use user-supplied icon artwork');
 assert.ok(markerSource.includes('sy-map-school-label'),'School name should accompany map photo');
 assert.ok(operations.includes('dashboardCompanyMarker(map,point,config.hasCustomLogo)'),'Dashboard must call the bounded company marker');
 const dashboardCss=read('frontend/assets/operations.css');
@@ -54,6 +54,9 @@ assert.ok(dashboardCss.includes('#dashboardSchoolMap .leaflet-marker-icon.sy-map
 const watermarkSource=read('backend/public/index.php');
 assert.ok(watermarkSource.includes("$watermark='service-yar.ir'")&&!watermarkSource.includes('ServiceYar | challi.ir'),'Public photos should have the new watermarked domain');
 assert.ok(!watermarkSource.includes('imagefilledrectangle($canvas,0,$th-32'),'Public photo must not add a bottom banner');
+assert.ok(watermarkSource.includes('imagecolorallocatealpha($overlay,255,255,255,75)'),'Public watermark must remain legible');
+assert.ok(js.includes('sy-public-default-art')&&js.includes('sy-public-watermarked-photo'),'Public modal must distinguish placeholders and real photos');
+assert.ok(css.includes('sy-public-modal-visual.sy-public-default-art')&&css.includes('content:"service-yar.ir"'),'School modal needs crisp fallback artwork and visible watermark');
 
 assert.ok(operations.includes('dashboardCompanyMarker(map,point,config.hasCustomLogo)')&&operations.includes('dashboardSchoolMarker(map,point,sc)'),'Dashboard markers must use dedicated image icons');
 assert.ok(css.includes('Prevent blank sections in full-page screenshots'),'Public page content must never be hidden by reveal animation');
@@ -64,8 +67,8 @@ assert.ok(read('backend/src/Domain/PublicExplorer.php').includes('public_contact
 assert.ok(js.includes("typeof event.key==='string'"),'Keyboard shortcuts must tolerate events without key');
 assert.ok(app.includes('/api/v1/auth/status'),'Guest landing must check status without calling protected /me endpoint');
 assert.ok(api.includes('/api/v1/auth/status'),'Missing anonymous-safe auth status route');
-assert.ok(js.includes('DEFAULT_COMPANY_IMAGE')&&js.includes('attachPinFallback(')&&js.includes('/assets/company-map-icon.webp')&&js.includes('/assets/school-map-icon.webp'),'Missing user-provided map icon fallbacks');
-for(const img of ['frontend/assets/company-map-icon.webp','frontend/assets/school-map-icon.webp'])
+assert.ok(js.includes('DEFAULT_COMPANY_IMAGE')&&js.includes('attachPinFallback(')&&js.includes('/assets/company-map-icon.svg')&&js.includes('/assets/school-map-icon.svg'),'Missing user-provided map icon fallbacks');
+for(const img of ['frontend/assets/company-map-icon.svg','frontend/assets/school-map-icon.svg'])
  assert.ok(existsSync(new URL(img,root)),'Missing uploaded image asset: '+img);
 assert.ok(!html.includes('sy-dialog-privacy'),'Do not display unnecessary publication note in public modal');
 const adminApp=read('frontend/assets/app.js');
