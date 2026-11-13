@@ -43,8 +43,14 @@ final class AgencyLogo
     {
         Authorization::requireAgencyAccess($uid,$aid);
         $path=self::filename($aid);
-        if(!is_file($path))$path=dirname(__DIR__,3).'/frontend/assets/logo.png';
-        if(!is_file($path))throw new AuthException(404,'لوگوی شرکت پیدا نشد.','NOT_FOUND');
+        if(!is_file($path)){
+            // Production FTP publishes frontend/assets under /public_html/assets,
+            // whereas the local checkout keeps them under frontend/assets.
+            foreach([dirname(__DIR__,3).'/assets/logo.png',dirname(__DIR__,3).'/frontend/assets/logo.png'] as $fallback){
+                if(is_file($fallback)){$path=$fallback;break;}
+            }
+        }
+        if(!is_file($path))throw new AuthException(404,'لوگوی پیش‌فرض در فایل‌های انتشار موجود نیست.','NOT_FOUND');
         $mime=(string)(@getimagesize($path)['mime']??'');
         if(!in_array($mime,['image/png','image/jpeg','image/webp'],true))throw new AuthException(500,'فایل لوگو معتبر نیست.','INVALID_LOGO');
         header('Content-Type: '.$mime);
