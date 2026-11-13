@@ -10,7 +10,7 @@ foreach([2=>4,3=>5,4=>6,5=>12] as $tableNo=>$sheetNo){
  $t=new DOMDocument();$t->loadXML($z->getFromName('xl/tables/table'.$tableNo.'.xml'));$cols=$t->getElementsByTagName('tableColumn');
  $d=new DOMDocument();$d->loadXML($z->getFromName('xl/worksheets/sheet'.$sheetNo.'.xml'));$r=$tableNo===5?4:2;
  $headers=[];foreach($d->getElementsByTagName('row') as $row)if((int)$row->getAttribute('r')===$r){foreach($row->getElementsByTagName('c') as $cell){$name=preg_replace('/[0-9]/','',$cell->getAttribute('r'));$headers[$name]=$cell->textContent;}break;}
- $diff=[];foreach($cols as $i=>$col){$k='';$n=$i+1;while($n>0){$n--;$k=chr(65+$n%26).$k;$n=intdiv($n,26);}if(trim($col->getAttribute('name'))!==trim($headers[$k]??''))$diff[]=$k.':'.substr($col->getAttribute('name'),0,28).'!='.substr($headers[$k]??'',0,28);}
- echo 'TABLE-MISMATCH-'.$tableNo.' '.json_encode($diff,JSON_UNESCAPED_UNICODE)."\\n";
+ $diff=[];foreach($cols as $i=>$col){$k='';$n=$i+1;while($n>0){$n--;$k=chr(65+$n%26).$k;$n=intdiv($n,26);}if(trim($col->getAttribute('name'))!==trim($headers[$k]??''))$diff[]=$k.':'.mb_substr($col->getAttribute('name'),0,28).'!='.mb_substr($headers[$k]??'',0,28);}
+ echo 'TABLE-MISMATCH-'.$tableNo.' '.json_encode($diff,JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE)."\\n";
 }
 $z->close();
