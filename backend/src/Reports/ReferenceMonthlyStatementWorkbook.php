@@ -96,6 +96,10 @@ final class ReferenceMonthlyStatementWorkbook
     private static function put(\DOMDocument $doc,\DOMElement $row,string $col,int $index,mixed $value,?string $style=null): void
     {
         if($value===null || $value==='')return;
+        require_once __DIR__.'/ExcelLocalization.php';
+        // Formula expressions and numeric values are not string-localized:
+        // doing so would corrupt cross-sheet calculations in the 14-sheet template.
+        if(!is_array($value))$value=ExcelLocalization::value($value,$col);
         $cell=$doc->createElementNS(self::NS,'c');
         $cell->setAttribute('r',$col.$index);
         if($style!==null)$cell->setAttribute('s',$style);
