@@ -120,7 +120,7 @@
  function adjustSchoolPhotoFrame(img){
   if(!img||!img.naturalWidth||!img.naturalHeight)return;
   const ratio=img.naturalWidth/img.naturalHeight;
-  const frame=img.closest('.sy-public-modal-visual,.sy-school-choice-visual');
+  const frame=img.closest('.sy-public-modal-visual,.sy-school-choice-visual,.sy-public-pin');
   if(!frame)return;
   frame.style.setProperty('--sy-school-aspect',String(ratio));
   frame.classList.toggle('sy-photo-portrait',ratio<.9);
@@ -194,12 +194,14 @@
   };
   img.addEventListener('error',fail);
   img.addEventListener('load',()=>{
+   adjustSchoolPhotoFrame(img);
    img.hidden=false;
    face?.classList.toggle('sy-public-pin-no-frame',isDefault());
    icon.classList.toggle('sy-public-pin-default',isDefault());
    face?.classList.remove('sy-public-pin-fallback');
   });
   if(img.complete&&img.naturalWidth===0)fail();
+  else if(img.complete&&img.naturalWidth>0)adjustSchoolPhotoFrame(img);
  }
  function focusPoints(points){
   if(!schoolMap||!points.length)return;
