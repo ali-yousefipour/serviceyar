@@ -51,14 +51,33 @@ final class MonthlyStatementWorkbook
         Authorization::requirePermission($uid,'finance.view');
         $d=MonthlyStatements::get($uid,$aid,$id);
         if($d['status']!=='final')throw new AuthException(409,'برای دریافت فایل، صورت‌وضعیت باید فعال باشد.','STATEMENT_DELETED');
+        self::render($d,$aid,$id,false);
+    }
+
+    /** Download a temporary 14-sheet workbook without writing a monthly statement. */
+    public static function downloadPreview(int $uid,int $aid,array $input): never
+    {
+        Authorization::requirePermission($uid,'finance.view');
+        $d=MonthlyStatements::preview($uid,$aid,$input);
+        $digest=(string)($input['approvalDigest']??'');
+        if(!preg_match('/^[a-f0-9]{64}$/D',$digest)||!hash_equals($d['approval_digest'],$digest)){
+            throw new AuthException(409,'اطلاعات از زمان پیش‌نمایش تغییر کرده است؛ دوباره محاسبه کنید.','STATEMENT_PREVIEW_CHANGED');
+        }
+        if(empty($d['items']))throw new AuthException(422,'برای این ماه اطلاعات قابل تهیه وجود ندارد.','STATEMENT_EMPTY');
+        self::render($d,$aid,0,true);
+    }
+
+    /** Identical workbook generation for archived and temporary previews. */
+    private static function render(array $d,int $aid,int $id,bool $preview): never
+    {
         if(!class_exists(\ZipArchive::class))throw new AuthException(500,'افزونه ZIP برای اکسل فعال نیست.','EXPORT_DEPENDENCY_MISSING');
         $q=Connection::get()->prepare('SELECT name FROM agencies WHERE id=?');$q->execute([$aid]);$agency=(string)$q->fetchColumn();
         // Prefer the real reference's layout and formula-bearing sheets when
         // the scrubbed template has been installed. Legacy synthetic XLSX is
         // retained as a safe fallback until the template is deployed.
-        if(($_GET['workbookFormat']??'')!=='standard')ReferenceMonthlyStatementWorkbook::downloadIfAvailable($d,$agency,$id);
+        if(($_GET['workbookFormat']??'')!=='standard')ReferenceMonthlyStatementWorkbook::downloadIfAvailable($d,$agency,$id,$preview);
         $label=$d['month_name'].' '.$d['year'];
-        $title=$label.' - '.$agency.' - صورت‌وضعیت سرویس مدارس (ریال)';
+        $title=($preview?'پیش‌نمایش آزمایشی ـ ثبت‌نشده | ':'').$label.' - '.$agency.' - صورت‌وضعیت سرویس مدارس (ریال)';
         $items=$d['items'];$drivers=$d['drivers'];$rates=$d['rates'];$t=$d['totals'];
         // Frozen reference accounting is separate from driver deductions.
         // Legacy snapshots are calculated at export without mutating storage.
@@ -146,7 +165,7 @@ final class MonthlyStatementWorkbook
             ['صورت‌وضعیت بدون بیمه و گواهی',$referenceTotals['statement_excluding_certificate_insurance']??0]
         ];
         $sheets=[
-            ['راهنما',['عنوان','توضیح'],[['دوره',$label],['شرکت',$agency],['وضعیت','نهایی'],['مبنای داده','تصویر ثابت از تخصیص‌های فعال در زمان تأیید'],['قالب خروجی','بازسازی ۱۴ شیتی؛ قالب دقیق مرجع هنوز نصب نشده است'],['مبنای محاسبه','تعرفه کلاس خودرو، مسافت و ناحیه طبق فایل ۱۴۰۵'],['ارقام','ریال']]],
+            ['راهنما',['عنوان','توضیح'],[['دوره',$label],['شرکت',$agency],['وضعیت',$preview?'آزمایشی ـ ثبت‌نشده':'نهایی'],['مبنای داده','تصویر ثابت از تخصیص‌های فعال در زمان تأیید'],['قالب خروجی','بازسازی ۱۴ شیتی؛ قالب دقیق مرجع هنوز نصب نشده است'],['مبنای محاسبه','تعرفه کلاس خودرو، مسافت و ناحیه طبق فایل ۱۴۰۵'],['ارقام','ریال']]],
             ['اطلاعات پایه1',['عنوان','مقدار'],[['نام شرکت',$agency],['سال مالی',$d['year']],['ماه',$d['month_name']],['شروع دوره',$d['from']],['پایان دوره',$d['to']],['سال تحصیلی',$d['academic_year']]]],
             ['tbl_Monthly_Archive',['سال مالی','ماه','ردیف','نام دانش‌آموز','کد ملی','مقطع','نام ولی','تلفن','شبا ولی','مبدا','مدرسه','ناحیه','راننده','کد ملی راننده','شهریه','کسورات','خالص'],$archiveRows],
             ['دانش آموزان6',['ردیف','نام دانش‌آموز','کد ملی','مقطع','نام ولی','تلفن','مبدا','مدرسه','ناحیه','فاصله','راننده','سرویس','شهریه ماهانه'],$studentRows],
@@ -192,7 +211,7 @@ final class MonthlyStatementWorkbook
                 if(!$writer->saveAs($tmp))throw new \RuntimeException('Cannot write XLSX statement');
                 while(ob_get_level()>0)ob_end_clean();
                 header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-                header('Content-Disposition: attachment; filename="school-statement-'.$d['year'].'-'.str_pad((string)$d['month'],2,'0',STR_PAD_LEFT).'-'.$id.'.xlsx"');
+                header('Content-Disposition: attachment; filename="'.($preview?'preview-':'').'school-statement-'.$d['year'].'-'.str_pad((string)$d['month'],2,'0',STR_PAD_LEFT).($preview?'':'-'.$id).'.xlsx"');
                 header('Cache-Control: private, no-store');header('X-Content-Type-Options: nosniff');
                 readfile($tmp);
             }finally{if(is_file($tmp))@unlink($tmp);}
@@ -221,7 +240,7 @@ final class MonthlyStatementWorkbook
             $zip->addFromString('xl/styles.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Tahoma"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Tahoma"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF185B50"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="3" fontId="0" fillId="0" borderId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellXfs></styleSheet>');
             $zip->close();
             header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            header('Content-Disposition: attachment; filename="school-statement-'.$d['year'].'-'.str_pad((string)$d['month'],2,'0',STR_PAD_LEFT).'-'.$id.'.xlsx"');
+            header('Content-Disposition: attachment; filename="'.($preview?'preview-':'').'school-statement-'.$d['year'].'-'.str_pad((string)$d['month'],2,'0',STR_PAD_LEFT).($preview?'':'-'.$id).'.xlsx"');
             header('Cache-Control: private, no-store');header('X-Content-Type-Options: nosniff');
             readfile($tmp);
         }finally{if(is_file($tmp))@unlink($tmp);}
