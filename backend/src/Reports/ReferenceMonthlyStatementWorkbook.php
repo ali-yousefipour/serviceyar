@@ -217,6 +217,31 @@ final class ReferenceMonthlyStatementWorkbook
         }
     }
 
+    /** Adjust the reference's print definitions to the real month rather than
+     * printing only its fixed 639-row and 3-row original viewports. */
+    private static function expandPrintAreas(\ZipArchive $zip,int $students,int $drivers): void
+    {
+        $source=$zip->getFromName('xl/workbook.xml');
+        if(!is_string($source))throw new \RuntimeException('Workbook metadata missing');
+        $doc=new \DOMDocument('1.0','UTF-8');
+        if(!@$doc->loadXML($source,LIBXML_NONET))throw new \RuntimeException('Invalid workbook metadata');
+        $footerOffset=max(0,(4+$drivers)+3-220);
+        $ranges=[
+            3=>"'دانش آموزان6'!\$A\$1:\$O\$".max(3,2+$students),
+            4=>"'رانندگان 7'!\$A\$1:\$L\$".max(3,2+$drivers),
+            5=>"'بهای خدمات اولیا5'!\$A\$1:\$W\$".max(4,3+$students),
+            6=>"'صورت وضعیت نهایی8'!\$A\$1:\$K\$".(230+$footerOffset)
+        ];
+        foreach($doc->getElementsByTagNameNS(self::NS,'definedName') as $name){
+            if($name->getAttribute('name')!=='_xlnm.Print_Area')continue;
+            $index=(int)$name->getAttribute('localSheetId');
+            if(!isset($ranges[$index]))continue;
+            while($name->firstChild)$name->removeChild($name->firstChild);
+            $name->appendChild($doc->createTextNode($ranges[$index]));
+        }
+        $zip->addFromString('xl/workbook.xml',$doc->saveXML());
+    }
+
     private static function replaceRows(\ZipArchive $zip,int $sheet,int $start,array $records,bool $withTotal=false): void
     {
         $doc=self::document($zip,$sheet);
@@ -588,6 +613,7 @@ final class ReferenceMonthlyStatementWorkbook
                     ]);
                 }
                 self::synchronizeTableHeaders($zip);
+                self::expandPrintAreas($zip,count($students),count($drivers));
                 // Do not invent journal voucher account codes or contract IDs.
                 // The reference accounting sheet remains unposted until mapped.
                 $zip->close();
