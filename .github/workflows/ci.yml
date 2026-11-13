@@ -60,6 +60,7 @@ jobs:
           node-version: '22'
       - name: Migration and transport integration
         run: |
+          trap 'status=$?; if [ "$status" -ne 0 ]; then echo "PHP integration diagnostics:"; tail -100 storage/logs/serviceyar-error.log 2>/dev/null || true; fi' EXIT
           php backend/bin/migrate.php
           php backend/bin/migrate.php
           php tests/transport-integration.php
