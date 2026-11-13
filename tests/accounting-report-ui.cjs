@@ -43,4 +43,9 @@ assert(source.includes('id="ledgerReportRetry"'),'Ledger report must expose a re
 assert(source.includes("exportQuery=query().toString();ready=true;"),'Export filters must match the rendered report');
 assert(source.includes("if(ready&&exportQuery)downloadFile("),'Export must only use the confirmed report filter snapshot');
 assert(source.includes("setAttribute('aria-busy','false')"),'Report loading status must clear on completion');
+assert(source.includes('id="ledgerReportFreshness"'),'Finance report should announce the freshness of displayed results');
+assert(source.includes("form.addEventListener('input',invalidate);form.addEventListener('change',invalidate);"),'Changing financial report filters must invalidate output');
+assert(source.includes("version++;ready=false;exportQuery=''"),'Changing report filters must discard pending responses and previous export snapshot');
+assert(source.includes("$('ledgerReportPrint').disabled=true;$('ledgerReportExcel').disabled=true"),'Outdated financial report must not remain printable/exportable');
+assert(source.includes('فیلترهای گزارش تغییر کرده‌اند.'),'Old report content must be replaced with an update prompt');
 console.log('Accounting account search and safe report filters passed');
