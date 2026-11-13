@@ -331,3 +331,18 @@
  #syPublicSchools .sy-public-facts div{grid-template-columns:100px 1fr}
  #syPublicSchools .sy-school-map{height:340px;min-height:300px}
 }
+
+/* All-company map directory. Unlocated offices remain explicitly listed. */
+.sy-company-directory{margin-top:10px;border:1px solid #d9e8df;border-radius:13px;background:#fff;overflow:hidden;direction:rtl}
+.sy-company-directory>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;padding:11px 14px;color:#174f3b;font-size:.87rem;font-weight:750;list-style:none}
+.sy-company-directory>summary::-webkit-details-marker{display:none}
+.sy-company-directory>summary::after{content:'⌄';font-size:1rem;color:#45735e}
+.sy-company-directory[open]>summary::after{content:'⌃'}
+.sy-company-directory>summary span{font-weight:500;font-size:.78rem;color:#587c6c;margin-inline-start:auto}
+.sy-company-directory-items{max-height:240px;overflow:auto;overscroll-behavior:contain;border-top:1px solid #e1ebe4;padding:6px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.sy-company-directory-row{display:flex;align-items:center;justify-content:space-between;gap:9px;padding:10px 12px;text-align:right;background:#f7fbf8;border:1px solid transparent;border-radius:9px;cursor:pointer;font:inherit;font-size:.79rem;color:#184333}
+.sy-company-directory-row strong{font-weight:650;overflow-wrap:anywhere}
+.sy-company-directory-row:hover,.sy-company-directory-row:focus-visible{background:#e7f5ec;border-color:#72c59a;outline-offset:2px}
+.sy-company-directory-row span{flex:none;font-size:.68rem;white-space:nowrap}
+.sy-company-located{color:#138052}.sy-company-not-located{color:#8b7261}
+@media(max-width:680px){.sy-company-directory-items{grid-template-columns:1fr}}
