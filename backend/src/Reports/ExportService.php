@@ -312,12 +312,10 @@ final class ExportService
             // Raw values prevent implicit date, formula, URL and number conversion.
             return "\\0".$v;
         };
-        $safeStyle=static fn(string $value):string => htmlspecialchars($value,ENT_XML1|ENT_QUOTES,'UTF-8');
         $grid=[];
         $grid[]=array_map(static fn($heading)=>'<b><style color="#FFFFFF" bgcolor="#165F3C"><wraptext>'.htmlspecialchars((string)$heading,ENT_XML1|ENT_QUOTES,'UTF-8').'</wraptext></style></b>',array_values($columns));
         foreach($rows as $index=>$row){
             $cells=[];
-            $isFinal=$styled && $index===count($rows)-1;
             foreach($names as $field){
                 $value=$row[$field]??'';
                 if(is_int($value)||is_float($value)){
