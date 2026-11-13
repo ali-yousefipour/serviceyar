@@ -117,6 +117,16 @@
  function publicMapStatus(message){
   const el=document.getElementById('syPublicMapStatus');if(el)el.textContent=message;
  }
+ function adjustSchoolPhotoFrame(img){
+  if(!img||!img.naturalWidth||!img.naturalHeight)return;
+  const ratio=img.naturalWidth/img.naturalHeight;
+  const frame=img.closest('.sy-public-modal-visual,.sy-school-choice-visual');
+  if(!frame)return;
+  frame.style.setProperty('--sy-school-aspect',String(ratio));
+  frame.classList.toggle('sy-photo-portrait',ratio<.9);
+  frame.classList.toggle('sy-photo-landscape',ratio>1.1);
+  frame.classList.toggle('sy-photo-square',ratio>=.9&&ratio<=1.1);
+ }
  function publicModal(title,items,imageUrl,fallbackUrl=DEFAULT_COMPANY_IMAGE){
   const modal=document.getElementById('syPublicSchoolDialog');
   if(!modal)return;
@@ -126,6 +136,8 @@
   const visual=document.getElementById('syPublicModalVisual');visual.replaceChildren();
   const img=document.createElement('img');
   img.src=imageUrl||fallbackUrl;img.alt=title;img.loading='lazy';
+  visual.classList.toggle('sy-school-photo-frame',fallbackUrl===DEFAULT_SCHOOL_IMAGE&&!!imageUrl);
+  img.addEventListener('load',()=>adjustSchoolPhotoFrame(img));
   img.addEventListener('error',()=>{
    if(img.src.endsWith(fallbackUrl)){img.remove();visual.textContent='تصویر در دسترس نیست';}
    else img.src=fallbackUrl;
@@ -276,7 +288,9 @@
    content.append(name,provider,region);
    const visual=document.createElement('span');visual.className='sy-school-choice-visual';
    const img=document.createElement('img');img.src=school.photoUrl||DEFAULT_SCHOOL_IMAGE;img.alt='';img.loading='lazy';
-   img.onerror=()=>{if(!img.src.endsWith(DEFAULT_SCHOOL_IMAGE))img.src=DEFAULT_SCHOOL_IMAGE;else {img.remove();visual.textContent='⌖';}};
+   img.addEventListener('load',()=>adjustSchoolPhotoFrame(img));
+   img.addEventListener('error',()=>{if(!img.src.endsWith(DEFAULT_SCHOOL_IMAGE))img.src=DEFAULT_SCHOOL_IMAGE;else {img.remove();visual.textContent='⌖';}});
+   visual.classList.toggle('sy-school-photo-frame',Boolean(school.photoUrl));
    visual.append(img);
    button.append(visual,content);
    button.addEventListener('click',()=>selectPublicSchool(school));results.append(button);
