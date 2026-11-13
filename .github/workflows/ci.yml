@@ -23,6 +23,7 @@ jobs:
           php tests/directory-sorting.php
           php tests/installments.php
           php tests/monthly-statement-period.php
+          php tests/monthly-statement-template-capacity.php
           node --check frontend/assets/app.js
           node --check frontend/assets/operations.js
           node tests/wizard-lookup.cjs
