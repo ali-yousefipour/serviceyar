@@ -107,6 +107,98 @@
    if(status)status.textContent='آمار موقتاً در دسترس نیست';
   }
  }
+ let schoolMap=null,schoolMarkers=null,publicSchoolList=[],selectedSchool=null,schoolSearchTimer=null;
+ const faNumber=value=>new Intl.NumberFormat('fa-IR').format(value);
+ function selectPublicSchool(school){
+  selectedSchool=school;
+  const input=document.getElementById('syQuoteSchoolName');
+  if(input)input.value=school.name+' — '+school.company;
+  document.getElementById('syQuoteResult').textContent='مدرسه انتخاب شد؛ مسافت و کلاس خودرو را وارد کنید.';
+  if(schoolMap)schoolMap.setView([school.latitude,school.longitude],15);
+  root.querySelectorAll('[data-school-id]').forEach(el=>el.classList.toggle('sy-selected-school',String(school.id)===el.dataset.schoolId));
+ }
+ function drawPublicSchools(rows){
+  const result=document.getElementById('sySchoolResults');
+  if(!result)return;
+  result.replaceChildren();
+  if(!rows.length){result.textContent='مدرسه‌ای با این مشخصات یافت نشد.';return;}
+  rows.forEach(school=>{
+   const button=document.createElement('button');
+   button.type='button';button.className='sy-school-choice';button.dataset.schoolId=school.id;
+   const title=document.createElement('strong');title.textContent=school.name;
+   const company=document.createElement('small');company.textContent='شرکت سرویس‌دهنده: '+school.company;
+   const region=document.createElement('span');region.textContent=school.region||'ناحیه ثبت نشده';
+   button.append(title,company,region);button.addEventListener('click',()=>selectPublicSchool(school));
+   result.append(button);
+  });
+  if(!schoolMap||!window.L)return;
+  schoolMarkers?.clearLayers();
+  const positions=[];
+  rows.forEach(school=>{
+   if(!Number.isFinite(school.latitude)||!Number.isFinite(school.longitude))return;
+   const marker=L.marker([school.latitude,school.longitude]).addTo(schoolMarkers);
+   const popup=document.createElement('div');
+   const name=document.createElement('strong');name.textContent=school.name;
+   const company=document.createElement('p');company.textContent='شرکت: '+school.company;
+   popup.append(name,company);
+   if(school.photoUrl){
+    const img=document.createElement('img');img.src=school.photoUrl;img.alt='تصویر '+school.name;
+    img.loading='lazy';img.style.cssText='max-width:190px;max-height:130px;object-fit:cover;display:block;margin:8px auto;border-radius:6px';
+    img.onerror=()=>img.remove();popup.append(img);
+   }
+   const action=document.createElement('button');action.type='button';action.textContent='انتخاب برای محاسبه';
+   action.addEventListener('click',()=>selectPublicSchool(school));popup.append(action);
+   marker.bindPopup(popup);positions.push([school.latitude,school.longitude]);
+  });
+  if(positions.length)schoolMap.fitBounds(L.latLngBounds(positions).pad(.12),{maxZoom:13});
+ }
+ async function searchPublicSchools(term=''){
+  const status=document.getElementById('sySchoolResults');if(!status)return;
+  status.textContent='در حال جستجو…';
+  try{
+   const response=await fetch('/api/v1/public/schools?q='+encodeURIComponent(term),{credentials:'omit'});
+   const body=await response.json();
+   if(!response.ok||!body.ok)throw Error(body.error?.message||'خطا در دریافت اطلاعات');
+   publicSchoolList=body.data.schools||[];
+   drawPublicSchools(publicSchoolList);
+  }catch(error){status.textContent=error.message||'خطا در دریافت مدارس';}
+ }
+ async function setupPublicSchools(){
+  const mapNode=document.getElementById('sySchoolsMap');
+  if(!mapNode||mapNode.dataset.initialized)return;
+  mapNode.dataset.initialized='1';
+  if(window.L){
+   schoolMap=L.map(mapNode,{scrollWheelZoom:false}).setView([36.3,59.6],11);
+   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(schoolMap);
+   schoolMarkers=L.layerGroup().addTo(schoolMap);
+   fetch('/assets/school-district-boundaries.geojson',{credentials:'omit'}).then(r=>r.ok?r.json():null).then(geo=>{
+    if(!geo||!schoolMap)return;
+    const layer=L.geoJSON(geo,{style:()=>({color:'#0c7662',weight:2,fillOpacity:.06}),onEachFeature:(feature,shape)=>shape.bindTooltip(feature.properties.name)});
+    L.control.layers(null,{'مرزبندی نواحی آموزش‌وپرورش':layer},{collapsed:true}).addTo(schoolMap);
+    layer.addTo(schoolMap);
+   }).catch(()=>{});
+   requestAnimationFrame(()=>schoolMap?.invalidateSize());
+  }else mapNode.textContent='نمایش نقشه در دسترس نیست.';
+  const search=document.getElementById('sySchoolSearch');
+  search?.addEventListener('input',()=>{
+   clearTimeout(schoolSearchTimer);
+   schoolSearchTimer=setTimeout(()=>searchPublicSchools(search.value.trim()),350);
+  });
+  document.getElementById('syServiceQuote')?.addEventListener('submit',async event=>{
+   event.preventDefault();const status=document.getElementById('syQuoteResult');
+   if(!selectedSchool){status.textContent='ابتدا مدرسه را انتخاب کنید.';return;}
+   const form=event.currentTarget;
+   const distance=form.elements.distanceKm.value,vehicleClass=form.elements.vehicleClass.value;
+   status.textContent='در حال بررسی نرخ‌نامه شرکت…';
+   try{
+    const url='/api/v1/public/service-quote?schoolId='+selectedSchool.id+'&distanceKm='+encodeURIComponent(distance)+'&vehicleClass='+encodeURIComponent(vehicleClass);
+    const response=await fetch(url,{credentials:'omit'});const body=await response.json();
+    if(!response.ok||!body.ok)throw Error(body.error?.message||'محاسبه انجام نشد');
+    status.textContent=body.data.monthlyFee==null?'برای این مدرسه، مسافت و کلاس خودرو تعرفه ثبت نشده است.':'تعرفه ماهانه: '+faNumber(body.data.monthlyFee)+' ریال';
+   }catch(error){status.textContent=error.message;}
+  });
+  await searchPublicSchools();
+ }
  function goTop(smooth=false){
   if(window.scrollY>0)window.scrollTo({top:0,behavior:smooth&&animate()?'smooth':'instant'});
  }
@@ -181,6 +273,7 @@
    login.hidden=true;root.hidden=false;
    renderPage({initial:!activePage});
    void loadStats();
+   void setupPublicSchools();
   }catch(_){
    // Preserve authentication access on static asset or API failure.
    root.hidden=true;login.hidden=false;
