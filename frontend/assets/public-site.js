@@ -110,22 +110,26 @@
 
  let schoolMap=null,publicCompanyMarkers=null,schoolMarkers=null,publicSchoolList=[],publicCompanies=[],selectedSchool=null,schoolSearchTimer=null,schoolSearchSequence=0;
  const faNumber=value=>new Intl.NumberFormat('fa-IR').format(value);
+ const DEFAULT_SCHOOL_IMAGE='/assets/school-placeholder.png';
+ const DEFAULT_COMPANY_IMAGE='/assets/company-placeholder.png';
  const validPoint=row=>row&&Number.isFinite(Number(row.latitude))&&Number.isFinite(Number(row.longitude))&&row.latitude!==null&&row.longitude!==null;
  function publicMapStatus(message){
   const el=document.getElementById('syPublicMapStatus');if(el)el.textContent=message;
  }
- function publicModal(title,items,imageUrl){
+ function publicModal(title,items,imageUrl,fallbackUrl=DEFAULT_COMPANY_IMAGE){
   const modal=document.getElementById('syPublicSchoolDialog');
   if(!modal)return;
   const heading=document.getElementById('sySchoolDialogTitle');
   const details=document.getElementById('syPublicDetails');
   heading.textContent=title;details.replaceChildren();
   const visual=document.getElementById('syPublicModalVisual');visual.replaceChildren();
-  if(imageUrl){
-   const img=document.createElement('img');img.src=imageUrl;img.alt=title;img.loading='lazy';
-   img.addEventListener('error',()=>img.replaceWith(document.createTextNode('تصویر در دسترس نیست')));
-   visual.append(img);
-  }else visual.textContent='تصویری ثبت نشده است';
+  const img=document.createElement('img');
+  img.src=imageUrl||fallbackUrl;img.alt=title;img.loading='lazy';
+  img.addEventListener('error',()=>{
+   if(img.src.endsWith(fallbackUrl)){img.remove();visual.textContent='تصویر در دسترس نیست';}
+   else img.src=fallbackUrl;
+  });
+  visual.append(img);
   for(const [key,value] of items){
    if(value===null||value===undefined||String(value).trim()==='')continue;
    const row=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');
@@ -135,21 +139,22 @@
  }
  function showCompany(company){
   publicModal(company.name,[
-   ['نام شرکت',company.name],['نشانی دفتر',company.address],['مدیر شرکت',company.managerName],
-   ['همراه مدیر',company.managerMobile],
-   ['وضعیت اطلاعات تماس',company.contactPublished?'اطلاعات تماس با مجوز شرکت منتشر شده است':'اطلاعات تماس عمومی توسط شرکت منتشر نشده است']
-  ],company.logoUrl);
+   ['نام شرکت',company.name],['مدیر شرکت',company.managerName],
+   ['نشانی دفتر',company.address],['تلفن دفتر',company.officePhone],
+   ['شماره همراه مدیر (با مجوز انتشار)',company.managerMobile]
+  ],company.logoUrl,DEFAULT_COMPANY_IMAGE);
  }
  function showSchool(school){
   publicModal(school.name,[
    ['نام مدرسه',school.name],['ناحیه آموزش‌وپرورش',school.region],['نوع مدرسه',school.type],
    ['نشانی مدرسه',school.address],['تلفن مدرسه',school.phone],['مدیر مدرسه',school.managerName],
    ['شرکت سرویس‌دهنده',school.company||'هنوز شرکتی مشخص نشده است']
-  ],school.photoUrl);
+  ],school.photoUrl,DEFAULT_SCHOOL_IMAGE);
  }
  function publicPin(type,photo){
   const color=type==='agency'?'green':'yellow';
-  const content=photo?'<img alt="" src="'+photo.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'">':'';
+  const imageUrl=photo||(type==='agency'?DEFAULT_COMPANY_IMAGE:DEFAULT_SCHOOL_IMAGE);
+  const content='<img alt="" src="'+imageUrl.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'">';
   return L.divIcon({className:'sy-public-pin sy-public-pin-'+color,html:'<span class="sy-public-pin-face '+(!photo?'sy-public-pin-fallback':'')+'">'+content+'<span class="sy-public-pin-symbol">⌖</span></span>',
    iconSize:[54,58],iconAnchor:[27,56],popupAnchor:[0,-50]});
  }
@@ -247,8 +252,9 @@
    const region=document.createElement('span');region.textContent=school.region||'ناحیه نامشخص';
    content.append(name,provider,region);
    const visual=document.createElement('span');visual.className='sy-school-choice-visual';
-   if(school.photoUrl){const img=document.createElement('img');img.src=school.photoUrl;img.alt='';img.loading='lazy';img.onerror=()=>{visual.textContent='⌖'};visual.append(img);}
-   else visual.textContent='⌖';
+   const img=document.createElement('img');img.src=school.photoUrl||DEFAULT_SCHOOL_IMAGE;img.alt='';img.loading='lazy';
+   img.onerror=()=>{if(!img.src.endsWith(DEFAULT_SCHOOL_IMAGE))img.src=DEFAULT_SCHOOL_IMAGE;else {img.remove();visual.textContent='⌖';}};
+   visual.append(img);
    button.append(visual,content);
    button.addEventListener('click',()=>selectPublicSchool(school));results.append(button);
   });
