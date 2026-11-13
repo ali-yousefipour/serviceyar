@@ -1527,13 +1527,55 @@ function persianMonthRange(year,month){
  return first?{from:first,to:last}:null;
 }
 function disposeMaps(){activeMaps.forEach(map=>map.remove());activeMaps=[];}
+let districtBoundariesPromise=null;
+function loadDistrictBoundaries(){
+ if(!districtBoundariesPromise)districtBoundariesPromise=fetch('/assets/school-district-boundaries.geojson',{credentials:'same-origin'})
+  .then(response=>{if(!response.ok)throw new Error('دریافت مرزبندی نواحی ناموفق بود');return response.json();})
+  .then(data=>{
+   if(data?.type!=='FeatureCollection'||!Array.isArray(data.features)||data.features.length!==8)throw new Error('اطلاعات مرزبندی نواحی نامعتبر است');
+   return data;
+  }).catch(error=>{districtBoundariesPromise=null;throw error;});
+ return districtBoundariesPromise;
+}
+async function addDistrictBoundaries(map){
+ if(!map||typeof L?.geoJSON!=='function')return;
+ try{
+  const data=await loadDistrictBoundaries();
+  if(!map._container?.isConnected)return;
+  const colors=['#2563eb','#0d9488','#d97706','#7c3aed','#db2777','#059669','#b45309','#475569'];
+  const layer=L.geoJSON(data,{
+   style:feature=>{
+    const index=data.features.indexOf(feature);
+    const color=colors[index<0?0:index%colors.length];
+    return {color,weight:2.5,opacity:.9,fillColor:color,fillOpacity:.12};
+   },
+   onEachFeature:(feature,polygon)=>{
+    const name=feature?.properties?.name||'ناحیه آموزش‌وپرورش';
+    polygon.bindTooltip(name,{sticky:true,direction:'top'});
+    polygon.bindPopup('<strong>'+name+'</strong>');
+   }
+  }).addTo(map);
+  const control=L.control({position:'topright'});
+  control.onAdd=()=>{
+   const container=L.DomUtil.create('div','leaflet-bar school-district-control');
+   const label=L.DomUtil.create('label','school-district-toggle',container);
+   const checkbox=L.DomUtil.create('input','',label);
+   checkbox.type='checkbox';checkbox.checked=true;checkbox.setAttribute('aria-label','نمایش مرزبندی نواحی آموزش‌وپرورش');
+   const caption=L.DomUtil.create('span','',label);caption.textContent='مرزبندی نواحی';
+   checkbox.addEventListener('change',()=>{if(checkbox.checked)layer.addTo(map);else map.removeLayer(layer);});
+   L.DomEvent.disableClickPropagation(container);L.DomEvent.disableScrollPropagation(container);
+   return container;
+  };
+  control.addTo(map);
+ }catch(error){console.warn('School district boundaries unavailable:',error?.message||error);}
+}
 let neshanSdkPromise=null;
 async function makeMap(element,center=[36.3,59.6],zoom=12){
  try{const company=currentAgency?.id,config=await api(scoped('/api/v1/maps/config'));if(!element?.isConnected||company!==currentAgency?.id)return null;
  if(!config.webKey)throw new Error('کلید نمایش نقشه نشان در تنظیمات شرکت ثبت نشده است.');
  if(!neshanSdkPromise)neshanSdkPromise=new Promise((resolve,reject)=>{let settled=false;const timer=setTimeout(()=>finish(new Error('زمان دریافت نقشه نشان به پایان رسید.')),15000);const style=document.createElement('link');style.rel='stylesheet';style.href='https://static.neshan.org/sdk/leaflet/v1.9.4/neshan-sdk/v1.0.8/index.css';document.head.append(style);const script=document.createElement('script');script.src='https://static.neshan.org/sdk/leaflet/v1.9.4/neshan-sdk/v1.0.8/index.js';const finish=error=>{if(settled)return;settled=true;clearTimeout(timer);if(error){script.remove();style.remove();neshanSdkPromise=null;reject(error);}else resolve();};script.onload=()=>finish();script.onerror=()=>finish(new Error('کتابخانه نقشه نشان دریافت نشد؛ اتصال شبکه را بررسی کنید.'));document.head.append(script);});
  await neshanSdkPromise;if(!element.isConnected||company!==currentAgency?.id)return null;
- const map=new L.Map(element,{key:config.webKey,maptype:'dreamy',center,zoom,scrollWheelZoom:false});element.dataset.provider='neshan';activeMaps.push(map);requestAnimationFrame(()=>map.invalidateSize());return map;
+ const map=new L.Map(element,{key:config.webKey,maptype:'dreamy',center,zoom,scrollWheelZoom:false});element.dataset.provider='neshan';activeMaps.push(map);void addDistrictBoundaries(map);requestAnimationFrame(()=>map.invalidateSize());return map;
  }catch(e){if(element?.isConnected){const message=document.createElement('p');message.className='error';message.setAttribute('role','status');message.textContent=e.message;element.replaceChildren(message);}return null;}
 }
 async function locationPicker(form,key){
