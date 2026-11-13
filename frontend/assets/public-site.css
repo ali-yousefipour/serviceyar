@@ -150,3 +150,10 @@
 @media(max-width:800px){.sy-public.sy-motion-ready .sy-hero-visual.sy-in-view{transform:translateY(var(--sy-parallax,0px))}}
 @media(max-width:540px){.sy-scroll-cue{bottom:10px;font-size:9px;gap:5px}}
 @media(prefers-reduced-motion:reduce){.sy-scroll-cue b{animation:none!important}.sy-public.sy-motion-ready .sy-hero-visual.sy-in-view{transform:none!important}}
+
+/* Reveal completion must not mask tactile hover states. */
+.sy-public.sy-motion-ready .sy-feature-grid article.sy-in-view:hover,
+.sy-public.sy-motion-ready .sy-contact-grid article.sy-in-view:hover{transform:translateY(-9px)}
+.sy-public.sy-motion-ready .sy-stat-grid article.sy-in-view:hover{transform:translateY(-8px)}
+.sy-public.sy-motion-ready .sy-flow-grid>div.sy-in-view:hover{transform:translateY(-7px)}
+@media(hover:none){.sy-feature-grid article:hover,.sy-contact-grid article:hover,.sy-stat-grid article:hover,.sy-flow-grid>div:hover{transform:none!important}}
