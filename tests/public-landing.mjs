@@ -52,4 +52,12 @@ assert.ok(js.includes('DEFAULT_COMPANY_IMAGE')&&js.includes('attachPinFallback('
 for(const img of ['frontend/assets/company-placeholder.png','frontend/assets/school-placeholder.png'])
  assert.ok(existsSync(new URL(img,root)),'Missing uploaded image asset: '+img);
 assert.ok(!html.includes('sy-dialog-privacy'),'Do not display unnecessary publication note in public modal');
+const adminApp=read('frontend/assets/app.js');
+const agencyApi=read('backend/src/Agency/AgencyService.php');
+const agencyExport=read('backend/src/Reports/ExportService.php');
+assert.ok(agencyApi.includes('function activate(')&&api.includes('/api/v1/admin/agencies/'),'Reactivation must be handled on server');
+assert.ok(adminApp.includes('data-company-disable')&&adminApp.includes('sy-agency-activate'),'Both disable and reactivate controls required');
+assert.ok(adminApp.includes('syAgencyExcel')&&adminApp.includes('syAgencyPrint')&&adminApp.includes('syAgencyStatus'),'Agency list needs export, print and status controls');
+assert.ok(agencyExport.includes('function companies(')&&agencyExport.includes('serviceyar-agencies.xlsx'),'Styled company workbook endpoint required');
+assert.ok(read('frontend/assets/app.css').includes('.sy-agency-data-table thead th'),'Company table should have sticky accessible headers');
 console.log('Public landing pages, accessibility structure, real statistics and login integration OK');
