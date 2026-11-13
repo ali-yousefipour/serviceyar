@@ -174,19 +174,32 @@
   mapNode.dataset.initialized='1';
   if(window.L){
    schoolMap=L.map(mapNode,{scrollWheelZoom:false}).setView([36.3,59.6],11);
-   // Prefer a light, readable basemap. Fail over once if tile requests are blocked
-   // by a hosting/network policy; district outlines alone are not a basemap.
-   const base=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
-    subdomains:'abcd',maxZoom:19,attribution:'© OpenStreetMap contributors · © CARTO'
-   }).addTo(schoolMap);
-   let fallbackUsed=false;
-   base.on('tileerror',()=>{
-    if(fallbackUsed||!schoolMap)return;
-    fallbackUsed=true;schoolMap.removeLayer(base);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-     maxZoom:19,attribution:'© OpenStreetMap contributors'
-    }).addTo(schoolMap);
-   });
+   // Retry alternate providers when a raster endpoint is blocked.
+   const sources=[
+    {url:'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',options:{subdomains:'abcd',attribution:'© OpenStreetMap · © CARTO'}},
+    {url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',options:{subdomains:'abc',attribution:'© OpenStreetMap contributors'}},
+    {url:'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',options:{subdomains:'abc',attribution:'© OpenStreetMap contributors · HOT'}}
+   ];
+   const tileStatus=document.createElement('div');tileStatus.className='sy-map-tile-status';
+   tileStatus.setAttribute('role','status');tileStatus.hidden=true;
+   mapNode.parentElement?.append(tileStatus);
+   let sourceIndex=0,activeTiles=null,failCount=0,loadedCount=0;
+   const useSource=()=>{
+    if(!schoolMap)return;
+    if(activeTiles)schoolMap.removeLayer(activeTiles);
+    failCount=0;loadedCount=0;
+    const source=sources[sourceIndex];
+    activeTiles=L.tileLayer(source.url,{...source.options,maxZoom:19});
+    activeTiles.on('tileload',()=>{loadedCount++;tileStatus.hidden=true;});
+    activeTiles.on('tileerror',()=>{
+     if(loadedCount>0||++failCount<2)return;
+     if(sourceIndex<sources.length-1){sourceIndex++;useSource();return;}
+     tileStatus.hidden=false;
+     tileStatus.textContent='بارگذاری نقشه پایه با مشکل روبه‌رو شد. اتصال به سرویس نقشه را بررسی کنید.';
+    });
+    activeTiles.addTo(schoolMap);
+   };
+   useSource();
    schoolMarkers=L.layerGroup().addTo(schoolMap);
    fetch('/assets/school-district-boundaries.geojson',{credentials:'omit'}).then(r=>r.ok?r.json():null).then(geo=>{
     if(!geo||!schoolMap)return;
