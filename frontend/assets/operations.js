@@ -358,24 +358,28 @@ function syLocationSvg(color){
  return '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" fill="'+color+'"><path d="M12 2a8 8 0 0 0-8 8c0 5.6 8 12 8 12s8-6.4 8-12a8 8 0 0 0-8-8zm0 11.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4z"/></svg>';
 }
 function dashboardCompanyPin(hasLogo){
- const img=hasLogo?'<img class="sy-map-marker-photo" alt="" loading="lazy" decoding="async" src="'+esc(agencyLogoUrl())+'">':'';
- return L.divIcon({className:'sy-map-marker sy-map-company'+(!hasLogo?' sy-marker-fallback':''),
+ const img='<img class="sy-map-marker-photo" alt="" loading="lazy" decoding="async" src="'+esc(hasLogo?agencyLogoUrl():'/assets/company-map-icon.webp')+'">';
+ return L.divIcon({className:'sy-map-marker sy-map-company'+(!hasLogo?' sy-company-default-photo':''),
   html:'<span class="sy-map-marker-bubble">'+img+'<span class="sy-map-marker-symbol">'+syLocationSvg('#0b985b')+'</span></span>',
   iconSize:[56,64],iconAnchor:[28,62],popupAnchor:[0,-58]});
 }
 function dashboardCompanyMarker(map,point,hasLogo){
- const marker=L.marker(point,{icon:dashboardCompanyPin(hasLogo),title:currentAgency?.name||'دفتر شرکت'}).addTo(map).bindPopup(esc(currentAgency?.name||'دفتر شرکت')).openPopup();
+ const marker=L.marker(point,{icon:dashboardCompanyPin(hasLogo),title:currentAgency?.name||'دفتر شرکت'}).addTo(map).bindPopup(esc(currentAgency?.name||'دفتر شرکت'));
  const icon=marker.getElement(),img=icon?.querySelector('.sy-map-marker-photo');
  if(img){
-  const fallback=()=>{img.remove();icon.classList.add('sy-marker-fallback');};
-  img.addEventListener('error',fallback,{once:true});
+  const fallback=()=>{
+   const defaultSource='/assets/company-map-icon.webp';
+   if(img.getAttribute('src')===defaultSource){img.remove();icon.classList.add('sy-marker-fallback');}
+   else{icon.classList.add('sy-company-default-photo');img.src=defaultSource;}
+  };
+  img.addEventListener('error',fallback);
   if(img.complete&&img.naturalWidth===0)fallback();
  }
  return marker;
 }
 function dashboardSchoolPin(sc){
  const url=Number(sc.id)>0&&sc.photo_path?scoped('/api/v1/schools/'+encodeURIComponent(sc.id)+'/photo'):null;
- const img='<img class="sy-map-marker-photo" alt="" loading="lazy" decoding="async" src="'+esc(url||'/assets/school-placeholder.png')+'">';
+ const img='<img class="sy-map-marker-photo" alt="" loading="lazy" decoding="async" src="'+esc(url||'/assets/school-map-icon.webp')+'">';
  const label=String(sc.name||'مدرسه');
  return L.divIcon({className:'sy-map-marker sy-map-school'+(!url?' sy-school-default-photo':''),
   html:'<span class="sy-map-marker-bubble">'+img+'<span class="sy-map-marker-symbol">'+syLocationSvg('#e5ae0a')+'</span></span><span class="sy-map-school-label" title="'+esc(label)+'">'+esc(label)+'</span>',
@@ -387,7 +391,7 @@ function dashboardSchoolMarker(map,point,sc){
  const img=icon?.querySelector('.sy-map-marker-photo');
  if(img){
   const fallback=()=>{
-   const placeholder='/assets/school-placeholder.png';
+   const placeholder='/assets/school-map-icon.webp';
    if(img.getAttribute('src')===placeholder){
     img.remove();icon.classList.add('sy-marker-fallback');
    }else{
