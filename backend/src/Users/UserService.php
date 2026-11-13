@@ -28,6 +28,26 @@ final class UserService {
   });
  }
  private static function audit($p,int $u,int $id,string $action): void {$p->prepare('INSERT INTO audit_logs(uuid,user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?)')->execute([Uuid::v4(),$u,$action,'user',(string)$id]);}
+ public static function updateOwnProfile(int $userId,array $data): array {
+  $first=$data['firstName']??null;$last=$data['lastName']??null;
+  if(!is_string($first)||!is_string($last)||mb_strlen($first)>100||mb_strlen($last)>120
+    ||preg_match('/[\x00-\x1F\x7F]/u',$first.$last)){
+   throw new AuthException(422,'نام یا نام خانوادگی معتبر نیست.','VALIDATION_ERROR');
+  }
+  $first=trim($first);$last=trim($last);
+  if($first==='')throw new AuthException(422,'نام را وارد کنید.','VALIDATION_ERROR');
+  return O::transaction(function($pdo)use($userId,$first,$last){
+   $stmt=$pdo->prepare('UPDATE users SET first_name=?,last_name=? WHERE id=? AND is_active=1');
+   $stmt->execute([$first,$last,$userId]);
+   if($stmt->rowCount()===0){
+    $exists=$pdo->prepare('SELECT id FROM users WHERE id=? AND is_active=1');
+    $exists->execute([$userId]);
+    if(!$exists->fetchColumn())throw new AuthException(404,'حساب کاربری یافت نشد.','NOT_FOUND');
+   }
+   self::audit($pdo,$userId,$userId,'user.profile_updated');
+   return ['id'=>$userId,'firstName'=>$first,'lastName'=>$last];
+  });
+ }
  public static function changePassword(int $u,int $a,int $id,array $b): array {
   if($u!==$id){self::scope($u,$a,'manage');self::editable($u,$a,$id);}$pw=self::password($b['password']??null);if($pw!==($b['passwordConfirmation']??null))throw new AuthException(422,'تکرار رمز یکسان نیست.','VALIDATION_ERROR');
   return O::transaction(function($p)use($u,$id,$b,$pw){$q=$p->prepare('SELECT password_hash FROM users WHERE id=? FOR UPDATE');$q->execute([$id]);$hash=$q->fetchColumn();if(!$hash)throw new AuthException(404,'کاربر پیدا نشد.','NOT_FOUND');if($u===$id&&(!is_string($b['currentPassword']??null)||!password_verify($b['currentPassword'],$hash)))throw new AuthException(422,'رمز فعلی صحیح نیست.','CURRENT_PASSWORD_INVALID');$p->prepare('UPDATE users SET password_hash=? WHERE id=?')->execute([password_hash($pw,PASSWORD_DEFAULT),$id]);$p->prepare('UPDATE user_sessions SET revoked_at=UTC_TIMESTAMP() WHERE user_id=? AND revoked_at IS NULL')->execute([$id]);self::audit($p,$u,$id,'user.password_changed');return ['changed'=>true,'requiresLogin'=>$u===$id];});
