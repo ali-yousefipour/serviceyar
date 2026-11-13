@@ -66,36 +66,104 @@ try {
    Response::json(['ok'=>true,'data'=>['provider'=>'osm','webKey'=>'']]);
   }
  }
- // Public directory: minimum search length, no bulk enumeration and no sensitive media/location fields.
- // Exact locations, original images and boundaries are available only in authorized workflows.
+ // Public school discovery: query-only, limited results, no bulk dump endpoint.
+ // Coordinates are rounded for public display; original files are never served.
  if($method==='GET'&&$path==='/api/v1/public/schools'){
   try{
-   $term=trim((string)($_GET['q']??''));
-   $term=str_replace(['ي','ك','‌'],['ی','ک',' '],$term);
+   $term=trim(str_replace(['ي','ك','‌'],['ی','ک',' '],(string)($_GET['q']??'')));
    $len=mb_strlen($term,'UTF-8');
-   if($len===0){
-    header('Cache-Control: no-store');
-    Response::json(['ok'=>true,'data'=>['schools'=>[],'minimumSearchLength'=>3]]);
+   if($len===0){header('Cache-Control: no-store');Response::json(['ok'=>true,'data'=>['schools'=>[],'minimumSearchLength'=>3]]);}
+   if($len<3||$len>80)Response::json(['ok'=>false,'error'=>['code'=>'INVALID_QUERY','message'=>'حداقل سه حرف وارد کنید.']],422);
+   // Bound the request frequency using a locked file outside public_html assets.
+   $ip=(string)($_SERVER['REMOTE_ADDR']??'unknown');
+   $rateDir=dirname(__DIR__,2).'/storage/cache/public-school-rate';
+   if(!is_dir($rateDir))@mkdir($rateDir,0750,true);
+   if(is_dir($rateDir)){
+    $rateFile=$rateDir.'/'.hash('sha256',$ip);
+    $handle=@fopen($rateFile,'c+');
+    if($handle&&flock($handle,LOCK_EX)){
+     $record=json_decode(stream_get_contents($handle)?:'{}',true);
+     $now=time();$window=(int)($record['window']??0);$count=(int)($record['count']??0);
+     if($now-$window>=60){$window=$now;$count=0;}
+     $count++;ftruncate($handle,0);rewind($handle);fwrite($handle,json_encode(['window'=>$window,'count'=>$count]));fflush($handle);flock($handle,LOCK_UN);fclose($handle);
+     if($count>35){header('Retry-After: 60');Response::json(['ok'=>false,'error'=>['code'=>'RATE_LIMIT','message'=>'تعداد جستجوها بیش از حد مجاز است.']],429);}
+    }elseif($handle)fclose($handle);
    }
-   if($len<3||$len>80)Response::json(['ok'=>false,'error'=>['code'=>'INVALID_QUERY','message'=>'برای جستجو حداقل سه حرف وارد کنید.']],422);
-   $pdo=Connection::get();
-   $sql="SELECT s.name,s.region,a.name AS company_name FROM schools s
-    JOIN agencies a ON a.id=s.agency_id AND a.is_active=1
-    WHERE s.is_active=1 AND (
-     REPLACE(REPLACE(s.name,'ي','ی'),'ك','ک') LIKE :school
-     OR REPLACE(REPLACE(a.name,'ي','ی'),'ك','ک') LIKE :company
-    ) ORDER BY s.name,s.agency_id LIMIT 20";
-   $stmt=$pdo->prepare($sql);$search='%'.$term.'%';
-   $stmt->execute(['school'=>$search,'company'=>$search]);
-   $rows=[];
-   foreach($stmt->fetchAll(\PDO::FETCH_ASSOC) as $row)
-    $rows[]=['name'=>(string)$row['name'],'region'=>(string)($row['region']??''),'company'=>(string)$row['company_name']];
-   header('Cache-Control: no-store');
+   $pdo=Connection::get();$needle='%'.$term.'%';$rows=[];$seen=[];
+   // The central catalog is the authoritative preloaded list.
+   try{
+    $stmt=$pdo->prepare("SELECT id,name,region,latitude,longitude,photo_path FROM school_catalog
+     WHERE REPLACE(REPLACE(name,'ي','ی'),'ك','ک') LIKE :q ORDER BY name LIMIT 16");
+    $stmt->execute(['q'=>$needle]);
+    foreach($stmt->fetchAll(\PDO::FETCH_ASSOC) as $school){
+     $lat=is_numeric($school['latitude'])?(float)$school['latitude']:null;
+     $lng=is_numeric($school['longitude'])?(float)$school['longitude']:null;
+     $hasPoint=$lat!==null&&$lng!==null&&abs($lat)<=90&&abs($lng)<=180&&$lat!=0&&$lng!=0;
+     $id='c'.(int)$school['id'];$key=trim((string)$school['name']).'|'.trim((string)($school['region']??''));
+     $seen[$key]=true;
+     $rows[]=['id'=>$id,'name'=>(string)$school['name'],'region'=>(string)($school['region']??''),'company'=>'فهرست آماده مدارس',
+      'latitude'=>$hasPoint?round($lat,4):null,'longitude'=>$hasPoint?round($lng,4):null,
+      'photoUrl'=>(string)($school['photo_path']??'')!==''?'/api/v1/public/school-photo?school='.$id.'&expires='.(time()+600).'&sig='.hash_hmac('sha256',$id.'|'.(time()+600),(string)config('APP_KEY','').(string)config('DB_PASSWORD','')):null];
+    }
+   }catch(\Throwable $catalogError){error_log('[ServiceYar][public-schools] catalog: '.$catalogError->getMessage());}
+   $stmt=$pdo->prepare("SELECT s.id,s.name,s.region,s.latitude,s.longitude,s.photo_path,a.name company_name
+      FROM schools s JOIN agencies a ON a.id=s.agency_id AND a.is_active=1
+      WHERE s.is_active=1 AND (REPLACE(REPLACE(s.name,'ي','ی'),'ك','ک') LIKE :school OR REPLACE(REPLACE(a.name,'ي','ی'),'ك','ک') LIKE :company)
+      ORDER BY s.name LIMIT 20");
+   $stmt->execute(['school'=>$needle,'company'=>$needle]);
+   foreach($stmt->fetchAll(\PDO::FETCH_ASSOC) as $school){
+    if(count($rows)>=20)break;
+    $key=trim((string)$school['name']).'|'.trim((string)($school['region']??''));
+    if(isset($seen[$key]))continue;$seen[$key]=true;
+    $lat=is_numeric($school['latitude'])?(float)$school['latitude']:null;
+    $lng=is_numeric($school['longitude'])?(float)$school['longitude']:null;
+    $hasPoint=$lat!==null&&$lng!==null&&abs($lat)<=90&&abs($lng)<=180&&$lat!=0&&$lng!=0;
+    $id='s'.(int)$school['id'];$expiry=time()+600;
+    $rows[]=['id'=>$id,'name'=>(string)$school['name'],'region'=>(string)($school['region']??''),'company'=>(string)$school['company_name'],
+     'latitude'=>$hasPoint?round($lat,4):null,'longitude'=>$hasPoint?round($lng,4):null,
+     'photoUrl'=>(string)($school['photo_path']??'')!==''?'/api/v1/public/school-photo?school='.$id.'&expires='.$expiry.'&sig='.hash_hmac('sha256',$id.'|'.$expiry,(string)config('APP_KEY','').(string)config('DB_PASSWORD','')):null];
+   }
+   header('Cache-Control: private, no-store');header('X-Robots-Tag: noindex, nofollow, noarchive');
    Response::json(['ok'=>true,'data'=>['schools'=>$rows,'minimumSearchLength'=>3]]);
   }catch(\Throwable $e){
    error_log('[ServiceYar][public-schools] '.$e->getMessage());
    Response::json(['ok'=>false,'error'=>['code'=>'PUBLIC_SCHOOLS_UNAVAILABLE','message'=>'جستجوی مدارس موقتاً در دسترس نیست.']],503);
   }
+ }
+ // Expiring signed photo endpoint: recompress, watermark and strip metadata.
+ if($method==='GET'&&$path==='/api/v1/public/school-photo'){
+  $school=(string)($_GET['school']??'');$expiry=(int)($_GET['expires']??0);$signature=(string)($_GET['sig']??'');
+  $secret=(string)config('APP_KEY','').(string)config('DB_PASSWORD','');
+  if(!preg_match('/^[cs][1-9][0-9]{0,9}$/D',$school)||$expiry<time()||$expiry>time()+660
+    ||$secret===''||!hash_equals(hash_hmac('sha256',$school.'|'.$expiry,$secret),$signature)){
+   Response::json(['ok'=>false,'error'=>['code'=>'INVALID_PHOTO_LINK','message'=>'پیوند تصویر معتبر نیست یا منقضی شده است.']],403);
+  }
+  $catalog=$school[0]==='c';$id=(int)substr($school,1);$pdo=Connection::get();
+  $sql=$catalog?'SELECT photo_path FROM school_catalog WHERE id=? LIMIT 1':
+   'SELECT s.photo_path FROM schools s JOIN agencies a ON a.id=s.agency_id AND a.is_active=1 WHERE s.id=? AND s.is_active=1 LIMIT 1';
+  $q=$pdo->prepare($sql);$q->execute([$id]);$path=(string)($q->fetchColumn()?:'');
+  // Strict allowlist: never allow arbitrary paths, URLs, or directory traversal.
+  $root=dirname(__DIR__,2);$source=null;
+  if(preg_match('~^private-schools/([0-9]+)/([0-9]+)/([a-f0-9]{32})\.(jpg|png|webp)$~D',$path,$m))
+   $source=$root.'/storage/uploads/school-images/'.$m[1].'/'.$m[2].'/'.$m[3].'.'.$m[4];
+  elseif(preg_match('~^(?:uploads/)?schools/((?:[0-9]{4}/[0-9]{2}/)?[a-zA-Z0-9_.-]+\.(?:jpg|jpeg|png|webp))$~iD',$path,$m))
+   $source=$root.'/schools/'.$m[1];
+  if(!$source||!is_file($source)||!is_readable($source)||!function_exists('imagecreatefromstring'))
+   Response::json(['ok'=>false,'error'=>['code'=>'PHOTO_NOT_FOUND','message'=>'تصویر در دسترس نیست.']],404);
+  $bytes=@file_get_contents($source,false,null,0,5*1024*1024+1);
+  $original=$bytes!==false&&strlen($bytes)<=5*1024*1024?@imagecreatefromstring($bytes):false;
+  if(!$original)Response::json(['ok'=>false,'error'=>['code'=>'PHOTO_NOT_FOUND','message'=>'تصویر معتبر نیست.']],404);
+  $w=imagesx($original);$h=imagesy($original);$tw=$w>=$h?480:360;$th=$w>=$h?360:480;
+  $canvas=imagecreatetruecolor($tw,$th);
+  imagecopyresampled($canvas,$original,0,0,0,0,$tw,$th,$w,$h);
+  $ink=imagecolorallocatealpha($canvas,255,255,255,45);
+  $shadow=imagecolorallocatealpha($canvas,0,48,35,40);
+  imagefilledrectangle($canvas,0,$th-32,$tw,$th,$shadow);
+  imagestring($canvas,5,12,$th-26,'ServiceYar | challi.ir',$ink);
+  imagedestroy($original);
+  header('Content-Type: image/jpeg');header('Content-Disposition: inline; filename="serviceyar-preview.jpg"');
+  header('Cache-Control: private, no-store, max-age=0');header('X-Robots-Tag: noindex, noimageindex, noarchive');
+  header('X-Content-Type-Options: nosniff');imagejpeg($canvas,null,62);imagedestroy($canvas);exit;
  }
  // Public reference valuation: exactly the same 1405-1406 grid and traffic coefficients as Madares.
  // No tenant/school required; do not confuse this with agency-specific contracted tariffs.
