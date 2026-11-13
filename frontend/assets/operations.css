@@ -2273,3 +2273,9 @@ body.sy-menu-palette-open{overflow:hidden}
  body.sy-payslip-print-window .sy-payslip-settlement>div{padding:7px 10px!important}
  body.sy-payslip-print-window .sy-payslip-sheet :is(header,section,table,tr,footer){break-inside:avoid}
 }
+
+/* Mashhad education district boundaries overlay on Neshan/Leaflet maps. */
+.school-district-control{background:#fff;border:1px solid #cbd5e1;border-radius:9px;box-shadow:0 3px 14px rgba(15,23,42,.16);direction:rtl}
+.school-district-toggle{display:flex;align-items:center;gap:7px;padding:9px 11px;cursor:pointer;color:#17324d;font:600 12px Vazirmatn,Tahoma,sans-serif;white-space:nowrap}
+.school-district-toggle input{width:16px;height:16px;accent-color:#006d53;cursor:pointer;margin:0}
+.school-district-control:focus-within{outline:2px solid #006d53;outline-offset:2px}
