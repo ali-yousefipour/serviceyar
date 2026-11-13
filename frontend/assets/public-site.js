@@ -290,7 +290,7 @@
     if(!root.hidden&&root.contains(event.target))event.preventDefault();
    });
    document.addEventListener('keydown',event=>{
-    if(root.hidden||!root.contains(document.activeElement))return;
+    if(root.hidden||requestedPage()==='login')return;
     const key=event.key.toLowerCase();
     if((event.ctrlKey||event.metaKey)&&['s','p','u'].includes(key)){event.preventDefault();event.stopPropagation();}
    },true);
