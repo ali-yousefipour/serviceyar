@@ -31,6 +31,14 @@ try {
    foreach(['agencies','schools','students','drivers','services'] as $table){
     $counts[$table]=(int)$pdo->query('SELECT COUNT(*) FROM '.$table.' WHERE is_active=1')->fetchColumn();
    }
+   // The landing page describes the entire preloaded school inventory, not just
+   // schools already linked to an agency. Count catalog entries plus unmatched
+   // registered schools, without double-counting schools selected from catalog.
+   $counts['schools']=(int)$pdo->query("SELECT COUNT(*) FROM school_catalog")->fetchColumn()
+    +(int)$pdo->query("SELECT COUNT(*) FROM schools s WHERE s.is_active=1 AND NOT EXISTS
+      (SELECT 1 FROM school_catalog c WHERE
+       (s.code IS NOT NULL AND s.code<>'' AND c.education_code=s.code)
+       OR (TRIM(c.name)=TRIM(s.name) AND COALESCE(c.region,'')=COALESCE(s.region,'')))")->fetchColumn();
    header('Cache-Control: public, max-age=120');
    Response::json(['ok'=>true,'data'=>['counts'=>$counts]]);
   }catch(\Throwable $e){
