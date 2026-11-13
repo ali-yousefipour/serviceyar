@@ -31,4 +31,9 @@ assert(source.includes('role="region" aria-label="ردیف‌های سند حس�
 for(const label of ['حساب','شرح ردیف','بدهکار · ریال','بستانکار · ریال','پیگیری','عملیات'])assert(source.includes('data-label="'+label+'"'),'Mobile journal row missing field label '+label);
 assert(source.includes("if(!totals()){notify("),'Journal save must continue enforcing balance validation');
 assert(source.includes("'/approve',{}")||source.includes("'/approve',{}"),'Journal approval endpoint should remain available');
+assert(source.includes('id="journalResetFilters"'),'Account documents should offer a reset control');
+assert(source.includes('id="journalEmptyReset"'),'Empty account document results should offer recovery');
+assert(source.includes('role="region" aria-label="فهرست اسناد حسابداری"'),'Accounting document table should support keyboard navigation');
+assert(source.includes('status.onchange=()=>refresh();order.onchange=()=>refresh();'),'Status and order changes should not steal search focus');
+assert(source.includes('searchTimer=setTimeout(()=>refresh(true),400)'),'Search should restore input focus following refresh');
 console.log('Accounting account search and safe report filters passed');
