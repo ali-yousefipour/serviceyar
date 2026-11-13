@@ -47,6 +47,9 @@ jobs:
           # Validate normalized UTF-8 table headers against worksheet headers.
           php tests/monthly-statement-render-smoke.php render > /tmp/serviceyar-statement-reference-test.xlsx
           php tests/monthly-statement-render-smoke.php verify /tmp/serviceyar-statement-reference-test.xlsx
+          php tests/monthly-statement-render-smoke.php render-preview > /tmp/serviceyar-statement-preview-test.xlsx
+          php tests/monthly-statement-render-smoke.php verify /tmp/serviceyar-statement-preview-test.xlsx
+          rm /tmp/serviceyar-statement-preview-test.xlsx
           # Assert no Excel-repair shared formulas or stale period headings.
           rm /tmp/serviceyar-statement-reference-test.xlsx
           node --check frontend/assets/app.js
