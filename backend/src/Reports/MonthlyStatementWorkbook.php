@@ -88,9 +88,15 @@ final class MonthlyStatementWorkbook
         try{
             ReferenceMonthlyStatementWorkbook::downloadIfAvailable($d,$agency,$id,$preview);
         }catch(\RuntimeException $e){
-            error_log('[ServiceYar][statement-export] Exact reference workbook failed: '.$e->getMessage());
+            error_log('[ServiceYar][statement-export] Exact reference workbook failed: '.$e->getMessage()
+                .' previous: '.($e->getPrevious()?->getMessage()??'none'));
+            $stage=str_starts_with($e->getMessage(),'REFERENCE_STAGE_')
+                ?substr($e->getMessage(),strlen('REFERENCE_STAGE_')):'TEMPLATE_PREPARE';
+            $known=['TEMPLATE_COPY','ZIP_OPEN','BUILD_SOURCE_ROWS','REPLACE_DATA_SHEETS',
+                    'NORMALIZE_FORMULAS','UPDATE_HEADINGS','SYNC_TABLES','PRINT_AREAS','ZIP_FINALIZE','TEMPLATE_PREPARE'];
+            if(!in_array($stage,$known,true))$stage='TEMPLATE_PREPARE';
             throw new AuthException(500,
-                'ساخت صورت‌وضعیت با قالب اصلی ناموفق بود؛ فایل جایگزین با ظاهر متفاوت تولید نشد.',
+                'ساخت فایل با قالب اصلی ناموفق بود (مرحله '.$stage.'). کد مرحله را برای پیگیری خطا اعلام کنید.',
                 'STATEMENT_REFERENCE_RENDER_FAILED');
         }
         // The exporter exits after streaming the original reference layout.
