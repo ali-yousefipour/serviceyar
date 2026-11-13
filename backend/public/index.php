@@ -38,6 +38,37 @@ try {
    Response::json(['ok'=>false,'error'=>['code'=>'PUBLIC_STATS_UNAVAILABLE','message'=>'آمار عمومی موقتاً در دسترس نیست.']],503);
   }
  }
+ // Public school directory. No student, driver, contact or private tenant data exposed.
+ if($method==='GET'&&$path==='/api/v1/public/schools'){
+  try{
+   $pdo=Connection::get();
+   $query=trim((string)($_GET['q']??''));
+   if(mb_strlen($query,'UTF-8')>100)Response::json(['ok'=>false,'error'=>['code'=>'INVALID_QUERY','message'=>'عبارت جستجو طولانی است.']],422);
+   $sql="SELECT s.id,s.name,s.code,s.region,s.latitude,s.longitude,s.photo_path,a.name AS company_name
+    FROM schools s JOIN agencies a ON a.id=s.agency_id AND a.is_active=1
+    WHERE s.is_active=1 AND s.latitude IS NOT NULL AND s.longitude IS NOT NULL
+    AND (:empty=1 OR s.name LIKE :q1 OR s.code LIKE :q2 OR a.name LIKE :q3)
+    ORDER BY s.name,s.id LIMIT 250";
+   $stmt=$pdo->prepare($sql);
+   $stmt->execute(['empty'=>$query===''?1:0,'q1'=>'%'.$query.'%','q2'=>'%'.$query.'%','q3'=>'%'.$query.'%']);
+   $rows=[];
+   foreach($stmt->fetchAll(\\PDO::FETCH_ASSOC) as $row){
+    $pathValue=(string)($row['photo_path']??'');
+    $photo=null;
+    if(preg_match('~^(?:uploads/)?schools/(?:[0-9]{4}/[0-9]{2}/)?[a-zA-Z0-9_.-]+\\.(?:jpg|jpeg|png|webp)$~i',$pathValue)){
+     $photo='/schools/'.preg_replace('~^(?:uploads/)?schools/~','',$pathValue);
+    }
+    $rows[]=['id'=>(int)$row['id'],'name'=>$row['name'],'code'=>$row['code'],
+      'region'=>$row['region'],'latitude'=>(float)$row['latitude'],'longitude'=>(float)$row['longitude'],
+      'company'=>$row['company_name'],'photoUrl'=>$photo];
+   }
+   header('Cache-Control: public, max-age=120');
+   Response::json(['ok'=>true,'data'=>['schools'=>$rows]]);
+  }catch(\\Throwable $e){
+   error_log('[ServiceYar][public-schools] '.$e->getMessage());
+   Response::json(['ok'=>false,'error'=>['code'=>'PUBLIC_SCHOOLS_UNAVAILABLE','message'=>'اطلاعات مدارس فعلاً در دسترس نیست.']],503);
+  }
+ }
  $auth=new AuthService();
  if($method==='POST'&&$path==='/api/v1/auth/login'){ $b=Request::json();Response::json(['ok'=>true,'data'=>$auth->login((string)($b['username']??''),(string)($b['password']??''))]); }
  if($method==='POST'&&$path==='/api/v1/auth/logout'){ $s=$auth->current();$auth->requireCsrf($s);$auth->logout();Response::json(['ok'=>true,'data'=>['loggedOut'=>true]]); }
