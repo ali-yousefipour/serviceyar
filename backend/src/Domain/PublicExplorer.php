@@ -37,12 +37,14 @@ final class PublicExplorer {
  public static function companies(): array {
   $pdo=Connection::get();
   $agencies=$pdo->query("SELECT id,name FROM agencies WHERE is_active=1 ORDER BY name LIMIT 150")->fetchAll(PDO::FETCH_ASSOC);
-  $rows=[];
+  $rows=[];$mapped=0;
   foreach($agencies as $agency){
    $row=self::safeCompany($agency,self::settings($pdo,(int)$agency['id']));
-   if($row['latitude']!==null)$rows[]=$row;
+   $rows[]=$row;
+   if($row['latitude']!==null)$mapped++;
   }
-  return ['companies'=>$rows,'mappedCount'=>count($rows)];
+  return ['companies'=>$rows,'mappedCount'=>$mapped,'totalCompanies'=>count($rows),
+   'unmappedCount'=>count($rows)-$mapped];
  }
  public static function company(int $id): ?array {
   if($id<1)return null;
