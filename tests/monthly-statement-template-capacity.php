@@ -12,17 +12,16 @@ $fixture=static function(int $students,int $drivers):array{
 foreach([
     [0,0,true],
     [630,122,true],
-    [631,122,false],
-    [630,123,false],
-    [2500,160,false]
+    [631,122,true],
+    [630,123,true],
+    [2500,160,true]
 ] as [$students,$drivers,$expected]){
     $actual=Reference::fitsTemplateCapacity($fixture($students,$drivers));
     if($actual!==$expected)throw new RuntimeException(
         "Template capacity mismatch: students=$students drivers=$drivers expected=".var_export($expected,true)
     );
 }
-// The exporter must select the standard 14-sheet generator for high-volume months
-// instead of throwing a 500 or truncating the data in the fixed reference sheet.
+// The reference exporter expands the source worksheet and table ranges.
 // Regression: a high-volume month must still produce a valid 14-sheet XLSX.
 require_once dirname(__DIR__).'/backend/src/Vendor/SimpleXLSXGen.php';
 if(extension_loaded('mbstring')&&extension_loaded('zlib')&&class_exists(ZipArchive::class)){
