@@ -107,114 +107,183 @@
    if(status)status.textContent='آمار موقتاً در دسترس نیست';
   }
  }
- let schoolMap=null,schoolMarkers=null,publicSchoolList=[],selectedSchool=null,schoolSearchTimer=null;
+
+ let schoolMap=null,publicCompanyMarkers=null,schoolMarkers=null,publicSchoolList=[],publicCompanies=[],selectedSchool=null,schoolSearchTimer=null,schoolSearchSequence=0;
  const faNumber=value=>new Intl.NumberFormat('fa-IR').format(value);
- function selectPublicSchool(school){
+ const validPoint=row=>row&&Number.isFinite(Number(row.latitude))&&Number.isFinite(Number(row.longitude))&&row.latitude!==null&&row.longitude!==null;
+ function publicMapStatus(message){
+  const el=document.getElementById('syPublicMapStatus');if(el)el.textContent=message;
+ }
+ function publicModal(title,items,imageUrl){
+  const modal=document.getElementById('syPublicSchoolDialog');
+  if(!modal)return;
+  const heading=document.getElementById('sySchoolDialogTitle');
+  const details=document.getElementById('syPublicDetails');
+  heading.textContent=title;details.replaceChildren();
+  const visual=document.getElementById('syPublicModalVisual');visual.replaceChildren();
+  if(imageUrl){
+   const img=document.createElement('img');img.src=imageUrl;img.alt=title;img.loading='lazy';
+   img.addEventListener('error',()=>img.replaceWith(document.createTextNode('تصویر در دسترس نیست')));
+   visual.append(img);
+  }else visual.textContent='تصویری ثبت نشده است';
+  for(const [key,value] of items){
+   if(value===null||value===undefined||String(value).trim()==='')continue;
+   const row=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');
+   dt.textContent=key;dd.textContent=String(value);row.append(dt,dd);details.append(row);
+  }
+  if(!modal.open)modal.showModal();
+ }
+ function showCompany(company){
+  publicModal(company.name,[
+   ['نام شرکت',company.name],['نشانی دفتر',company.address],['مدیر شرکت',company.managerName],
+   ['همراه مدیر',company.managerMobile],
+   ['وضعیت اطلاعات تماس',company.contactPublished?'اطلاعات تماس با مجوز شرکت منتشر شده است':'اطلاعات تماس عمومی توسط شرکت منتشر نشده است']
+  ],company.logoUrl);
+ }
+ function showSchool(school){
+  publicModal(school.name,[
+   ['نام مدرسه',school.name],['ناحیه آموزش‌وپرورش',school.region],['نوع مدرسه',school.type],
+   ['نشانی مدرسه',school.address],['تلفن مدرسه',school.phone],['مدیر مدرسه',school.managerName],
+   ['شرکت سرویس‌دهنده',school.company||'هنوز شرکتی مشخص نشده است']
+  ],school.photoUrl);
+ }
+ function publicPin(type,photo){
+  const color=type==='agency'?'green':'yellow';
+  const content=photo?'<img alt="" src="'+photo.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'" onerror="this.remove();this.parentElement.classList.add(\'sy-public-pin-fallback\')">':'';
+  return L.divIcon({className:'sy-public-pin sy-public-pin-'+color,html:'<span class="sy-public-pin-face '+(!photo?'sy-public-pin-fallback':'')+'">'+content+'<span class="sy-public-pin-symbol">⌖</span></span>',
+   iconSize:[54,58],iconAnchor:[27,56],popupAnchor:[0,-50]});
+ }
+ function focusPoints(points){
+  if(!schoolMap||!points.length)return;
+  if(points.length===1)schoolMap.setView(points[0],14);
+  else schoolMap.fitBounds(L.latLngBounds(points).pad(.22),{maxZoom:14});
+ }
+ function drawCompanies(){
+  if(!publicCompanyMarkers||!schoolMap)return;
+  schoolMarkers?.clearLayers();publicCompanyMarkers.clearLayers();selectedSchool=null;
+  const points=[];
+  publicCompanies.forEach(company=>{
+   if(!validPoint(company))return;
+   const position=[Number(company.latitude),Number(company.longitude)];
+   const marker=L.marker(position,{icon:publicPin('agency',company.logoUrl),title:company.name});
+   marker.on('click',()=>showCompany(company));marker.addTo(publicCompanyMarkers);points.push(position);
+  });
+  if(points.length)focusPoints(points);
+  publicMapStatus(points.length?faNumber(points.length)+' شرکت دارای موقعیت ثبت‌شده روی نقشه':'هنوز موقعیتی برای شرکت‌ها ثبت نشده است.');
+ }
+ function clearMapForSearch(){
+  publicCompanyMarkers?.clearLayers();schoolMarkers?.clearLayers();
+  publicMapStatus('یک مدرسه را از نتایج جستجو انتخاب کنید.');
+ }
+ async function selectPublicSchool(school){
   selectedSchool=school;
-  if(schoolMap&&Number.isFinite(school.latitude)&&Number.isFinite(school.longitude))schoolMap.setView([school.latitude,school.longitude],15);
   root.querySelectorAll('[data-school-id]').forEach(el=>el.classList.toggle('sy-selected-school',String(school.id)===el.dataset.schoolId));
+  publicCompanyMarkers?.clearLayers();schoolMarkers?.clearLayers();
+  const points=[];
+  if(validPoint(school)&&schoolMap){
+   const p=[Number(school.latitude),Number(school.longitude)];
+   L.marker(p,{icon:publicPin('school',school.photoUrl),title:school.name}).on('click',()=>showSchool(school)).addTo(schoolMarkers);
+   points.push(p);
+  }
+  let company=publicCompanies.find(c=>Number(c.id)===Number(school.companyId));
+  if(!company&&school.companyId){
+   try{
+    const res=await fetch('/api/v1/public/company?id='+encodeURIComponent(school.companyId),{credentials:'omit'});
+    const json=await res.json();
+    if(res.ok&&json.ok)company=json.data;
+   }catch(_){}
+  }
+  if(selectedSchool!==school)return;
+  if(company&&validPoint(company)){
+   const p=[Number(company.latitude),Number(company.longitude)];
+   L.marker(p,{icon:publicPin('agency',company.logoUrl),title:company.name}).on('click',()=>showCompany(company)).addTo(schoolMarkers);
+   points.push(p);
+  }
+  focusPoints(points);
+  publicMapStatus(company?'مدرسه و شرکت سرویس‌دهنده انتخاب‌شده':'مدرسه انتخاب شد؛ برای شرکت سرویس‌دهنده موقعیت ثبت‌شده‌ای یافت نشد.');
  }
  function drawPublicSchools(rows){
-  const result=document.getElementById('sySchoolResults');
-  if(!result)return;
-  result.replaceChildren();
-  if(!rows.length){result.textContent='مدرسه‌ای با این مشخصات یافت نشد.';return;}
+  const results=document.getElementById('sySchoolResults');
+  if(!results)return;
+  results.replaceChildren();
+  if(!rows.length){results.textContent='مدرسه‌ای با این مشخصات یافت نشد.';return;}
   rows.forEach(school=>{
-   const button=document.createElement('button');
-   button.type='button';button.className='sy-school-choice';button.dataset.schoolId=school.id;
-   const title=document.createElement('strong');title.textContent=school.name;
-   const company=document.createElement('small');company.textContent='شرکت سرویس‌دهنده: '+school.company;
-   const region=document.createElement('span');region.textContent=school.region||'ناحیه ثبت نشده';
-   if(school.photoUrl){
-    const img=document.createElement('img');img.className='sy-school-thumbnail';img.src=school.photoUrl;
-    img.alt='';img.loading='lazy';img.onerror=()=>img.remove();button.append(img);
-   }
-   button.append(title,company,region);button.addEventListener('click',()=>selectPublicSchool(school));
-   result.append(button);
-  });
-  if(!schoolMap||!window.L)return;
-  schoolMarkers?.clearLayers();
-  const positions=[];
-  rows.forEach(school=>{
-   if(!Number.isFinite(school.latitude)||!Number.isFinite(school.longitude))return;
-   const icon=L.divIcon({className:'sy-public-pin',html:'<span class="sy-public-pin-face">'+
-    (school.photoUrl?'<img src="'+school.photoUrl.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'" alt="" onerror="this.replaceWith(document.createTextNode(\'⌖\'))">':'<span>⌖</span>')+
-    '</span>',iconSize:[46,46],iconAnchor:[23,42],popupAnchor:[0,-38]});
-   const marker=L.marker([school.latitude,school.longitude],{icon,title:school.name}).addTo(schoolMarkers);
-   const popup=document.createElement('div');
+   const button=document.createElement('button');button.type='button';button.className='sy-school-choice';button.dataset.schoolId=school.id;
+   const content=document.createElement('span');content.className='sy-school-choice-body';
    const name=document.createElement('strong');name.textContent=school.name;
-   const company=document.createElement('p');company.textContent='شرکت: '+school.company;
-   popup.append(name,company);
-   if(school.photoUrl){
-    const img=document.createElement('img');img.src=school.photoUrl;img.alt='تصویر '+school.name;
-    img.loading='lazy';img.style.cssText='max-width:190px;max-height:130px;object-fit:cover;display:block;margin:8px auto;border-radius:6px';
-    img.onerror=()=>img.remove();popup.append(img);
-   }
-   const action=document.createElement('button');action.type='button';action.textContent='انتخاب برای محاسبه';
-   action.addEventListener('click',()=>selectPublicSchool(school));popup.append(action);
-   marker.bindPopup(popup);marker.on('click',()=>selectPublicSchool(school));positions.push([school.latitude,school.longitude]);
+   const provider=document.createElement('small');provider.textContent=school.company||'بدون شرکت مشخص';
+   const region=document.createElement('span');region.textContent=school.region||'ناحیه نامشخص';
+   content.append(name,provider,region);
+   const visual=document.createElement('span');visual.className='sy-school-choice-visual';
+   if(school.photoUrl){const img=document.createElement('img');img.src=school.photoUrl;img.alt='';img.loading='lazy';img.onerror=()=>{visual.textContent='⌖'};visual.append(img);}
+   else visual.textContent='⌖';
+   button.append(visual,content);
+   button.addEventListener('click',()=>selectPublicSchool(school));results.append(button);
   });
-  if(positions.length)schoolMap.fitBounds(L.latLngBounds(positions).pad(.12),{maxZoom:13});
  }
  async function searchPublicSchools(term=''){
-  const status=document.getElementById('sySchoolResults');if(!status)return;
-  status.textContent='در حال جستجو…';
+  const result=document.getElementById('sySchoolResults');if(!result)return;
+  const version=++schoolSearchSequence;
+  if(!term){result.textContent='برای مشاهده مدارس نام مدرسه یا شرکت را جستجو کنید.';drawCompanies();return;}
+  clearMapForSearch();
+  if([...term].length<3){result.textContent='برای جستجو حداقل سه حرف وارد کنید.';return;}
+  result.textContent='در حال یافتن مدارس…';
   try{
-   const response=await fetch('/api/v1/public/schools?q='+encodeURIComponent(term),{credentials:'omit'});
-   const body=await response.json();
-   if(!response.ok||!body.ok)throw Error(body.error?.message||'خطا در دریافت اطلاعات');
-   publicSchoolList=body.data.schools||[];
-   if(!term){status.textContent='برای مشاهده عکس و موقعیت مدارس، حداقل سه حرف از نام مدرسه یا شرکت را وارد کنید.';return;}
+   const r=await fetch('/api/v1/public/schools?q='+encodeURIComponent(term),{credentials:'omit'});
+   const json=await r.json();
+   if(version!==schoolSearchSequence)return;
+   if(!r.ok||!json.ok)throw new Error(json.error?.message||'خطا در دریافت مدارس');
+   publicSchoolList=json.data.schools||[];
    drawPublicSchools(publicSchoolList);
-  }catch(error){status.textContent=error.message||'خطا در دریافت مدارس';}
+   publicMapStatus('از فهرست مدرسه‌ای را انتخاب کنید تا موقعیت مدرسه و شرکت آن نمایش داده شود.');
+  }catch(error){if(version===schoolSearchSequence)result.textContent=error.message||'دریافت اطلاعات ناموفق بود.';}
+ }
+ async function initNeshanMap(mapNode){
+  const response=await fetch('/api/v1/public/map-config',{credentials:'omit'});
+  const result=await response.json();
+  if(!response.ok||!result.ok||!result.data?.webKey)throw new Error('کلید نمایش نقشه نشان در تنظیمات ادمین کل ثبت نشده یا معتبر نیست.');
+  // Use the configured Neshan WEB key; the private routing/service key never reaches browsers.
+  if(!window.__syPublicNeshanPromise){
+   window.__syPublicNeshanPromise=new Promise((resolve,reject)=>{
+    const stylesheet=document.createElement('link');stylesheet.rel='stylesheet';
+    stylesheet.href='https://static.neshan.org/sdk/leaflet/v1.9.4/neshan-sdk/v1.0.8/index.css';
+    document.head.append(stylesheet);
+    const script=document.createElement('script');script.src='https://static.neshan.org/sdk/leaflet/v1.9.4/neshan-sdk/v1.0.8/index.js';
+    script.onload=resolve;script.onerror=()=>reject(new Error('کتابخانه نقشه نشان بارگذاری نشد.'));
+    document.head.append(script);
+   });
+  }
+  await window.__syPublicNeshanPromise;
+  schoolMap=new L.Map(mapNode,{key:result.data.webKey,maptype:'dreamy',center:[36.3,59.6],zoom:12,scrollWheelZoom:false});
+  publicCompanyMarkers=L.layerGroup().addTo(schoolMap);schoolMarkers=L.layerGroup().addTo(schoolMap);
+  requestAnimationFrame(()=>schoolMap?.invalidateSize(true));
  }
  async function setupPublicSchools(){
   const mapNode=document.getElementById('sySchoolsMap');
   if(!mapNode||mapNode.dataset.initialized)return;
   mapNode.dataset.initialized='1';
-  if(window.L){
-   schoolMap=L.map(mapNode,{scrollWheelZoom:false}).setView([36.3,59.6],11);
-   // Retry alternate providers when a raster endpoint is blocked.
-   const sources=[
-    {url:'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',options:{subdomains:'abcd',attribution:'© OpenStreetMap · © CARTO'}},
-    {url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',options:{subdomains:'abc',attribution:'© OpenStreetMap contributors'}},
-    {url:'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',options:{subdomains:'abc',attribution:'© OpenStreetMap contributors · HOT'}}
-   ];
-   const tileStatus=document.createElement('div');tileStatus.className='sy-map-tile-status';
-   tileStatus.setAttribute('role','status');tileStatus.hidden=true;
-   mapNode.parentElement?.append(tileStatus);
-   let sourceIndex=0,activeTiles=null,failCount=0,loadedCount=0;
-   const useSource=()=>{
-    if(!schoolMap)return;
-    if(activeTiles)schoolMap.removeLayer(activeTiles);
-    failCount=0;loadedCount=0;
-    const source=sources[sourceIndex];
-    activeTiles=L.tileLayer(source.url,{...source.options,maxZoom:19});
-    activeTiles.on('tileload',()=>{loadedCount++;tileStatus.hidden=true;});
-    activeTiles.on('tileerror',()=>{
-     if(loadedCount>0||++failCount<2)return;
-     if(sourceIndex<sources.length-1){sourceIndex++;useSource();return;}
-     tileStatus.hidden=false;
-     tileStatus.textContent='بارگذاری نقشه پایه با مشکل روبه‌رو شد. اتصال به سرویس نقشه را بررسی کنید.';
-    });
-    activeTiles.addTo(schoolMap);
-   };
-   useSource();
-   schoolMarkers=L.layerGroup().addTo(schoolMap);
-   fetch('/assets/school-district-boundaries.geojson',{credentials:'omit'}).then(r=>r.ok?r.json():null).then(geo=>{
-    if(!geo||!schoolMap)return;
-    const layer=L.geoJSON(geo,{style:()=>({color:'#0c7662',weight:2,fillOpacity:.06}),onEachFeature:(feature,shape)=>shape.bindTooltip(feature.properties.name)});
-    L.control.layers(null,{'مرزبندی نواحی آموزش‌وپرورش':layer},{collapsed:true}).addTo(schoolMap);
-    layer.addTo(schoolMap);
-   }).catch(()=>{});
-   // Leaflet must remeasure after the public page becomes visible.
-   requestAnimationFrame(()=>schoolMap?.invalidateSize(true));
-  }else mapNode.textContent='نمایش نقشه در دسترس نیست.';
+  const status=document.getElementById('sySchoolResults');
   const search=document.getElementById('sySchoolSearch');
   search?.addEventListener('input',()=>{
    clearTimeout(schoolSearchTimer);
-   schoolSearchTimer=setTimeout(()=>searchPublicSchools(search.value.trim()),350);
+   schoolSearchTimer=setTimeout(()=>searchPublicSchools(search.value.trim()),300);
   });
+  document.getElementById('syPublicSchoolDialog')?.querySelector('.sy-school-dialog-close')?.addEventListener('click',()=>document.getElementById('syPublicSchoolDialog').close());
+  document.getElementById('syPublicSchoolDialog')?.addEventListener('click',event=>{
+   if(event.target===event.currentTarget)event.currentTarget.close();
+  });
+  try{
+   await initNeshanMap(mapNode);
+   const companiesResponse=await fetch('/api/v1/public/companies',{credentials:'omit'});
+   const companiesBody=await companiesResponse.json();
+   if(!companiesResponse.ok||!companiesBody.ok)throw new Error(companiesBody.error?.message||'فهرست شرکت‌ها در دسترس نیست');
+   publicCompanies=companiesBody.data.companies||[];
+   if(search?.value.trim())await searchPublicSchools(search.value.trim());else drawCompanies();
+   if(status&&!search?.value.trim())status.textContent='شرکت‌ها روی نقشه مشخص‌اند؛ با جستجوی مدرسه می‌توانید موقعیت مدرسه و شرکت سرویس‌دهنده آن را ببینید.';
+  }catch(error){
+   publicMapStatus(error.message||'نمایش نقشه در دسترس نیست.');
+   if(mapNode&&!schoolMap)mapNode.textContent=error.message||'نقشه نشان در دسترس نیست.';
+  }
   document.getElementById('syServiceQuote')?.addEventListener('submit',async event=>{
    event.preventDefault();
    const form=event.currentTarget,status=document.getElementById('syQuoteResult');
