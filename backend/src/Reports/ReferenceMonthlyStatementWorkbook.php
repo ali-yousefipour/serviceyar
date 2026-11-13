@@ -420,8 +420,20 @@ final class ReferenceMonthlyStatementWorkbook
             throw new \RuntimeException('تعداد ردیف‌ها از سقف فیزیکی Excel بیشتر است.');
         }
         $stage='TEMPLATE_COPY';
-        $temp=tempnam(sys_get_temp_dir(),'sy-ref-');
-        if($temp===false || !copy(self::TEMPLATE,$temp))throw new \RuntimeException('Cannot prepare reference workbook');
+        // Shared cPanel hosts sometimes restrict /tmp via open_basedir.
+        // Prefer the application's private storage when writable, then
+        // fall back to the configured system temp directory.
+        $privateDir=dirname(__DIR__,3).'/storage/tmp';
+        if(!is_dir($privateDir))@mkdir($privateDir,0700,true);
+        $temp=false;
+        foreach([$privateDir,sys_get_temp_dir()] as $directory){
+            if(!is_dir($directory)||!is_writable($directory))continue;
+            $candidate=@tempnam($directory,'sy-ref-');
+            if($candidate===false)continue;
+            if(@copy(self::TEMPLATE,$candidate)){$temp=$candidate;break;}
+            @unlink($candidate);
+        }
+        if($temp===false)throw new \RuntimeException('Cannot prepare reference workbook (private temp storage unavailable)');
         try{
             $zip=new \ZipArchive();
             $stage='ZIP_OPEN';
