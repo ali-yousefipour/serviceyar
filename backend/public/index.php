@@ -64,6 +64,18 @@ try {
    Response::json(['ok'=>false,'error'=>['code'=>'COMPANIES_UNAVAILABLE','message'=>'موقعیت شرکت‌ها موقتاً در دسترس نیست.']],503);
   }
  }
+ if($method==='GET'&&$path==='/api/v1/public/company'){
+  try{
+   $id=filter_var($_GET['id']??null,FILTER_VALIDATE_INT);
+   $company=$id?\ServiceYar\Domain\PublicExplorer::company((int)$id):null;
+   if(!$company)Response::json(['ok'=>false,'error'=>['code'=>'NOT_FOUND','message'=>'شرکت یافت نشد.']],404);
+   header('Cache-Control: public, max-age=90');
+   Response::json(['ok'=>true,'data'=>$company]);
+  }catch(\Throwable $e){
+   error_log('[ServiceYar][public-company] '.$e->getMessage());
+   Response::json(['ok'=>false,'error'=>['code'=>'COMPANY_UNAVAILABLE','message'=>'اطلاعات شرکت در دسترس نیست.']],503);
+  }
+ }
  // Query-only school search; retain rate limits and no bulk school feed.
  if($method==='GET'&&$path==='/api/v1/public/schools'){
   try{
