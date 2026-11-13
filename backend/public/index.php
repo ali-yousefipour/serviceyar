@@ -29,9 +29,10 @@ try {
   try{
    $pdo=Connection::get();$counts=[];
    foreach(['agencies','schools','students','drivers','services'] as $table){
-    $counts[$table]=(int)$pdo->query('SELECT COUNT(*) FROM '.$table.' WHERE is_active=1')->fetchColumn();
+    // School totals include every registered record, regardless of activation status.
+    $where=$table==='schools'?'':' WHERE is_active=1';
+    $counts[$table]=(int)$pdo->query('SELECT COUNT(*) FROM '.$table.$where)->fetchColumn();
    }
-   $counts['schools']=\ServiceYar\Domain\PublicExplorer::countSchools();
    header('Cache-Control: public, max-age=120');
    Response::json(['ok'=>true,'data'=>['counts'=>$counts]]);
   }catch(\Throwable $e){
