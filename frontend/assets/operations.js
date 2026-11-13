@@ -369,7 +369,7 @@ function dashboardCompanyMarker(map,point,hasLogo){
  if(img){
   const fallback=()=>{
    const defaultSource='/assets/company-map-icon.webp';
-   if(img.getAttribute('src')===defaultSource){img.remove();icon.classList.add('sy-marker-fallback');}
+   if(img.getAttribute('src')===defaultSource){img.remove();icon.classList.add('sy-marker-fallback','sy-company-default-photo');}
    else{icon.classList.add('sy-company-default-photo');img.src=defaultSource;}
   };
   img.addEventListener('error',fallback);
@@ -393,7 +393,7 @@ function dashboardSchoolMarker(map,point,sc){
   const fallback=()=>{
    const placeholder='/assets/school-map-icon.webp';
    if(img.getAttribute('src')===placeholder){
-    img.remove();icon.classList.add('sy-marker-fallback');
+    img.remove();icon.classList.add('sy-marker-fallback','sy-school-default-photo');
    }else{
     icon.classList.add('sy-school-default-photo');
     img.src=placeholder;
