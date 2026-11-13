@@ -579,3 +579,14 @@
 }
 .sy-public-v3 .sy-v3-hero-more:hover{color:#fff}
 .sy-public-v3 .sy-v3-hero-more:focus-visible{outline:2px solid #a0f8ce;outline-offset:4px;border-radius:5px}
+
+
+/* Compatibility overrides for the original scroll cue/reveal hooks. */
+.sy-public-v3 .sy-hero-v3 .sy-v3-scroll-cue{
+ left:auto!important;right:max(30px,calc((100% - 1250px)/2))!important;
+ transform:none!important;bottom:20px!important;padding:5px 11px!important;
+}
+.sy-public.sy-public-v3.sy-motion-ready .sy-hero-v3 .sy-hero-visual.sy-in-view{
+ transform:translateY(var(--sy-parallax,0px))!important;
+}
+@media(max-width:650px){.sy-public-v3 .sy-hero-v3 .sy-v3-scroll-cue{right:17px!important;left:auto!important}}
