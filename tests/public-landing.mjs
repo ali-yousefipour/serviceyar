@@ -58,6 +58,9 @@ assert.ok(!js.includes('setInterval('),'Do not use polling or unbounded timers f
 assert.ok(api.includes("PublicExplorer::countSchools()")&&read('backend/src/Domain/PublicExplorer.php').includes('FROM school_catalog c WHERE NOT EXISTS'),'School count must cover registered and central schools without double counting');
 assert.ok(!read('backend/src/Domain/PublicExplorer.php').includes('FROM schools WHERE is_active=1'),'School count must include both active and inactive records');
 assert.ok(js.includes('iconSize:[38,42],iconAnchor:[19,40]'),'Public map markers must remain compact and anchored');
+assert.ok(js.includes("center:[36.3,59.6],zoom:14")&&js.includes("schoolMap.setView([36.3,59.6],14,{animate:false})"),'Initial public map must stay exactly two zoom levels above original 12');
+const companyPlot=js.slice(js.indexOf('function drawCompanies(){'),js.indexOf('function clearMapForSearch(){'));
+assert.ok(!companyPlot.includes('focusPoints(points)')&&!companyPlot.includes('fitBounds('),'Rendering company markers must never override the chosen default zoom');
 assert.ok(navJs.includes("iconSize:[78,59],iconAnchor:[39,40]")&&navJs.includes("className:'sy-dashboard-popup'"),'Dashboard map markers and Persian popup must have controlled size');
 assert.ok(brandCss.includes('.sy-public-v3 #syPublicSchools .leaflet-marker-icon.sy-public-pin')&&brandCss.includes('.leaflet-popup .sy-map-popup'),'Public pins and dashboard popup need compact themed CSS');
 assert.ok(js.includes('/api/v1/public/map-config')&&js.includes('static.neshan.org/sdk')&&js.includes('invalidateSize(true)'),'Public map must use configured Neshan web key');
