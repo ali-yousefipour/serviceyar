@@ -2218,3 +2218,26 @@ body.sy-menu-palette-open{overflow:hidden}
  .sy-payslip-print-window .sy-payslip-meta{grid-template-columns:repeat(2,minmax(0,1fr))!important}
  .sy-payslip-print-window :is(.sy-payslip-header,.sy-payslip-signatures){break-inside:avoid}
 }
+
+/* Harden logo bounds and dedicated single-slip print */
+/* Uploaded artwork must never expand the payslip or collapse the company heading. */
+.sy-payslip-sheet .sy-payslip-header{min-width:0;display:grid;grid-template-columns:56px minmax(0,1fr) auto;align-items:center;column-gap:12px}
+.sy-payslip-sheet .sy-payslip-header>img.sy-company-logo{display:block!important;width:56px!important;height:56px!important;min-width:56px!important;min-height:56px!important;max-width:56px!important;max-height:56px!important;box-sizing:border-box!important;object-fit:contain!important;overflow:hidden!important;padding:3px;border:1px solid #d5dfd8;border-radius:8px;background:#fff}
+.sy-payslip-sheet .sy-payslip-header>div{min-width:0}
+.sy-payslip-sheet .sy-payslip-header :is(h2,p,strong){overflow-wrap:break-word}
+.sy-payslip-sheet .sy-payslip-document-state{max-width:150px;white-space:normal;text-align:center}
+.sy-report-company-letterhead>img.sy-company-logo{display:block!important;width:56px!important;height:56px!important;min-width:56px!important;max-width:56px!important;min-height:56px!important;max-height:56px!important;object-fit:contain!important}
+.sy-payslip-print-window{margin:0!important;padding:0!important;background:#fff!important}
+.sy-payslip-print-window>.sy-payslip-sheet{box-sizing:border-box!important;width:min(100%,190mm)!important;max-width:190mm!important;margin:0 auto!important;padding:10mm!important;border:none!important;box-shadow:none!important}
+.sy-payslip-print-window .sy-payslip-header{grid-template-columns:56px minmax(0,1fr) auto!important}
+@media(max-width:600px){.sy-payslip-sheet .sy-payslip-header{grid-template-columns:48px minmax(0,1fr)}.sy-payslip-sheet .sy-payslip-header>img.sy-company-logo{width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important;max-width:48px!important;max-height:48px!important}.sy-payslip-sheet .sy-payslip-document-state{grid-column:1/-1;justify-self:start}}
+@page{size:A4 portrait;margin:12mm}
+@media print{
+ html:has(body.sy-payslip-print-window),body.sy-payslip-print-window{width:100%!important;max-width:none!important;overflow:visible!important;background:#fff!important}
+ body.sy-payslip-print-window>.sy-payslip-sheet{page:sy-driver-payslip;display:block!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important;border:0!important;break-inside:auto!important}
+ body.sy-payslip-print-window>.sy-payslip-sheet .sy-payslip-header>img.sy-company-logo{width:50px!important;height:50px!important;min-width:50px!important;min-height:50px!important;max-width:50px!important;max-height:50px!important}
+ body.sy-payslip-print-window .sy-payslip-header{grid-template-columns:50px minmax(0,1fr) auto!important}
+ body.sy-payslip-print-window .sy-payslip-columns{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ body.sy-payslip-print-window .sy-payslip-meta{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ body.sy-payslip-print-window :is(.sy-payslip-signatures,.sy-payslip-header,.sy-payslip-net){break-inside:avoid!important}
+}
