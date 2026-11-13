@@ -51,6 +51,9 @@ jobs:
           php tests/monthly-statement-render-smoke.php verify /tmp/serviceyar-statement-reference-test.xlsx
           php tests/monthly-statement-render-smoke.php render-preview > /tmp/serviceyar-statement-preview-test.xlsx
           php tests/monthly-statement-render-smoke.php verify /tmp/serviceyar-statement-preview-test.xlsx
+          php tests/monthly-statement-render-smoke.php render-large > /tmp/serviceyar-statement-large-test.xlsx
+          php tests/monthly-statement-render-smoke.php verify /tmp/serviceyar-statement-large-test.xlsx --large
+          rm /tmp/serviceyar-statement-large-test.xlsx
           rm /tmp/serviceyar-statement-preview-test.xlsx
           # Assert no Excel-repair shared formulas or stale period headings.
           rm /tmp/serviceyar-statement-reference-test.xlsx
