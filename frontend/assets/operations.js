@@ -358,14 +358,26 @@ function syLocationSvg(color){
  return '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" fill="'+color+'"><path d="M12 2a8 8 0 0 0-8 8c0 5.6 8 12 8 12s8-6.4 8-12a8 8 0 0 0-8-8zm0 11.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4z"/></svg>';
 }
 function dashboardCompanyPin(hasLogo){
- const img=hasLogo?'<img class="sy-map-marker-photo" alt="" src="'+esc(agencyLogoUrl())+'" onerror="this.remove();this.parentElement.classList.add(\'sy-marker-fallback\')">':'';
- return L.divIcon({className:'sy-map-marker sy-map-company '+(!hasLogo?'sy-marker-fallback':''),html:'<span class="sy-map-marker-bubble">'+img+'<span class="sy-map-marker-symbol">'+syLocationSvg('#0b985b')+'</span></span>',iconSize:[56,64],iconAnchor:[28,62],popupAnchor:[0,-58]});
+ const img=hasLogo?'<img class="sy-map-marker-photo" alt="" loading="lazy" decoding="async" src="'+esc(agencyLogoUrl())+'">':'';
+ return L.divIcon({className:'sy-map-marker sy-map-company'+(!hasLogo?' sy-marker-fallback':''),
+  html:'<span class="sy-map-marker-bubble">'+img+'<span class="sy-map-marker-symbol">'+syLocationSvg('#0b985b')+'</span></span>',
+  iconSize:[56,64],iconAnchor:[28,62],popupAnchor:[0,-58]});
+}
+function dashboardCompanyMarker(map,point,hasLogo){
+ const marker=L.marker(point,{icon:dashboardCompanyPin(hasLogo),title:currentAgency?.name||'دفتر شرکت'}).addTo(map).bindPopup(esc(currentAgency?.name||'دفتر شرکت')).openPopup();
+ const icon=marker.getElement(),img=icon?.querySelector('.sy-map-marker-photo');
+ if(img){
+  const fallback=()=>{img.remove();icon.classList.add('sy-marker-fallback');};
+  img.addEventListener('error',fallback,{once:true});
+  if(img.complete&&img.naturalWidth===0)fallback();
+ }
+ return marker;
 }
 function dashboardSchoolPin(sc){
  const url=Number(sc.id)>0&&sc.photo_path?scoped('/api/v1/schools/'+encodeURIComponent(sc.id)+'/photo'):null;
- const img=url?'<img class="sy-map-marker-photo" alt="" loading="lazy" decoding="async" src="'+esc(url)+'">':'';
+ const img='<img class="sy-map-marker-photo" alt="" loading="lazy" decoding="async" src="'+esc(url||'/assets/school-placeholder.png')+'">';
  const label=String(sc.name||'مدرسه');
- return L.divIcon({className:'sy-map-marker sy-map-school'+(!url?' sy-marker-fallback':''),
+ return L.divIcon({className:'sy-map-marker sy-map-school'+(!url?' sy-school-default-photo':''),
   html:'<span class="sy-map-marker-bubble">'+img+'<span class="sy-map-marker-symbol">'+syLocationSvg('#e5ae0a')+'</span></span><span class="sy-map-school-label" title="'+esc(label)+'">'+esc(label)+'</span>',
   iconSize:[112,82],iconAnchor:[56,63],popupAnchor:[0,-58]});
 }
@@ -374,8 +386,16 @@ function dashboardSchoolMarker(map,point,sc){
  const icon=marker.getElement();
  const img=icon?.querySelector('.sy-map-marker-photo');
  if(img){
-  const fallback=()=>{img.remove();icon.classList.add('sy-marker-fallback');};
-  img.addEventListener('error',fallback,{once:true});
+  const fallback=()=>{
+   const placeholder='/assets/school-placeholder.png';
+   if(img.getAttribute('src')===placeholder){
+    img.remove();icon.classList.add('sy-marker-fallback');
+   }else{
+    icon.classList.add('sy-school-default-photo');
+    img.src=placeholder;
+   }
+  };
+  img.addEventListener('error',fallback);
   if(img.complete&&img.naturalWidth===0)fallback();
  }
  return marker;
@@ -390,7 +410,7 @@ async function dashboard(token=pageToken){
  $('content').querySelectorAll('[data-status]').forEach(a=>a.onclick=()=>{initialStudentStatus=a.dataset.status;});$('dashboardRefresh').onclick=()=>dashboard(token).catch(e=>notify(e.message,true));
  $('quickSearch').onsubmit=e=>{e.preventDefault();initialSearch=e.target.q.value;location.hash=e.target.resource.value;};
  $('showWallet').closest('.wallet-card').hidden=!can('wallets');$('showWallet').setAttribute('aria-expanded','false');$('walletValue').setAttribute('aria-live','polite');$('showWallet').onclick=async()=>{const button=$('showWallet');if(button.getAttribute('aria-expanded')==='true'){$('walletValue').textContent='******';button.textContent='نمایش موجودی';button.setAttribute('aria-expanded','false');return;}button.disabled=true;try{delete lookupCache[currentAgency.id+':wallets'];const w={items:await lookup('wallets')};if(token!==pageToken)return;$('walletValue').textContent=number(w.items.reduce((sum,x)=>sum+Number(x.balance),0));button.textContent='پنهان کردن موجودی';button.setAttribute('aria-expanded','true');}catch(e){notify(e.message,true);}finally{if(button.isConnected)button.disabled=false;}};
- if(can('monitoring'))api(scoped('/api/v1/monitoring/users')).then(users=>{if(token===pageToken&&$('dashboardUsers'))$('dashboardUsers').innerHTML=users.length?simpleTable(['کاربر','وضعیت'],users.map(u=>[person(u),Number(u.online)?'آنلاین':'آفلاین'])):'<p class="empty">کاربری برای نمایش وجود ندارد.</p>';}).catch(e=>{if(token===pageToken&&$('dashboardUsers'))$('dashboardUsers').textContent=e.message;});else $('dashboardUsers').textContent='دسترسی به پایش کاربران مجاز نیست.';calendar(new Date());let map;try{map=await makeMap($('dashboardSchoolMap'));}catch(e){if(token===pageToken&&$('dashboardSchoolMap'))$('dashboardSchoolMap').textContent='نقشه موقتاً در دسترس نیست.';return;}if(!map)return;const points=[];let config;try{config=await api(scoped('/api/v1/maps/config'));}catch(e){if(token===pageToken)$('dashboardSchoolMap').insertAdjacentHTML('afterend','<p class="muted">تنظیمات نقشه دریافت نشد.</p>');return;}if(token!==pageToken)return;const office=config.companyLocation;if(office&&Number.isFinite(Number(office.latitude))&&Number.isFinite(Number(office.longitude))){const point=[Number(office.latitude),Number(office.longitude)];points.push(point);L.marker(point,{icon:dashboardCompanyPin(config.hasCustomLogo),title:currentAgency?.name||'دفتر شرکت'}).addTo(map).bindPopup(esc(currentAgency?.name||'دفتر شرکت')).openPopup();}else{const hint=document.createElement('p');hint.className='muted';hint.textContent='موقعیت دفتر شرکت هنوز ثبت نشده است؛ از تنظیمات، موقعیت را روی نشان انتخاب کنید.';$('dashboardSchoolMap').after(hint);}d.schools.forEach(sc=>{if(sc.latitude!==null&&sc.longitude!==null){const point=[Number(sc.latitude),Number(sc.longitude)];points.push(point);dashboardSchoolMarker(map,point,sc);}});if(points.length)map.fitBounds(L.latLngBounds(points).pad(.3),{maxZoom:14});
+ if(can('monitoring'))api(scoped('/api/v1/monitoring/users')).then(users=>{if(token===pageToken&&$('dashboardUsers'))$('dashboardUsers').innerHTML=users.length?simpleTable(['کاربر','وضعیت'],users.map(u=>[person(u),Number(u.online)?'آنلاین':'آفلاین'])):'<p class="empty">کاربری برای نمایش وجود ندارد.</p>';}).catch(e=>{if(token===pageToken&&$('dashboardUsers'))$('dashboardUsers').textContent=e.message;});else $('dashboardUsers').textContent='دسترسی به پایش کاربران مجاز نیست.';calendar(new Date());let map;try{map=await makeMap($('dashboardSchoolMap'));}catch(e){if(token===pageToken&&$('dashboardSchoolMap'))$('dashboardSchoolMap').textContent='نقشه موقتاً در دسترس نیست.';return;}if(!map)return;const points=[];let config;try{config=await api(scoped('/api/v1/maps/config'));}catch(e){if(token===pageToken)$('dashboardSchoolMap').insertAdjacentHTML('afterend','<p class="muted">تنظیمات نقشه دریافت نشد.</p>');return;}if(token!==pageToken)return;const office=config.companyLocation;if(office&&Number.isFinite(Number(office.latitude))&&Number.isFinite(Number(office.longitude))){const point=[Number(office.latitude),Number(office.longitude)];points.push(point);dashboardCompanyMarker(map,point,config.hasCustomLogo);}else{const hint=document.createElement('p');hint.className='muted';hint.textContent='موقعیت دفتر شرکت هنوز ثبت نشده است؛ از تنظیمات، موقعیت را روی نشان انتخاب کنید.';$('dashboardSchoolMap').after(hint);}d.schools.forEach(sc=>{if(sc.latitude!==null&&sc.longitude!==null){const point=[Number(sc.latitude),Number(sc.longitude)];points.push(point);dashboardSchoolMarker(map,point,sc);}});if(points.length)map.fitBounds(L.latLngBounds(points).pad(.3),{maxZoom:14});
 }
 function calendar(date){const fmt=new Intl.DateTimeFormat('fa-IR-u-ca-persian',{month:'long',year:'numeric',timeZone:'Asia/Tehran'}),dayFmt=new Intl.DateTimeFormat('en-US-u-ca-persian',{day:'numeric',timeZone:'Asia/Tehran'}),today=new Date();let first=new Date(date);first.setDate(first.getDate()-Number(dayFmt.format(first))+1);let next=new Date(first);next.setDate(next.getDate()+32);next.setDate(next.getDate()-Number(dayFmt.format(next))+1);const length=Math.round((next-first)/86400000),offset=(first.getDay()+1)%7;
  $('calendar').innerHTML=`<div class="calendar-head"><button id="prevMonth" aria-label="ماه قبل">‹</button><b>${fmt.format(date)}</b><button id="nextMonth" aria-label="ماه بعد">›</button></div><div class="calendar-days">${['ش','ی','د','س','چ','پ','ج'].map(x=>`<b>${x}</b>`).join('')}${'<span></span>'.repeat(offset)}${Array.from({length},(_,i)=>{const d=new Date(first);d.setDate(d.getDate()+i);return `<span class="${d.toDateString()===today.toDateString()?'today':''}">${number(i+1)}</span>`}).join('')}</div>`;$('prevMonth').onclick=()=>{const d=new Date(first);d.setDate(d.getDate()-1);calendar(d);};$('nextMonth').onclick=()=>calendar(next);}
