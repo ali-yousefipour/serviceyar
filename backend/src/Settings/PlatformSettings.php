@@ -12,8 +12,16 @@ final class PlatformSettings
     public static function value(string $key): string
     {
         if(!in_array($key,self::KEYS,true))return '';
-        $query=Connection::get()->prepare('SELECT setting_value FROM platform_settings WHERE setting_key=?');
-        $query->execute([$key]);return (string)($query->fetchColumn()?:'');
+        try{
+            $query=Connection::get()->prepare('SELECT setting_value FROM platform_settings WHERE setting_key=?');
+            $query->execute([$key]);
+            return (string)($query->fetchColumn()?:'');
+        }catch(\PDOException $e){
+            // A deployment may precede migration 0032 on shared hosting.
+            // Only the missing-table error is recoverable; other SQL failures must remain visible.
+            if($e->getCode()==='42S02'||(int)($e->errorInfo[1]??0)===1146)return '';
+            throw $e;
+        }
     }
     public static function overview(int $uid): array
     {
