@@ -153,7 +153,7 @@ try {
   $class=(string)($_GET['vehicleClass']??'');
   $allowed=['economy','standard','van'];
   if(!$district||$district<1||$district>8||!in_array($class,$allowed,true)
-    ||!preg_match('/^(?:[0-9]{1,3})(?:\.[0-9]{1,2})?$/D',$distanceRaw)
+    ||!preg_match('/^(?:[0-9]{1,3})(?:\\.[0-9]{1,2})?$/D',$distanceRaw)
     ||(float)$distanceRaw<=0||(float)$distanceRaw>200){
    Response::json(['ok'=>false,'error'=>['code'=>'INVALID_QUOTE_INPUT','message'=>'ناحیه، کلاس خودرو و مسافت معتبر (تا ۲۰۰ کیلومتر) را وارد کنید.']],422);
   }
@@ -182,7 +182,7 @@ try {
  $s=$auth->current(); $aid=null;
 
  // Agency-scoped school photo endpoint: no public listing or direct object-store URL.
- if(preg_match('#^/api/v1/schools/(\d+)/photo$#',$path,$photoMatch)){
+ if(preg_match('#^/api/v1/schools/(\\d+)/photo$#',$path,$photoMatch)){
   $s=$auth->current();$photoAgency=agencyId($s);$schoolId=(int)$photoMatch[1];
   if($method==='GET')\ServiceYar\Domain\SchoolPhotos::stream($s['id'],$photoAgency,$schoolId);
   if($method==='POST'){
@@ -222,12 +222,12 @@ try {
  if($method==='GET'&&$path==='/api/v1/reports/service-finance.xlsx')ExportService::serviceFinance($s['id'],$aid,$_GET);
  if($method==='GET'&&preg_match('#^/api/v1/students/(\d+)/service-finance$#',$path,$m))Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ServiceFinanceReport::report($s['id'],$aid,$_GET,(int)$m[1])]);
  if($method==='GET'&&$path==='/api/v1/operations/school-statement/rules'){Authorization::requirePermission($s['id'],'finance.view');Response::json(['ok'=>true,'data'=>json_decode(file_get_contents(__DIR__.'/../src/Domain/school-statement-template-1405.json'),true,512,JSON_THROW_ON_ERROR)]);}
- if($method==='GET'&&preg_match('#^/api/v1/reports/school-statements/(\d+)\.xlsx$#',$path,$statementExport))\ServiceYar\Reports\MonthlyStatementWorkbook::download($s['id'],$aid,(int)$statementExport[1]);
+ if($method==='GET'&&preg_match('#^/api/v1/reports/school-statements/(\\d+)\\.xlsx$#',$path,$statementExport))\ServiceYar\Reports\MonthlyStatementWorkbook::download($s['id'],$aid,(int)$statementExport[1]);
  if($method==='GET'&&$path==='/api/v1/operations/school-statements')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\MonthlyStatements::list($s['id'],$aid,($_GET['includeDeleted']??'')==='1')]);
  if($method==='POST'&&$path==='/api/v1/operations/school-statements/preview'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\MonthlyStatements::preview($s['id'],$aid,Request::json())]);}
  if($method==='POST'&&$path==='/api/v1/reports/school-statements/preview.xlsx'){$auth->requireCsrf($s);\ServiceYar\Reports\MonthlyStatementWorkbook::downloadPreview($s['id'],$aid,Request::json());}
  if($method==='POST'&&$path==='/api/v1/operations/school-statements'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\MonthlyStatements::finalize($s['id'],$aid,Request::json())],201);}
- if(preg_match('#^/api/v1/operations/school-statements/(\d+)(?:/(delete|restore))?$#',$path,$sm)){
+ if(preg_match('#^/api/v1/operations/school-statements/(\\d+)(?:/(delete|restore))?$#',$path,$sm)){
   if($method==='GET'&&empty($sm[2]))Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\MonthlyStatements::get($s['id'],$aid,(int)$sm[1])]);
   if($method==='POST'&&in_array($sm[2]??'',['delete','restore'],true)){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\MonthlyStatements::changeStatus($s['id'],$aid,(int)$sm[1],$sm[2]==='restore')]);}
  }
@@ -380,7 +380,7 @@ try {
  if($method==='GET'&&$path==='/api/v1/reports/export'){ExportService::xlsx($s['id'],$aid,(string)($_GET['resource']??'schools'));}
  if($method==='GET'&&$path==='/api/v1/reports/summary')Response::json(['ok'=>true,'data'=>ReportService::summary($s['id'],$aid)]);
  if($method==='GET'&&$path==='/api/v1/monitoring/activity')Response::json(['ok'=>true,'data'=>MonitoringService::activity($s['id'],$aid)]);
- if($method==='GET'&&preg_match('#^/api/v1/monitoring/services/(\d+)/locations$#',$path,$mm))Response::json(['ok'=>true,'data'=>MonitoringService::locations($s['id'],$aid,(int)$mm[1])]);
+ if($method==='GET'&&preg_match('#^/api/v1/monitoring/services/(\\d+)/locations$#',$path,$mm))Response::json(['ok'=>true,'data'=>MonitoringService::locations($s['id'],$aid,(int)$mm[1])]);
  if($method==='GET'&&$path==='/api/v1/ai/history')Response::json(['ok'=>true,'data'=>AiService::history($s['id'],$aid)]);
  if($method==='POST'&&$path==='/api/v1/ai/conversations'){ $auth->requireCsrf($s);$b=Request::json();Response::json(['ok'=>true,'data'=>AiService::create($s['id'],$aid,(string)($b['title']??'گفتگو'))],201); }
  if($method==='GET'&&$path==='/api/v1/dashboard/summary'){
@@ -389,7 +389,7 @@ try {
   Response::json(['ok'=>true,'data'=>['agencyId'=>$aid,'counts'=>$counts]]);
  }
 
- if(preg_match('#^/api/v1/services/(\d+)/students$#',$path,$mm)){ $serviceId=(int)$mm[1]; if($method==='GET')Response::json(['ok'=>true,'data'=>DomainService::serviceStudents($s['id'],$aid,$serviceId)]); if($method==='POST'){ $auth->requireCsrf($s);$b=Request::json();DomainService::assignStudent($s['id'],$aid,$serviceId,(int)($b['studentId']??0),isset($b['pickupAddress'])?(string)$b['pickupAddress']:null,isset($b['pickupOrder'])?(int)$b['pickupOrder']:null);Response::json(['ok'=>true,'data'=>['assigned'=>true]],201);} if($method==='DELETE'){ $auth->requireCsrf($s);$studentId=(int)($_GET['studentId']??0);DomainService::removeStudent($s['id'],$aid,$serviceId,$studentId);Response::json(['ok'=>true,'data'=>['removed'=>true]]);} }
+ if(preg_match('#^/api/v1/services/(\\d+)/students$#',$path,$mm)){ $serviceId=(int)$mm[1]; if($method==='GET')Response::json(['ok'=>true,'data'=>DomainService::serviceStudents($s['id'],$aid,$serviceId)]); if($method==='POST'){ $auth->requireCsrf($s);$b=Request::json();DomainService::assignStudent($s['id'],$aid,$serviceId,(int)($b['studentId']??0),isset($b['pickupAddress'])?(string)$b['pickupAddress']:null,isset($b['pickupOrder'])?(int)$b['pickupOrder']:null);Response::json(['ok'=>true,'data'=>['assigned'=>true]],201);} if($method==='DELETE'){ $auth->requireCsrf($s);$studentId=(int)($_GET['studentId']??0);DomainService::removeStudent($s['id'],$aid,$serviceId,$studentId);Response::json(['ok'=>true,'data'=>['removed'=>true]]);} }
  if($method==='POST'&&$path==='/api/v1/services/bulk-status'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ServiceBulkStatus::apply($s['id'],$aid,Request::json())]);}
  if($method==='POST'&&$path==='/api/v1/drivers/bulk-status'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\DriverBulkStatus::apply($s['id'],$aid,Request::json())]);}
  if($method==='GET'&&$path==='/api/v1/operations/mehr-assignments/preview')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\MehrWorkbookAssignments::run($s['id'],$aid,false)]);
