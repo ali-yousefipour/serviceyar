@@ -1667,9 +1667,15 @@ function showDriverPayslip(doc,line){
    if(typeof window.html2pdf!=='function')throw new Error('امکان ایجاد PDF در حال حاضر فراهم نیست.');
    wrap=document.createElement('div');
    wrap.dir='rtl';
-   wrap.style.cssText='position:fixed;z-index:-1;top:0;left:0;width:794px;padding:38px;background:#fff;pointer-events:none';
+   wrap.className='sy-payslip-pdf-render';
+   // html2canvas does not faithfully reproduce the app's responsive grid in
+   // all browsers. Use a dedicated, deterministic document layout instead.
+   wrap.style.cssText='position:absolute;top:0;left:0;z-index:-1;box-sizing:border-box;width:718px;max-width:718px;padding:0;background:#fff;direction:rtl;pointer-events:none';
    const copy=slip.cloneNode(true);
-   copy.style.cssText='box-sizing:border-box;width:100%;max-width:none;margin:0;padding:0;border:0;box-shadow:none';
+   copy.style.cssText='box-sizing:border-box;display:block;width:718px;min-width:718px;max-width:718px;margin:0;padding:18px;border:0;box-shadow:none;overflow:visible;font-family:Vazirmatn,Tahoma,sans-serif;font-size:12px;line-height:1.8;direction:rtl';
+   const docStyle=document.createElement('style');
+   docStyle.textContent='.sy-payslip-pdf-render .sy-payslip-header{display:flex!important;flex-direction:row!important;align-items:center!important;gap:12px!important;min-width:0!important}.sy-payslip-pdf-render .sy-payslip-header>img{flex:0 0 50px!important;width:50px!important;height:50px!important;max-width:50px!important;max-height:50px!important}.sy-payslip-pdf-render .sy-payslip-header>div{flex:1 1 auto!important;min-width:0!important}.sy-payslip-pdf-render .sy-payslip-document-state{flex:0 0 116px!important;min-width:116px!important;max-width:116px!important}.sy-payslip-pdf-render .sy-payslip-columns{display:block!important;margin:12px 0!important}.sy-payslip-pdf-render .sy-payslip-columns>section{display:block!important;width:100%!important;max-width:100%!important;margin:0 0 14px!important;break-inside:avoid!important}.sy-payslip-pdf-render .sy-payslip-columns table{table-layout:fixed!important;width:100%!important;border-collapse:collapse!important}.sy-payslip-pdf-render .sy-payslip-columns :is(th,td){display:table-cell!important;width:50%!important;max-width:50%!important;box-sizing:border-box!important;white-space:normal!important;overflow:visible!important;word-break:normal!important}.sy-payslip-pdf-render .sy-payslip-meta{display:block!important;width:100%!important;overflow:visible!important}.sy-payslip-pdf-render .sy-payslip-field{box-sizing:border-box!important;display:flex!important;width:100%!important;min-height:28px!important;padding:4px 10px!important;border-bottom:1px solid #d9e3db!important}.sy-payslip-pdf-render .sy-payslip-field dt{flex:0 0 45%!important}.sy-payslip-pdf-render .sy-payslip-field dd{flex:1 1 auto!important;overflow-wrap:anywhere!important}.sy-payslip-pdf-render .sy-payslip-signatures{display:flex!important;gap:16px!important;margin-top:22px!important}.sy-payslip-pdf-render .sy-payslip-signatures>div{flex:1 1 0!important}.sy-payslip-pdf-render :is(h2,h3,p,td,th,dt,dd,span,strong){letter-spacing:normal!important;text-transform:none!important}';
+   wrap.appendChild(docStyle);
    wrap.appendChild(copy);
    document.body.appendChild(wrap);
    await Promise.all(Array.from(copy.querySelectorAll('img')).map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve;})));
@@ -1678,7 +1684,7 @@ function showDriverPayslip(doc,line){
    await window.html2pdf().set({
     margin:[10,10,10,10],filename:'فیش-حقوق-'+name+'.pdf',
     image:{type:'jpeg',quality:0.98},
-    html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0,windowWidth:1200},
+    html2canvas:{scale:2.5,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0,windowWidth:794},
     jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
     pagebreak:{mode:['css','legacy'],avoid:['.sy-payslip-header','.sy-payslip-signatures','tr']}
    }).from(copy).save();
