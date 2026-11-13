@@ -198,6 +198,14 @@ try {
  if(preg_match('#^/api/v1/agencies/(\d+)/users$#',$path,$m)){ $id=(int)$m[1];if($method==='GET')Response::json(['ok'=>true,'data'=>AgencyService::users($s['id'],$id)]);if($method==='PUT'){ $auth->requireCsrf($s);$b=Request::json();Response::json(['ok'=>true,'data'=>AgencyService::assignUsers($s['id'],$id,is_array($b['userIds']??null)?$b['userIds']:[])]);} }
  if(preg_match('#^/api/v1/agencies/(\d+)$#',$path,$m)&&$method==='DELETE'){ $auth->requireCsrf($s);AgencyService::deactivate($s['id'],(int)$m[1]);Response::json(['ok'=>true,'data'=>['deactivated'=>true]]);}
 
+ if($method==='POST'&&preg_match('#^/api/v1/admin/agencies/(\\d+)/activate$#',$path,$m)){
+  $auth->requireCsrf($s);
+  AgencyService::activate($s['id'],(int)$m[1]);
+  Response::json(['ok'=>true,'data'=>['activated'=>true]]);
+ }
+ if($method==='GET'&&$path==='/api/v1/admin/agencies/export.xlsx'){
+  ExportService::companies($s['id'],$_GET);
+ }
  if($method==='GET'&&$path==='/api/v1/admin/overview'){
   if(!Authorization::isSuperAdmin($s['id'])) throw new AuthException(403,'این بخش فقط برای مدیر کل سامانه است.','SUPER_ADMIN_REQUIRED');
   $pdo=Connection::get();$counts=[];
