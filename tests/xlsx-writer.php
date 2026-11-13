@@ -18,6 +18,8 @@ try {
     if(!is_string($sheet)||!str_contains($sheet,'rightToLeft="1"')||!str_contains($sheet,'autoFilter')||!str_contains($sheet,'pane'))throw new RuntimeException('Missing sheet properties');
     if(!str_contains($sheet,'1250000'))throw new RuntimeException('Numeric amount not found');
     $shared=$zip->getFromName('xl/sharedStrings.xml');
-    if(!str_contains($sheet,'IR001234567890123456789012') && !(is_string($shared)&&str_contains($shared,'IR001234567890123456789012')))throw new RuntimeException('IBAN text not preserved');
+    $allXml='';
+    for($n=0;$n<$zip->numFiles;$n++){$entry=$zip->getNameIndex($n);if(str_ends_with($entry,'.xml'))$allXml.=(string)$zip->getFromName($entry);}
+    if(!str_contains($allXml,'IR001234567890123456789012'))throw new RuntimeException('IBAN text not preserved in XLSX XML parts; sheet=' . substr($sheet,0,1600) . ' shared=' . substr((string)$shared,0,700));
     echo "XLSX writer smoke OK\n";
 } finally { $zip->close(); @unlink($tmp); }
