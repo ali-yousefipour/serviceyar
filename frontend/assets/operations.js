@@ -1420,8 +1420,48 @@ async function renderPayroll(data,token){
  $('createPayrollDocument')?.addEventListener('click',async()=>{const lines=[...result.querySelectorAll('input[name="payrollSelected"]:checked')].map(c=>({driverId:Number(c.value),amount:result.querySelector(`[data-salary="${c.value}"]`).value}));if(!lines.length){notify('رانندگان را انتخاب کنید.',true);return;}$('createPayrollDocument').disabled=true;try{await write('/api/v1/operations/payroll-documents',{from:data.from,to:data.to,lines});await list();notify('سند پیش‌نویس حقوق ذخیره شد؛ هیچ انتقال وجهی انجام نشد.');}catch(e){notify(e.message,true);}finally{if($('createPayrollDocument'))$('createPayrollDocument').disabled=false;}});
  await list();
 }
+function showDriverPayslip(doc,line){
+ const amount=v=>number(v);
+ const net=Number(line.expected_net_salary||0),saved=Number(line.salary||0),difference=saved-net;
+ const data=[['کارکرد ناخالص',line.earned],['کسور نظارت و بازرسی',line.supervision_deduction],['کسور اطلاع‌رسانی و هماهنگی',line.coordination_deduction],['کسور بالاسری شرکت',line.overhead_deduction],['حق بیمه راننده',line.insurance_deduction]];
+ const item=(label,value)=>'<div class="sy-payslip-field"><dt>'+esc(label)+'</dt><dd>'+esc(value||'—')+'</dd></div>';
+ const sumRow=(label,value,cls='')=>'<tr class="'+cls+'"><th scope="row">'+esc(label)+'</th><td>'+amount(value)+'</td></tr>';
+ const agency=doc.agency_name||currentAgency?.name||'سرویس‌یار';
+ dialog('فیش حقوق انفرادی · '+person(line),'<div class="sy-payslip-actions"><p>فیش از آخرین اطلاعات ذخیره‌شده سند تهیه می‌شود. برای خروجی PDF در پنجره چاپ، گزینه «ذخیره به‌صورت PDF» را انتخاب کنید.</p><button type="button" class="primary" id="payslipPrint">چاپ / ذخیره PDF</button><button type="button" id="payslipBack">بازگشت به سند حقوق</button></div>'+
+ '<article class="sy-payslip-sheet" dir="rtl" aria-label="فیش حقوق '+esc(person(line))+'">'+
+ '<header class="sy-payslip-header"><img src="/assets/logo.png" alt="نشان سرویس‌یار" width="66" height="66"><div><strong>'+esc(agency)+'</strong><h2>فیش حقوق و کارکرد راننده</h2><p>سرویس حمل‌ونقل دانش‌آموزی · مبالغ به ریال</p></div><span class="sy-payslip-document-state">'+(doc.status==='approved'?'سند تأییدشده':'پیش‌نویس / تأییدنشده')+'</span></header>'+
+ (doc.status!=='approved'?'<div class="sy-payslip-draft">پیش‌نویس ـ فاقد تأیید نهایی حسابداری</div>':'')+
+ '<dl class="sy-payslip-meta">'+item('نام و نام خانوادگی راننده',person(line))+item('شماره سند',doc.document_no)+item('تاریخ شروع دوره',dateText(doc.date_from))+item('تاریخ پایان دوره',dateText(doc.date_to))+item('نام بانک',line.bank_name)+item('شماره حساب',line.bank_account)+item('شماره شبا',line.iban)+'</dl>'+
+ '<div class="sy-payslip-columns"><section><h3>مزایا و کارکرد</h3><table><thead><tr><th scope="col">شرح</th><th scope="col">مبلغ (ریال)</th></tr></thead><tbody>'+sumRow('کارکرد ناخالص',line.earned)+'</tbody><tfoot>'+sumRow('جمع کارکرد',line.earned)+'</tfoot></table></section>'+
+ '<section><h3>کسورات</h3><table><thead><tr><th scope="col">شرح</th><th scope="col">مبلغ (ریال)</th></tr></thead><tbody>'+data.slice(1).map(([k,v])=>sumRow(k,v)).join('')+'</tbody><tfoot>'+sumRow('جمع کسورات',line.total_deductions)+'</tfoot></table></section></div>'+
+ '<section class="sy-payslip-settlement"><h3>خلاصه تسویه</h3><div><span>خالص محاسباتی پس از کسورات</span><strong>'+amount(net)+' ریال</strong></div><div class="sy-payslip-net"><span>مبلغ حقوق ثبت‌شده در سند</span><strong>'+amount(saved)+' ریال</strong></div>'+
+ (Math.abs(difference)>=1?'<p class="sy-payslip-discrepancy">توجه: مبلغ ثبت‌شده با خالص محاسباتی '+amount(Math.abs(difference))+' ریال مغایرت دارد. علت اختلاف باید توسط واحد مالی بررسی شود.</p>':'')+'</section>'+
+ '<footer class="sy-payslip-signatures"><div>تنظیم‌کننده سند<span></span></div><div>مسئول مالی<span></span></div><div>مهر و امضای شرکت<span></span></div></footer><p class="sy-payslip-footnote">این فیش فقط بر اساس سند حقوق ثبت‌شده تهیه شده و به‌تنهایی به معنای انجام انتقال وجه نیست.</p></article>');
+ $('payslipPrint').onclick=()=>window.print();
+ $('payslipBack').onclick=()=>payrollDocument(Number(doc.id));
+}
 async function payrollDocument(id){
- try{const doc=await api(scoped('/api/v1/operations/payroll-documents/'+id)),editable=doc.status==='draft'&&can('payroll','manage');dialog('سند حقوق '+doc.document_no,`<p>${dateText(doc.date_from)} تا ${dateText(doc.date_to)}</p><p class="muted">${esc(doc.deduction_policy||'')}</p>${doc.lines.some(r=>r.salary_differs_from_calculated_net)?'<p class="sy-payroll-legacy-warning">توجه: حقوق ثبت‌شده در برخی ردیف‌ها با خالص محاسباتی تفاوت دارد؛ اسناد قدیمی بدون اصلاحیه تغییر نمی‌کنند.</p>':''}<form id="payrollDocumentForm"><div class="table-wrap"><table><thead><tr><th>راننده</th><th>کارکرد ناخالص</th><th>نظارت ۳٪</th><th>هماهنگی ۱٪</th><th>بالاسری ۷٪</th><th>بیمه ۷٫۸٪</th><th>جمع کسورات</th><th>خالص محاسباتی</th><th>حقوق سند</th></tr></thead><tbody>${doc.lines.map(r=>`<tr><td>${esc(person(r))}</td><td>${number(r.earned)}</td><td>${number(r.supervision_deduction)}</td><td>${number(r.coordination_deduction)}</td><td>${number(r.overhead_deduction)}</td><td>${number(r.insurance_deduction)}</td><td>${number(r.total_deductions)}</td><td>${number(r.expected_net_salary)}</td><td><input data-doc-salary="${r.driver_id}" type="number" min="0" step="0.01" value="${esc(r.salary)}" ${editable?'':'readonly'} aria-label="حقوق ${esc(person(r))}"></td></tr>`).join('')}</tbody></table></div>${editable?'<button class="primary">ذخیره مبالغ</button>':''}<button type="button" id="printPayrollDocument">چاپ</button></form>`);$('printPayrollDocument').onclick=()=>window.print();if(editable)$('payrollDocumentForm').onsubmit=async e=>{e.preventDefault();try{const lines=[...e.target.querySelectorAll('[data-doc-salary]')].map(input=>({driverId:Number(input.dataset.docSalary),amount:input.value}));await write('/api/v1/operations/payroll-documents/'+id,{lines},'PUT');closeDialog();render();}catch(err){$('formError').textContent=err.message;$('formError').hidden=false;}};}catch(e){notify(e.message,true);}
+ try{
+  const doc=await api(scoped('/api/v1/operations/payroll-documents/'+id));
+  const editable=doc.status==='draft'&&can('payroll','manage');
+  dialog('سند حقوق '+doc.document_no,'<div class="sy-payroll-doc-intro"><p>دوره: '+dateText(doc.date_from)+' تا '+dateText(doc.date_to)+'</p><p>برای چاپ فیش حقوق یا ذخیره PDF، دکمه «فیش انفرادی» مقابل نام همان راننده را انتخاب کنید.</p></div><p class="muted">'+esc(doc.deduction_policy||'')+'</p>'+
+  (doc.lines.some(r=>r.salary_differs_from_calculated_net)?'<p class="sy-payroll-legacy-warning">توجه: حقوق ثبت‌شده در برخی ردیف‌ها با خالص محاسباتی تفاوت دارد؛ اسناد قدیمی بدون اصلاحیه تغییر نمی‌کنند.</p>':'')+
+  '<form id="payrollDocumentForm"><div class="table-wrap sy-payroll-doc-table"><table><thead><tr><th>راننده</th><th>کارکرد ناخالص</th><th>نظارت</th><th>هماهنگی</th><th>بالاسری</th><th>بیمه</th><th>جمع کسورات</th><th>خالص محاسباتی</th><th>حقوق سند</th><th>فیش</th></tr></thead><tbody>'+
+  doc.lines.map(r=>'<tr><td>'+esc(person(r))+'</td><td>'+number(r.earned)+'</td><td>'+number(r.supervision_deduction)+'</td><td>'+number(r.coordination_deduction)+'</td><td>'+number(r.overhead_deduction)+'</td><td>'+number(r.insurance_deduction)+'</td><td>'+number(r.total_deductions)+'</td><td>'+number(r.expected_net_salary)+'</td><td><input data-doc-salary="'+Number(r.driver_id)+'" type="number" min="0" step="0.01" value="'+esc(r.salary)+'" '+(editable?'':'readonly')+' aria-label="حقوق '+esc(person(r))+'"></td><td><button type="button" data-driver-payslip="'+Number(r.driver_id)+'" aria-label="نمایش و چاپ فیش '+esc(person(r))+'">فیش انفرادی</button></td></tr>').join('')+
+  '</tbody></table></div>'+(editable?'<button class="primary" type="submit">ذخیره مبالغ</button>':'')+'</form>');
+  $('payrollDocumentForm').querySelectorAll('[data-driver-payslip]').forEach(button=>button.onclick=()=>{
+   const line=doc.lines.find(r=>Number(r.driver_id)===Number(button.dataset.driverPayslip));
+   if(line)showDriverPayslip(doc,line);
+  });
+  if(editable)$('payrollDocumentForm').onsubmit=async e=>{
+   e.preventDefault();const button=e.currentTarget.querySelector('[type=submit]');button.disabled=true;
+   try{
+    const lines=[...e.target.querySelectorAll('[data-doc-salary]')].map(input=>({driverId:Number(input.dataset.docSalary),amount:input.value}));
+    await write('/api/v1/operations/payroll-documents/'+id,{lines},'PUT');
+    notify('مبالغ سند ذخیره شدند.');await payrollDocument(id);
+   }catch(err){const box=$('formError');if(box){box.textContent=err.message;box.hidden=false;}if(button.isConnected)button.disabled=false;}
+  };
+ }catch(e){notify(e.message,true);}
 }
 
 async function serviceSchoolsDialog(id){
