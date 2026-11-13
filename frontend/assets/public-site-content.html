@@ -33,15 +33,24 @@
    </form>
   </section>
   <section class="sy-explorer-panel sy-directory-panel" aria-labelledby="sySchoolDirectoryTitle">
-   <div class="sy-explorer-panel-heading"><span class="sy-explorer-step" aria-hidden="true">⌕</span><div><h2 id="sySchoolDirectoryTitle">مدارس و شرکت‌های سرویس‌دهنده</h2></div></div>
-   <label class="sy-school-search" for="sySchoolSearch"><span>جستجوی نام مدرسه یا شرکت</span><input id="sySchoolSearch" type="search" autocomplete="off" minlength="3" maxlength="80" placeholder="حداقل سه حرف وارد کنید…"></label>
+   <div class="sy-explorer-panel-heading"><span class="sy-explorer-step" aria-hidden="true">⌖</span><div><span class="sy-overline">نقشه تعاملی سرویس‌یار</span><h2 id="sySchoolDirectoryTitle">شرکت‌های سرویس مدارس و مدارس تحت پوشش</h2><p>ابتدا موقعیت شرکت‌ها را ببینید؛ سپس نام مدرسه را جستجو و انتخاب کنید.</p></div></div>
+   <div class="sy-map-guidance"><span><i class="sy-map-legend-green"></i>دفتر شرکت</span><span><i class="sy-map-legend-yellow"></i>مدرسه انتخاب‌شده</span></div><label class="sy-school-search" for="sySchoolSearch"><span>جستجوی نام مدرسه یا شرکت</span><input id="sySchoolSearch" type="search" autocomplete="off" minlength="3" maxlength="80" placeholder="حداقل سه حرف وارد کنید…"></label>
    <div class="sy-schools-layout">
     <div id="sySchoolResults" class="sy-school-results" aria-live="polite">برای مشاهده عکس و موقعیت مدارس، نام مدرسه یا شرکت را جستجو کنید.</div>
-    <div class="sy-map-frame"><div id="sySchoolsMap" class="sy-school-map" role="region" aria-label="نقشه عمومی شهر مشهد"></div><div class="sy-map-privacy-note">عکس پیش‌نمایش و موقعیت تقریبی مدارسِ یافت‌شده نمایش داده می‌شود. برای مدیریت و ویرایش اطلاعات، <a href="#login">وارد سامانه شوید</a>.</div></div>
+    <div class="sy-map-frame"><div id="sySchoolsMap" class="sy-school-map" role="region" aria-label="نقشه عمومی شهر مشهد"></div><div id="syPublicMapStatus" class="sy-public-map-status" role="status" aria-live="polite">در حال بارگذاری نقشه نشان و موقعیت شرکت‌ها…</div><div class="sy-map-privacy-note">نقشه با کلید تنظیم‌شده نشان بارگذاری می‌شود. برای مدیریت اطلاعات <a href="#login">وارد سامانه شوید</a>.</div></div>
    </div>
   </section>
  </div>
- <dialog id="syPublicSchoolDialog" class="sy-school-dialog" aria-labelledby="sySchoolDialogTitle"><div class="sy-school-dialog-body"><button type="button" class="sy-school-dialog-close" aria-label="بستن جزئیات مدرسه">×</button><div class="sy-dialog-emblem" aria-hidden="true">⌂</div><p class="sy-dialog-overline">اطلاعات مدرسه</p><h3 id="sySchoolDialogTitle"></h3><dl><div><dt>شرکت سرویس‌دهنده</dt><dd id="syDialogCompany"></dd></div><div><dt>ناحیه آموزش‌وپرورش</dt><dd id="syDialogRegion"></dd></div></dl><p class="sy-dialog-privacy">به‌منظور حفاظت از اطلاعات مدارس، نشانی دقیق و تصاویر اصلی در صفحه عمومی ارائه نمی‌شوند.</p></div></dialog>
+ <dialog id="syPublicSchoolDialog" class="sy-school-dialog sy-public-detail-modal" aria-labelledby="sySchoolDialogTitle">
+  <div class="sy-school-dialog-body">
+   <button type="button" class="sy-school-dialog-close" aria-label="بستن جزئیات">×</button>
+   <div id="syPublicModalVisual" class="sy-public-modal-visual" aria-label="تصویر مجموعه"></div>
+   <div class="sy-public-modal-content"><span class="sy-dialog-overline">سرویس‌یار | اطلاعات ثبت‌شده</span>
+    <h3 id="sySchoolDialogTitle"></h3><dl id="syPublicDetails" class="sy-public-facts"></dl>
+    <p class="sy-dialog-privacy">اطلاعات تماس مدیر شرکت فقط در صورت تأیید انتشار توسط شرکت نمایش داده می‌شود.</p>
+   </div>
+  </div>
+ </dialog>
 </section>
 <section class="sy-public-container sy-site-section sy-catalog-advantage" aria-labelledby="syCatalogAdvantageTitle" data-reveal="up">
  <div class="sy-catalog-advantage-icon" aria-hidden="true">⌖</div>
