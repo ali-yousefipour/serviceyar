@@ -133,6 +133,11 @@ function renderNav(){
   sidebar.addEventListener('click',event=>{
    if(!sidebar.classList.contains('sy-collapsed')||matchMedia('(max-width:920px)').matches)return;
    if(event.target.closest('#sySidebarCollapse'))return;
+   if(event.target.closest('#syAccountMenu>summary')){
+    apply(false);
+    try{localStorage.setItem('sy-sidebar-collapsed','0');}catch(_){}
+    return;
+   }
    if(event.target.closest('.nav-group>summary,.sy-nav-search')){
     event.preventDefault();
     apply(false);
