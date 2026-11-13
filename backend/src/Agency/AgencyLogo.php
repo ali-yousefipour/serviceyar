@@ -41,6 +41,22 @@ final class AgencyLogo
         return ['removed'=>true];
     }
 
+    /** Public only for explicitly customized company branding; never serves tenant documents. */
+    public static function publicOutput(int $aid): never
+    {
+        if($aid<1||!self::hasCustomLogo($aid))
+            throw new AuthException(404,'لوگوی عمومی شرکت ثبت نشده است.','NOT_FOUND');
+        $path=self::filename($aid);
+        $mime=(string)(@getimagesize($path)['mime']??'');
+        if(!in_array($mime,['image/png','image/jpeg','image/webp'],true))
+            throw new AuthException(404,'لوگوی عمومی معتبر نیست.','NOT_FOUND');
+        header('Content-Type: '.$mime);
+        header('Cache-Control: public, max-age=300');
+        header('X-Content-Type-Options: nosniff');
+        header('Content-Length: '.filesize($path));
+        readfile($path);exit;
+    }
+
     public static function output(int $uid,int $aid): never
     {
         Authorization::requireAgencyAccess($uid,$aid);
