@@ -10,6 +10,9 @@ async function request(path,{method='GET',body,token=true,status=200,raw=false}=
 }
 const scoped=path=>path+(path.includes('?')?'&':'?')+'agencyId='+aid;
 await request('/api/v1/auth/me',{status:401});
+const publicOverview=(await request('/api/v1/public/overview')).data;
+for(const field of ['agencies','schools','students','drivers','services'])assert.ok(Number.isInteger(publicOverview.counts[field])&&publicOverview.counts[field]>=0,'Public '+field+' must be a nonnegative count');
+assert.deepEqual(Object.keys(publicOverview),['counts'],'Public overview must not expose tenant/user information');checks+=6;
 await request('/api/v1/auth/login',{method:'POST',body:{username:'preview',password:'Preview-Only-2026!'}});
 const me=(await request('/api/v1/auth/me')).data;csrf=me.csrfToken;aid=me.agencies[0].id;
 const logoResponse=await request(scoped('/api/v1/agency/logo'),{raw:true});
