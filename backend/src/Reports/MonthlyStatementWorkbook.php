@@ -159,6 +159,42 @@ final class MonthlyStatementWorkbook
             ['سند مالی10',['شرح سند','بدهکار ریال','بستانکار ریال'],[['حق‌الزحمه رانندگان',$referenceTotals['driver_fee']??0,0],['نظارت ۳٪',$referenceTotals['oversight_3pct']??0,0],['هماهنگی ۱٪',$referenceTotals['education_1pct']??0,0],['سهم شرکت ۷٪',$referenceTotals['company_7pct']??0,0],['جمع صورت‌وضعیت',0,$referenceTotals['statement_excluding_certificate_insurance']??0]]],
             ['روکش محاسبات 11',['عنوان','مبلغ ریال'],$summaryRows]
         ];
+        // Build the synthetic 14-sheet fallback with the locally vendored
+        // XLSX writer. The installed reference template above remains the
+        // authoritative layout, including its formulas and print settings.
+        if(extension_loaded('mbstring') && extension_loaded('zlib')){
+            require_once __DIR__.'/../Vendor/SimpleXLSXGen.php';
+            $toRows=static function(array $headers,array $data,string $heading):array{
+                $records=[['<b><style color="#FFFFFF" bgcolor="#165F3C">'.htmlspecialchars($heading,ENT_XML1|ENT_QUOTES,'UTF-8').'</style></b>']];
+                $records[]=array_map(static fn($v)=>'<b><style color="#FFFFFF" bgcolor="#217957"><wraptext>'.htmlspecialchars((string)$v,ENT_XML1|ENT_QUOTES,'UTF-8').'</wraptext></style></b>',$headers);
+                foreach($data as $row){
+                    $records[]=array_map(static fn($v)=>is_int($v)||is_float($v)?$v:\Shuchkin\SimpleXLSXGen::raw((string)($v??'')),array_values($row));
+                }
+                return $records;
+            };
+            $first=$sheets[0];
+            $writer=\Shuchkin\SimpleXLSXGen::fromArray($toRows($first[1],$first[2],$title.' | '.$first[0]),$first[0]);
+            $writer->setDefaultFont('Vazirmatn')->setDefaultFontSize(11)->rightToLeft()->setAuthor('ServiceYar');
+            $writer->freezePanes('A3');
+            for($i=1;$i<count($sheets);$i++){
+                $sheet=$sheets[$i];
+                $writer->addSheet($toRows($sheet[1],$sheet[2],$title.' | '.$sheet[0]),$sheet[0]);
+                $writer->freezePanes('A3');
+                $writer->autoFilter('A2:'.self::column(count($sheet[1])).max(2,count($sheet[2])+2));
+                foreach($sheet[1] as $n=>$heading)$writer->setColWidth($n+1,max(16,min(42,(int)ceil(mb_strlen((string)$heading,'UTF-8')*1.25)+5)));
+            }
+            $tmp=tempnam(sys_get_temp_dir(),'sy-statement-');
+            if($tmp===false)throw new \RuntimeException('Cannot create XLSX temporary file');
+            try{
+                if(!$writer->saveAs($tmp))throw new \RuntimeException('Cannot write XLSX statement');
+                while(ob_get_level()>0)ob_end_clean();
+                header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                header('Content-Disposition: attachment; filename="school-statement-'.$d['year'].'-'.str_pad((string)$d['month'],2,'0',STR_PAD_LEFT).'-'.$id.'.xlsx"');
+                header('Cache-Control: private, no-store');header('X-Content-Type-Options: nosniff');
+                readfile($tmp);
+            }finally{if(is_file($tmp))@unlink($tmp);}
+            exit;
+        }
         $tmp=tempnam(sys_get_temp_dir(),'sy-statement-');
         if($tmp===false)throw new \RuntimeException('Cannot create temporary statement file');
         try{
