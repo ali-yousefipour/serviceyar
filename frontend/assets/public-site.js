@@ -166,6 +166,30 @@
   if(points.length===1)schoolMap.setView(points[0],14);
   else schoolMap.fitBounds(L.latLngBounds(points).pad(.22),{maxZoom:14});
  }
+ function renderCompanyDirectory(){
+  const root=document.getElementById('syCompanyDirectoryItems');
+  const counter=document.getElementById('syCompanyDirectoryCount');
+  if(!root)return;
+  root.replaceChildren();
+  const located=publicCompanies.filter(validPoint).length;
+  if(counter)counter.textContent='('+faNumber(located)+' موقعیت از '+faNumber(publicCompanies.length)+' شرکت)';
+  for(const company of publicCompanies){
+   const item=document.createElement('button');
+   item.type='button';item.className='sy-company-directory-row';
+   item.setAttribute('role','listitem');
+   const name=document.createElement('strong');name.textContent=company.name;
+   const state=document.createElement('span');
+   const hasLocation=validPoint(company);
+   state.textContent=hasLocation?'نمایش موقعیت':'موقعیت ثبت نشده';
+   state.className=hasLocation?'sy-company-located':'sy-company-not-located';
+   item.append(name,state);
+   item.addEventListener('click',()=>{
+    showCompany(company);
+    if(hasLocation&&schoolMap)schoolMap.setView([Number(company.latitude),Number(company.longitude)],15);
+   });
+   root.append(item);
+  }
+ }
  function drawCompanies(){
   if(!publicCompanyMarkers||!schoolMap)return;
   schoolMarkers?.clearLayers();publicCompanyMarkers.clearLayers();selectedSchool=null;
@@ -177,7 +201,7 @@
    marker.on('click',()=>showCompany(company));marker.addTo(publicCompanyMarkers);attachPinFallback(marker);points.push(position);
   });
   if(points.length)focusPoints(points);
-  publicMapStatus(points.length?faNumber(points.length)+' شرکت دارای موقعیت ثبت‌شده روی نقشه':'هنوز موقعیتی برای شرکت‌ها ثبت نشده است.');
+  publicMapStatus(points.length?faNumber(points.length)+' شرکت دارای مختصات معتبر از '+faNumber(publicCompanies.length)+' شرکت فعال نمایش داده می‌شوند.':'هنوز مختصات معتبری برای شرکت‌ها ثبت نشده است.');
  }
  function clearMapForSearch(){
   publicCompanyMarkers?.clearLayers();schoolMarkers?.clearLayers();
@@ -286,6 +310,7 @@
    const companiesBody=await companiesResponse.json();
    if(!companiesResponse.ok||!companiesBody.ok)throw new Error(companiesBody.error?.message||'فهرست شرکت‌ها در دسترس نیست');
    publicCompanies=companiesBody.data.companies||[];
+   renderCompanyDirectory();
    if(search?.value.trim())await searchPublicSchools(search.value.trim());else drawCompanies();
    if(status&&!search?.value.trim())status.textContent='شرکت‌ها روی نقشه مشخص‌اند؛ با جستجوی مدرسه می‌توانید موقعیت مدرسه و شرکت سرویس‌دهنده آن را ببینید.';
   }catch(error){
