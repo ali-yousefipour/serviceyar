@@ -443,3 +443,254 @@ body{background:var(--canvas);color:var(--ink)}
  font:500 11px/1.85 Vazirmatn,Tahoma,sans-serif!important;
  direction:rtl!important;color:#22523d!important;
 }
+
+
+/* UX scale v5: consistent spacing and text rhythm across the public home. */
+.sy-public-v3{--sy-gap-xs:6px;--sy-gap-sm:10px;--sy-gap-md:16px;--sy-gap-lg:24px;--sy-card-radius:16px}
+.sy-public-v3 .sy-hero-v3{min-height:0!important}
+.sy-public-v3 .sy-hero-v3 .sy-hero-layout{min-height:0!important;padding-block:34px 44px!important;gap:32px!important}
+.sy-public-v3 .sy-hero-v3 .sy-v3-scroll-cue{display:none!important}
+.sy-public-v3 .sy-stat-section{padding-block:30px 24px!important}
+.sy-public-v3 .sy-stat-section .sy-section-heading{margin-bottom:14px!important}
+.sy-public-v3 .sy-stat-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px!important}
+.sy-public-v3 .sy-stat-grid article{
+ display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+ min-width:0;min-height:110px!important;padding:14px 16px!important;
+ border-radius:14px!important;box-shadow:0 6px 20px rgba(6,60,39,.06)!important;
+}
+.sy-public-v3 .sy-stat-grid article:nth-child(2){
+ background:linear-gradient(140deg,#075c43,#064431)!important;border-color:#0a654a!important;
+}
+.sy-public-v3 .sy-stat-grid article:nth-child(2) strong,
+.sy-public-v3 .sy-stat-grid article:nth-child(2) p{color:#fff!important}
+.sy-public-v3 .sy-stat-grid article:nth-child(2)>span{color:#f4d68b!important;background:rgba(255,255,255,.13)!important}
+.sy-public-v3 .sy-stat-grid article>span{font-size:16px!important;width:27px;height:27px;display:grid;place-items:center}
+.sy-public-v3 .sy-stat-grid strong{font-size:clamp(19px,2vw,27px)!important;font-weight:850!important}
+.sy-public-v3 .sy-stat-footnote{margin-top:9px!important;max-width:900px}
+.sy-public-v3 #syPublicSchools.sy-v3-map-section{padding-top:26px!important;padding-bottom:27px!important}
+.sy-public-v3 #syPublicSchools .sy-explorer-grid{gap:14px!important}
+.sy-public-v3 #syPublicSchools .sy-directory-panel{padding:19px 21px!important;border-radius:17px!important}
+.sy-public-v3 #syPublicSchools .sy-directory-panel .sy-explorer-panel-heading{margin-bottom:9px!important}
+.sy-public-v3 #syPublicSchools .sy-directory-panel .sy-explorer-panel-heading h2{
+ font-size:clamp(16px,1.65vw,22px)!important;margin:3px 0!important;
+}
+.sy-public-v3 #syPublicSchools .sy-explorer-panel-heading{align-items:center!important;gap:10px!important}
+.sy-public-v3 #syPublicSchools .sy-explorer-step{
+ width:30px!important;height:30px!important;min-width:30px!important;
+ font-size:15px!important;border-radius:9px!important;
+}
+.sy-public-v3 #syPublicSchools .sy-map-guidance{gap:7px!important;margin-bottom:8px!important}
+.sy-public-v3 #syPublicSchools .sy-map-guidance span{font-size:10px!important;padding:4px 9px!important}
+.sy-public-v3 #syPublicSchools .sy-school-search{margin-bottom:10px!important;max-width:450px!important;gap:4px!important}
+.sy-public-v3 #syPublicSchools .sy-school-search input{
+ box-sizing:border-box!important;height:41px!important;min-height:41px!important;
+ font-size:12px!important;padding:8px 12px!important;
+}
+.sy-public-v3 #syPublicSchools .sy-schools-layout{
+ grid-template-columns:minmax(220px,.55fr) minmax(0,1.6fr)!important;gap:12px!important;
+}
+.sy-public-v3 #syPublicSchools .sy-school-results{
+ box-sizing:border-box!important;min-height:315px!important;max-height:335px!important;
+ padding:9px!important;border-radius:12px!important;
+}
+.sy-public-v3 #syPublicSchools .sy-school-map{
+ height:335px!important;min-height:335px!important;max-height:335px!important;border-radius:12px!important;
+}
+.sy-public-v3 #syPublicSchools .sy-map-frame{min-height:0!important}
+.sy-public-v3 #syPublicSchools .sy-school-choice{min-height:65px!important;padding:8px!important;gap:9px!important}
+.sy-public-v3 #syPublicSchools .sy-school-choice-visual{width:43px!important;height:43px!important;min-width:43px!important;border-radius:9px!important}
+.sy-public-v3 #syPublicSchools .sy-school-choice-body strong{font-size:12px!important}
+.sy-public-v3 #syPublicSchools .sy-school-choice-body :is(small,span){font-size:10px!important}
+.sy-public-v3 #syPublicSchools .sy-public-map-status{
+ top:8px!important;right:8px!important;
+ padding:6px 9px!important;font-size:10px!important;max-width:70%!important;
+}
+.sy-public-v3 #syPublicSchools .sy-map-privacy-note{font-size:10px!important;padding-top:6px!important}
+.sy-public-v3 #syPublicSchools .sy-company-directory{margin-top:7px!important}
+.sy-public-v3 #syPublicSchools .sy-company-directory>summary{padding:8px 11px!important;font-size:11px!important}
+.sy-public-v3 #syPublicSchools .sy-tariff-panel{
+ padding:17px 21px!important;border:1px solid #dce7d7!important;
+ border-radius:16px!important;background:#fffefa!important;
+}
+.sy-public-v3 #syPublicSchools .sy-tariff-panel .sy-explorer-panel-heading{
+ margin:0 0 12px!important;
+}
+.sy-public-v3 #syPublicSchools .sy-tariff-panel .sy-explorer-panel-heading h2{
+ font-size:18px!important;line-height:1.5!important;margin:0!important;
+}
+.sy-public-v3 #syPublicSchools .sy-public-quote{margin:0!important}
+.sy-public-v3 #syPublicSchools .sy-quote-fields{
+ display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(125px,.65fr)!important;
+ align-items:end!important;gap:11px!important;
+}
+.sy-public-v3 #syPublicSchools .sy-quote-fields label{
+ display:grid!important;gap:5px!important;min-width:0!important;
+ font-size:11px!important;font-weight:700!important;color:#28543f!important;
+}
+.sy-public-v3 #syPublicSchools .sy-quote-fields :is(input,select){
+ display:block!important;box-sizing:border-box!important;
+ width:100%!important;height:43px!important;min-height:43px!important;
+ border:1px solid #cbded0!important;border-radius:10px!important;
+ background:#fcfefa!important;color:#1a4634!important;
+ padding:7px 11px!important;font-size:12px!important;
+ box-shadow:none!important;
+}
+.sy-public-v3 #syPublicSchools .sy-quote-fields :is(input,select):focus{
+ outline:2px solid rgba(200,155,59,.28)!important;outline-offset:1px!important;border-color:#bd963c!important;
+}
+.sy-public-v3 #syPublicSchools .sy-quote-fields .sy-km-field{
+ display:flex!important;align-items:center!important;position:relative!important;
+ min-width:0!important;
+}
+.sy-public-v3 #syPublicSchools .sy-quote-fields .sy-km-field input{
+ min-width:0!important;padding-left:35px!important;
+}
+.sy-public-v3 #syPublicSchools .sy-quote-fields .sy-km-field span{
+ font-size:11px!important;position:absolute!important;left:10px!important;
+ color:#607b6a!important;
+}
+.sy-public-v3 #syPublicSchools .sy-quote-submit{
+ box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;
+ height:43px!important;min-height:43px!important;
+ width:100%!important;margin:0!important;border-radius:10px!important;
+ padding:7px 12px!important;font-size:12px!important;font-weight:750!important;
+}
+.sy-public-v3 #syPublicSchools .sy-quote-result{
+ margin-top:11px!important;min-height:0!important;
+ padding:10px 13px!important;border-radius:10px!important;
+ font-size:11px!important;line-height:1.8!important;
+}
+.sy-public-v3 #syPublicSchools .sy-quote-result strong{font-size:19px!important}
+.sy-public-v3 #syPublicSchools .sy-quote-note{margin:7px 0 0!important;font-size:10px!important}
+.sy-public-v3 .sy-v3-catalog-card{margin-block:17px 21px!important}
+.sy-public-v3 .sy-v3-catalog-card .sy-catalog-advantage-icon{
+ width:65px!important;height:65px!important;border-radius:14px!important;
+}
+.sy-public-v3 .sy-v3-catalog-card .sy-catalog-advantage-icon img{width:51px!important;height:51px!important}
+.sy-public-v3 .sy-v3-catalog-card{grid-template-columns:70px minmax(0,1fr) auto!important}
+.sy-public-v3 .sy-v3-capabilities{padding-top:20px!important}
+.sy-public-v3 .sy-v3-capabilities .sy-section-heading{margin-bottom:13px!important}
+.sy-public-v3 .sy-v3-capabilities .sy-feature-grid{gap:12px!important}
+.sy-public-v3 .sy-v3-capabilities .sy-feature-grid article{
+ min-height:145px!important;padding:18px!important;border-radius:15px!important;
+}
+.sy-public-v3 .sy-v3-capabilities .sy-feature-grid h3{
+ margin:9px 0 4px!important;font-size:14px!important;
+}
+.sy-public-v3 .sy-v3-capabilities .sy-feature-grid p{font-size:11px!important;line-height:1.85!important}
+.sy-public-v3 .sy-v3-capabilities .sy-feature-grid .sy-v3-feature-icon{
+ width:41px!important;height:41px!important;border-radius:11px!important;font-size:21px!important;
+}
+.sy-public-v3 .sy-v3-feature-icon img{width:32px!important;height:32px!important}
+.sy-public-v3 .sy-v3-flow{padding-block:30px!important}
+.sy-public-v3 .sy-v3-flow .sy-flow-grid{gap:12px!important}
+.sy-public-v3 .sy-v3-cta{margin-block:26px 34px!important;padding:23px 26px!important;border-radius:16px!important}
+/* Login: form has its own readable card and 16px accessible inputs. */
+#login.login{background:#f5f8f3!important;grid-template-columns:minmax(0,1fr) minmax(460px,1fr)!important}
+#login .login-side{
+ box-sizing:border-box!important;
+ background:linear-gradient(150deg,#f6f9f5,#edf3ea)!important;
+ padding:30px clamp(20px,4vw,62px) 20px!important;
+ gap:0!important;
+}
+#login .login-card{
+ box-sizing:border-box!important;
+ width:min(480px,100%)!important;
+ padding:31px clamp(23px,2.8vw,38px) 24px!important;
+ background:#fffefa!important;
+ border:1px solid #d9e6d9!important;
+ border-radius:24px!important;
+ box-shadow:0 20px 55px rgba(4,66,42,.1)!important;
+}
+#login .login-card:after{display:none!important}
+#login .login-heading{margin-bottom:21px!important}
+#login .login-heading-icon{
+ width:36px!important;height:36px!important;margin-bottom:11px!important;
+ border-radius:10px!important;background:#e9f3e6!important;color:#115b42!important;font-size:17px!important;
+}
+#login .login-overline{font-size:11px!important;margin-bottom:4px!important;color:#96742d!important}
+#login .login-card h1{
+ margin:0 0 5px!important;font-size:clamp(21px,2.2vw,26px)!important;
+ line-height:1.55!important;color:#124a37!important;font-weight:850!important;
+}
+#login .login-card p{font-size:12px!important;line-height:1.8!important;color:#667a6e!important}
+#login .login-card form{display:grid!important;gap:7px!important;margin:13px 0 0!important}
+#login .login-card label{
+ color:#284f3f!important;margin:7px 0 0!important;font-size:13px!important;
+ font-weight:750!important;line-height:1.55!important;
+}
+#login .login-input-wrap{
+ box-sizing:border-box!important;display:flex!important;align-items:center!important;
+ width:100%!important;min-height:51px!important;height:51px!important;
+ gap:10px!important;padding:0 13px!important;
+ border:1px solid #cbded1!important;border-radius:12px!important;
+ background:#fdfefb!important;
+ box-shadow:0 1px 2px rgba(4,66,42,.03)!important;
+}
+#login .login-card .login-input-wrap input{
+ box-sizing:border-box!important;display:block!important;min-height:45px!important;
+ flex:1!important;min-width:0!important;width:100%!important;
+ padding:10px 0!important;margin:0!important;border:0!important;
+ background:transparent!important;color:#173d2f!important;
+ font:500 16px/1.7 Vazirmatn,Tahoma,sans-serif!important;
+ outline:none!important;box-shadow:none!important;
+}
+#login .login-card .login-input-wrap input::placeholder{color:#8b9b8d!important;font-size:13px!important}
+#login .login-input-wrap>span{font-size:17px!important;color:#688577!important}
+#login .login-input-wrap:focus-within{
+ border-color:#c99d43!important;box-shadow:0 0 0 3px rgba(201,157,67,.17)!important;
+}
+#login .password-toggle{
+ font:700 12px/1.5 Vazirmatn,Tahoma,sans-serif!important;
+ min-height:32px!important;padding:5px 8px!important;
+ color:#075c43!important;border-radius:8px!important;
+}
+#login .password-toggle:hover{background:#eaf3e6!important}
+#login .login-submit{
+ width:100%!important;min-height:49px!important;height:49px!important;
+ margin-top:7px!important;padding:0 15px!important;
+ border-radius:11px!important;
+ background:linear-gradient(115deg,#0b7752,#07513a)!important;
+ color:#fff!important;font-size:14px!important;font-weight:800!important;
+}
+#login .login-help{margin:5px 0 3px!important;font-size:11px!important;color:#637a6b!important}
+#login .login-bottom{margin-top:17px!important;padding-top:14px!important;font-size:11px!important;color:#6a7c6f!important}
+#login .login-copyright{margin-top:14px!important;font-size:10px!important;color:#758577!important}
+#login .sy-login-back{font-size:12px!important}
+#login .login-showcase{
+ background:radial-gradient(circle at 20% 75%,rgba(207,162,63,.16),transparent 37%),linear-gradient(150deg,#06422f,#07583f 60%,#064032)!important;
+}
+#login .showcase-content{margin:25px 0!important;max-width:500px!important}
+#login .showcase-content h2{font-size:clamp(30px,3.5vw,46px)!important;line-height:1.5!important;margin:18px 0 12px!important}
+#login .showcase-content h2 em{color:#e5bd64!important}
+#login .showcase-content>p{font-size:13px!important;line-height:2!important;color:#e4f1e5!important}
+#login .showcase-features{gap:11px!important;margin-top:21px!important}
+#login .showcase-features>div{gap:10px!important}
+#login .showcase-features b{font-size:12px!important;color:#fff!important}
+#login .showcase-features small{font-size:11px!important;color:#d3e5d6!important}
+#login .showcase-kicker{font-size:11px!important;color:#f2dfab!important}
+@media(max-width:1120px){
+ .sy-public-v3 #syPublicSchools .sy-quote-fields{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ .sy-public-v3 #syPublicSchools .sy-quote-submit{grid-column:auto!important}
+}
+@media(max-width:860px){
+ .sy-public-v3 #syPublicSchools .sy-schools-layout{grid-template-columns:minmax(0,1fr)!important}
+ .sy-public-v3 #syPublicSchools .sy-school-map{height:315px!important;min-height:315px!important;max-height:315px!important}
+ .sy-public-v3 #syPublicSchools .sy-school-results{min-height:95px!important;max-height:220px!important}
+ .sy-public-v3 .sy-stat-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+ #login.login{grid-template-columns:minmax(0,.75fr) minmax(0,1.25fr)!important}
+}
+@media(max-width:680px){
+ #login.login{display:flex!important;flex-direction:column!important}
+ #login .login-side{padding:25px 15px 20px!important}
+ #login .login-card{width:min(460px,100%)!important;padding:22px 20px!important;border-radius:18px!important}
+ #login .login-card .login-input-wrap input{font-size:16px!important}
+}
+@media(max-width:560px){
+ .sy-public-v3 #syPublicSchools .sy-quote-fields{grid-template-columns:1fr!important}
+ .sy-public-v3 .sy-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ .sy-public-v3 .sy-v3-catalog-card{grid-template-columns:50px minmax(0,1fr)!important;gap:11px!important}
+ .sy-public-v3 .sy-v3-catalog-card .sy-catalog-advantage-icon{width:48px!important;height:48px!important}
+ .sy-public-v3 .sy-v3-catalog-card .sy-catalog-advantage-icon img{width:40px!important;height:40px!important}
+ .sy-public-v3 .sy-v3-catalog-card .sy-btn{grid-column:1/-1!important;width:100%!important;max-width:none!important}
+}
