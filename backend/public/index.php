@@ -70,26 +70,35 @@ try {
   }
  }
 
+
+ // Public reference valuation: exactly the same 1405-1406 grid and traffic coefficients as Madares.
+ // No tenant/school required; do not confuse this with agency-specific contracted tariffs.
  if($method==='GET'&&$path==='/api/v1/public/service-quote'){
-  $schoolId=filter_var($_GET['schoolId']??null,FILTER_VALIDATE_INT);
-  $distance=filter_var($_GET['distanceKm']??null,FILTER_VALIDATE_INT);
-  $vehicleClass=(string)($_GET['vehicleClass']??'');
-  if(!$schoolId||!$distance||$distance<3||$distance>1000||!in_array($vehicleClass,['1','2','3'],true)){
-   Response::json(['ok'=>false,'error'=>['code'=>'INVALID_QUOTE_INPUT','message'=>'مدرسه، مسافت صحیح و کلاس خودرو را انتخاب کنید.']],422);
+  $district=filter_var($_GET['district']??null,FILTER_VALIDATE_INT);
+  $distanceRaw=(string)($_GET['distanceKm']??'');
+  $class=(string)($_GET['vehicleClass']??'');
+  $allowed=['economy','standard','van'];
+  if(!$district||$district<1||$district>8||!in_array($class,$allowed,true)
+    ||!preg_match('/^(?:[0-9]{1,3})(?:\\.[0-9]{1,2})?$/D',$distanceRaw)
+    ||(float)$distanceRaw<=0||(float)$distanceRaw>200){
+   Response::json(['ok'=>false,'error'=>['code'=>'INVALID_QUOTE_INPUT','message'=>'ناحیه، کلاس خودرو و مسافت معتبر (تا ۲۰۰ کیلومتر) را وارد کنید.']],422);
   }
-  try{
-   $pdo=Connection::get();
-   $stmt=$pdo->prepare('SELECT s.agency_id,s.region FROM schools s JOIN agencies a ON a.id=s.agency_id WHERE s.id=? AND s.is_active=1 AND a.is_active=1');
-   $stmt->execute([$schoolId]);$school=$stmt->fetch(\PDO::FETCH_ASSOC);
-   if(!$school)Response::json(['ok'=>false,'error'=>['code'=>'SCHOOL_NOT_FOUND','message'=>'مدرسه یافت نشد.']],404);
-   $amount=\ServiceYar\Domain\AgencySchoolTariffs::quote($pdo,(int)$school['agency_id'],(int)$schoolId,
-    \ServiceYar\Domain\AgencySchoolTariffs::YEAR,$distance,$vehicleClass);
-   header('Cache-Control: public, max-age=120');
-   Response::json(['ok'=>true,'data'=>['monthlyFee'=>$amount,'currency'=>'IRR','academicYear'=>\ServiceYar\Domain\AgencySchoolTariffs::YEAR]]);
-  }catch(\Throwable $e){
-   error_log('[ServiceYar][public-service-quote] '.$e->getMessage());
-   Response::json(['ok'=>false,'error'=>['code'=>'PUBLIC_QUOTE_UNAVAILABLE','message'=>'محاسبه تعرفه موقتاً در دسترس نیست.']],503);
-  }
+  $reference=json_decode(file_get_contents(__DIR__.'/../src/Domain/public-service-valuation-1405.json'),true,512,JSON_THROW_ON_ERROR);
+  $vehicle=null;foreach($reference['classes'] as $item){if($item['key']===$class){$vehicle=$item;break;}}
+  $km=max(3,(int)ceil((float)$distanceRaw));
+  $entry=null;foreach($vehicle['brackets'] as $item){if((int)$item['distance_km']===min(20,$km)){$entry=$item;break;}}
+  if(!$entry)Response::json(['ok'=>false,'error'=>['code'=>'RATE_UNAVAILABLE','message'=>'تعرفه این مسافت موجود نیست.']],422);
+  $extra=max(0,$km-20)*(float)$vehicle['extra_driver_riyal_per_km'];
+  $driver=(float)$entry['driver_1405_riyal']+$extra;
+  $parentBase=(float)$entry['parent_monthly_riyal']+($extra*1.19658);
+  $factor=(float)($reference['traffic_by_district'][(string)$district]??0);
+  $total=(int)round($parentBase+($driver*$factor*1.19658));
+  header('Cache-Control: public, max-age=3600');
+  Response::json(['ok'=>true,'data'=>[
+   'monthlyFee'=>$total,'baseMonthlyFee'=>(int)round($parentBase),'trafficPercent'=>(int)round($factor*100),
+   'driverBase'=>(int)round($driver),'distanceAppliedKm'=>$km,
+   'currency'=>'IRR','academicYear'=>$reference['year'],'reference'=>'Madares 1405-1406'
+  ]]);
  }
  $auth=new AuthService();
  if($method==='POST'&&$path==='/api/v1/auth/login'){ $b=Request::json();Response::json(['ok'=>true,'data'=>$auth->login((string)($b['username']??''),(string)($b['password']??''))]); }
