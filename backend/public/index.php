@@ -136,10 +136,29 @@ try {
   $w=imagesx($original);$h=imagesy($original);$tw=$w>=$h?480:360;$th=$w>=$h?360:480;
   $canvas=imagecreatetruecolor($tw,$th);
   imagecopyresampled($canvas,$original,0,0,0,0,$tw,$th,$w,$h);
-  $ink=imagecolorallocatealpha($canvas,255,255,255,45);
-  $shadow=imagecolorallocatealpha($canvas,0,48,35,40);
-  imagefilledrectangle($canvas,0,$th-32,$tw,$th,$shadow);
-  imagestring($canvas,5,12,$th-26,'ServiceYar | challi.ir',$ink);
+  // Subtle semi-transparent watermark overlays the photo rather than adding a footer.
+  // The preview image has no original EXIF metadata after recompression.
+  $watermark='service-yar.ir';
+  $font=5;
+  $textWidth=imagefontwidth($font)*strlen($watermark);
+  $textHeight=imagefontheight($font);
+  $overlay=imagecreatetruecolor($textWidth+30,$textHeight+24);
+  imagealphablending($overlay,false);
+  imagesavealpha($overlay,true);
+  $transparent=imagecolorallocatealpha($overlay,0,0,0,127);
+  imagefill($overlay,0,0,$transparent);
+  $ink=imagecolorallocatealpha($overlay,255,255,255,108);
+  imagestring($overlay,$font,15,12,$watermark,$ink);
+  $rotated=imagerotate($overlay,18,$transparent);
+  imagedestroy($overlay);
+  if($rotated!==false){
+   imagesavealpha($rotated,true);
+   imagealphablending($canvas,true);
+   $rx=(int)floor(($tw-imagesx($rotated))/2);
+   $ry=(int)floor(($th-imagesy($rotated))/2);
+   imagecopy($canvas,$rotated,$rx,$ry,0,0,imagesx($rotated),imagesy($rotated));
+   imagedestroy($rotated);
+  }
   imagedestroy($original);
   header('Content-Type: image/jpeg');header('Content-Disposition: inline; filename="serviceyar-preview.jpg"');
   header('Cache-Control: private, no-store, max-age=0');header('X-Robots-Tag: noindex, noimageindex, noarchive');
