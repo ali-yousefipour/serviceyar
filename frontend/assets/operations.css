@@ -2279,3 +2279,7 @@ body.sy-menu-palette-open{overflow:hidden}
 .school-district-toggle{display:flex;align-items:center;gap:7px;padding:9px 11px;cursor:pointer;color:#17324d;font:600 12px Vazirmatn,Tahoma,sans-serif;white-space:nowrap}
 .school-district-toggle input{width:16px;height:16px;accent-color:#006d53;cursor:pointer;margin:0}
 .school-district-control:focus-within{outline:2px solid #006d53;outline-offset:2px}
+
+.sy-school-photo-name{display:flex;align-items:center;gap:9px;min-width:170px}
+.sy-school-photo-name img{width:46px;height:46px;object-fit:cover;border-radius:9px;border:1px solid #d7e4de;flex:none}
+.sy-school-photo-name img[hidden]{display:none}
