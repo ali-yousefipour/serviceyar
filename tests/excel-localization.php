@@ -23,4 +23,6 @@ if(XL::header('تاریخ صدور میلادی')!=='تاریخ صدور شمس�
 if(XL::value('=SUM(A1:A10)')!=='=SUM(A1:A10)')throw new RuntimeException('Formula must remain ASCII');
 $example=XL::row(['id'=>12,'is_active'=>1,'amount'=>1250000,'iban'=>'IR830170000000115338903004']);
 if($example['id']!=='۱۲'||$example['is_active']!=='فعال'||$example['amount']!==1250000||$example['iban']!=='IR830170000000115338903004')throw new RuntimeException('Column-specific formatting failed');
+$money=XL::row(['amount'=>'1234567.50','monthly_fee'=>'895000','reference_no'=>'001234','status'=>'pending']);
+if($money['amount']!==1234567.5||$money['monthly_fee']!==895000||$money['reference_no']!=='001234'||$money['status']!=='در انتظار تأیید')throw new RuntimeException('Numeric amounts or status translation failed');
 echo "Persian Excel localization OK\n";
