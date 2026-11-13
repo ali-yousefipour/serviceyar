@@ -12,6 +12,8 @@ const navJs=read('frontend/assets/operations.js');
 const navCss=read('frontend/assets/operations.css');
 const brandCss=read('frontend/assets/brand-theme.css');
 assert.ok(index.includes('/assets/brand-theme.css')&&brandCss.includes('--sy-org-gold')&&brandCss.includes('.sy-public'),'Public, login and panel must share institutional green and gold palette');
+assert.ok(brandCss.includes('#login .login-card .login-input-wrap input')&&brandCss.includes('font:500 16px/1.7')&&brandCss.includes('#login .login-card{'),'Login fields must be readable and contained in a dedicated card');
+assert.ok(brandCss.includes('#syPublicSchools .sy-quote-fields')&&brandCss.includes('#syPublicSchools .sy-school-map')&&brandCss.includes('.sy-v3-capabilities .sy-feature-grid article'),'Public calculator, map and cards must be covered by coherent responsive design');
 assert.ok(index.includes('sy-command-sidebar')&&index.includes('sy-sidebar-brand-copy')&&index.includes('sy-sidebar-bottom'),'Sidebar must have separate brand, navigation and account regions');
 assert.ok(index.includes('id="syAccountMenu"')&&index.includes('id="syEditProfile"')&&index.includes('id="ownPassword"'),'Sidebar user menu must expose profile and password actions');
 assert.ok(!index.includes('id="userName"')&&!index.includes('id="avatar"')&&!index.includes('class="eyebrow"'),'Dashboard header must not duplicate the brand or user');
