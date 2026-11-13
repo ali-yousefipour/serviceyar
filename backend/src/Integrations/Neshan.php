@@ -5,9 +5,9 @@ use ServiceYar\Database\Connection;
 use ServiceYar\Auth\AuthException;
 final class Neshan {
  public static function settings(int $aid): array {$q=Connection::get()->prepare("SELECT setting_key,setting_value FROM agency_settings WHERE agency_id=? AND setting_key IN ('map_provider','neshan_service_key','neshan_web_key','company_location')");$q->execute([$aid]);return $q->fetchAll(\PDO::FETCH_KEY_PAIR);}
- public static function key(int $aid): string {$s=self::settings($aid);if(!empty($s['neshan_service_key']))return $s['neshan_service_key'];$env=(string)config('NESHAN_SERVICE_KEY','');if($env!=='')return $env;$file=dirname(__DIR__,3).'/storage/cache/neshan-service-key.txt';return is_file($file)?trim(file_get_contents($file)):'';}
+ public static function key(int $aid): string {$s=self::settings($aid);$platform=\ServiceYar\Settings\PlatformSettings::value('neshan_service_key');if($platform!=='')return $platform;$env=(string)config('NESHAN_SERVICE_KEY','');if($env!=='')return $env;$file=dirname(__DIR__,3).'/storage/cache/neshan-service-key.txt';return is_file($file)?trim(file_get_contents($file)):'';}
  public static function webKey(array $settings): string {
-  if(array_key_exists('neshan_web_key',$settings))return (string)$settings['neshan_web_key'];
+  $platform=\ServiceYar\Settings\PlatformSettings::value('neshan_web_key');if($platform!=='')return $platform;
   $key=(string)config('NESHAN_WEB_KEY','');
   if($key===''){$file=dirname(__DIR__,3).'/storage/cache/neshan-web-key.txt';$key=is_file($file)?trim(file_get_contents($file)):'';}
   return preg_match('/^web\.[a-zA-Z0-9-]{16,200}$/D',$key)?$key:'';
