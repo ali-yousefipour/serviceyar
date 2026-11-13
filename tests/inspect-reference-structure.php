@@ -13,4 +13,14 @@ foreach([2=>4,3=>5,4=>6,5=>12] as $tableNo=>$sheetNo){
  $diff=[];foreach($cols as $i=>$col){$k='';$n=$i+1;while($n>0){$n--;$k=chr(65+$n%26).$k;$n=intdiv($n,26);}if(trim($col->getAttribute('name'))!==trim($headers[$k]??''))$diff[]=$k.':'.mb_substr($col->getAttribute('name'),0,28).'!='.mb_substr($headers[$k]??'',0,28);}
  echo 'TABLE-MISMATCH-'.$tableNo.' '.json_encode($diff,JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE)."\\n";
 }
+
+$sheet7=new DOMDocument();$sheet7->loadXML($z->getFromName('xl/worksheets/sheet7.xml'));
+foreach($sheet7->getElementsByTagName('row') as $row){
+ $r=(int)$row->getAttribute('r');if($r<218||$r>231)continue;
+ $cells=[];foreach($row->getElementsByTagName('c') as $c){$cells[]=$c->getAttribute('r').'='.mb_substr($c->textContent,0,70);}
+ echo 'FOOTER-'.$r.' '.json_encode($cells,JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE)."\\n";
+}
+foreach([6,7] as $sn){$d=new DOMDocument();$d->loadXML($z->getFromName('xl/worksheets/sheet'.$sn.'.xml'));$merges=[];foreach($d->getElementsByTagName('mergeCell') as $m)$merges[]=$m->getAttribute('ref');echo 'MERGES-'.$sn.' '.json_encode(array_slice($merges,-30))."\\n";}
+$book=new DOMDocument();$book->loadXML($z->getFromName('xl/workbook.xml'));
+foreach($book->getElementsByTagName('definedName') as $n)if(str_contains($n->getAttribute('name'),'Print'))echo 'PRINTNAME '.$n->getAttribute('name').' '.$n->getAttribute('localSheetId').' '.$n->textContent."\\n";
 $z->close();
