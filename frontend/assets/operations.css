@@ -2113,3 +2113,5 @@ body.sy-menu-palette-open{overflow:hidden}
  #content .sy-payroll-list-actions button{white-space:normal}
 }
 @media print{#content .sy-payroll-list-controls{display:none!important}}
+
+#content .sy-payroll-list-table tbody tr[hidden]{display:none!important}
