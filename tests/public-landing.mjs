@@ -16,7 +16,10 @@ assert.ok(navCss.includes('ServiceYar Command Navigation v3')&&navCss.includes('
 assert.ok(navCss.includes('max-width:920px')&&navCss.includes('.sy-command-sidebar.nav-open'),'Sidebar must be a functional mobile drawer');
 assert.ok(navJs.includes("d.classList.toggle('current-group',active);if(active)d.open=true"),'Active navigation group must reopen after routing');
 assert.ok(navJs.includes("popup.style.removeProperty('top')"),'Accordion must not retain old floating popup positioning');
-assert.ok(navJs.includes('getPaletteItems=')&&navJs.includes('navSearchButton.onclick=openPalette'),'Permission-scoped menu search must remain functional');
+assert.ok(navJs.includes("navSearchInput.addEventListener('input'")&&navJs.includes("group.querySelectorAll('.nav-popup a')")&&navJs.includes("link.hidden=!match"),'Permission-scoped inline menu filtering must remain functional');
+assert.ok(navJs.includes("querySelector('a[href=\"#dashboard\"]')?.after(receiptLink)")&&navJs.includes("can('ledger','manage')"),'Receipt/payment shortcut must be placed below dashboard and permission-scoped');
+assert.ok(navJs.includes("input?.focus();input?.select()")&&!navJs.includes('navSearchButton.onclick=openPalette'),'Ctrl+K must focus the inline search without opening a new modal');
+assert.ok(navCss.includes('#app .sy-command-sidebar #nav>.sy-nav-search{')&&navCss.includes('display:grid!important'),'Inline sidebar search must be visible');
 
 const api=read('backend/public/index.php');
 for(const link of ['home','features','about','contact','faq','login'])assert.ok(html.includes('href="#'+link+'"'),'Missing navigation '+link);
@@ -40,8 +43,8 @@ for(const marker of ['syScrollProgress','syBackToTop','data-reveal','data-reveal
 for(const feature of ['IntersectionObserver','requestAnimationFrame','prefers-reduced-motion','scrollIntoView','aria-expanded','sy-page-enter','sy-in-view','toLocaleString'])assert.ok(js.includes(feature),'Missing accessible animation: '+feature);
 for(const cssHook of ['sy-page-in','sy-dashboard-sheen','sy-bars-rise','sy-scroll-progress','sy-backtop','prefers-reduced-motion:reduce','sy-scroll-cue'])assert.ok(css.includes(cssHook),'Missing motion system: '+cssHook);
 assert.ok(!js.includes('setInterval('),'Do not use polling or unbounded timers for scroll animation');
-assert.ok(api.includes('PublicExplorer::countSchools()'),'School count must use de-duplicated central directory');
-assert.ok(read('backend/src/Domain/PublicExplorer.php').includes('school_catalog'),'School count must include central catalog');
+assert.ok(api.includes("$where=$table==='schools'?'':' WHERE is_active=1'"),'Public school count must include both active and inactive registered schools');
+assert.ok(!api.includes("$counts['schools']=\\ServiceYar\\Domain\\PublicExplorer::countSchools()"),'Public school total must not include a de-duplicated central directory');
 assert.ok(js.includes('/api/v1/public/map-config')&&js.includes('static.neshan.org/sdk')&&js.includes('invalidateSize(true)'),'Public map must use configured Neshan web key');
 assert.ok(html.includes('syCatalogAdvantageTitle')&&html.includes('فهرست بسیاری از مدارس'),'Catalog advantage must be visible');
 assert.ok(html.includes('sy-v3-dashboard-art')&&html.includes('sy-v3-map-intro'),'Landing should show the redesigned dashboard showcase and map introduction');
