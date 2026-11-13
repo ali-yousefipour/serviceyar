@@ -1187,7 +1187,7 @@ async function schoolStatementPage(token){
   try{
    const d=await api(scoped('/api/v1/operations/school-statements/'+id));if(token!==pageToken)return;
    const modal=$('modal');
-   const exportLink=d.status==='final'?`<a class="button primary" href="${esc(scoped('/api/v1/reports/school-statements/'+id+'.xlsx'))}">اکسل قالب مرجع ۱۴ شیتی</a> <a class="button" href="${esc(scoped('/api/v1/reports/school-statements/'+id+'.xlsx?workbookFormat=standard'))}">اکسل استاندارد ۱۴ شیتی</a>`:'<span class="sy-statement-muted">این صورت‌وضعیت حذف شده است؛ پس از بازیابی خروجی قابل دریافت خواهد بود.</span>';
+   const exportLink=d.status==='final'?`<a class="button primary" href="${esc(scoped('/api/v1/reports/school-statements/'+id+'.xlsx'))}">اکسل قالب مرجع ۱۴ شیتی</a>`:'<span class="sy-statement-muted">این صورت‌وضعیت حذف شده است؛ پس از بازیابی خروجی قابل دریافت خواهد بود.</span>';
    modal.innerHTML=`<div class="modal-backdrop sy-statement-backdrop"><section class="modal-card sy-statement-modal" role="dialog" aria-modal="true" aria-labelledby="statementDetailHeading" tabindex="-1">
     <div class="sy-statement-modal-heading"><div><span class="sy-statement-kicker">جزئیات صورت‌وضعیت ثبت‌شده</span><h2 id="statementDetailHeading">صورت‌وضعیت ${esc(d.month_name)} ${number(d.year)}</h2><p>ثبت در تاریخ ${esc(dateText(d.created_at))} · ${d.status==='deleted'?'حذف‌شده':'نهایی'}</p></div><button type="button" id="statementClose" aria-label="بستن جزئیات">بستن <span aria-hidden="true">×</span></button></div>
     <div class="sy-statement-modal-body">${details(d)}</div><div class="sy-statement-modal-footer">${exportLink}<button type="button" data-close-statement>بازگشت به سوابق</button></div>
