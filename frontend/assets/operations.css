@@ -2531,3 +2531,14 @@ body.sy-menu-palette-open{overflow:hidden}
 /* Missing-photo schools use the project's actual placeholder asset. */
 #dashboardSchoolMap .leaflet-marker-icon.sy-map-school.sy-school-default-photo .sy-map-marker-bubble{background:#fff9df!important}
 #dashboardSchoolMap .leaflet-marker-icon.sy-map-school.sy-school-default-photo .sy-map-marker-photo{object-fit:contain!important}
+
+
+/* Keep map markers keyboard accessible without exposing full-size media. */
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-company:focus-visible,
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-school:focus-visible{
+ outline:3px solid #147c52!important;outline-offset:3px!important;border-radius:14px!important;
+}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-company.sy-marker-fallback .sy-map-marker-photo,
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-school.sy-marker-fallback .sy-map-marker-photo{
+ display:none!important;
+}
