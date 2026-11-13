@@ -257,7 +257,10 @@
    const marker=L.marker(position,{icon:publicPin('agency',company.logoUrl),title:company.name});
    marker.on('click',()=>showCompany(company));marker.addTo(publicCompanyMarkers);attachPinFallback(marker);points.push(position);
   });
-  if(points.length)focusPoints(points);
+  // Initial company plotting must not call fitBounds: it overrides the requested
+  // two-click (+2) city zoom with a dynamically calculated zoom.
+  // Keep the map at exactly zoom 14 (original level 12 plus two '+' presses).
+  schoolMap.setView([36.3,59.6],14,{animate:false});
   publicMapStatus(points.length?faNumber(points.length)+' شرکت دارای مختصات معتبر از '+faNumber(publicCompanies.length)+' شرکت فعال نمایش داده می‌شوند.':'هنوز مختصات معتبری برای شرکت‌ها ثبت نشده است.');
  }
  function clearMapForSearch(){
