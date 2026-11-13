@@ -320,9 +320,10 @@ try{
  check(count(array_filter($daily['items'],fn($r)=>$r['serviceId']===(int)$scheduleA['id']))===1,'Daily schedule resolves exact school shift');
  $dailyHoliday=\ServiceYar\Domain\DailySchedule::report($uid,$a,['date'=>'2026-11-06','weekAnchor'=>'2026-10-31']);check(count($dailyHoliday['items'])===0,'Daily schedule excludes weekly holidays');
  rejected(fn()=>\ServiceYar\Domain\DailySchedule::report($uid,$a,['date'=>'invalid']),'VALIDATION_ERROR');
- $p->prepare('INSERT INTO agency_settings(agency_id,setting_key,setting_value,is_secret) VALUES(?,?,?,1)')->execute([$a,'neshan_service_key','service.test-secret-000000000000']);
- check(!array_key_exists('neshan_service_key',\ServiceYar\Settings\SettingsService::get($uid,$a)),'Neshan service key is excluded from settings responses');
- $mapConfig=\ServiceYar\Integrations\Neshan::config($a);check($mapConfig['provider']==='neshan'&&$mapConfig['serviceConfigured']&&!isset($mapConfig['serviceKey']),'Neshan is default and map config hides service secret');
+ \ServiceYar\Settings\PlatformSettings::save($uid,['neshan_service_key'=>'service.test-secret-000000000000']);
+ check(!array_key_exists('neshan_service_key',\ServiceYar\Settings\SettingsService::get($uid,$a)),'Platform service key is excluded from company settings');
+ rejected(fn()=>\ServiceYar\Settings\SettingsService::put($uid,$a,['neshan_service_key'=>'service.test-secret-000000000000']),'SUPER_ADMIN_REQUIRED');
+ $mapConfig=\ServiceYar\Integrations\Neshan::config($a);check($mapConfig['provider']==='neshan'&&$mapConfig['serviceConfigured']&&!isset($mapConfig['serviceKey']),'Central Neshan provider is configured without leaking service secret');
  $list=\ServiceYar\Domain\ChequeReceipts::list($uid,$a,['status'=>'collected','search'=>'CH-'.$tag]);check($list['pagination']['total']===2&&$list['amount']==='2469.00','Cheque filters and totals remain scoped');
  rejected(fn()=>\ServiceYar\Domain\ChequeReceipts::list($uid,$a,['from'=>'2026-12-01','to'=>'2026-11-01']),'VALIDATION_ERROR');
  D::delete($uid,$a,'accounts',(int)$cash['id']);check(\ServiceYar\Domain\AccountStatement::report($uid,$a,['accountId'=>$cash['id']])['closing']==='-1226.40','Inactive account retains historical statement');$journal['documentNo'].='-inactive';rejected(fn()=>J::save($uid,$a,$journal),'CROSS_SCOPE_REFERENCE');
