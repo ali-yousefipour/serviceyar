@@ -1847,3 +1847,31 @@ body.sy-menu-palette-open{overflow:hidden}
 @media(max-width:900px){#content .sy-quick-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:680px){#content .sy-quick-header{gap:9px;flex-wrap:wrap}#content .sy-quick-search,#content .sy-quick-fields{grid-template-columns:minmax(0,1fr)}#content .sy-quick-section{padding:13px}#content .sy-quick-table-wrap{max-height:none;border:0;overflow:visible}#content .sy-quick-table{display:block;min-width:0}#content .sy-quick-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}#content .sy-quick-table tbody{display:grid;gap:12px}#content .sy-quick-table tbody tr{display:grid;gap:5px;border:1px solid var(--q-line);border-radius:12px;padding:12px;background:#fff}#content .sy-quick-table td{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;border:0;padding:5px 0}#content .sy-quick-table td::before{content:attr(data-label);flex:0 0 29%;font-size:12px;color:#557063;font-weight:750}#content .sy-quick-table td :is(input:not([type=checkbox]),select){flex:1;min-width:0}#content .sy-quick-footer{align-items:stretch;flex-direction:column;padding:15px}#content .sy-quick-footer button{width:100%}}
 @media print{body:has(.sy-quick-journal) .sy-quick-footer button{display:none!important}}
+
+/* Journal editor: accessible structured accounting entries */
+#content .sy-journal-editor .sy-journal-fieldset{min-width:0;margin:0;padding:0;border:0}
+#content .sy-journal-editor .sy-journal-legend{font-size:14px;color:#20583a;font-weight:800;margin-bottom:14px}
+#content .sy-journal-editor .sy-journal-meta{background:#f7fbf8;border:1px solid #e0eae2;padding:16px;border-radius:13px}
+#content .sy-journal-lines-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:22px 0 9px}
+#content .sy-journal-lines-head h3{font-size:15px;color:#20583a;margin:0}
+#content .sy-journal-lines-head p{font-size:12px;color:#607868;margin:0;line-height:1.8}
+#content .sy-journal-help{font-size:12px;line-height:1.8;color:#5c7665;margin:0 0 16px}
+#content .sy-journal-editor :is(input,select,button):focus-visible{outline:3px solid #78b995;outline-offset:2px}
+#content .sy-journal-editor-table-wrap{max-width:100%}
+#content .sy-journal-editor-table td{vertical-align:middle}
+#content .sy-journal-editor-table td[data-label=عملیات] button{min-height:40px;white-space:nowrap}
+@media(max-width:700px){
+ #content .sy-journal-editor .sy-journal-meta{padding:12px}
+ #content .sy-journal-editor .sy-journal-editor-table-wrap{overflow:visible;max-height:none;border:0}
+ #content .sy-journal-editor .sy-journal-editor-table{display:block!important;min-width:0!important}
+ #content .sy-journal-editor .sy-journal-editor-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+ #content .sy-journal-editor .sy-journal-editor-table tbody{display:grid;gap:12px}
+ #content .sy-journal-editor .sy-journal-editor-table tbody tr{display:grid;padding:13px;border:1px solid #d8e8de;border-radius:12px;background:#fff;gap:8px}
+ #content .sy-journal-editor .sy-journal-editor-table tbody tr.sy-journal-line-error{border-color:#deada1;background:#fff8f6}
+ #content .sy-journal-editor .sy-journal-editor-table td{display:grid;grid-template-columns:minmax(90px,32%) minmax(0,1fr);align-items:center;gap:9px;padding:0;border:0;min-width:0}
+ #content .sy-journal-editor .sy-journal-editor-table td::before{content:attr(data-label);font-size:12px;font-weight:750;color:#4d6b59}
+ #content .sy-journal-editor .sy-journal-editor-table td :is(input,select){width:100%;min-width:0!important;max-width:none;font-size:16px;min-height:45px}
+ #content .sy-journal-editor .sy-journal-editor-table td button{width:100%}
+ #content .sy-journal-lines-head{display:block}
+}
+@media print{body:has(.journal-print) .sy-journal-help{display:none!important}}
