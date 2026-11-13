@@ -1397,8 +1397,37 @@ async function agencyPaymentMethodSettings(){
 async function settingsPage(){
  const token=pageToken;const setting=await api(scoped('/api/v1/settings'));if(token!==pageToken)return;
  const fields={company_phone:'تلفن شرکت',company_address:'نشانی شرکت',academic_year:'سال تحصیلی',support_phone:'شماره پشتیبانی'};
+ const saveLogo=async(form)=>{
+  const file=form.querySelector('[name=companyLogo]').files?.[0];
+  if(!file)throw new Error('ابتدا تصویر لوگو را انتخاب کنید.');
+  if(file.size>1048576||!['image/png','image/jpeg','image/webp'].includes(file.type))throw new Error('تصویر باید PNG، JPEG یا WebP و حداکثر یک مگابایت باشد.');
+  const data=new FormData();data.append('file',file);
+  const response=await fetch(agencyLogoUrl(),{method:'POST',credentials:'same-origin',headers:{'X-CSRF-Token':session.csrfToken,'Accept':'application/json'},body:data});
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok||!result.ok)throw new Error(result.error?.message||'ذخیره لوگو ناموفق بود.');
+  return result.data;
+ };
+
  const settingsSection=(title,description)=>`<header class="sy-settings-section-head"><div><h2>${title}</h2><p>${description}</p></div></header>`;
  $('content').innerHTML=`<section class="panel sy-settings-panel">${settingsSection('اطلاعات شرکت','مشخصات عمومی و اطلاعات تماس شرکت')}<form id="transportSettings" class="form-grid sy-settings-grid">${Object.entries(fields).map(([k,t])=>`<label>${t}<input name="${k}" value="${esc(setting[k]||'')}" maxlength="500"></label>`).join('')}${can('settings','manage')?'<button class="primary">ذخیره تنظیمات</button>':''}</form><p class="muted">کلیدهای اتصال و سرویس‌دهنده‌ها تنها در تنظیمات سامانه و توسط ادمین کل مدیریت می‌شوند.</p></section>${can('holidays')?'<section class="panel"><h2>تعطیلات</h2><div id="holidayRows"></div><div id="holidayEditor"></div></section>':''}${can('users')?'<section class="panel"><h2>کاربران شرکت</h2><div id="companyUserRows"></div></section>':''}<div id="modal"></div>`;
+ const logoPanel=document.createElement('section');logoPanel.className='panel sy-settings-panel sy-agency-logo-settings';
+ logoPanel.innerHTML='<header class="sy-settings-section-head"><div><h2>لوگوی اختصاصی شرکت</h2><p>لوگو در داشبورد، سربرگ اسناد و خروجی چاپ و PDF شرکت استفاده می‌شود.</p></div></header><div class="sy-agency-logo-layout">'+agencyLogoImage('نشان شرکت '+(currentAgency?.name||''),100)+'<form id="agencyLogoForm"><label>انتخاب تصویر (PNG، JPG یا WebP؛ حداکثر ۱ مگابایت)<input type="file" name="companyLogo" accept="image/png,image/jpeg,image/webp" '+(can('settings','manage')?'':'disabled')+'></label>'+(can('settings','manage')?'<div class="sy-agency-logo-actions"><button class="primary" type="submit">ثبت لوگو</button><button type="button" id="removeAgencyLogo">حذف لوگوی اختصاصی</button></div>':'')+'<p id="agencyLogoStatus" role="status" aria-live="polite">در صورت ثبت‌نشدن لوگو، نشان پیش‌فرض سرویس‌یار استفاده می‌شود.</p></form></div>';
+ $('transportSettings').closest('section').after(logoPanel);
+ const logoForm=logoPanel.querySelector('#agencyLogoForm');
+ if(can('settings','manage')){
+  logoForm.onsubmit=async event=>{
+   event.preventDefault();const button=logoForm.querySelector('[type=submit]');button.disabled=true;
+   try{await saveLogo(logoForm);logoPanel.querySelector('img').src=agencyLogoUrl()+'&revision='+Date.now();logoForm.reset();$('agencyLogoStatus').textContent='لوگوی شرکت ذخیره شد.';notify('لوگوی شرکت ثبت شد.');}
+   catch(err){$('agencyLogoStatus').textContent=err.message;}
+   finally{button.disabled=false;}
+  };
+  $('removeAgencyLogo').onclick=async event=>{
+   const button=event.currentTarget;button.disabled=true;
+   try{await write('/api/v1/agency/logo',{},'DELETE');logoPanel.querySelector('img').src=agencyLogoUrl()+'&revision='+Date.now();$('agencyLogoStatus').textContent='لوگوی اختصاصی حذف شد؛ نشان پیش‌فرض نمایش داده می‌شود.';}
+   catch(err){$('agencyLogoStatus').textContent=err.message;}
+   finally{button.disabled=false;}
+  };
+ }
  if(can('settings','manage')){
  let office=setting.company_location;if(typeof office==='string'){try{office=JSON.parse(office||'null');}catch{office=null;notify('مختصات ذخیره‌شده دفتر شرکت معتبر نیست؛ می‌توانید موقعیت را دوباره ثبت کنید.',true);}}
  const panel=document.createElement('section');panel.className='panel';panel.innerHTML=`<h2>موقعیت دفتر شرکت</h2><form id="companyLocationForm"><div class="form-grid"><label>عرض جغرافیایی<input name="latitude" type="number" step="any" min="-90" max="90" required value="${esc(office?.latitude??'')}"></label><label>طول جغرافیایی<input name="longitude" type="number" step="any" min="-180" max="180" required value="${esc(office?.longitude??'')}"></label><label>نشانی<input name="address" value="${esc(setting.company_address||'')}"></label></div><button class="primary" type="submit">ذخیره موقعیت شرکت</button><p role="status" data-office-result></p></form>`;$('transportSettings').closest('section').after(panel);
