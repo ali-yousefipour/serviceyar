@@ -1877,7 +1877,7 @@ async function addDistrictBoundaries(map){
  try{
   const data=await loadDistrictBoundaries();
   if(!map._container?.isConnected)return;
-  const colors=['#2563eb','#0d9488','#d97706','#7c3aed','#db2777','#059669','#b45309','#475569'];
+  const colors=['#0a7652','#c89b3b','#397b61','#b78625','#5b9a76','#e0b963','#176047','#9a7738'];
   const layer=L.geoJSON(data,{
    style:feature=>{
     const index=data.features.indexOf(feature);
