@@ -1493,6 +1493,25 @@ companiesPage=async function(){
   adminPanel.innerHTML='<header class="sy-settings-section-head"><div><h2>تنظیمات سامانه · سرویس‌دهنده‌ها</h2><p>این کلیدها در سطح سامانه تعریف می‌شوند و در تنظیمات شرکت‌ها نمایش داده نمی‌شوند.</p></div></header>'+
    '<div class="sy-platform-status"><span>کلید سرویس نشان: '+(platform.neshanServiceConfigured?'تنظیم شده':'تنظیم نشده')+'</span><span>کلید وب نشان: '+(platform.neshanWebConfigured?'تنظیم شده':'تنظیم نشده')+'</span><span>پیامک نگین: '+(platform.smsConfigured?'فعال':'نیازمند تنظیم سرور')+'</span><span>درگاه بله: '+(platform.baleConfigured?'فعال':'نیازمند تنظیم سرور')+'</span></div>'+
    '<form id="platformSettingsForm" class="form-grid sy-settings-grid"><label>کلید سرویس نشان<input name="neshan_service_key" type="password" autocomplete="off" placeholder="برای حفظ کلید فعلی خالی بگذارید"></label><label>کلید وب نشان<input name="neshan_web_key" type="password" autocomplete="off" placeholder="برای حفظ کلید فعلی خالی بگذارید"></label><div class="sy-platform-explanation">اطلاعات محرمانه پیامک نگین و درگاه بله در تنظیمات امن سرور نگهداری می‌شوند؛ وضعیت اتصال از این بخش قابل بررسی است.</div><button class="primary" type="submit">ذخیره کلیدهای نشان</button><p role="status" id="platformSaveStatus"></p></form>';
+  adminPanel.classList.add('sy-admin-service-card');
+  adminPanel.querySelector('.sy-platform-status')?.setAttribute('role','list');
+  adminPanel.querySelectorAll('.sy-platform-status span').forEach(item=>item.setAttribute('role','listitem'));
+  const platformForm=adminPanel.querySelector('#platformSettingsForm');
+  if(platformForm){
+   platformForm.classList.add('sy-admin-service-form');
+   const note=document.createElement('p');note.className='sy-admin-security-note';
+   note.textContent='کلیدهای قبلی حفظ می‌شوند؛ فقط برای جایگزینی، کلید جدید وارد کنید.';
+   platformForm.prepend(note);
+   platformForm.querySelectorAll('label').forEach(label=>{
+    label.classList.add('sy-admin-secret-field');
+    const input=label.querySelector('input[type=password]');if(!input)return;
+    const button=document.createElement('button');button.type='button';button.className='sy-admin-show-secret';button.textContent='نمایش';
+    input.after(button);
+    button.onclick=()=>{const visible=input.type==='password';input.type=visible?'text':'password';button.textContent=visible?'پنهان':'نمایش';};
+   });
+  }
+  $('content').classList.add('sy-super-admin-workspace');
+  $('content').querySelectorAll('section.panel').forEach(panel=>panel.classList.add('sy-super-admin-card'));
   $('content').prepend(adminPanel);
   const form=$('platformSettingsForm');
   form.onsubmit=async e=>{
