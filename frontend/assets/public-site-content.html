@@ -18,29 +18,30 @@
 <section class="sy-public-container sy-stat-section" id="syNumbers" aria-labelledby="syStatsTitle"><span class="sy-overline">سرویس‌یار در یک نگاه</span><div class="sy-section-heading"><h2 id="syStatsTitle">آمار فعالیت سامانه</h2><span id="syStatsStatus" role="status" aria-live="polite">در حال دریافت آمار…</span></div><div class="sy-stat-grid" data-reveal-group>
 <article><span>▣</span><strong data-stat="agencies">—</strong><p>شرکت ثبت‌شده</p></article><article><span>⌂</span><strong data-stat="schools">—</strong><p>مدرسه ثبت‌شده</p></article><article><span>♧</span><strong data-stat="students">—</strong><p>دانش‌آموز</p></article><article><span>◈</span><strong data-stat="drivers">—</strong><p>راننده</p></article><article><span>▤</span><strong data-stat="services">—</strong><p>سرویس ثبت‌شده</p></article>
 </div><p class="sy-stat-footnote">ارقام از داده‌های فعال سامانه دریافت می‌شوند؛ اطلاعات شخصی کاربران در این صفحه منتشر نمی‌شود.</p></section>
-<section class="sy-public-container sy-site-section sy-school-lookup" id="syPublicSchools" aria-labelledby="sySchoolLookupTitle">
-<div class="sy-section-heading sy-explorer-heading"><div><span class="sy-overline">دسترسی عمومی و رایگان</span><h2 id="sySchoolLookupTitle">راهنمای سرویس مدارس مشهد</h2><p>تعرفه مصوب را محاسبه کنید و مدرسه و شرکت سرویس‌دهنده را روی نقشه پیدا کنید.</p></div><span class="sy-explorer-year">سال تحصیلی ۱۴۰۵–۱۴۰۶</span></div>
-<div class="sy-explorer-grid">
-<section class="sy-explorer-panel sy-tariff-panel" aria-labelledby="syTariffTitle">
-<div class="sy-explorer-panel-heading"><span class="sy-explorer-step">۰۱</span><div><h3 id="syTariffTitle">محاسبه آنلاین هزینه سرویس</h3><p>فقط ناحیه، کلاس خودرو و مسافت را مشخص کنید.</p></div></div>
-<form id="syServiceQuote" class="sy-public-quote">
-<div class="sy-quote-fields">
-<label>ناحیه آموزش‌وپرورش<select name="district" required><option value="">انتخاب ناحیه</option><option value="1">ناحیه ۱</option><option value="2">ناحیه ۲</option><option value="3">ناحیه ۳</option><option value="4">ناحیه ۴</option><option value="5">ناحیه ۵</option><option value="6">ناحیه ۶</option><option value="7">ناحیه ۷</option><option value="8">تبادکان</option></select></label>
-<label>کلاس خودرو<select name="vehicleClass" required><option value="">انتخاب خودرو</option><option value="economy">پراید، آردی و روآ</option><option value="standard">سمند، اطلس، کوئیک، تیبا و مشابه</option><option value="van">ون و مینی‌بوس</option></select></label>
-<label>مسافت سرویس (کیلومتر)<div class="sy-km-field"><input name="distanceKm" type="number" inputmode="decimal" min="0.1" max="200" step="0.01" required placeholder="مثلاً ۸٫۵"><span>km</span></div></label>
-<button type="submit" class="sy-btn sy-btn-login sy-quote-submit">محاسبه مبلغ ماهانه <span aria-hidden="true">←</span></button>
-</div>
-<div id="syQuoteResult" class="sy-quote-result" role="status" aria-live="polite">تعرفه بر اساس نرخ‌نامه سال تحصیلی ۱۴۰۵–۱۴۰۶ محاسبه می‌شود.</div>
-<p class="sy-quote-note">مبنای مسافت: میانگین مسیر رفت‌وبرگشت · ضرایب ترافیک نواحی در محاسبه لحاظ می‌شود · مبالغ به ریال است.</p>
-</form>
-</section>
-<section class="sy-explorer-panel sy-directory-panel" aria-labelledby="sySchoolDirectoryTitle">
-<div class="sy-explorer-panel-heading"><span class="sy-explorer-step">۰۲</span><div><h3 id="sySchoolDirectoryTitle">جستجوی مدارس و شرکت‌ها</h3><p>مدرسه را پیدا کنید و شرکت ارائه‌دهنده سرویس را ببینید.</p></div></div>
-<label class="sy-school-search" for="sySchoolSearch"><span>نام مدرسه، کد یا شرکت سرویس‌دهنده</span><input id="sySchoolSearch" type="search" autocomplete="off" placeholder="نام مدرسه یا شرکت را بنویسید…"></label>
-<div class="sy-school-search-status" id="sySchoolSearchStatus" role="status" aria-live="polite"></div>
-<div class="sy-schools-layout"><div id="sySchoolResults" class="sy-school-results" aria-live="polite">در حال دریافت مدارس…</div><div id="sySchoolsMap" class="sy-school-map" role="region" aria-label="نقشه مدارس و مرزبندی نواحی آموزش‌وپرورش"></div></div>
-</section>
-</div>
+<section class="sy-public-container sy-site-section sy-school-lookup" id="syPublicSchools" aria-label="محاسبه هزینه و جستجوی مدارس">
+ <div class="sy-explorer-grid sy-explorer-compact">
+  <section class="sy-explorer-panel sy-tariff-panel" aria-labelledby="syTariffTitle">
+   <div class="sy-explorer-panel-heading"><span class="sy-explorer-step" aria-hidden="true">✦</span><div><h2 id="syTariffTitle">محاسبه هزینه سرویس</h2></div></div>
+   <form id="syServiceQuote" class="sy-public-quote">
+    <div class="sy-quote-fields">
+     <label>ناحیه آموزش‌وپرورش<select name="district" required><option value="">انتخاب ناحیه</option><option value="1">ناحیه ۱</option><option value="2">ناحیه ۲</option><option value="3">ناحیه ۳</option><option value="4">ناحیه ۴</option><option value="5">ناحیه ۵</option><option value="6">ناحیه ۶</option><option value="7">ناحیه ۷</option><option value="8">تبادکان</option></select></label>
+     <label>کلاس خودرو<select name="vehicleClass" required><option value="">انتخاب کلاس خودرو</option><option value="economy">پراید، آردی و روآ</option><option value="standard">سمند، اطلس، کوئیک، تیبا و مشابه</option><option value="van">ون و مینی‌بوس</option></select></label>
+     <label>مسافت (کیلومتر)<div class="sy-km-field"><input name="distanceKm" type="number" inputmode="decimal" min="0.1" max="200" step="0.01" required placeholder="مثلاً ۸٫۵"><span>km</span></div></label>
+     <button type="submit" class="sy-btn sy-btn-login sy-quote-submit">محاسبه مبلغ</button>
+    </div>
+    <div id="syQuoteResult" class="sy-quote-result" role="status" aria-live="polite">ناحیه، خودرو و مسافت را انتخاب کنید.</div>
+   </form>
+  </section>
+  <section class="sy-explorer-panel sy-directory-panel" aria-labelledby="sySchoolDirectoryTitle">
+   <div class="sy-explorer-panel-heading"><span class="sy-explorer-step" aria-hidden="true">⌕</span><div><h2 id="sySchoolDirectoryTitle">مدارس و شرکت‌های سرویس‌دهنده</h2></div></div>
+   <label class="sy-school-search" for="sySchoolSearch"><span>جستجوی نام مدرسه یا شرکت</span><input id="sySchoolSearch" type="search" autocomplete="off" minlength="3" maxlength="80" placeholder="حداقل سه حرف وارد کنید…"></label>
+   <div class="sy-schools-layout">
+    <div id="sySchoolResults" class="sy-school-results" aria-live="polite">برای مشاهده مدارس، نام مدرسه یا شرکت را جستجو کنید.</div>
+    <div class="sy-map-frame"><div id="sySchoolsMap" class="sy-school-map" role="region" aria-label="نقشه عمومی شهر مشهد"></div><div class="sy-map-privacy-note">موقعیت دقیق مدارس و مرزبندی‌های عملیاتی در نمایش عمومی منتشر نمی‌شود.</div></div>
+   </div>
+  </section>
+ </div>
+ <dialog id="syPublicSchoolDialog" class="sy-school-dialog" aria-labelledby="sySchoolDialogTitle"><div class="sy-school-dialog-body"><button type="button" class="sy-school-dialog-close" aria-label="بستن جزئیات مدرسه">×</button><div class="sy-dialog-emblem" aria-hidden="true">⌂</div><p class="sy-dialog-overline">اطلاعات مدرسه</p><h3 id="sySchoolDialogTitle"></h3><dl><div><dt>شرکت سرویس‌دهنده</dt><dd id="syDialogCompany"></dd></div><div><dt>ناحیه آموزش‌وپرورش</dt><dd id="syDialogRegion"></dd></div></dl><p class="sy-dialog-privacy">به‌منظور حفاظت از اطلاعات مدارس، نشانی دقیق و تصاویر اصلی در صفحه عمومی ارائه نمی‌شوند.</p></div></dialog>
 </section>
 <section class="sy-public-container sy-site-section" id="syCapabilities"><div class="sy-section-heading"><div><span class="sy-overline">امکانات کلیدی</span><h2>همه ابزارهای ضروری، در یک مسیر روشن</h2><p>مدیریت داده‌محور و منسجم سرویس مدارس.</p></div><a class="sy-arrow-link" href="#features">مشاهده همه امکانات ←</a></div><div class="sy-feature-grid" data-reveal-group><article><span>⌂</span><h3>مدارس و دانش‌آموزان</h3><p>ثبت اطلاعات، سازمان‌دهی مدارس و اتصال دانش‌آموزان به سرویس‌های مرتبط.</p></article><article><span>◈</span><h3>رانندگان و ناوگان</h3><p>مدیریت خودروها، ظرفیت و تخصیص راننده و سرویس به مدارس.</p></article><article><span>▦</span><h3>امور مالی و صورت‌وضعیت</h3><p>محاسبات مالی، کسورات و تهیه گزارش‌ها و صورت‌وضعیت‌های ماهانه.</p></article></div></section>
 <section class="sy-site-flow" id="syHowItWorks"><div class="sy-public-container"><span class="sy-overline">گردش کار</span><h2>از ثبت اطلاعات تا گزارش نهایی</h2><div class="sy-flow-grid" data-reveal-group><div><b>۱</b><strong>ثبت و آماده‌سازی</strong><small>شرکت، مدرسه، دانش‌آموز</small></div><div><b>۲</b><strong>تخصیص سرویس</strong><small>راننده، خودرو و مسیر</small></div><div><b>۳</b><strong>کنترل مالی</strong><small>تعرفه، کسورات و پرداخت‌ها</small></div><div><b>۴</b><strong>گزارش‌گیری</strong><small>صورت‌وضعیت و خروجی Excel</small></div></div></div></section>
