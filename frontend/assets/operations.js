@@ -853,14 +853,16 @@ async function formResource(key,id,onSaved){
    let match=normalized.match(/^(\d{2})([آ-یA-Za-z])(\d{3})(\d{2})$/u);
    if(!match){const other=normalized.match(/^(\d{2})(\d{3})([آ-یA-Za-z])(\d{2})$/u);if(other)match=[other[0],other[1],other[3],other[2],other[4]];}
    const letters='آ ا ب ج د س ص ط ق ل م ن و ه ی ت ع ف ک گ پ ث ز ش'.split(' ');
-   const field=document.createElement('fieldset');field.className='sy-vehicle-plate-editor';
-   field.innerHTML='<legend>پلاک خودرو · قالب ایران</legend><div class="sy-plate-edit-layout" role="group" aria-label="ویرایش بخش‌های شماره پلاک">'+
-    '<span class="sy-plate-edit-region"><span>ایران</span><input type="text" inputmode="numeric" data-plate-region maxlength="2" placeholder="۱۱" aria-label="کد ایران"></span>'+
-    '<input type="text" inputmode="numeric" data-plate-middle maxlength="3" placeholder="۱۲۳" aria-label="سه رقم میانی پلاک">'+
+   // Reuse the exact plate presentation already used in the vehicle search form.
+   const field=document.createElement('fieldset');field.className='vehicle-plate-filter sy-vehicle-plate-editor';
+   field.innerHTML='<legend>پلاک خودرو · قالب ایران</legend><div class="vehicle-plate-entry" role="group" aria-label="ویرایش بخش‌های شماره پلاک">'+
+    '<span class="vehicle-plate-iran">ایران <small>IR</small></span>'+
+    '<input type="text" inputmode="numeric" data-plate-region maxlength="2" placeholder="۱۱" aria-label="کد ایران، دو رقم" dir="ltr">'+
+    '<input type="text" inputmode="numeric" data-plate-middle maxlength="3" placeholder="۱۲۳" aria-label="سه رقم میانی پلاک" dir="ltr">'+
     '<select data-plate-letter aria-label="حرف پلاک"><option value="">حرف</option>'+letters.map(letter=>'<option value="'+letter+'">'+letter+'</option>').join('')+'</select>'+
-    '<input type="text" inputmode="numeric" data-plate-first maxlength="2" placeholder="۱۲" aria-label="دو رقم اول پلاک">'+
-    '<span class="sy-plate-edit-flag" aria-hidden="true"><span>🇮🇷</span><small>IR</small></span></div>'+
-    '<p class="sy-plate-edit-help" data-plate-hint>هر بخش از پلاک را جداگانه وارد کنید.</p>';
+    '<input type="text" inputmode="numeric" data-plate-first maxlength="2" placeholder="۱۲" aria-label="دو رقم اول پلاک" dir="ltr">'+
+    '<span class="vehicle-plate-flag" aria-hidden="true">IR</span></div>'+
+    '<small class="sy-plate-edit-help" data-plate-hint>هر بخش از پلاک را جداگانه وارد کنید.</small>';
    label.replaceWith(field);field.append(plate);plate.type='hidden';
    const first=field.querySelector('[data-plate-first]'),middle=field.querySelector('[data-plate-middle]'),letter=field.querySelector('[data-plate-letter]'),region=field.querySelector('[data-plate-region]');
    if(match){first.value=match[1];letter.value=match[2];middle.value=match[3];region.value=match[4];}
