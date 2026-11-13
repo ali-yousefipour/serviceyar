@@ -29,10 +29,12 @@ final class MonthlyStatementWorkbook
             .'<sheetFormatPr defaultRowHeight="24"/><cols>';
         for($i=1;$i<=$cols;$i++)$xml.='<col min="'.$i.'" max="'.$i.'" width="'.($i===1?16:28).'" customWidth="1"/>';
         $xml.='</cols><sheetData>';
-        $all=array_merge([[$title],$headers],$rows);
+        require_once __DIR__.'/ExcelLocalization.php';
+        $all=array_merge([[ExcelLocalization::value($title)],array_map([ExcelLocalization::class,'header'],$headers)],$rows);
         foreach($all as $ri=>$row){
             $r=$ri+1;$xml.='<row r="'.$r.'"'.($r===2?' ht="75" customHeight="1"':'').'>';
             foreach($row as $ci=>$v){
+                $v=ExcelLocalization::value($v);
                 $ref=self::column($ci+1).$r;$style=$r<=2?1:(is_numeric($v)&&!is_string($v)?2:3);
                 if(is_int($v)||is_float($v))$xml.='<c r="'.$ref.'" s="'.$style.'"><v>'.self::escape($v).'</v></c>';
                 else $xml.='<c r="'.$ref.'" s="'.$style.'" t="inlineStr"><is><t xml:space="preserve">'.self::escape($v).'</t></is></c>';
@@ -164,11 +166,12 @@ final class MonthlyStatementWorkbook
         // authoritative layout, including its formulas and print settings.
         if(extension_loaded('mbstring') && extension_loaded('zlib')){
             require_once __DIR__.'/../Vendor/SimpleXLSXGen.php';
+            require_once __DIR__.'/ExcelLocalization.php';
             $toRows=static function(array $headers,array $data,string $heading):array{
-                $records=[['<b><style color="#FFFFFF" bgcolor="#165F3C">'.htmlspecialchars($heading,ENT_XML1|ENT_QUOTES,'UTF-8').'</style></b>']];
-                $records[]=array_map(static fn($v)=>'<b><style color="#FFFFFF" bgcolor="#217957"><wraptext>'.htmlspecialchars((string)$v,ENT_XML1|ENT_QUOTES,'UTF-8').'</wraptext></style></b>',$headers);
+                $records=[['<b><style color="#FFFFFF" bgcolor="#165F3C">'.htmlspecialchars((string)ExcelLocalization::value($heading),ENT_XML1|ENT_QUOTES,'UTF-8').'</style></b>']];
+                $records[]=array_map(static fn($v)=>'<b><style color="#FFFFFF" bgcolor="#217957"><wraptext>'.htmlspecialchars(ExcelLocalization::header((string)$v),ENT_XML1|ENT_QUOTES,'UTF-8').'</wraptext></style></b>',$headers);
                 foreach($data as $row){
-                    $records[]=array_map(static fn($v)=>is_int($v)||is_float($v)?$v:\Shuchkin\SimpleXLSXGen::raw((string)($v??'')),array_values($row));
+                    $records[]=array_map(static function($v){$v=ExcelLocalization::value($v);return is_int($v)||is_float($v)?$v:\Shuchkin\SimpleXLSXGen::raw((string)$v);},array_values($row));
                 }
                 return $records;
             };
