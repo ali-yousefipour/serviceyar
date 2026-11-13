@@ -39,38 +39,38 @@ try {
   }
  }
  // Public school directory. No student, driver, contact or private tenant data exposed.
+
+ // Public directory: minimum search length, no bulk enumeration and no sensitive media/location fields.
+ // Exact locations, original images and boundaries are available only in authorized workflows.
  if($method==='GET'&&$path==='/api/v1/public/schools'){
   try{
-   $pdo=Connection::get();
-   $query=trim((string)($_GET['q']??''));
-   if(mb_strlen($query,'UTF-8')>100)Response::json(['ok'=>false,'error'=>['code'=>'INVALID_QUERY','message'=>'عبارت جستجو طولانی است.']],422);
-   $sql="SELECT s.id,s.name,s.code,s.region,s.latitude,s.longitude,s.photo_path,a.name AS company_name
-    FROM schools s JOIN agencies a ON a.id=s.agency_id AND a.is_active=1
-    WHERE s.is_active=1
-    AND (:empty=1 OR s.name LIKE :q1 OR s.code LIKE :q2 OR a.name LIKE :q3)
-    ORDER BY s.name,s.id LIMIT 250";
-   $stmt=$pdo->prepare($sql);
-   $stmt->execute(['empty'=>$query===''?1:0,'q1'=>'%'.$query.'%','q2'=>'%'.$query.'%','q3'=>'%'.$query.'%']);
-   $rows=[];
-   foreach($stmt->fetchAll(\PDO::FETCH_ASSOC) as $row){
-    $pathValue=(string)($row['photo_path']??'');
-    $photo=null;
-    if(preg_match('~^(?:uploads/)?schools/(?:[0-9]{4}/[0-9]{2}/)?[a-zA-Z0-9_.-]+\\.(?:jpg|jpeg|png|webp)$~i',$pathValue)){
-     $photo='/schools/'.preg_replace('~^(?:uploads/)?schools/~','',$pathValue);
-    }
-    $rows[]=['id'=>(int)$row['id'],'name'=>$row['name'],'code'=>$row['code'],
-      'region'=>$row['region'],'latitude'=>$row['latitude']===null?null:(float)$row['latitude'],'longitude'=>$row['longitude']===null?null:(float)$row['longitude'],
-      'company'=>$row['company_name'],'photoUrl'=>$photo];
+   $term=trim((string)($_GET['q']??''));
+   $term=str_replace(['ي','ك','‌'],['ی','ک',' '],$term);
+   $len=mb_strlen($term,'UTF-8');
+   if($len===0){
+    header('Cache-Control: no-store');
+    Response::json(['ok'=>true,'data'=>['schools'=>[],'minimumSearchLength'=>3]]);
    }
-   header('Cache-Control: public, max-age=120');
-   Response::json(['ok'=>true,'data'=>['schools'=>$rows]]);
+   if($len<3||$len>80)Response::json(['ok'=>false,'error'=>['code'=>'INVALID_QUERY','message'=>'برای جستجو حداقل سه حرف وارد کنید.']],422);
+   $pdo=Connection::get();
+   $sql="SELECT s.name,s.region,a.name AS company_name FROM schools s
+    JOIN agencies a ON a.id=s.agency_id AND a.is_active=1
+    WHERE s.is_active=1 AND (
+     REPLACE(REPLACE(s.name,'ي','ی'),'ك','ک') LIKE :school
+     OR REPLACE(REPLACE(a.name,'ي','ی'),'ك','ک') LIKE :company
+    ) ORDER BY s.name,s.agency_id LIMIT 20";
+   $stmt=$pdo->prepare($sql);$search='%'.$term.'%';
+   $stmt->execute(['school'=>$search,'company'=>$search]);
+   $rows=[];
+   foreach($stmt->fetchAll(\PDO::FETCH_ASSOC) as $row)
+    $rows[]=['name'=>(string)$row['name'],'region'=>(string)($row['region']??''),'company'=>(string)$row['company_name']];
+   header('Cache-Control: no-store');
+   Response::json(['ok'=>true,'data'=>['schools'=>$rows,'minimumSearchLength'=>3]]);
   }catch(\Throwable $e){
    error_log('[ServiceYar][public-schools] '.$e->getMessage());
-   Response::json(['ok'=>false,'error'=>['code'=>'PUBLIC_SCHOOLS_UNAVAILABLE','message'=>'اطلاعات مدارس فعلاً در دسترس نیست.']],503);
+   Response::json(['ok'=>false,'error'=>['code'=>'PUBLIC_SCHOOLS_UNAVAILABLE','message'=>'جستجوی مدارس موقتاً در دسترس نیست.']],503);
   }
  }
-
-
  // Public reference valuation: exactly the same 1405-1406 grid and traffic coefficients as Madares.
  // No tenant/school required; do not confuse this with agency-specific contracted tariffs.
  if($method==='GET'&&$path==='/api/v1/public/service-quote'){
