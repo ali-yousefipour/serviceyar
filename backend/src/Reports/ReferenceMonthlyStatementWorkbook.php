@@ -271,7 +271,7 @@ final class ReferenceMonthlyStatementWorkbook
         $zip->addFromString('xl/worksheets/sheet'.$sheet.'.xml',$doc->saveXML());
     }
 
-    public static function downloadIfAvailable(array $d,string $agency,int $statementId): bool
+    public static function downloadIfAvailable(array $d,string $agency,int $statementId,bool $preview=false): bool
     {
         if(!self::available())return false;
         if(count($d['items']??[])>630 || count($d['reference_drivers']??$d['drivers']??[])>122){
@@ -432,13 +432,21 @@ final class ReferenceMonthlyStatementWorkbook
                     'E6'=>$t['municipality_vat_10pct'],'F6'=>$t['education_1pct'],
                     'G6'=>$t['company_7pct']
                 ]);
+                if($preview){
+                    // Visible, non-posting notice in the reference guide sheet.
+                    // Keep all 14 sheets, formulas, and original template intact.
+                    self::replaceCells($zip,1,[
+                        'A1'=>'پیش‌نمایش آزمایشی صورت‌وضعیت ـ ثبت‌نشده',
+                        'A2'=>'این فایل فقط برای بررسی محاسبات ماه انتخابی است و سند مالی نهایی محسوب نمی‌شود.'
+                    ]);
+                }
                 // Do not invent journal voucher account codes or contract IDs.
                 // The reference accounting sheet remains unposted until mapped.
                 $zip->close();
             }catch(\Throwable $e){$zip->close();throw $e;}
             header('X-ServiceYar-Statement-Template: reference-14-sheet');
             header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            header('Content-Disposition: attachment; filename="school-statement-reference-'.$d['year'].'-'.str_pad((string)$d['month'],2,'0',STR_PAD_LEFT).'-'.$statementId.'.xlsx"');
+            header('Content-Disposition: attachment; filename="'.($preview?'preview-':'').'school-statement-reference-'.$d['year'].'-'.str_pad((string)$d['month'],2,'0',STR_PAD_LEFT).($preview?'':'-'.$statementId).'.xlsx"');
             header('Cache-Control: private, no-store');
             header('X-Content-Type-Options: nosniff');
             readfile($temp);
