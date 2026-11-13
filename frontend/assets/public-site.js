@@ -149,9 +149,17 @@
  }
  function publicPin(type,photo){
   const color=type==='agency'?'green':'yellow';
-  const content=photo?'<img alt="" src="'+photo.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'" onerror="this.remove();this.parentElement.classList.add(\'sy-public-pin-fallback\')">':'';
+  const content=photo?'<img alt="" src="'+photo.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'">':'';
   return L.divIcon({className:'sy-public-pin sy-public-pin-'+color,html:'<span class="sy-public-pin-face '+(!photo?'sy-public-pin-fallback':'')+'">'+content+'<span class="sy-public-pin-symbol">⌖</span></span>',
    iconSize:[54,58],iconAnchor:[27,56],popupAnchor:[0,-50]});
+ }
+ function attachPinFallback(marker){
+  const icon=marker.getElement();
+  const img=icon?.querySelector('img');
+  if(!img)return;
+  const fallback=()=>{img.remove();icon.querySelector('.sy-public-pin-face')?.classList.add('sy-public-pin-fallback');};
+  if(img.complete&&img.naturalWidth===0)fallback();
+  else img.addEventListener('error',fallback,{once:true});
  }
  function focusPoints(points){
   if(!schoolMap||!points.length)return;
@@ -166,7 +174,7 @@
    if(!validPoint(company))return;
    const position=[Number(company.latitude),Number(company.longitude)];
    const marker=L.marker(position,{icon:publicPin('agency',company.logoUrl),title:company.name});
-   marker.on('click',()=>showCompany(company));marker.addTo(publicCompanyMarkers);points.push(position);
+   marker.on('click',()=>showCompany(company));marker.addTo(publicCompanyMarkers);attachPinFallback(marker);points.push(position);
   });
   if(points.length)focusPoints(points);
   publicMapStatus(points.length?faNumber(points.length)+' شرکت دارای موقعیت ثبت‌شده روی نقشه':'هنوز موقعیتی برای شرکت‌ها ثبت نشده است.');
@@ -182,7 +190,7 @@
   const points=[];
   if(validPoint(school)&&schoolMap){
    const p=[Number(school.latitude),Number(school.longitude)];
-   L.marker(p,{icon:publicPin('school',school.photoUrl),title:school.name}).on('click',()=>showSchool(school)).addTo(schoolMarkers);
+   const schoolMarker=L.marker(p,{icon:publicPin('school',school.photoUrl),title:school.name}).on('click',()=>showSchool(school)).addTo(schoolMarkers);attachPinFallback(schoolMarker);
    points.push(p);
   }
   let company=publicCompanies.find(c=>Number(c.id)===Number(school.companyId));
@@ -196,7 +204,7 @@
   if(selectedSchool!==school)return;
   if(company&&validPoint(company)){
    const p=[Number(company.latitude),Number(company.longitude)];
-   L.marker(p,{icon:publicPin('agency',company.logoUrl),title:company.name}).on('click',()=>showCompany(company)).addTo(schoolMarkers);
+   const companyMarker=L.marker(p,{icon:publicPin('agency',company.logoUrl),title:company.name}).on('click',()=>showCompany(company)).addTo(schoolMarkers);attachPinFallback(companyMarker);
    points.push(p);
   }
   focusPoints(points);
