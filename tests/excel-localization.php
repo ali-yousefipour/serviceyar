@@ -20,9 +20,7 @@ foreach($cases as [$input,$expected]){
     if($out!==$expected)throw new RuntimeException('Excel localization failed: '.var_export([$input,$expected,$out],true));
 }
 if(XL::header('تاریخ صدور میلادی')!=='تاریخ صدور شمسی')throw new RuntimeException('Jalali header failed');
-if(XL::value('=SUM(A1:A10)')!=='=SUM(A۱:A۱۰)') {
-    // Spreadsheet formulas must never be passed to the display converter;
-    // this test explicitly prevents any caller from using it for formulas.
-    throw new RuntimeException('Unexpected formula transformation');
-}
+if(XL::value('=SUM(A1:A10)')!=='=SUM(A1:A10)')throw new RuntimeException('Formula must remain ASCII');
+$example=XL::row(['id'=>12,'is_active'=>1,'amount'=>1250000,'iban'=>'IR830170000000115338903004']);
+if($example['id']!=='۱۲'||$example['is_active']!=='فعال'||$example['amount']!==1250000||$example['iban']!=='IR830170000000115338903004')throw new RuntimeException('Column-specific formatting failed');
 echo "Persian Excel localization OK\n";
