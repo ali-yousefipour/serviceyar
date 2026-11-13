@@ -14,7 +14,10 @@ import posixpath
 
 ROOT = "/public_html"
 PAYLOAD = Path("deploy-payload")
-STAGING = ROOT + "/.serviceyar-staging"
+# Use an isolated FTP staging directory per Actions run. Concurrent or
+# cancelled releases must never delete/move one another's staged files.
+RUN_ID = "".join(c for c in os.environ.get("GITHUB_RUN_ID", "local") if c.isascii() and c.isalnum())
+STAGING = ROOT + "/.serviceyar-staging-" + (RUN_ID or "local")
 MANIFEST = ROOT + "/.serviceyar-manifest.json"
 SCHEMA = 1
 
