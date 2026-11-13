@@ -97,6 +97,13 @@ final class ExcelLocalization
     {
         foreach($row as $field=>$value){
             $name=(string)$field;
+            // PDO may return monetary DECIMAL columns as strings. Preserve
+            // numeric Excel cells for SUM and other spreadsheet calculations.
+            if(is_string($value)&&is_numeric($value)
+                && preg_match('/(^|_)(amount|fee|salary|balance|debit|credit|receipt|payment|paid|earned|deduction|invoiced|received|total|monthly|estimated|work|insurance|supervision|coordination|overhead)(_|$)/i',$name)){
+                $row[$field]=str_contains($value,'.')?(float)$value:(int)$value;
+                continue;
+            }
             if(is_int($value)&&preg_match('/(^id$|_id$|^n$|^row_no$|_count$|^capacity$|^rating$)/',$name)){
                 $row[$field]=self::digits((string)$value);
                 continue;
