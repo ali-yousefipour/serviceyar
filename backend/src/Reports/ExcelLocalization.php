@@ -28,6 +28,12 @@ final class ExcelLocalization
         'male'=>'مرد','female'=>'زن','primary'=>'ابتدایی','secondary'=>'متوسطه',
         'morning'=>'صبح','afternoon'=>'بعدازظهر','evening'=>'عصر','both'=>'هردو',
         'yes'=>'بله','no'=>'خیر','true'=>'بله','false'=>'خیر',
+        'suspended'=>'تعلیق‌شده','blocked'=>'مسدود','expired'=>'منقضی‌شده',
+        'processing'=>'در حال پردازش','in_progress'=>'در حال انجام',
+        'new'=>'جدید','no_request'=>'بدون درخواست','prepayment'=>'در انتظار پیش‌پرداخت',
+        'waiting_payment'=>'در انتظار پرداخت','waiting_approval'=>'در انتظار تأیید',
+        'settled'=>'تسویه‌شده','unsettled'=>'تسویه‌نشده','refunded'=>'بازپرداخت‌شده',
+        'bounced'=>'برگشت‌خورده','returned'=>'برگشت‌خورده',
     ];
 
     public static function digits(string $text): string
@@ -68,10 +74,13 @@ final class ExcelLocalization
     public static function value(mixed $value, string $field = '', bool $preserveNumeric=true): mixed
     {
         if($value===null)return '';
+        if($field==='is_active' || $field==='active')return ((string)$value==='1'||$value===true)?'فعال':'غیرفعال';
         if(is_bool($value))return $value?'بله':'خیر';
         if((is_int($value)||is_float($value))&&$preserveNumeric)return $value;
         $text=trim((string)$value);
         if($text==='')return '';
+        // Keep worksheet formula syntax and references in ASCII.
+        if($text[0]==='=')return $text;
         // An internationally interoperable account number must retain ASCII.
         if(preg_match('/^IR[0-9]{24}$/i',$text))return strtoupper($text);
         $key=strtolower($text);
@@ -83,7 +92,19 @@ final class ExcelLocalization
 
     public static function row(array $row): array
     {
-        foreach($row as $field=>$value)$row[$field]=self::value($value,(string)$field);
+        foreach($row as $field=>$value){
+            $name=(string)$field;
+            if(is_int($value)&&preg_match('/(^id$|_id$|^n$|^row_no$|_count$|^capacity$|^rating$)/',$name)){
+                $row[$field]=self::digits((string)$value);
+                continue;
+            }
+            // Bank identifiers must remain interoperable ASCII strings.
+            if(in_array($name,['iban','bank_account','reference_no','tracking_no','national_code','mobile','phone'],true)){
+                $row[$field]=(string)($value??'');
+                continue;
+            }
+            $row[$field]=self::value($value,$name);
+        }
         return $row;
     }
 }
