@@ -111,8 +111,8 @@
 
  let schoolMap=null,publicCompanyMarkers=null,schoolMarkers=null,publicSchoolList=[],publicCompanies=[],selectedSchool=null,schoolSearchTimer=null,schoolSearchSequence=0;
  const faNumber=value=>new Intl.NumberFormat('fa-IR').format(value);
- const DEFAULT_SCHOOL_IMAGE='/assets/school-map-icon.webp';
- const DEFAULT_COMPANY_IMAGE='/assets/company-map-icon.webp';
+ const DEFAULT_SCHOOL_IMAGE='/assets/school-map-icon.svg';
+ const DEFAULT_COMPANY_IMAGE='/assets/company-map-icon.svg';
  const validPoint=row=>row&&Number.isFinite(Number(row.latitude))&&Number.isFinite(Number(row.longitude))&&row.latitude!==null&&row.longitude!==null;
  function publicMapStatus(message){
   const el=document.getElementById('syPublicMapStatus');if(el)el.textContent=message;
