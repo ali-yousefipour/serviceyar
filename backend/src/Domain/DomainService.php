@@ -301,8 +301,13 @@ final class DomainService {
      WHEN 'agency' THEN (SELECT ag.name FROM agencies ag WHERE ag.id=le.party_id AND ag.id=le.agency_id)
     END AS party_name,
     NULLIF(TRIM(CONCAT_WS(' ',u.first_name,u.last_name)),'') AS creator_name,
-    u.username AS creator_username
+    u.username AS creator_username,
+    CONCAT_WS(' · ',ca.code,ca.title) AS company_account_name,
+    ca.bank_name AS company_bank_name,
+    ca.bank_account AS company_bank_account,
+    ca.iban AS company_iban
     FROM ledger_entries le LEFT JOIN users u ON u.id=le.created_by
+    LEFT JOIN accounting_accounts ca ON ca.id=le.company_account_id AND ca.agency_id=le.agency_id
     WHERE le.id=:id AND le.agency_id=:a");
    $p->execute(['id'=>$id,'a'=>$aid]);
    $row=array_merge($row,$p->fetch()?:[]);
