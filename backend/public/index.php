@@ -133,7 +133,10 @@ try {
   $bytes=@file_get_contents($source,false,null,0,5*1024*1024+1);
   $original=$bytes!==false&&strlen($bytes)<=5*1024*1024?@imagecreatefromstring($bytes):false;
   if(!$original)Response::json(['ok'=>false,'error'=>['code'=>'PHOTO_NOT_FOUND','message'=>'تصویر معتبر نیست.']],404);
-  $w=imagesx($original);$h=imagesy($original);$tw=$w>=$h?480:360;$th=$w>=$h?360:480;
+  $w=imagesx($original);$h=imagesy($original);
+  // Keep the natural portrait / landscape aspect ratio (including panoramic photos).
+  $scale=min(1,480/max(1,$w,$h));
+  $tw=max(1,(int)round($w*$scale));$th=max(1,(int)round($h*$scale));
   $canvas=imagecreatetruecolor($tw,$th);
   imagecopyresampled($canvas,$original,0,0,0,0,$tw,$th,$w,$h);
   // Subtle semi-transparent watermark overlays the photo rather than adding a footer.
