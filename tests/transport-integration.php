@@ -410,6 +410,13 @@ try{
  $vehicleRecord=D::save($uid,$a,'vehicles',['plate'=>'12ب34567','model'=>'خودروی آزمایشی','capacity'=>4,'ownerName'=>'مالک خودروی تست']);
  $vehicleDriver=D::save($uid,$a,'drivers',['firstName'=>'یاسین','lastName'=>'خودرو','status'=>'active','vehicleId'=>$vehicleRecord['id']]);
  check($vehicleRecord['owner_name']==='مالک خودروی تست','Vehicle owner name persists independently from the driver');
+ $unnamedVehicle=D::save($uid,$a,'vehicles',['plate'=>'77ی12345','capacity'=>4]);
+ $fallbackDriver=D::save($uid,$a,'drivers',['firstName'=>'راننده','lastName'=>'مالک پیش‌فرض','status'=>'active','vehicleId'=>$unnamedVehicle['id']]);
+ $fallbackRow=D::get($uid,$a,'vehicles',(int)$unnamedVehicle['id']);
+ check($fallbackRow['effective_owner_name']==='راننده مالک پیش‌فرض','Vehicle without explicit owner falls back to its assigned driver');
+ $fallbackList=D::list($uid,$a,'vehicles',['search'=>'77ی12345']);
+ check(($fallbackList['items'][0]['effective_owner_name']??'')==='راننده مالک پیش‌فرض','Vehicle list uses driver as fallback owner');
+
  $ownerMatches=D::list($uid,$a,'vehicles',['search'=>'مالک خودروی تست']);
  check(in_array((int)$vehicleRecord['id'],array_map('intval',array_column($ownerMatches['items'],'id')),true),'Vehicles are searchable by owner name');
  $driverMatches=D::list($uid,$a,'vehicles',['driverSearch'=>'یاسین خودرو']);
