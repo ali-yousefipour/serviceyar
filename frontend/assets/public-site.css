@@ -210,3 +210,14 @@
 @media(max-width:1050px){.sy-explorer-panel .sy-quote-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.sy-explorer-panel .sy-quote-submit{width:100%}}
 @media(max-width:800px){.sy-explorer-panel .sy-schools-layout{grid-template-columns:1fr}.sy-explorer-panel .sy-school-results{max-height:280px}.sy-explorer-panel .sy-school-map{min-height:340px}}
 @media(max-width:540px){.sy-explorer-heading{align-items:start}.sy-explorer-year{white-space:normal}.sy-explorer-panel .sy-quote-fields{grid-template-columns:1fr}.sy-explorer-panel .sy-quote-submit{width:100%}.sy-explorer-panel-heading{gap:10px}}
+
+/* Public catalog value proposition and map usability */
+.sy-catalog-advantage{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:24px;padding:30px 34px!important;border:1px solid #bfe3d3;border-radius:26px;background:linear-gradient(115deg,#effaf4,#fff 65%);box-shadow:0 18px 55px #064d2b12}
+.sy-catalog-advantage-icon{width:76px;height:76px;display:grid;place-items:center;border-radius:22px;background:#d9f3e7;color:#08704c;font-size:44px}
+.sy-catalog-advantage h2{margin:5px 0 6px;font-size:clamp(1.3rem,2.5vw,2rem);line-height:1.5;color:#083f30}
+.sy-catalog-advantage p{margin:0;color:#526e61;font-size:.95rem;line-height:2}
+.sy-catalog-advantage .sy-btn{white-space:normal;text-align:center;max-width:245px}
+.sy-map-frame{min-width:0;position:relative}.sy-map-privacy-note{line-height:1.9}.sy-map-privacy-note a{color:#076e4b;text-decoration:underline;font-weight:800}
+.sy-school-map .leaflet-tile-pane{filter:saturate(.85)}
+@media(max-width:900px){.sy-catalog-advantage{grid-template-columns:auto minmax(0,1fr)}.sy-catalog-advantage .sy-btn{grid-column:1/-1;max-width:none;justify-self:stretch}}
+@media(max-width:580px){.sy-catalog-advantage{grid-template-columns:1fr;gap:12px;padding:22px!important}.sy-catalog-advantage-icon{width:58px;height:58px;font-size:34px}.sy-catalog-advantage .sy-btn{grid-column:auto}}
