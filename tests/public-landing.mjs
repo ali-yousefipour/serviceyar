@@ -29,4 +29,7 @@ for(const marker of ['syScrollProgress','syBackToTop','data-reveal','data-reveal
 for(const feature of ['IntersectionObserver','requestAnimationFrame','prefers-reduced-motion','scrollIntoView','aria-expanded','sy-page-enter','sy-in-view','toLocaleString'])assert.ok(js.includes(feature),'Missing accessible animation: '+feature);
 for(const cssHook of ['sy-page-in','sy-dashboard-sheen','sy-bars-rise','sy-scroll-progress','sy-backtop','prefers-reduced-motion:reduce','sy-scroll-cue'])assert.ok(css.includes(cssHook),'Missing motion system: '+cssHook);
 assert.ok(!js.includes('setInterval('),'Do not use polling or unbounded timers for scroll animation');
+assert.ok(api.includes('school_catalog')&&api.includes('COUNT(DISTINCT'),'The school count must include a de-duplicated central catalog');
+assert.ok(js.includes('basemaps.cartocdn.com')&&js.includes('tileerror')&&js.includes('invalidateSize(true)'),'Public map requires visible basemap and resize/failover handling');
+assert.ok(html.includes('syCatalogAdvantageTitle')&&html.includes('فهرست بسیاری از مدارس'),'Catalog advantage must be visible');
 console.log('Public landing pages, accessibility structure, real statistics and login integration OK');
