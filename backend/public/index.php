@@ -157,6 +157,10 @@ try {
  if($method==='GET'&&$path==='/api/v1/operations/driver-deduction-rates'){Authorization::requirePermission($s['id'],'services.view');Authorization::requireAgencyAccess($s['id'],$aid);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\DriverDeductionPolicy::rates($aid)]);}
  if($method==='GET'&&$path==='/api/v1/finance/banks'){Authorization::requirePermission($s['id'],'finance.view');Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\IranBankDetails::banks()]);}
  if($method==='GET'&&$path==='/api/v1/finance/payment-methods')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\AgencyPaymentMethods::get($s['id'],$aid)]);
+ if($path==='/api/v1/admin/platform-settings'){
+   if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Settings\PlatformSettings::overview($s['id'])]);
+   if($method==='PUT'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Settings\PlatformSettings::save($s['id'],Request::json())]);}
+ }
  if($method==='GET'&&$path==='/api/v1/settings')Response::json(['ok'=>true,'data'=>SettingsService::get($s['id'],$aid)]);
  if(($method==='PUT'||$method==='PATCH')&&$path==='/api/v1/settings'){ $auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>SettingsService::put($s['id'],$aid,Request::json())]); }
  if($method==='GET'&&$path==='/api/v1/holidays')Response::json(['ok'=>true,'data'=>HolidayService::list($s['id'],$aid)]);
