@@ -7,6 +7,17 @@ const html=read('frontend/assets/public-site-content.html');
 const css=read('frontend/assets/public-site.css');
 const js=read('frontend/assets/public-site.js');
 const app=read('frontend/assets/app.js');
+
+const navJs=read('frontend/assets/operations.js');
+const navCss=read('frontend/assets/operations.css');
+assert.ok(index.includes('sy-command-sidebar')&&index.includes('sy-sidebar-brand-copy')&&index.includes('sy-sidebar-bottom'),'Sidebar must have separate brand, navigation and account regions');
+assert.ok(index.includes('aria-label="ناوبری اصلی سامانه"'),'Sidebar navigation needs semantic labeling');
+assert.ok(navCss.includes('ServiceYar Command Navigation v3')&&navCss.includes('.sy-command-sidebar #nav .nav-group>summary'),'Premium navigation must use full-width inline accordion groups');
+assert.ok(navCss.includes('max-width:920px')&&navCss.includes('.sy-command-sidebar.nav-open'),'Sidebar must be a functional mobile drawer');
+assert.ok(navJs.includes("d.classList.toggle('current-group',active);if(active)d.open=true"),'Active navigation group must reopen after routing');
+assert.ok(navJs.includes("popup.style.removeProperty('top')"),'Accordion must not retain old floating popup positioning');
+assert.ok(navJs.includes('getPaletteItems=')&&navJs.includes('navSearchButton.onclick=openPalette'),'Permission-scoped menu search must remain functional');
+
 const api=read('backend/public/index.php');
 for(const link of ['home','features','about','contact','faq','login'])assert.ok(html.includes('href="#'+link+'"'),'Missing navigation '+link);
 for(const page of ['home','features','about','contact','faq'])assert.ok(html.includes('data-public-page="'+page+'"'),'Missing page '+page);
