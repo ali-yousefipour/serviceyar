@@ -6,7 +6,7 @@ use ServiceYar\Reports\ReferenceMonthlyStatementWorkbook as Template;
 use ServiceYar\Domain\SchoolServiceStatement;
 
 $action=$argv[1]??'';
-if($action==='render'){
+if($action==='render'||$action==='render-preview'){
     $_ENV['SCHOOL_STATEMENT_REFERENCE_TEMPLATE_ENABLED']='1';
     $ref=SchoolServiceStatement::fromSchoolTariff('2',4,'ناحیه 6',30);
     $items=[];
@@ -33,7 +33,7 @@ if($action==='render'){
     $d=['year'=>1405,'month'=>8,'month_name'=>'آبان','items'=>$items,
         'totals'=>['students'=>2,'drivers'=>1,'schools'=>1],
         'reference_totals'=>$totals,'reference_drivers'=>$drivers];
-    Template::downloadIfAvailable($d,'شرکت آزمایشی',9876);
+    Template::downloadIfAvailable($d,'شرکت آزمایشی',9876,$action==='render-preview');
     throw new RuntimeException('Reference template was not activated');
 }
 if($action!=='verify'||empty($argv[2]))throw new InvalidArgumentException('Usage: render | verify file.xlsx');
