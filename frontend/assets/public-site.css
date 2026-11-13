@@ -1,3 +1,4 @@
+#app[hidden]{display:none!important}
 /* ServiceYar public website. Scoped to avoid regressions in the authenticated app. */
 #publicSite[hidden],#login[hidden],.sy-site-page[hidden],.sy-mobile-menu[hidden]{display:none!important}
 .sy-public{--sy-forest:#07563d;--sy-deep:#073a32;--sy-mint:#d8f4e8;--sy-ink:#183b34;--sy-mute:#627a73;background:#f8fbfa;color:var(--sy-ink);font-family:Vazirmatn,Tahoma,sans-serif;line-height:1.9;min-height:100vh}
