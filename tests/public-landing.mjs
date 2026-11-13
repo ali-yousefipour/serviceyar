@@ -34,6 +34,10 @@ assert.ok(read('backend/src/Domain/PublicExplorer.php').includes('school_catalog
 assert.ok(js.includes('/api/v1/public/map-config')&&js.includes('static.neshan.org/sdk')&&js.includes('invalidateSize(true)'),'Public map must use configured Neshan web key');
 assert.ok(html.includes('syCatalogAdvantageTitle')&&html.includes('فهرست بسیاری از مدارس'),'Catalog advantage must be visible');
 const operations=read('frontend/assets/operations.js');
+assert.ok(operations.includes("function iranPlateInput(kind='filter')"),'Vehicle search/edit must share a single plate component');
+assert.ok(operations.includes('${iranPlateInput("filter")}')&&operations.includes("iranPlateInput('edit')"),'Both vehicle contexts must use the shared plate component');
+assert.ok(read('frontend/assets/operations.css').includes('.iran-plate.iran-plate-input'),'Editable plate should reuse the list plate visual system');
+
 assert.ok(operations.includes('function dashboardCompanyPin(')&&operations.includes('function dashboardSchoolPin('),'Dashboard marker functions must be defined before use');
 assert.ok(operations.includes('icon:dashboardCompanyPin(config.hasCustomLogo)')&&operations.includes('icon:dashboardSchoolPin(sc)'),'Dashboard markers must use dedicated image icons');
 assert.ok(css.includes('Prevent blank sections in full-page screenshots'),'Public page content must never be hidden by reveal animation');
