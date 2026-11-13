@@ -111,7 +111,7 @@
  const faNumber=value=>new Intl.NumberFormat('fa-IR').format(value);
  function selectPublicSchool(school){
   selectedSchool=school;
-  if(schoolMap)schoolMap.setView([school.latitude,school.longitude],15);
+  if(schoolMap&&Number.isFinite(school.latitude)&&Number.isFinite(school.longitude))schoolMap.setView([school.latitude,school.longitude],15);
   root.querySelectorAll('[data-school-id]').forEach(el=>el.classList.toggle('sy-selected-school',String(school.id)===el.dataset.schoolId));
  }
  function drawPublicSchools(rows){
