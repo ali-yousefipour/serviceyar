@@ -569,3 +569,13 @@
 @media(prefers-reduced-motion:reduce){
  .sy-public-v3 *, .sy-public-v3 *:before,.sy-public-v3 *:after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}
 }
+
+
+/* Small secondary discovery action beneath the two primary hero decisions. */
+.sy-public-v3 .sy-v3-hero-more{
+ display:inline-flex;align-items:center;gap:8px;margin-top:16px;
+ color:#c1efd6;font-size:11px;font-weight:800;
+ text-decoration:underline;text-underline-offset:5px;transition:color .2s;
+}
+.sy-public-v3 .sy-v3-hero-more:hover{color:#fff}
+.sy-public-v3 .sy-v3-hero-more:focus-visible{outline:2px solid #a0f8ce;outline-offset:4px;border-radius:5px}
