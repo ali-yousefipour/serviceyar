@@ -79,6 +79,12 @@ final class AgencyService {
   $id=(int)Connection::get()->lastInsertId(); Connection::get()->prepare('INSERT IGNORE INTO agency_users(agency_id,user_id) VALUES(:a,:u)')->execute(['a'=>$id,'u'=>$userId]);
   return self::update($userId,$id,$b);
  }
+ public static function activate(int $userId,int $id): void {
+  Authorization::requirePermission($userId,'agencies.manage');
+  if(!Authorization::isSuperAdmin($userId))throw new \ServiceYar\Auth\AuthException(403,'فقط مدیر کل می‌تواند شرکت را فعال کند.','SUPER_ADMIN_REQUIRED');
+  $pdo=Connection::get();$stmt=$pdo->prepare('UPDATE agencies SET is_active=1 WHERE id=? AND is_active=0');$stmt->execute([$id]);
+  if($stmt->rowCount()===0){$check=$pdo->prepare('SELECT id FROM agencies WHERE id=?');$check->execute([$id]);if(!$check->fetchColumn())throw new \ServiceYar\Auth\AuthException(404,'شرکت پیدا نشد.','NOT_FOUND');}
+ }
  public static function deactivate(int $userId,int $id): void {
   Authorization::requirePermission($userId,'agencies.manage');
   if (!Authorization::isSuperAdmin($userId)) throw new \ServiceYar\Auth\AuthException(403,'فقط مدیر کل می‌تواند شرکت را غیرفعال کند.','SUPER_ADMIN_REQUIRED');
