@@ -2045,3 +2045,15 @@ body.sy-menu-palette-open{overflow:hidden}
  #content .sy-method-settings-actions button{flex:1 1 140px}
 }
 @media print{#content .sy-payment-method-settings{display:none!important}}
+
+/* Grouped accounting and banking account editor */
+#modal .sy-company-account-editor{display:grid;gap:16px}
+#modal .sy-account-fieldset{min-width:0;padding:18px;border:1px solid #dbe9df;border-radius:14px;background:#fbfdfb}
+#modal .sy-account-fieldset legend{padding:0 9px;color:#1d5a3a;font-weight:850;font-size:15px}
+#modal .sy-account-fieldset>p{font-size:12px;color:#627a68;line-height:1.9;margin:0 0 14px}
+#modal .sy-account-fieldset .sy-account-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#modal .sy-account-banking{background:#f4faf6;border-color:#c8e0d0}
+#modal .sy-account-banking :is([name=iban],[name=bankAccount]){font-family:Vazir,ui-monospace,monospace;direction:ltr;text-align:left;letter-spacing:.3px}
+#modal .sy-account-fieldset :is(select,input):focus-visible{outline:3px solid #83c49b;outline-offset:2px}
+#modal .sy-company-account-editor #saveRecord{justify-self:start;min-width:160px;min-height:44px}
+@media(max-width:650px){#modal .sy-account-fieldset{padding:12px}#modal .sy-account-fieldset .sy-account-fields{grid-template-columns:minmax(0,1fr)}#modal .sy-company-account-editor #saveRecord{width:100%}}
