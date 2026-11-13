@@ -321,7 +321,7 @@ body{background:var(--canvas);color:var(--ink)}
 /* Public map: override conflicting legacy 54/64px fixed pins (including placeholders). */
 .sy-public-v3 #syPublicSchools .leaflet-marker-icon.sy-public-pin{
  width:38px!important;height:42px!important;max-width:38px!important;max-height:42px!important;
- margin:0!important;background:transparent!important;border:0!important;overflow:visible!important;
+ background:transparent!important;border:0!important;overflow:visible!important;
 }
 .sy-public-v3 #syPublicSchools .sy-public-pin .sy-public-pin-face,
 .sy-public-v3 #syPublicSchools .sy-public-pin .sy-public-pin-face.sy-public-pin-no-frame{
