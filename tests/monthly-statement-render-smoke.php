@@ -80,6 +80,59 @@ try{
         if(!str_contains((string)$zip->getFromName('xl/tables/table3.xml'),'A2:L242'))
             throw new RuntimeException('Driver table range did not expand');
     }
+    if($isLarge){
+        $book=new DOMDocument();
+        $book->loadXML((string)$zip->getFromName('xl/workbook.xml'),LIBXML_NONET);
+        $printAreas=[];
+        foreach($book->getElementsByTagName('definedName') as $defined){
+            if($defined->getAttribute('name')==='_xlnm.Print_Area')
+                $printAreas[(int)$defined->getAttribute('localSheetId')]=$defined->textContent;
+        }
+        foreach([3=>752,4=>242,5=>753,6=>257] as $sheetIndex=>$endRow){
+            $range=$printAreas[$sheetIndex]??'';
+            if(!str_contains($range,'
+    // formula base was replaced or removed.
+    foreach([7,12] as $sheetId){
+        $sheetXml=(string)$zip->getFromName('xl/worksheets/sheet'.$sheetId.'.xml');
+        if(preg_match('/<f[^>]*t="shared"/',$sheetXml))
+            throw new RuntimeException('Dangling shared formula in sheet'.$sheetId);
+    }
+    $period='آبان ۱۴۰۵';
+    foreach([4,5,6,7,12,13,14] as $sheetId){
+        $sheetXml=(string)$zip->getFromName('xl/worksheets/sheet'.$sheetId.'.xml');
+        if(!str_contains($sheetXml,$period))
+            throw new RuntimeException('Wrong month/year heading in sheet'.$sheetId);
+    }
+    // Structured table names must match the visible header text exactly.
+    foreach([2=>[4,2],3=>[5,2],4=>[6,2],5=>[12,4]] as $tableNo=>$spec){
+        [$sheetNo,$headerRow]=$spec;
+        $table=new DOMDocument();$table->loadXML((string)$zip->getFromName('xl/tables/table'.$tableNo.'.xml'),LIBXML_NONET);
+        $sheetDoc=new DOMDocument();$sheetDoc->loadXML((string)$zip->getFromName('xl/worksheets/sheet'.$sheetNo.'.xml'),LIBXML_NONET);
+        $labels=[];
+        foreach($sheetDoc->getElementsByTagName('row') as $row){
+            if((int)$row->getAttribute('r')!==$headerRow)continue;
+            foreach($row->getElementsByTagName('c') as $cell){
+                $column=preg_replace('/[0-9]/','',$cell->getAttribute('r'));
+                $labels[$column]=$cell->textContent;
+            }
+            break;
+        }
+        $columns=$table->getElementsByTagName('tableColumn');
+        foreach($columns as $i=>$column){
+            $n=$i+1;$letter='';
+            while($n>0){$n--;$letter=chr(65+$n%26).$letter;$n=intdiv($n,26);}
+            if(($labels[$letter]??null)!==$column->getAttribute('name'))
+                throw new RuntimeException('Table header mismatch in table'.$tableNo.' col '.$letter);
+        }
+    }
+    if($zip->locateName('xl/vbaProject.bin')!==false)
+        throw new RuntimeException('Rendered workbook contains macros');
+}finally{$zip->close();}
+echo "Rendered reference workbook structure and formulas verified\n";
+.$endRow))
+                throw new RuntimeException('Original print area is truncated for sheet index '.$sheetIndex.': '.$range);
+        }
+    }
     // Repair-regression: Excel rejects shared followers when their original
     // formula base was replaced or removed.
     foreach([7,12] as $sheetId){
