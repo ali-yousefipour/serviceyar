@@ -62,7 +62,9 @@ assert.ok(navJs.includes("iconSize:[78,59],iconAnchor:[39,40]")&&navJs.includes(
 assert.ok(brandCss.includes('.sy-public-v3 #syPublicSchools .leaflet-marker-icon.sy-public-pin')&&brandCss.includes('.leaflet-popup .sy-map-popup'),'Public pins and dashboard popup need compact themed CSS');
 assert.ok(js.includes('/api/v1/public/map-config')&&js.includes('static.neshan.org/sdk')&&js.includes('invalidateSize(true)'),'Public map must use configured Neshan web key');
 assert.ok(html.includes('syCatalogAdvantageTitle')&&html.includes('فهرست بسیاری از مدارس'),'Catalog advantage must be visible');
-assert.ok(html.includes('sy-v3-dashboard-art')&&html.includes('sy-v3-map-intro'),'Landing should show the redesigned dashboard showcase and map introduction');
+assert.ok(html.includes('dashboard-real-capture.webp')&&html.includes('sy-v3-real-preview')&&html.includes('sy-v3-map-intro'),'Landing must show the authentic dashboard capture and map introduction');
+assert.ok(!html.includes('sy-v3-dashboard-art')&&!html.includes('sy-v3-art-kpis')&&!html.includes('sy-v3-float sy-v3-float-school'),'Fake dashboard showcase artwork must be removed');
+assert.ok(brandCss.includes('.sy-v3-real-dashboard-image')&&brandCss.includes('.sy-v3-real-preview-heading'),'Screenshot must have responsive hero framing');
 assert.ok(html.includes('sy-v3-feature-school')&&html.includes('sy-v3-feature-route')&&html.includes('sy-v3-feature-money'),'All three feature cards need purpose-specific icon containers');
 assert.ok((html.match(/sy-v3-feature-icon[^"]*"><svg /g)||[]).length===3,'Key feature cards must use three matching inline SVG icons instead of image and text glyphs');
 assert.ok(brandCss.includes('.sy-v3-feature-icon svg')&&brandCss.includes('.sy-v3-feature-money'),'Key feature icon dimensions and brand accents must be normalized');
