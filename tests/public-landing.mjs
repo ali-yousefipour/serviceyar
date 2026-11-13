@@ -63,6 +63,9 @@ assert.ok(brandCss.includes('.sy-public-v3 #syPublicSchools .leaflet-marker-icon
 assert.ok(js.includes('/api/v1/public/map-config')&&js.includes('static.neshan.org/sdk')&&js.includes('invalidateSize(true)'),'Public map must use configured Neshan web key');
 assert.ok(html.includes('syCatalogAdvantageTitle')&&html.includes('فهرست بسیاری از مدارس'),'Catalog advantage must be visible');
 assert.ok(html.includes('sy-v3-dashboard-art')&&html.includes('sy-v3-map-intro'),'Landing should show the redesigned dashboard showcase and map introduction');
+assert.ok(html.includes('sy-v3-feature-school')&&html.includes('sy-v3-feature-route')&&html.includes('sy-v3-feature-money'),'All three feature cards need purpose-specific icon containers');
+assert.ok((html.match(/sy-v3-feature-icon[^"]*"><svg /g)||[]).length===3,'Key feature cards must use three matching inline SVG icons instead of image and text glyphs');
+assert.ok(brandCss.includes('.sy-v3-feature-icon svg')&&brandCss.includes('.sy-v3-feature-money'),'Key feature icon dimensions and brand accents must be normalized');
 const operations=read('frontend/assets/operations.js');
 assert.ok(operations.includes("function iranPlateInput(kind='filter')"),'Vehicle search/edit must share a single plate component');
 assert.ok(operations.includes('${iranPlateInput("filter")}')&&operations.includes("iranPlateInput('edit')"),'Both vehicle contexts must use the shared plate component');
