@@ -1180,7 +1180,7 @@ async function serviceMembers(id,back){
   const monthlyTotal=rows.reduce((total,row)=>total+Number(row.monthly_fee||0),0);
   const annualMonths=row=>serviceAcademicMonths(row);
   const annualTotal=rows.reduce((total,row)=>total+Math.round(Number(row.monthly_fee||0)*annualMonths(row)),0);
-  dialog('دانش‌آموزان سرویس '+service.title,`<p>ظرفیت ${number(service.capacity)} · تخصیص ${number(rows.length)} · جای خالی ${number(free)}</p>
+  dialog('دانش‌آموزان سرویس '+service.title,`<div class="sy-service-member-header"><div><strong>ظرفیت ${number(service.capacity)} نفر</strong><span>تخصیص ${number(rows.length)} نفر · جای خالی ${number(free)} نفر</span></div>${canAssign&&free>0?'<button type="button" class="primary sy-service-add-student" id="syServiceAddStudent">+ افزودن دانش‌آموز</button>':''}</div><p>ظرفیت ${number(service.capacity)} · تخصیص ${number(rows.length)} · جای خالی ${number(free)}</p>
    <p>جمع شهریه ماهانه دانش‌آموزان: ${number(monthlyTotal)} ریال · جمع سالانه: ${number(annualTotal)} ریال</p><p class="sy-service-net-summary">کسورات راننده ${percent(memberNet.rate)}٪: ${number(memberNet.deducted)} ریال · خالص پرداخت ماهانه راننده: ${number(memberNet.net)} ریال</p>
    ${back?'<button type="button" id="backToDriverServices">بازگشت به سرویس‌های راننده</button>':''}
    ${simpleTable(['نام','مسافت تعرفه','ماهیانه · ریال','مدت قرارداد','سالیانه · ریال','ترتیب توقف','نشانی'],rows.map(r=>[person(r),km(r.tariff_distance_km),number(r.monthly_fee),number(annualMonths(r))+' ماه',number(Math.round(Number(r.monthly_fee||0)*annualMonths(r))),r.pickup_order,r.pickup_address]))}
@@ -1194,8 +1194,14 @@ async function serviceMembers(id,back){
     <div class="pager" id="memberPager"></div>
     <label>ترتیب توقف<input type="number" name="pickupOrder" min="1"></label>
     <label>نشانی سوار شدن<input name="pickupAddress"></label>
-    <button class="primary" disabled>افزودن به سرویس</button>
+    <button class="primary" disabled>ثبت دانش‌آموز در سرویس</button>
    </form>`:'<p>ظرفیت این سرویس تکمیل است.</p>'}`:''}`);
+  const addStudentButton=$('syServiceAddStudent');
+  if(addStudentButton)addStudentButton.onclick=()=>{
+   const form=$('assignForm');if(!form)return;
+   form.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'});
+   form.querySelector('#memberSearch')?.focus({preventScroll:true});
+  };
   if(back)$('backToDriverServices').onclick=back;
   $('modal').querySelectorAll('[data-edit-member]').forEach(button=>button.onclick=()=>formResource('students',Number(button.dataset.editMember),()=>serviceMembers(id,back)));
   $('modal').querySelectorAll('[data-remove-member]').forEach(button=>button.onclick=async()=>{
