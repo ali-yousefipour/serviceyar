@@ -175,3 +175,38 @@
 #syQuoteResult{margin:12px 0 0;color:#15513b}
 @media(max-width:800px){.sy-schools-layout{grid-template-columns:1fr}.sy-school-results{max-height:270px}.sy-school-map{min-height:320px}.sy-quote-fields{grid-template-columns:1fr 1fr}.sy-quote-fields label:first-child{grid-column:1/-1}}
 @media(max-width:520px){.sy-quote-fields{grid-template-columns:1fr}}
+
+/* 1405/1406 public school navigator: responsive RTL, keyboard-friendly. */
+.sy-explorer-heading{align-items:center;gap:20px}
+.sy-explorer-year{padding:7px 14px;border:1px solid #cce9da;color:#126044;background:#eaf8f0;border-radius:99px;font-size:.85rem;white-space:nowrap}
+.sy-explorer-grid{display:grid;gap:22px}
+.sy-explorer-panel{background:white;border:1px solid #dfebe5;border-radius:22px;padding:clamp(18px,3vw,30px);box-shadow:0 14px 46px #084d3010}
+.sy-explorer-panel-heading{display:flex;align-items:start;gap:14px;margin-bottom:24px}
+.sy-explorer-panel-heading h3{font-size:clamp(1.15rem,2vw,1.48rem);margin:0;color:#0a4733}
+.sy-explorer-panel-heading p{margin:3px 0 0;color:#607d70;font-size:.92rem}
+.sy-explorer-step{flex:none;display:grid;place-items:center;width:47px;height:47px;border-radius:14px;background:#e5f7ed;color:#056747;font-weight:800;font-size:1.2rem}
+.sy-explorer-panel .sy-public-quote{background:transparent;border:0;padding:0;margin:0}
+.sy-explorer-panel .sy-quote-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;align-items:end;gap:14px}
+.sy-explorer-panel .sy-quote-fields label{display:grid;gap:8px;font-weight:650;color:#234a3b;font-size:.9rem}
+.sy-explorer-panel .sy-quote-fields input,.sy-explorer-panel .sy-quote-fields select{min-height:48px;border:1px solid #cddfd5;border-radius:12px;padding:10px 13px;background:#fbfdfc;transition:border-color .15s,box-shadow .15s}
+.sy-explorer-panel .sy-quote-fields input:focus,.sy-explorer-panel .sy-quote-fields select:focus,.sy-school-search input:focus{outline:none;border-color:#087c55;box-shadow:0 0 0 3px #16a36a25}
+.sy-explorer-panel .sy-quote-submit{min-height:48px;white-space:nowrap;border-radius:12px;align-self:end}
+.sy-km-field{display:flex;align-items:center;position:relative}
+.sy-km-field input{padding-left:43px!important}
+.sy-km-field span{position:absolute;left:13px;direction:ltr;color:#81998d;font-size:.83rem;pointer-events:none}
+.sy-explorer-panel .sy-quote-result{margin-top:20px;padding:16px 20px;border:1px dashed #b6d9c8;border-radius:13px;background:#f7fcf9;color:#406b57;display:grid;gap:4px;min-height:62px}
+.sy-explorer-panel .sy-quote-result.sy-quote-success{background:linear-gradient(100deg,#e3f6e9,#f3fbf7);border:1px solid #a4dabc}
+.sy-quote-result strong{font-size:clamp(1.5rem,3vw,2rem);color:#055b3c;font-variant-numeric:tabular-nums}
+.sy-quote-result span{font-size:.88rem;color:#4d7160}
+.sy-explorer-panel .sy-quote-note{margin:14px 0 0;font-size:.81rem;color:#718b7e;line-height:1.9}
+.sy-explorer-panel .sy-schools-layout{grid-template-columns:minmax(240px,.8fr) minmax(0,1.6fr)}
+.sy-explorer-panel .sy-school-search{display:grid;gap:7px;margin:0 0 14px;font-weight:650;font-size:.9rem}
+.sy-explorer-panel .sy-school-search input{min-height:49px}
+.sy-school-search-status{font-size:.85rem;min-height:4px}
+.sy-explorer-panel .sy-school-results{max-height:470px}
+.sy-explorer-panel .sy-school-map{min-height:470px}
+.sy-school-choice{position:relative;overflow:hidden;padding-left:82px}
+.sy-school-choice .sy-school-thumbnail{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:60px;height:60px;border-radius:9px;object-fit:cover;border:1px solid #cddfd5}
+@media(max-width:1050px){.sy-explorer-panel .sy-quote-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.sy-explorer-panel .sy-quote-submit{width:100%}}
+@media(max-width:800px){.sy-explorer-panel .sy-schools-layout{grid-template-columns:1fr}.sy-explorer-panel .sy-school-results{max-height:280px}.sy-explorer-panel .sy-school-map{min-height:340px}}
+@media(max-width:540px){.sy-explorer-heading{align-items:start}.sy-explorer-year{white-space:normal}.sy-explorer-panel .sy-quote-fields{grid-template-columns:1fr}.sy-explorer-panel .sy-quote-submit{width:100%}.sy-explorer-panel-heading{gap:10px}}
