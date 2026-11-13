@@ -36,7 +36,7 @@ final class OperationsService
         $p=self::scope($uid,$aid,'dashboard.view');$counts=[];
         foreach(['schools','students','drivers','services'] as $t){$extra=$t==='drivers'?" AND status='active'":'';$q=$p->prepare("SELECT COUNT(*) FROM $t WHERE agency_id=:a AND is_active=1$extra");$q->execute(['a'=>$aid]);$counts[$t]=(int)$q->fetchColumn();}
         $q=$p->prepare('SELECT service_status,COUNT(*) total FROM students WHERE agency_id=:a AND is_active=1 GROUP BY service_status');$q->execute(['a'=>$aid]);$statuses=$q->fetchAll();
-        $q=$p->prepare('SELECT sc.id,sc.name,sc.latitude,sc.longitude,COUNT(st.id) students,SUM(CASE WHEN st.service_status<>\'assigned\' THEN 1 ELSE 0 END) unassigned FROM schools sc LEFT JOIN students st ON st.school_id=sc.id AND st.agency_id=sc.agency_id AND st.is_active=1 WHERE sc.agency_id=:a AND sc.is_active=1 GROUP BY sc.id,sc.name,sc.latitude,sc.longitude ORDER BY sc.name');$q->execute(['a'=>$aid]);
+        $q=$p->prepare('SELECT sc.id,sc.name,sc.latitude,sc.longitude,sc.photo_path,COUNT(st.id) students,SUM(CASE WHEN st.service_status<>\'assigned\' THEN 1 ELSE 0 END) unassigned FROM schools sc LEFT JOIN students st ON st.school_id=sc.id AND st.agency_id=sc.agency_id AND st.is_active=1 WHERE sc.agency_id=:a AND sc.is_active=1 GROUP BY sc.id,sc.name,sc.latitude,sc.longitude,sc.photo_path ORDER BY sc.name');$q->execute(['a'=>$aid]);
         return ['counts'=>$counts,'statuses'=>$statuses,'schools'=>$q->fetchAll()];
     }
 
