@@ -25,4 +25,10 @@ for(const section of ['quickPeopleTitle','quickDocumentTitle','quickRowsTitle'])
 assert(source.includes('id="quickJournalHint"'),'Quick journal must explain why saving is unavailable');
 assert(source.includes('sy-quick-table-wrap" tabindex="0" role="region"'),'Quick journal person table must have a keyboard-scrollable region');
 assert(source.includes('data-label="مبلغ · ریال"'),'Quick journal mobile rows must preserve column names');
+assert(source.includes('class="sy-journal-fieldset"'),'Journal editor should group details in a fieldset');
+assert(source.includes('class="sy-journal-editor-table"'),'Journal editor should expose a dedicated responsive table');
+assert(source.includes('role="region" aria-label="ردیف‌های سند حسابداری"'),'Journal rows should have a keyboard accessible region');
+for(const label of ['حساب','شرح ردیف','بدهکار · ریال','بستانکار · ریال','پیگیری','عملیات'])assert(source.includes('data-label="'+label+'"'),'Mobile journal row missing field label '+label);
+assert(source.includes("if(!totals()){notify("),'Journal save must continue enforcing balance validation');
+assert(source.includes("'/approve',{}")||source.includes("'/approve',{}"),'Journal approval endpoint should remain available');
 console.log('Accounting account search and safe report filters passed');
