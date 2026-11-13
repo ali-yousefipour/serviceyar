@@ -104,6 +104,40 @@ function renderNav(){
  document.querySelector('.eyebrow').innerHTML='<img class="site-wordmark" src="/assets/logo.png" alt="سرویس یار">';
  if(!$('ownPassword')){const b=document.createElement('button');b.id='ownPassword';b.type='button';b.className='account-password';b.textContent='تغییر رمز من';b.onclick=()=>passwordDialog({id:session.user.id,username:session.user.username},false,true);document.querySelector('.header-actions').append(b);}
  if(!$('navigationToggle')){const button=document.createElement('button');button.id='navigationToggle';button.type='button';button.innerHTML='<span aria-hidden="true">☰</span>';button.setAttribute('aria-label','باز کردن منوی اصلی');button.setAttribute('aria-expanded','false');document.querySelector('.header').prepend(button);const shade=document.createElement('button');shade.id='navigationShade';shade.type='button';shade.setAttribute('aria-label','بستن منوی اصلی');shade.hidden=true;document.querySelector('#app').append(shade);const toggle=open=>{document.querySelector('.sidebar').classList.toggle('nav-open',open);shade.hidden=!open;button.setAttribute('aria-expanded',String(open));};button.onclick=()=>toggle(button.getAttribute('aria-expanded')!=='true');shade.onclick=()=>toggle(false);document.addEventListener('keydown',e=>{if(e.key==='Escape'&&button.getAttribute('aria-expanded')==='true'){toggle(false);$('nav').querySelectorAll('details').forEach(d=>d.open=false);button.focus();}});}
+ // Desktop compact rail: persisted per browser, independent from the mobile drawer.
+ const sidebar=document.querySelector('.sy-command-sidebar');
+ if(sidebar&&!document.getElementById('sySidebarCollapse')){
+  const toggle=document.createElement('button');
+  toggle.type='button';toggle.id='sySidebarCollapse';toggle.className='sy-sidebar-collapse-toggle';
+  const apply=collapsed=>{
+   sidebar.classList.toggle('sy-collapsed',collapsed);
+   document.getElementById('app')?.classList.toggle('sy-sidebar-collapsed',collapsed);
+   toggle.setAttribute('aria-expanded',String(!collapsed));
+   toggle.setAttribute('aria-label',collapsed?'باز کردن کامل منوی کناری':'جمع کردن منوی کناری');
+   toggle.title=collapsed?'باز کردن منو':'جمع کردن منو';
+   toggle.innerHTML=collapsed?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg>';
+  };
+  let saved=false;
+  try{saved=localStorage.getItem('sy-sidebar-collapsed')==='1';}catch(_){}
+  apply(saved);
+  toggle.addEventListener('click',()=>{
+   const collapsed=!sidebar.classList.contains('sy-collapsed');
+   apply(collapsed);
+   if(collapsed)sidebar.querySelectorAll('.nav-group').forEach(group=>group.open=false);
+   try{localStorage.setItem('sy-sidebar-collapsed',collapsed?'1':'0');}catch(_){}
+  });
+  sidebar.querySelector('.sy-sidebar-brand')?.append(toggle);
+  sidebar.addEventListener('click',event=>{
+   if(!sidebar.classList.contains('sy-collapsed')||matchMedia('(max-width:920px)').matches)return;
+   if(event.target.closest('#sySidebarCollapse'))return;
+   if(event.target.closest('.nav-group>summary,.sy-nav-search')){
+    event.preventDefault();
+    apply(false);
+    try{localStorage.setItem('sy-sidebar-collapsed','0');}catch(_){}
+    if(event.target.closest('.sy-nav-search'))requestAnimationFrame(()=>document.getElementById('syNavSearch')?.focus());
+   }
+  },true);
+ }
  renderAgencySelector();$('nav').innerHTML=`<a class="nav" href="#dashboard" title="داشبورد">${samarMenuIcon('dashboard')}<span>داشبورد</span></a>`+menus.map(([icon,title,items])=>{const visible=items.filter(([key])=>can(key.split('/')[0],(key.endsWith('/new')||key.endsWith('/quick')||key.endsWith('/fees')||key==='driver-assignment')?'manage':'view'));return visible.length?`<details class="nav-group"><summary title="${esc(title)}">${samarMenuIcon(icon)}<span>${esc(title)}</span></summary><div class="nav-popup" aria-label="${esc(title)}">${visible.map(([key,text])=>`<a href="#${key}" aria-label="${esc(text)}">${samarMenuIcon(key)}<span>${esc(text)}</span></a>`).join('')}</div></details>`:''}).join('')+(session?.roles?.includes('super_admin')?`<a class="nav" href="#companies" title="تنظیمات سامانه">${navIcon('settings')}<span>تنظیمات سامانه</span></a>`:'');
  // Put the finance action immediately below Dashboard, within the permission-controlled menu.
  document.getElementById('quickReceipt')?.remove();
@@ -130,6 +164,9 @@ function renderNav(){
      side.classList.add('nav-open');
      document.getElementById('navigationShade')?.removeAttribute('hidden');
      document.getElementById('navigationToggle')?.setAttribute('aria-expanded','true');
+    }
+    if(side?.classList.contains('sy-collapsed')&&!matchMedia('(max-width:920px)').matches){
+     document.getElementById('sySidebarCollapse')?.click();
     }
     input?.focus();input?.select();
    }
