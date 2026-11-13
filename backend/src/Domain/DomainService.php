@@ -83,8 +83,21 @@ final class DomainService {
   $table=self::cfg($resource)['table'];
   return $table.'.'.$column.' '.$dir.($column==='id'?'':', '.$table.'.id DESC');
  }
+ /** Reconcile old service capacities without changing existing student assignments. */
+ private static function refreshServiceCapacity(\PDO $pdo,int $aid,?int $serviceId=null): void {
+  $sql="UPDATE services sv
+    JOIN drivers d ON d.id=sv.driver_id AND d.agency_id=sv.agency_id AND d.is_active=1
+    JOIN vehicles v ON v.id=d.vehicle_id AND v.agency_id=sv.agency_id AND v.is_active=1
+    SET sv.capacity=v.capacity
+    WHERE sv.agency_id=:agency AND sv.is_active=1 AND sv.capacity<v.capacity";
+  $params=['agency'=>$aid];
+  if($serviceId!==null){$sql.=' AND sv.id=:service';$params['service']=$serviceId;}
+  $pdo->prepare($sql)->execute($params);
+ }
  public static function list(int $uid,int $aid,string $resource,array $q): array {
-  $c=self::cfg($resource); self::scope($uid,$aid,$c['permission']); $where='agency_id=:agency';$params=['agency'=>$aid];
+  $c=self::cfg($resource); self::scope($uid,$aid,$c['permission']);
+  if($resource==='services')self::refreshServiceCapacity(Connection::get(),$aid);
+  $where='agency_id=:agency';$params=['agency'=>$aid];
   if($resource==='services'){
    [$clauses,$serviceParams]=self::serviceFilters($q,$uid);
    foreach($clauses as $clause)$where.=' AND '.$clause;
@@ -281,6 +294,7 @@ final class DomainService {
  }
  public static function get(int $uid,int $aid,string $resource,int $id): array {
   $c=self::cfg($resource);self::scope($uid,$aid,$c['permission']);
+  if($resource==='services')self::refreshServiceCapacity(Connection::get(),$aid,$id);
   $s=Connection::get()->prepare('SELECT * FROM '.$c['table'].' WHERE id=:id AND agency_id=:a');$s->execute(['id'=>$id,'a'=>$aid]);
   $row=$s->fetch();if(!$row)throw new AuthException(404,'رکورد پیدا نشد.','NOT_FOUND');
   if($resource==='vehicles'){
