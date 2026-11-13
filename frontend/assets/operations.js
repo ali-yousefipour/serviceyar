@@ -19,6 +19,23 @@ const transportFields={
 };
 resources.accounts=['حساب‌ها',['code','title','bankName','bankAccount','iban','parentId','isActive']];resources.ledger=['دریافت و پرداخت',transportFields.ledger];resources['driver-ratings']=['امتیاز و گزارش',transportFields['driver-ratings']];resources['parent-reports']=['گزارشات والدین',transportFields['parent-reports']];
 for(const [key,fields] of Object.entries(transportFields))resources[key][1]=fields;
+// Orient school photo containers from the loaded image dimensions; no fixed 4:3 crop.
+function setSchoolPhotoOrientation(img){
+ if(!img||!img.naturalWidth||!img.naturalHeight)return;
+ const ratio=img.naturalWidth/img.naturalHeight;
+ const frame=img.closest('.sy-school-details-cover,.sy-school-photo-editor-preview,.sy-school-photo-name,.sy-map-school');
+ if(!frame)return;
+ frame.style.setProperty('--sy-school-aspect',String(ratio));
+ frame.classList.toggle('sy-photo-portrait',ratio<.9);
+ frame.classList.toggle('sy-photo-landscape',ratio>1.1);
+ frame.classList.toggle('sy-photo-square',ratio>=.9&&ratio<=1.1);
+}
+document.addEventListener('load',event=>{
+ const img=event.target;
+ if(img instanceof HTMLImageElement&&img.matches('.sy-school-details-image,.sy-school-photo-editor-preview img,.sy-school-photo-name img,.sy-map-school .sy-map-marker-photo')){
+  setSchoolPhotoOrientation(img);
+ }
+},true);
 function schoolPhotoUrl(row){
  const path=String(row?.photo_path??row?.photoPath??'').trim();
  if(!path||!row?.id||!currentAgency?.id)return '';
