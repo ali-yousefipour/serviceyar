@@ -56,4 +56,11 @@ for(const field of ['supervision_deduction','coordination_deduction','overhead_d
 assert(source.includes('فیش فقط بر اساس سند حقوق ثبت‌شده'),'Payslip should not imply confirmed bank transfer');
 assert(source.includes("doc.status==='approved'?'سند تأییدشده':'پیش‌نویس / تأییدنشده'"),'Draft payslips must be visibly identified');
 assert(source.includes('sy-payslip-discrepancy'),'Payslip must warn when stored salary differs from calculated net');
+assert(source.includes('class="sy-service-more"'),'Service cards should collapse extensive finance breakdowns');
+assert(source.includes('خالص ماهانه قابل پرداخت به راننده'),'Service card must highlight driver net pay');
+assert(source.includes('async function agencyPaymentMethodSettings()'),'Company-specific payment methods editor missing');
+assert(source.includes('finance_payment_methods:rows'),'Company payment method settings must persist through backend');
+assert(source.includes('/api/v1/finance/banks'),'Accounting bank selector must use server directory');
+assert(source.includes('companyAccountId'),'New receipts and payments need a company account');
+assert(source.includes('حساب مبدأ شرکت')&&source.includes('حساب مقصد شرکت'),'Account label should reflect transaction direction');
 console.log('Accounting account search and safe report filters passed');
