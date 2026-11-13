@@ -635,3 +635,49 @@
 .sy-public-v3 #syPublicSchools .sy-public-pin-face.sy-public-pin-no-frame.sy-public-pin-fallback .sy-public-pin-symbol {
  display:flex!important;
 }
+
+
+/* Respect the native aspect ratio of genuine school photography.
+   Visual bounds stay predictable while portrait and landscape frames differ. */
+#syPublicSchools .sy-school-choice-visual.sy-school-photo-frame{
+ box-sizing:border-box!important;
+ width:clamp(42px,calc(70px * var(--sy-school-aspect,1)),94px)!important;
+ height:70px!important;
+ min-width:42px!important;max-width:94px!important;
+ flex:0 0 auto!important;
+ background:#f5faf7!important;
+ border:1px solid #e1ebe4!important;
+ overflow:hidden!important;
+ padding:2px!important;
+}
+#syPublicSchools .sy-school-choice-visual.sy-school-photo-frame img{
+ width:100%!important;height:100%!important;
+ min-width:0!important;max-width:100%!important;max-height:100%!important;
+ object-fit:contain!important;object-position:center!important;
+}
+#syPublicSchools .sy-public-modal-visual.sy-school-photo-frame{
+ align-self:center!important;justify-self:center!important;
+ box-sizing:border-box!important;
+ min-height:0!important;height:auto!important;
+ width:min(100%,calc(420px * var(--sy-school-aspect,1)))!important;
+ max-height:440px!important;
+ aspect-ratio:var(--sy-school-aspect,1)!important;
+ border-radius:17px!important;
+ overflow:hidden!important;
+ background:#f5faf7!important;
+}
+#syPublicSchools .sy-public-modal-visual.sy-school-photo-frame img{
+ display:block!important;width:100%!important;height:100%!important;
+ max-width:100%!important;max-height:440px!important;
+ object-fit:contain!important;object-position:center!important;
+}
+#syPublicSchools .sy-public-modal-visual.sy-school-photo-frame.sy-photo-landscape{width:100%!important}
+#syPublicSchools .sy-public-modal-visual.sy-school-photo-frame.sy-photo-portrait{max-width:270px!important}
+@media(max-width:590px){
+ #syPublicSchools .sy-public-modal-visual.sy-school-photo-frame{
+  width:min(100%,calc(290px * var(--sy-school-aspect,1)))!important;
+  max-height:290px!important;
+  margin:12px auto 0!important;
+ }
+ #syPublicSchools .sy-public-modal-visual.sy-school-photo-frame.sy-photo-landscape{max-width:min(100%,420px)!important}
+}
