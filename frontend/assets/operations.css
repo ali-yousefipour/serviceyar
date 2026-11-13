@@ -2654,3 +2654,167 @@ body.sy-menu-palette-open{overflow:hidden}
 #assignForm{scroll-margin-top:24px;border:1px solid #d3e7dc;border-radius:16px;padding:16px;margin-block:16px;background:#f9fcfa}
 #assignForm:focus-within{border-color:#0b9965;box-shadow:0 0 0 3px #0c9d6216}
 @media(max-width:550px){.sy-service-member-header{padding:12px}.sy-service-member-header .sy-service-add-student{width:100%}}
+
+
+/* ServiceYar Command Navigation v3 — an expanded premium workspace sidebar.
+   All routes and role-visibility checks remain owned by renderNav(). */
+#app:not([hidden]){--sy-sidebar-width:284px;--sy-sidebar-gap:16px}
+#app .sy-command-sidebar{
+ direction:rtl;box-sizing:border-box;position:fixed!important;
+ top:14px!important;right:14px!important;bottom:14px!important;left:auto!important;
+ width:var(--sy-sidebar-width)!important;height:auto!important;min-height:0!important;
+ max-height:calc(100dvh - 28px)!important;display:flex!important;flex-direction:column!important;
+ gap:0!important;padding:14px 11px 11px!important;
+ border:1px solid #185c47!important;border-radius:23px!important;
+ background:radial-gradient(ellipse at 10% 0%,#287b5b66,transparent 49%),linear-gradient(165deg,#0c513b,#064231 56%,#04382c)!important;
+ box-shadow:-14px 16px 46px #092b2824, inset 0 1px 0 #ffffff16!important;
+ z-index:72!important;overflow:hidden!important;
+}
+#app .sy-command-sidebar .sy-sidebar-brand{
+ display:flex!important;align-items:center!important;gap:11px!important;
+ margin:0 3px 12px!important;padding:11px 10px 15px!important;
+ width:auto!important;min-height:0!important;
+ text-align:right!important;white-space:normal!important;
+ font-size:inherit!important;color:#fff!important;letter-spacing:normal!important;
+ border-bottom:1px solid #ffffff24!important;background:none!important;border-radius:0!important;
+}
+#app .sy-command-sidebar .sy-sidebar-brand:before{content:none!important;display:none!important}
+#app .sy-command-sidebar .sy-sidebar-brand img{display:block;width:46px;height:46px;flex:0 0 46px;object-fit:contain;background:#fff;border-radius:15px;padding:4px;box-shadow:0 7px 18px #032a223d}
+#app .sy-sidebar-brand-copy{display:grid;gap:2px;min-width:0}
+#app .sy-sidebar-brand-copy strong{display:block;font-size:20px;font-weight:950;line-height:1.35;color:#fff}
+#app .sy-sidebar-brand-copy small{font-size:10px;line-height:1.6;color:#b7ded0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:174px}
+#app .sy-sidebar-caption{padding:4px 14px 9px;color:#9ac8b7;font-size:10px;font-weight:800;letter-spacing:.03em}
+#app .sy-command-sidebar #nav{display:flex!important;flex-direction:column!important;gap:4px!important;flex:1 1 auto!important;overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain;padding:2px 3px 15px!important;scrollbar-width:thin;scrollbar-color:#659b85 transparent;min-width:0}
+#app .sy-command-sidebar #nav>.nav,
+#app .sy-command-sidebar #nav>.nav-group{flex:none!important;min-width:0!important;width:100%!important;box-sizing:border-box!important}
+#app .sy-command-sidebar #nav>.nav,
+#app .sy-command-sidebar #nav .nav-group>summary{
+ box-sizing:border-box!important;position:relative!important;
+ display:flex!important;justify-content:flex-start!important;align-items:center!important;
+ width:100%!important;height:auto!important;min-height:45px!important;
+ gap:12px!important;margin:0!important;padding:10px 12px!important;
+ background:transparent!important;border:1px solid transparent!important;
+ border-radius:13px!important;color:#e5f5ec!important;font-size:12.5px!important;
+ font-weight:750!important;line-height:1.6!important;text-decoration:none!important;
+ cursor:pointer!important;transition:background .18s ease,border-color .18s ease,color .18s ease!important;
+}
+#app .sy-command-sidebar #nav>.nav svg,
+#app .sy-command-sidebar #nav .nav-group>summary svg{display:block!important;flex:none!important;width:21px!important;height:21px!important;color:#bce6d1!important;stroke-width:1.85!important}
+#app .sy-command-sidebar #nav>.nav>span,
+#app .sy-command-sidebar #nav .nav-group>summary>span{display:inline!important;flex:1;min-width:0;text-align:right!important;white-space:normal!important}
+#app .sy-command-sidebar #nav .nav-group>summary{list-style:none}
+#app .sy-command-sidebar #nav .nav-group>summary::-webkit-details-marker{display:none}
+#app .sy-command-sidebar #nav .nav-group>summary:after{
+ content:"⌄";font:800 18px/1 sans-serif;color:#9ccebb;flex:none;
+ transition:transform .2s;transform:rotate(0deg)
+}
+#app .sy-command-sidebar #nav .nav-group[open]>summary:after{transform:rotate(180deg)}
+#app .sy-command-sidebar #nav>.nav:hover,
+#app .sy-command-sidebar #nav .nav-group>summary:hover,
+#app .sy-command-sidebar #nav>.nav:focus-visible,
+#app .sy-command-sidebar #nav .nav-group>summary:focus-visible{
+ background:#ffffff19!important;border-color:#ffffff20!important;color:#fff!important;
+}
+#app .sy-command-sidebar #nav>.nav.active,
+#app .sy-command-sidebar #nav>.nav[aria-current=page]{
+ background:linear-gradient(100deg,#f4c96c,#e4aa3c)!important;border-color:#ffe8a8!important;
+ color:#174632!important;box-shadow:0 7px 17px #071e1528!important;
+}
+#app .sy-command-sidebar #nav>.nav.active svg{color:#174632!important}
+#app .sy-command-sidebar #nav .nav-group.current-group>summary,
+#app .sy-command-sidebar #nav .nav-group[open]>summary{
+ background:#ffffff18!important;border-color:#ffffff23!important;color:#fff!important;
+}
+#app .sy-command-sidebar #nav .nav-group.current-group>summary:before{
+ content:"";position:absolute;right:0;top:20%;bottom:20%;width:3px;border-radius:3px;background:#f9ca6c;
+}
+#app .sy-command-sidebar #nav .nav-popup{
+ display:grid!important;position:static!important;inset:auto!important;
+ min-width:0!important;width:100%!important;max-width:100%!important;max-height:none!important;
+ margin:5px 0 8px!important;padding:4px 5px 5px 3px!important;
+ border:0!important;border-right:1px solid #ffffff29!important;border-radius:0!important;
+ background:transparent!important;box-shadow:none!important;overflow:visible!important;gap:2px!important;
+}
+#app .sy-command-sidebar #nav .nav-popup a{
+ display:flex!important;align-items:center!important;gap:9px!important;
+ box-sizing:border-box!important;min-height:37px!important;padding:8px 10px!important;
+ border:1px solid transparent!important;border-radius:10px!important;
+ text-decoration:none!important;font-size:11.5px!important;font-weight:650!important;line-height:1.65!important;
+ color:#c6e3d7!important;background:transparent!important;
+}
+#app .sy-command-sidebar #nav .nav-popup a svg{display:block;width:17px!important;height:17px!important;flex:0 0 17px;color:#8abfa8}
+#app .sy-command-sidebar #nav .nav-popup a:hover,
+#app .sy-command-sidebar #nav .nav-popup a:focus-visible{
+ background:#ffffff1d!important;color:#fff!important;border-color:#ffffff1d!important;
+}
+#app .sy-command-sidebar #nav .nav-popup a.active,
+#app .sy-command-sidebar #nav .nav-popup a[aria-current=page]{
+ color:#173f2e!important;background:#ecf8ee!important;border-color:#d4ebdf!important;
+ font-weight:900!important;box-shadow:0 5px 11px #02271922!important;
+}
+#app .sy-command-sidebar #nav .nav-popup a.active svg,
+#app .sy-command-sidebar #nav .nav-popup a[aria-current=page] svg{color:#0c6e4e!important}
+#app .sy-command-sidebar .sy-menu-search-trigger{
+ display:flex!important;align-items:center!important;justify-content:flex-start!important;
+ gap:10px!important;width:100%!important;min-height:44px!important;height:auto!important;
+ margin:0 0 13px!important;padding:9px 12px!important;
+ border-radius:12px!important;border:1px solid #ffffff30!important;
+ background:#ffffff13!important;color:#eaf8ef!important;
+ text-align:right!important;font-size:12px!important;font-weight:750!important;
+}
+#app .sy-command-sidebar .sy-menu-search-trigger:hover{background:#ffffff26!important}
+#app .sy-command-sidebar .sy-nav-search-icon{display:block!important;flex:0 0 22px!important;font-size:22px!important;line-height:1!important}
+#app .sy-command-sidebar .sy-menu-search-trigger>span:nth-child(2){display:block!important;flex:1!important;white-space:normal!important;font-size:12px!important}
+#app .sy-command-sidebar .sy-menu-search-trigger kbd{font:700 10px/1.2 sans-serif;white-space:nowrap;padding:5px;border:1px solid #ffffff35;border-radius:6px;color:#cde6d9;background:#ffffff0d;direction:ltr}
+#app .sy-command-sidebar .sy-sidebar-bottom{flex:none;display:grid;gap:8px;border-top:1px solid #ffffff23;padding:11px 5px 2px}
+#app .sy-sidebar-support{display:flex;align-items:center;gap:10px;min-width:0;background:#ffffff0b;padding:10px;border-radius:13px}
+#app .sy-sidebar-support-dot{width:11px;height:11px;flex:0 0 11px;border-radius:50%;background:#65e5a2;box-shadow:0 0 0 5px #44c78324}
+#app .sy-sidebar-support>span:last-child{display:grid;gap:2px;min-width:0}
+#app .sy-sidebar-support strong{font-size:12px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#app .sy-sidebar-support small{font-size:10px;color:#b6d8cb}
+#app .sy-command-sidebar #quickReceipt{
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ width:100%!important;height:42px!important;min-height:42px!important;
+ padding:9px 12px!important;margin:2px 0!important;border:1px solid #dcb96b!important;
+ border-radius:12px!important;color:#163c2e!important;background:linear-gradient(120deg,#f9d891,#e9b44e)!important;
+ font-weight:800!important;
+}
+#app .sy-command-sidebar #quickReceipt svg{width:20px!important;height:20px!important}
+#app .sy-command-sidebar #quickReceipt:after{content:"ثبت دریافت و پرداخت";font-size:12px;padding-right:9px}
+#app .sy-command-sidebar .logout{
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ width:100%!important;min-height:39px!important;height:auto!important;margin:0!important;
+ padding:9px!important;color:#f1e8df!important;font-size:11.5px!important;
+ border-radius:11px!important;background:#ffffff0b!important;border:1px solid #ffffff20!important;
+}
+#app .sy-command-sidebar .logout:hover{background:#b94b4b45!important;border-color:#f0acac70!important}
+#app .sy-command-sidebar #nav .nav-group[hidden],#app .sy-command-sidebar #nav a[hidden]{display:none!important}
+#app .sy-command-sidebar #nav .sy-nav-search{display:none!important}
+#app .main{margin-right:calc(var(--sy-sidebar-width) + 28px)!important;width:calc(100% - var(--sy-sidebar-width) - 28px)!important;min-width:0}
+#app #navigationToggle{display:none!important}
+@media(max-width:920px){
+ #app .sy-command-sidebar{
+  right:0!important;top:0!important;bottom:0!important;
+  border-radius:23px 0 0 23px!important;width:min(310px,88vw)!important;
+  max-height:100dvh!important;
+  transform:translateX(105%)!important;visibility:hidden!important;pointer-events:none!important;
+  transition:transform .25s cubic-bezier(.2,.8,.2,1),visibility .25s!important;
+ }
+ #app .sy-command-sidebar.nav-open{transform:translateX(0)!important;visibility:visible!important;pointer-events:auto!important}
+ #app .main{margin-right:0!important;width:100%!important;padding-inline:12px!important}
+ #app #navigationToggle{display:inline-flex!important;align-items:center;justify-content:center;
+  position:relative;z-index:61;min-width:42px;min-height:42px;font-size:21px;
+  background:#e9f5ee;border:1px solid #cee7d7;color:#07543b;border-radius:13px}
+ #app #navigationShade:not([hidden]){display:block!important;position:fixed!important;inset:0!important;
+  z-index:70!important;background:#04261c99!important;backdrop-filter:blur(3px)!important;
+  width:100vw!important;height:100dvh!important;border:0!important;border-radius:0!important}
+ #app .sy-sidebar-caption{display:block!important}
+}
+@media(max-width:480px){
+ #app .main{padding-inline:8px!important}
+ #app .sy-command-sidebar{width:min(302px,90vw)!important}
+}
+@media(prefers-reduced-motion:reduce){
+ #app .sy-command-sidebar,#app .sy-command-sidebar *{transition:none!important;scroll-behavior:auto!important}
+}
+@media print{#app .sy-command-sidebar,#app #navigationToggle,#app #navigationShade{display:none!important}#app .main{margin-right:0!important;width:100%!important}}
