@@ -87,6 +87,7 @@ assert.ok(operations.includes("sy-school-default-photo")&&operations.includes("s
 // Portrait and landscape school photos must preserve native proportions.
 assert.ok(api.includes('480/max(1,$w,$h)')&&api.includes('$tw=max(1,(int)round($w*$scale))'),'Public preview must preserve native aspect ratio');
 assert.ok(js.includes('function adjustSchoolPhotoFrame(')&&js.includes("img.addEventListener('load',()=>adjustSchoolPhotoFrame(img))"),'Public school images need orientation-aware frames');
+assert.ok(js.includes(".sy-school-choice-visual,.sy-public-pin")&&css.includes('.sy-public-pin.sy-photo-portrait')&&css.includes('.sy-public-pin.sy-photo-landscape'),'Public school map pins must adapt portrait/landscape dimensions');
 assert.ok(css.includes('.sy-public-modal-visual.sy-school-photo-frame')&&css.includes('aspect-ratio:var(--sy-school-aspect,1)'),'School detail modal must adapt to portrait or landscape photos');
 assert.ok(operations.includes('function setSchoolPhotoOrientation(')&&operations.includes("document.addEventListener('load',event=>"),'Authenticated school photos must update orientation without inline events');
 assert.ok(read('frontend/assets/operations.css').includes('.sy-school-details-cover:has(.sy-school-details-image)'),'School detail image must have proportional framing');
