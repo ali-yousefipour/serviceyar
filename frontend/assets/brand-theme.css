@@ -235,3 +235,37 @@ body{background:var(--canvas);color:var(--ink)}
 .sy-public .sy-v3-kpi-glyph{background:#e0efdf!important;color:#0a7250!important}
 .sy-public .sy-v3-art-mini-chart :is(span,i,b):nth-child(odd){background-color:#0e8461!important}
 .sy-public .sy-v3-art-mini-chart :is(span,i,b):nth-child(even){background-color:#d1a349!important}
+
+
+/* Account management lives in the sidebar footer, not the dashboard header. */
+.sy-screen-reader-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+#app .header{min-height:52px!important;padding-block:7px!important;justify-content:flex-end!important}
+#app .header .header-actions{margin-inline-start:auto!important}
+#app .sy-command-sidebar .sy-sidebar-bottom{position:relative;overflow:visible;z-index:5}
+#app .sy-command-sidebar .sy-account-menu{width:100%;min-width:0;position:relative}
+#app .sy-command-sidebar .sy-account-menu>summary{list-style:none;cursor:pointer;display:flex!important;align-items:center;gap:11px;padding:12px 10px!important;outline-offset:2px}
+#app .sy-command-sidebar .sy-account-menu>summary::-webkit-details-marker{display:none}
+#app .sy-account-avatar{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;color:#063e2f;background:linear-gradient(135deg,#f8e6b5,#cba151);border:1px solid #efd493;border-radius:12px;font-size:18px;font-weight:850}
+#app .sy-account-identity{display:grid;gap:2px;min-width:0;flex:1}
+#app .sy-account-identity strong{font-size:12px;color:#fff;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
+#app .sy-account-identity small{font-size:10px;color:#bfdaca;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
+#app .sy-account-chevron{width:16px;height:16px;flex:0 0 16px;color:#e2c982;transition:transform .2s}
+#app .sy-account-menu[open] .sy-account-chevron{transform:rotate(180deg)}
+#app .sy-account-menu>summary:hover,#app .sy-account-menu[open]>summary{background:rgba(255,255,255,.13)!important}
+#app .sy-account-menu>summary:focus-visible{outline:2px solid #e3be68;outline-offset:2px}
+#app .sy-account-actions{display:grid;gap:5px;padding:8px 4px 5px}
+#app .sy-account-actions button{display:flex;align-items:center;gap:10px;min-height:41px;padding:9px 12px;width:100%;border:1px solid rgba(235,208,142,.23);border-radius:10px;background:rgba(255,255,255,.07);color:#f4f8f1;text-align:right;font-family:inherit;font-size:12px;cursor:pointer;transition:background .2s,border-color .2s}
+#app .sy-account-actions button:hover,#app .sy-account-actions button:focus-visible{background:rgba(211,170,79,.2);border-color:#e1c477}
+#app .sy-account-actions button>span{display:grid;place-items:center;width:21px;color:#e8cc82;font-size:18px}
+#app .sy-own-profile-form{display:grid;gap:14px}
+#app .sy-own-profile-form>label{display:grid;gap:5px}
+#app .sy-own-profile-form input:disabled{background:#eef4ec;color:#657969;cursor:not-allowed}
+@media(min-width:921px){
+ #app.sy-sidebar-collapsed .sy-command-sidebar .sy-account-identity,
+ #app.sy-sidebar-collapsed .sy-command-sidebar .sy-account-chevron,
+ #app.sy-sidebar-collapsed .sy-command-sidebar .sy-account-actions{display:none!important}
+ #app.sy-sidebar-collapsed .sy-command-sidebar .sy-account-menu>summary{justify-content:center!important;padding:7px 0!important}
+ #app.sy-sidebar-collapsed .sy-command-sidebar .sy-account-avatar{width:39px;height:39px;flex-basis:39px}
+}
+@media(max-width:920px){#app .header{justify-content:space-between!important}}
+@media(prefers-reduced-motion:reduce){#app .sy-account-chevron,#app .sy-account-actions button{transition:none!important}}
