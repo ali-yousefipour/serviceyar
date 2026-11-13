@@ -2021,3 +2021,17 @@ async function newServicePage(token,initialDriverId){
   finally{saving=false;}
  };
 }
+
+/* Agency branded printed report headers: one company, one document. */
+let companyPrintHeader=null;
+window.addEventListener('beforeprint',()=>{
+ companyPrintHeader?.remove();companyPrintHeader=null;
+ const visible=element=>element&&!element.closest('[hidden]')&&element.getClientRects().length>0;
+ const selectors=['#modal .sy-payslip-sheet','#modal .journal-print','.ledger-print-sheet','.sy-account-statement','#content .sy-operation-page','#content .sy-record-details','#content > .panel'];
+ const target=selectors.map(selector=>[...document.querySelectorAll(selector)].find(visible)).find(Boolean);
+ if(!target||target.querySelector('.sy-company-logo'))return;
+ const header=document.createElement('header');header.className='sy-report-company-letterhead';
+ header.innerHTML=agencyLogoImage('لوگوی '+(currentAgency?.name||'شرکت'),64)+'<div><strong>'+esc(currentAgency?.name||'شرکت')+'</strong><p>سرویس‌یار · گزارش رسمی شرکت</p></div>';
+ target.prepend(header);companyPrintHeader=header;
+});
+window.addEventListener('afterprint',()=>{companyPrintHeader?.remove();companyPrintHeader=null;});
