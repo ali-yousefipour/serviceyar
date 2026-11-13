@@ -130,6 +130,63 @@ async function companiesPage(){
   const d=await api('/api/v1/admin/overview');
   const rows=(d.agencies||[]).map(a=>'<tr><td>'+esc(a.id)+'</td><td>'+esc(a.name)+'</td><td>'+esc(a.code||'—')+'</td><td>'+esc(a.manager_name||'—')+'</td><td>'+esc(a.office_phone||'—')+'</td><td>'+esc(a.office_address||'—')+'</td><td>'+(a.latitude!=null&&a.longitude!=null?esc(Number(a.latitude).toFixed(6)+' ، '+Number(a.longitude).toFixed(6)):'ثبت نشده')+'</td><td><span class="'+(Number(a.is_active)===1?'status-active':'status-inactive')+'">'+(Number(a.is_active)===1?'فعال':'غیرفعال')+'</span></td><td><button class="link" data-company-edit="'+esc(a.id)+'">ویرایش</button><button class="link" data-company-users="'+esc(a.id)+'">تعیین کاربران</button>'+(Number(a.is_active)===1?'<button class="link danger" data-company-disable="'+esc(a.id)+'">غیرفعال‌سازی</button>':'')+'</td></tr>').join('');
   $('content').innerHTML='<section class="welcome"><h2>تنظیمات سامانه</h2><p>تعریف و مدیریت شرکت‌ها و تعیین کاربران هر شرکت.</p></section><section class="panel"><div class="toolbar"><div><h2>مدیریت شرکت‌ها</h2><p>برای حفظ سوابق، حذف به‌صورت غیرفعال‌سازی انجام می‌شود.</p></div><button class="primary" id="newCompanyBtn">تعریف شرکت جدید</button></div><div class="table-wrap"><table><thead><tr><th>شناسه</th><th>نام شرکت</th><th>کد شرکت</th><th>نام مدیر</th><th>تلفن دفتر</th><th>نشانی</th><th>مختصات جغرافیایی</th><th>وضعیت</th><th>عملیات</th></tr></thead><tbody>'+(rows||'<tr><td colspan="9">شرکتی ثبت نشده است.</td></tr>')+'</tbody></table></div><div id="companyEditor"></div></section><section class="panel"><div class="toolbar"><div><h2>کاربران سامانه</h2><p class="muted">می‌توانید حساب جدید بسازید یا کاربران موجود را به شرکت‌ها تخصیص دهید.</p></div><button class="primary" id="newUserBtn" >ایجاد کاربر جدید</button></div><div class="table-wrap"><table><thead><tr><th>نام کاربری</th><th>نام</th><th>نقش</th><th>شرکت‌های مرتبط</th><th>وضعیت</th></tr></thead><tbody>'+(d.users||[]).map(u=>'<tr><td>'+esc(u.username)+'</td><td>'+esc(((u.first_name||'')+' '+(u.last_name||'')).trim()||'—')+'</td><td>'+esc(u.roles||'بدون نقش')+'</td><td>'+esc(u.agencies||'بدون شرکت')+'</td><td>'+(Number(u.is_active)===1?'فعال':'غیرفعال')+'</td></tr>').join('')+'</tbody></table></div></section>';
+  const companyPanel=$('newCompanyBtn').closest('section'),allCompanies=d.agencies||[];
+  companyPanel.classList.add('sy-admin-agency-panel');
+  companyPanel.querySelector('.table-wrap')?.classList.add('sy-agency-table-scroll');
+  const fa=n=>Number(n).toLocaleString('fa-IR');
+  const activeCount=allCompanies.filter(a=>Number(a.is_active)===1).length;
+  const summary=document.createElement('div');summary.className='sy-agency-kpis';
+  summary.innerHTML=[['کل شرکت‌ها',allCompanies.length],['شرکت‌های فعال',activeCount],['شرکت‌های غیرفعال',allCompanies.length-activeCount]].map(([label,value])=>'<article><span>'+label+'</span><strong>'+fa(value)+'</strong></article>').join('');
+  companyPanel.querySelector('.toolbar').after(summary);
+  const filters=document.createElement('div');filters.className='sy-agency-controls';
+  filters.innerHTML='<label>جستجو<input id="syAgencySearch" type="search" placeholder="نام شرکت، مدیر، کد یا نشانی"></label><label>وضعیت<select id="syAgencyStatus"><option value="all">همه شرکت‌ها</option><option value="active">فعال</option><option value="inactive">غیرفعال</option></select></label><button type="button" id="syAgencyExcel">خروجی Excel</button><button type="button" id="syAgencyPrint">چاپ فهرست</button>';
+  summary.after(filters);
+  const count=document.createElement('p');count.className='sy-agency-result-count';filters.after(count);
+  const table=companyPanel.querySelector('table');table.classList.add('sy-agency-data-table');
+  const trs=[...table.querySelectorAll('tbody tr')];
+  trs.forEach((tr,i)=>{
+   const agency=allCompanies[i];if(!agency)return;
+   tr.dataset.status=Number(agency.is_active)===1?'active':'inactive';
+   tr.dataset.query=[agency.name,agency.code,agency.manager_name,agency.office_phone,agency.office_address].join(' ').replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').toLowerCase();
+   if(tr.cells[0])tr.cells[0].textContent=fa(agency.id);
+   if(tr.dataset.status==='inactive'){
+    const button=document.createElement('button');button.type='button';button.className='sy-agency-activate';button.textContent='فعال‌سازی مجدد';
+    tr.lastElementChild?.append(button);
+    button.onclick=async()=>{
+     if(!confirm('شرکت «'+agency.name+'» دوباره فعال شود؟'))return;
+     button.disabled=true;
+     try{await api('/api/v1/admin/agencies/'+agency.id+'/activate',{method:'POST',headers:{'X-CSRF-Token':session.csrfToken}});await companiesPage();}
+     catch(error){alert(error.message);button.disabled=false;}
+    };
+   }
+  });
+  const search=filters.querySelector('#syAgencySearch'),status=filters.querySelector('#syAgencyStatus');
+  const refresh=()=>{
+   const term=search.value.trim().replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').toLowerCase();
+   let shown=0;
+   for(const tr of trs){const visible=(!term||tr.dataset.query?.includes(term))&&(status.value==='all'||status.value===tr.dataset.status);tr.hidden=!visible;if(visible)shown++;}
+   count.textContent='نمایش '+fa(shown)+' از '+fa(allCompanies.length)+' شرکت';
+  };
+  search.oninput=refresh;status.onchange=refresh;refresh();
+  filters.querySelector('#syAgencyExcel').onclick=async event=>{
+   const button=event.currentTarget;button.disabled=true;
+   try{
+    const url='/api/v1/admin/agencies/export.xlsx?'+new URLSearchParams({search:search.value.trim(),status:status.value});
+    const response=await fetch(url,{credentials:'same-origin'});
+    if(!response.ok){const error=await response.json().catch(()=>null);throw new Error(error?.error?.message||'ساخت فایل ناموفق بود.');}
+    const blob=await response.blob(),uri=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=uri;link.download='serviceyar-agencies.xlsx';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(uri),1000);
+   }catch(error){alert(error.message);}finally{button.disabled=false;}
+  };
+  filters.querySelector('#syAgencyPrint').onclick=()=>{
+   const win=window.open('','_blank','width=1100,height=800');
+   if(!win){alert('باز شدن پنجره چاپ مسدود است.');return;}
+   const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+   const selected=trs.filter(tr=>!tr.hidden);
+   const headers=['ردیف','شرکت','کد','مدیر','تلفن','نشانی','موقعیت','وضعیت'];
+   const body=selected.map((tr,i)=>'<tr><td>'+fa(i+1)+'</td>'+[1,2,3,4,5,6,7].map(j=>'<td>'+safe(tr.cells[j]?.textContent?.trim())+'</td>').join('')+'</tr>').join('');
+   win.document.open();win.document.write('<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>شرکت‌های سرویس‌یار</title><style>@page{size:A4 landscape;margin:12mm}body{font:12px Tahoma;color:#153b2c}h1{font-size:21px}table{border-collapse:collapse;width:100%;font-size:10px}th,td{border:1px solid #c7d9cf;padding:7px;text-align:right}th{background:#145d3d;color:#fff}tr:nth-child(even){background:#f0f7f3}thead{display:table-header-group}tr{break-inside:avoid}</style></head><body><h1>سرویس‌یار | گزارش شرکت‌ها</h1><p>تعداد: '+fa(selected.length)+'</p><table><thead><tr>'+headers.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></body></html>');win.document.close();win.focus();win.addEventListener('load',()=>win.print(),{once:true});
+  };
   $('newCompanyBtn').onclick=()=>companyForm(null);
   $('newUserBtn').onclick=()=>newUserForm(d.agencies||[],d.roles||[]);
   function newUserForm(companyList,roleList){
