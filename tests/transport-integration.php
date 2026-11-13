@@ -351,7 +351,12 @@ try{
  rejected(fn()=>\ServiceYar\Users\UserService::changePassword($uid,$a,(int)$newUser['id'],['password'=>'Another-Password','passwordConfirmation'=>'different']),'VALIDATION_ERROR');
  \ServiceYar\Users\UserService::changePassword((int)$newUser['id'],$a,(int)$newUser['id'],['password'=>'Self-Replacement-123','passwordConfirmation'=>'Self-Replacement-123','currentPassword'=>'Replacement-Only-123']);check(true,'Self password change verifies current password');
  $manager=insertFixture('users',['uuid'=>Uuid::v4(),'username'=>'manager_'.$tag,'password_hash'=>'unused']);$p->prepare('INSERT INTO agency_users(agency_id,user_id) VALUES(?,?)')->execute([$a,$manager]);$adminRole=(int)$p->query("SELECT id FROM roles WHERE name='agency_admin'")->fetchColumn();$p->prepare('INSERT INTO user_roles(user_id,role_id) VALUES(?,?)')->execute([$manager,$adminRole]);$p->prepare("INSERT IGNORE INTO role_permissions(role_id,permission_id) SELECT ?,id FROM permissions WHERE name='users.manage'")->execute([$adminRole]);
- rejected(fn()=>\ServiceYar\Users\UserService::save($manager,$a,['username'=>'escalate_'.$tag,'password'=>'Temporary-Only-123','role'=>'super_admin']),'FORBIDDEN');
+ rejected(fn()=>\ServiceYar\Users\UserService::save($manager,$a,['username'=>'escalate_'.$tag,'password'=>'Temporary-Only-123','role'=>'super_admin']),'ROLE_ASSIGNMENT_FORBIDDEN');
+ $agencyOperator=\ServiceYar\Users\UserService::save($manager,$a,['username'=>'agency_op_'.$tag,'firstName'=>'کاربر','lastName'=>'شرکت','password'=>'Valid-Only-123','role'=>'operator']);
+ check((int)$agencyOperator['is_active']===1,'Manager creates an active company operator');
+ check(str_contains((string)$agencyOperator['role_names'],'operator'),'Company user receives operator role');
+ check(count(array_filter(\ServiceYar\Users\UserService::list($manager,$a),fn($item)=>(int)$item['id']===(int)$agencyOperator['id']))===1,'Company operator visible to its manager');
+ rejected(fn()=>\ServiceYar\Users\UserService::save($manager,$a,['username'=>'illegal_admin_'.$tag,'password'=>'Valid-Only-123','role'=>'agency_admin']),'ROLE_ASSIGNMENT_FORBIDDEN');
  $p->prepare('INSERT INTO agency_users(agency_id,user_id) VALUES(?,?)')->execute([$b,$newUser['id']]);rejected(fn()=>\ServiceYar\Users\UserService::changePassword($manager,$a,(int)$newUser['id'],['password'=>'Reset-Password-123','passwordConfirmation'=>'Reset-Password-123']),'PROTECTED_USER');
  rejected(fn()=>\ServiceYar\Agency\AgencyService::update($manager,$a,['name'=>'شرکت','isActive'=>0]),'FORBIDDEN');
  $planBody=['studentId'=>$s1['id'],'requestKey'=>'installments-test-'.$tag,'total'=>'100','advance'=>'10','count'=>3,'issueDate'=>'2026-10-01','dates'=>['2026-11-01','2026-12-01','2027-01-01']];
