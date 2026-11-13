@@ -22,6 +22,9 @@ assert.ok(navJs.includes("navSearchInput.addEventListener('input'")&&navJs.inclu
 assert.ok(navJs.includes("querySelector('a[href=\"#dashboard\"]')?.after(receiptLink)")&&navJs.includes("can('ledger','manage')"),'Receipt/payment shortcut must be placed below dashboard and permission-scoped');
 assert.ok(navJs.includes("input?.focus();input?.select()")&&!navJs.includes('navSearchButton.onclick=openPalette'),'Ctrl+K must focus the inline search without opening a new modal');
 assert.ok(navCss.includes('#app .sy-command-sidebar #nav>.sy-nav-search{')&&navCss.includes('display:grid!important'),'Inline sidebar search must be visible');
+assert.ok(navJs.includes("id='sySidebarCollapse'")&&navJs.includes("localStorage.setItem('sy-sidebar-collapsed'")&&navJs.includes("classList.toggle('sy-collapsed',collapsed)"),'Desktop sidebar must support persistent minimize and maximize');
+assert.ok(brandCss.includes('#app.sy-sidebar-collapsed')&&brandCss.includes('@media(max-width:920px)'),'Sidebar compact rail must be desktop-only and responsive');
+assert.ok(brandCss.includes('.samar-donut')&&brandCss.includes('.sy-mock-chart')&&brandCss.includes('.login-showcase'),'Charts, public landing and login must use shared institutional theme');
 
 const api=read('backend/public/index.php');
 for(const link of ['home','features','about','contact','faq','login'])assert.ok(html.includes('href="#'+link+'"'),'Missing navigation '+link);
