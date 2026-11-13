@@ -403,7 +403,7 @@ async function ledgerReportPage(token=pageToken){
  const query=()=>{const p=new URLSearchParams(new FormData(form));p.set('agencyId',currentAgency.id);return p;};
  const names={student:'دانش‌آموز',driver:'راننده',school:'مدرسه',agency:'شرکت'};
  const methods=ledgerMethods;
- const invalidate=()=>{version++;ready=false;exportQuery='';$('ledgerReportPrint').disabled=true;$('ledgerReportExcel').disabled=true;$('ledgerReportBody').setAttribute('aria-busy','false');$('ledgerReportFreshness').textContent='فیلترها تغییر کرده‌اند؛ برای دریافت نتیجه جدید، «تهیه گزارش» را بزنید.';$('ledgerFilterSummary').textContent='نیازمند به‌روزرسانی';};
+ const invalidate=()=>{version++;ready=false;exportQuery='';$('ledgerReportPrint').disabled=true;$('ledgerReportExcel').disabled=true;$('ledgerReportBody').setAttribute('aria-busy','false');$('ledgerReportBody').innerHTML='<div class="sy-ledger-report-state" role="status"><strong>فیلترهای گزارش تغییر کرده‌اند.</strong><p>برای نمایش نتیجه مطابق معیارهای جدید، دکمه «تهیه گزارش» را انتخاب کنید.</p></div>';$('ledgerReportFreshness').textContent='فیلترها تغییر کرده‌اند؛ برای دریافت نتیجه جدید، «تهیه گزارش» را بزنید.';$('ledgerFilterSummary').textContent='نیازمند به‌روزرسانی';};
  form.addEventListener('input',invalidate);form.addEventListener('change',invalidate);
  const render=async()=>{
   if(form.elements.dateFrom.value&&form.elements.dateTo.value&&form.elements.dateFrom.value>form.elements.dateTo.value){notify('تاریخ شروع نمی‌تواند بعد از تاریخ پایان باشد.',true);return;}
