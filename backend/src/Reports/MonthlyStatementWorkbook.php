@@ -72,20 +72,29 @@ final class MonthlyStatementWorkbook
     {
         if(!class_exists(\ZipArchive::class))throw new AuthException(500,'افزونه ZIP برای اکسل فعال نیست.','EXPORT_DEPENDENCY_MISSING');
         $q=Connection::get()->prepare('SELECT name FROM agencies WHERE id=?');$q->execute([$aid]);$agency=(string)$q->fetchColumn();
-        // Prefer the real reference's layout and formula-bearing sheets when
-        // the scrubbed template has been installed. Legacy synthetic XLSX is
-        // retained as a safe fallback until the template is deployed.
-        if(($_GET['workbookFormat']??'')!=='standard'){
-            try{
-                ReferenceMonthlyStatementWorkbook::downloadIfAvailable($d,$agency,$id,$preview);
-            }catch(\RuntimeException $e){
-                // A malformed or over-constrained reference must not break
-                // preview downloads. Keep the month's data and switch to the
-                // independent 14-sheet writer, without saving any document.
-                error_log('[ServiceYar][statement-export] Reference workbook unavailable; using standard 14-sheet fallback: '.$e->getMessage());
-                if(headers_sent())throw $e;
-            }
+        // The financial statement is a fidelity-sensitive document. Never
+        // silently substitute the generic 14-sheet writer: that changes
+        // tables, merged cells, formulas, print layout and visual appearance.
+        if(!ReferenceMonthlyStatementWorkbook::available()){
+            throw new AuthException(503,
+                'قالب اصلی صورت‌وضعیت در سرور در دسترس نیست؛ خروجی متفاوت تولید نمی‌شود.',
+                'STATEMENT_REFERENCE_TEMPLATE_UNAVAILABLE');
         }
+        if(!ReferenceMonthlyStatementWorkbook::fitsTemplateCapacity($d)){
+            throw new AuthException(422,
+                'تعداد رکوردهای این ماه از ظرفیت قالب اصلی بیشتر است. برای حفظ ظاهر مرجع، قالب باید بدون تغییر چیدمان توسعه داده شود.',
+                'STATEMENT_REFERENCE_TEMPLATE_CAPACITY');
+        }
+        try{
+            ReferenceMonthlyStatementWorkbook::downloadIfAvailable($d,$agency,$id,$preview);
+        }catch(\RuntimeException $e){
+            error_log('[ServiceYar][statement-export] Exact reference workbook failed: '.$e->getMessage());
+            throw new AuthException(500,
+                'ساخت صورت‌وضعیت با قالب اصلی ناموفق بود؛ فایل جایگزین با ظاهر متفاوت تولید نشد.',
+                'STATEMENT_REFERENCE_RENDER_FAILED');
+        }
+        // The exporter exits after streaming the original reference layout.
+        throw new \LogicException('Reference statement exporter returned without a file');
         $label=$d['month_name'].' '.$d['year'];
         $title=($preview?'پیش‌نمایش آزمایشی ـ ثبت‌نشده | ':'').$label.' - '.$agency.' - صورت‌وضعیت سرویس مدارس (ریال)';
         $items=$d['items'];$drivers=$d['drivers'];$rates=$d['rates'];$t=$d['totals'];
