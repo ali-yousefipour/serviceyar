@@ -2818,3 +2818,11 @@ body.sy-menu-palette-open{overflow:hidden}
  #app .sy-command-sidebar,#app .sy-command-sidebar *{transition:none!important;scroll-behavior:auto!important}
 }
 @media print{#app .sy-command-sidebar,#app #navigationToggle,#app #navigationShade{display:none!important}#app .main{margin-right:0!important;width:100%!important}}
+
+
+/* Hidden states must outrank command-rail presentation rules. */
+#app .sy-command-sidebar #nav .nav-group:not([open])>.nav-popup,
+#app .sy-command-sidebar #nav .nav-popup a[hidden],
+#app .sy-command-sidebar #nav>.nav[hidden],
+#app .sy-command-sidebar #nav>.nav-group[hidden],
+#app .sy-command-sidebar #quickReceipt[hidden]{display:none!important}
