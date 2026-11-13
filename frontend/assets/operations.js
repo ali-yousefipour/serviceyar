@@ -1256,7 +1256,31 @@ async function schoolStatementPage(token){
    if(Number(form.elements.year.value)!==payload.year||Number(form.elements.month.value)!==payload.month){
     preview.innerHTML='<p class="sy-statement-period-hint" role="status">ماه حین محاسبه تغییر کرد؛ پیش‌نمایش جدید تهیه کنید.</p>';return;
    }
-   preview.innerHTML=`<div class="toolbar"><h3>پیش‌نمایش ${esc(d.month_name)} ${number(d.year)}</h3><span class="badge">ثبت‌نشده</span></div>${details(d)}${allowed&&!d.validation_errors?.length&&!d.missing_driver_errors?.length&&!d.reconciliation_warnings?.length?'<div class="member-actions"><button type="button" class="primary" id="finalizeStatement">تأیید و ثبت نهایی</button></div>':''}`;
+   preview.innerHTML=`<div class="toolbar"><h3>پیش‌نمایش ${esc(d.month_name)} ${number(d.year)}</h3><span class="badge">ثبت‌نشده</span></div>${details(d)}<div class="member-actions"><button type="button" id="downloadStatementPreviewXlsx">دریافت اکسل آزمایشی ۱۴ شیتی</button>${allowed&&!d.validation_errors?.length&&!d.missing_driver_errors?.length&&!d.reconciliation_warnings?.length?'<button type="button" class="primary" id="finalizeStatement">تأیید و ثبت نهایی</button>':''}</div><p class="sy-statement-period-hint">فایل آزمایشی فقط برای بررسی است؛ دریافت آن هیچ صورت‌وضعیتی را ثبت یا تأیید نمی‌کند.</p>`;
+   $('downloadStatementPreviewXlsx')?.addEventListener('click',async()=>{
+    if(Number(form.elements.year.value)!==payload.year||Number(form.elements.month.value)!==payload.month||form.elements.from.value!==payload.from||form.elements.to.value!==payload.to){
+     notify('دوره تغییر کرده است؛ پیش‌نمایش تازه تهیه کنید.',true);return;
+    }
+    const btn=$('downloadStatementPreviewXlsx');btn.disabled=true;btn.textContent='در حال ساخت اکسل آزمایشی…';
+    try{
+     const response=await fetch(scoped('/api/v1/reports/school-statements/preview.xlsx'),{
+      method:'POST',credentials:'same-origin',
+      headers:{'Content-Type':'application/json','Accept':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','X-CSRF-Token':session.csrfToken},
+      body:JSON.stringify({...payload,approvalDigest:d.approval_digest})
+     });
+     if(!response.ok){
+      const error=await response.json().catch(()=>({}));
+      throw new Error(error?.error?.message||'تهیه فایل آزمایشی انجام نشد.');
+     }
+     const blob=await response.blob();
+     if(blob.size<200||!String(response.headers.get('Content-Type')||'').includes('spreadsheetml'))throw new Error('پاسخ سرور فایل Excel معتبر نیست.');
+     const url=URL.createObjectURL(blob),link=document.createElement('a');
+     link.href=url;link.download='پیش‌نمایش-صورت‌وضعیت-'+payload.year+'-'+String(payload.month).padStart(2,'0')+'.xlsx';
+     document.body.appendChild(link);link.click();link.remove();
+     setTimeout(()=>URL.revokeObjectURL(url),60000);
+    }catch(err){notify(err.message,true);}
+    finally{if(btn.isConnected){btn.disabled=false;btn.textContent='دریافت اکسل آزمایشی ۱۴ شیتی';}}
+   });
    $('finalizeStatement')?.addEventListener('click',async()=>{if(Number(form.elements.year.value)!==payload.year||Number(form.elements.month.value)!==payload.month){notify('دوره تغییر کرده است؛ پیش‌نمایش تازه تهیه کنید.',true);return;}if(!confirm('صورت‌وضعیت این ماه با مبالغ نمایش‌داده‌شده نهایی و ثبت شود؟'))return;const b=$('finalizeStatement');b.disabled=true;try{const result=await write('/api/v1/operations/school-statements',{...payload,approvalDigest:d.approval_digest},'POST');preview.innerHTML='<p class="ok">صورت‌وضعیت ماهانه ثبت شد.</p>';notify('صورت‌وضعیت نهایی ثبت شد.');await load();showDetail(result.id);}catch(err){notify(err.message,true);b.disabled=false;}});
   }catch(err){preview.innerHTML='<p class="error">'+esc(err.message)+'</p>';}finally{button.disabled=false;}
  };
