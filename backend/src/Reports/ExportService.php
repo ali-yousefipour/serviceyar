@@ -328,7 +328,7 @@ final class ExportService
             }
             $grid[]=$cells;
         }
-        $book=\\Shuchkin\\SimpleXLSXGen::fromArray($grid,'گزارش')
+        $book=\Shuchkin\SimpleXLSXGen::fromArray($grid,'گزارش')
             ->setDefaultFont('Vazirmatn')->setDefaultFontSize(11)
             ->rightToLeft()->freezePanes('A2')
             ->autoFilter('A1:'.$lastColumn($last).max(1,count($grid)))
