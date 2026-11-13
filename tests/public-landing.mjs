@@ -45,4 +45,11 @@ assert.ok(js.includes('drawCompanies()')&&js.includes('clearMapForSearch()')&&js
 assert.ok(html.includes('syPublicDetails')&&html.includes('syPublicMapStatus'),'Map modal and status needed');
 assert.ok(api.includes('/api/v1/public/companies')&&api.includes('/api/v1/public/company'),'Public companies API missing');
 assert.ok(read('backend/src/Domain/PublicExplorer.php').includes('public_contact_enabled'),'Public manager contact requires opt-in');
+assert.ok(js.includes("typeof event.key==='string'"),'Keyboard shortcuts must tolerate events without key');
+assert.ok(app.includes('/api/v1/auth/status'),'Guest landing must check status without calling protected /me endpoint');
+assert.ok(api.includes('/api/v1/auth/status'),'Missing anonymous-safe auth status route');
+assert.ok(js.includes('DEFAULT_COMPANY_IMAGE')&&js.includes('attachPinFallback('),'Missing company image fallback');
+for(const img of ['frontend/assets/company-placeholder.png','frontend/assets/school-placeholder.png'])
+ assert.ok(existsSync(new URL(img,root)),'Missing uploaded image asset: '+img);
+assert.ok(!html.includes('sy-dialog-privacy'),'Do not display unnecessary publication note in public modal');
 console.log('Public landing pages, accessibility structure, real statistics and login integration OK');
