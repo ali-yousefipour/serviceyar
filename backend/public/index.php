@@ -69,6 +69,28 @@ try {
    Response::json(['ok'=>false,'error'=>['code'=>'PUBLIC_SCHOOLS_UNAVAILABLE','message'=>'اطلاعات مدارس فعلاً در دسترس نیست.']],503);
   }
  }
+
+ if($method==='GET'&&$path==='/api/v1/public/service-quote'){
+  $schoolId=filter_var($_GET['schoolId']??null,FILTER_VALIDATE_INT);
+  $distance=filter_var($_GET['distanceKm']??null,FILTER_VALIDATE_INT);
+  $vehicleClass=(string)($_GET['vehicleClass']??'');
+  if(!$schoolId||!$distance||$distance<3||$distance>1000||!in_array($vehicleClass,['1','2','3'],true)){
+   Response::json(['ok'=>false,'error'=>['code'=>'INVALID_QUOTE_INPUT','message'=>'مدرسه، مسافت صحیح و کلاس خودرو را انتخاب کنید.']],422);
+  }
+  try{
+   $pdo=Connection::get();
+   $stmt=$pdo->prepare('SELECT s.agency_id,s.region FROM schools s JOIN agencies a ON a.id=s.agency_id WHERE s.id=? AND s.is_active=1 AND a.is_active=1');
+   $stmt->execute([$schoolId]);$school=$stmt->fetch(\PDO::FETCH_ASSOC);
+   if(!$school)Response::json(['ok'=>false,'error'=>['code'=>'SCHOOL_NOT_FOUND','message'=>'مدرسه یافت نشد.']],404);
+   $amount=\ServiceYar\Domain\AgencySchoolTariffs::quote($pdo,(int)$school['agency_id'],(int)$schoolId,
+    \ServiceYar\Domain\AgencySchoolTariffs::YEAR,$distance,$vehicleClass);
+   header('Cache-Control: public, max-age=120');
+   Response::json(['ok'=>true,'data'=>['monthlyFee'=>$amount,'currency'=>'IRR','academicYear'=>\ServiceYar\Domain\AgencySchoolTariffs::YEAR]]);
+  }catch(\Throwable $e){
+   error_log('[ServiceYar][public-service-quote] '.$e->getMessage());
+   Response::json(['ok'=>false,'error'=>['code'=>'PUBLIC_QUOTE_UNAVAILABLE','message'=>'محاسبه تعرفه موقتاً در دسترس نیست.']],503);
+  }
+ }
  $auth=new AuthService();
  if($method==='POST'&&$path==='/api/v1/auth/login'){ $b=Request::json();Response::json(['ok'=>true,'data'=>$auth->login((string)($b['username']??''),(string)($b['password']??''))]); }
  if($method==='POST'&&$path==='/api/v1/auth/logout'){ $s=$auth->current();$auth->requireCsrf($s);$auth->logout();Response::json(['ok'=>true,'data'=>['loggedOut'=>true]]); }
