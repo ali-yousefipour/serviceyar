@@ -9,7 +9,7 @@ use ServiceYar\Domain\DomainService;
 final class ExportService
 {
     private const SCHEMAS = [
-        'cheques'=>['table'=>'cheque_receipts','filename'=>'cheque-receipts.xlsx','date_column'=>'due_date','columns'=>['serial_no'=>'شماره چک','bank_name'=>'بانک','branch_name'=>'شعبه','bank_account'=>'شماره حساب','received_from'=>'دریافت از','received_date'=>'تاریخ دریافت میلادی','due_date'=>'سررسید میلادی','amount'=>'مبلغ ریال','status'=>'وضعیت','description'=>'بابت']],
+        'cheques'=>['table'=>'cheque_receipts','filename'=>'cheque-receipts.xlsx','date_column'=>'due_date','columns'=>['serial_no'=>'شماره چک','bank_name'=>'بانک','branch_name'=>'شعبه','bank_account'=>'شماره حساب','received_from'=>'دریافت از','received_date'=>'تاریخ دریافت شمسی','due_date'=>'سررسید شمسی','amount'=>'مبلغ ریال','status'=>'وضعیت','description'=>'بابت']],
         'schools' => ['table'=>'schools','filename'=>'schools-report.xlsx','date_column'=>'created_at','columns'=>[
             'id'=>'شناسه','name'=>'نام مدرسه','code'=>'کد مدرسه','school_type'=>'نوع مدرسه',
             'manager_name'=>'نام مدیر','phone'=>'تلفن','region'=>'منطقه','is_active'=>'وضعیت فعال','created_at'=>'تاریخ ثبت']],
@@ -145,7 +145,7 @@ final class ExportService
         $rows=[['description'=>'مانده ابتدای بازه','balance'=>$d['opening']]];
         foreach($d['items'] as $row)$rows[]=$row;
         $rows[]=['description'=>'جمع بازه / مانده پایان','debit'=>$d['debit'],'credit'=>$d['credit'],'balance'=>$d['closing']];
-        self::downloadRows(['document_date'=>'تاریخ میلادی','document_no'=>'شماره سند','row_no'=>'ردیف','description'=>'شرح','tracking_no'=>'پیگیری','debit'=>'بدهکار · ریال','credit'=>'بستانکار · ریال','balance'=>'مانده بدهکار · ریال'],$rows,'account-statement.xlsx');
+        self::downloadRows(['document_date'=>'تاریخ شمسی','document_no'=>'شماره سند','row_no'=>'ردیف','description'=>'شرح','tracking_no'=>'پیگیری','debit'=>'بدهکار · ریال','credit'=>'بستانکار · ریال','balance'=>'مانده بدهکار · ریال'],$rows,'account-statement.xlsx');
     }
 
     public static function schoolWorkbook(int $uid,int $aid,string $period): never {
@@ -212,7 +212,9 @@ final class ExportService
         $driverRows=array_map(static fn($r)=>array_values($r),$drivers);
         $esc=static fn($v)=>htmlspecialchars((string)$v,ENT_XML1|ENT_QUOTES,'UTF-8');
         $col=static function(int $n): string {$s='';while($n>0){$n--; $s=chr(65+$n%26).$s;$n=intdiv($n,26);}return $s;};
+        require_once __DIR__.'/ExcelLocalization.php';
         $cell=static function(string $ref,mixed $value,int $style=2,?string $formula=null)use($esc): string{
+          if($formula===null)$value=ExcelLocalization::value($value);
           if($formula!==null)return '<c r="'.$ref.'" s="'.$style.'"><f>'.$esc($formula).'</f><v>'.$esc($value).'</v></c>';
           if(is_int($value)||is_float($value))return '<c r="'.$ref.'" s="'.$style.'"><v>'.$esc($value).'</v></c>';
           return '<c r="'.$ref.'" s="'.$style.'" t="inlineStr"><is><t xml:space="preserve">'.$esc($value).'</t></is></c>';
@@ -286,7 +288,7 @@ final class ExportService
             'to_date'=>$report['to'], 'months'=>$report['months'],
         ], $report['items']);
         self::downloadRows([
-            'academic_year'=>'سال تحصیلی', 'from_date'=>'صدور از تاریخ میلادی', 'to_date'=>'صدور تا تاریخ میلادی',
+            'academic_year'=>'سال تحصیلی', 'from_date'=>'صدور از تاریخ شمسی', 'to_date'=>'صدور تا تاریخ شمسی',
             'months'=>'تعداد ماه خدمت', 'school'=>'مدرسه', 'service'=>'سرویس', 'driver'=>'راننده',
             'student'=>'دانش‌آموز', 'assignment_count'=>'تعداد تخصیص فعال',
             'monthly_fee'=>'ماهیانه · ریال', 'estimated_fee'=>'برآورد · ریال',
@@ -321,7 +323,7 @@ final class ExportService
                 $numericField=(bool)preg_match('/(^|_)(amount|fee|salary|balance|debit|credit|receipt|payment|paid|earned|deduction|invoiced|received|total|monthly|estimated|work|insurance|supervision|coordination|overhead|net)(_|$)/i',$field);
                 if((is_int($value)||is_float($value)||($numericField&&is_string($value)&&is_numeric($value)))&&is_numeric($value)){
                     // Only genuine amounts are coerced; identifiers never lose leading zeros.
-                    $cells[]='<style nf="#,##0">'.(string)(0+$value).'</style>';
+                    $cells[]='<style nf="[$-0429]#,##0">'.(string)(0+$value).'</style>';
                 }else{
                     // ID, IBAN, tracking number, dates and text stay text.
                     $cells[]=$safeText($value);
@@ -357,6 +359,9 @@ final class ExportService
 
     private static function downloadRows(array $columns,array $rows,string $filename,bool $styled=false): never
     {
+        require_once __DIR__.'/ExcelLocalization.php';
+        $columns=array_map([ExcelLocalization::class,'header'],$columns);
+        $rows=array_map([ExcelLocalization::class,'row'],$rows);
         if(extension_loaded('mbstring') && extension_loaded('zlib')){
             self::downloadRowsWithLibrary($columns,$rows,$filename,$styled);
         }
