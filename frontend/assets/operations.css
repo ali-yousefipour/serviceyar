@@ -2023,3 +2023,25 @@ body.sy-menu-palette-open{overflow:hidden}
 #content .sy-service-actions :is(button,a){min-height:34px;padding:6px 9px;font-size:11px;flex:0 1 auto}
 @media(max-width:550px){#content .sy-services-card-grid{grid-template-columns:1fr}#content .sy-service-actions :is(button,a){flex:1 1 auto}}
 @media print{#content .sy-service-more{display:none!important}}
+
+/* Company finance catalogue and account details, responsive UI */
+#content .sy-payment-method-settings{border:1px solid #d8e6dc;border-radius:16px;background:#fff}
+#content .sy-method-settings-rows{display:grid;gap:9px;margin:17px 0}
+#content .sy-method-setting{display:grid;grid-template-columns:110px minmax(0,1fr) 72px auto;align-items:end;gap:12px;padding:12px;border:1px solid #dce9e1;border-radius:12px;background:#f9fcfa}
+#content .sy-method-setting label{display:grid;gap:6px;min-width:0;font-size:12px;font-weight:700;color:#3b644a}
+#content .sy-method-setting input{width:100%;min-width:0;box-sizing:border-box;min-height:43px;border:1px solid #cadfce;border-radius:9px;padding:9px 11px;background:#fff}
+#content .sy-method-code{font-family:ui-monospace,monospace;font-size:11px;direction:ltr;overflow-wrap:anywhere;color:#5c7366}
+#content .sy-method-state{font-size:11px;font-weight:800;color:#176b43;background:#e4f5eb;padding:7px;text-align:center;border-radius:9px}
+#content .sy-method-settings-actions{display:flex;justify-content:flex-start;flex-wrap:wrap;gap:9px}
+#content .sy-method-setting button,#content .sy-method-settings-actions button{min-height:42px;padding:8px 13px;border-radius:9px}
+#content #agencyMethodsStatus{font-size:12px;font-weight:700;line-height:1.9;color:#276849;margin:13px 0 0}
+#content .sy-payment-method-settings :is(button,input):focus-visible{outline:3px solid #81bf99;outline-offset:2px}
+#content .sy-finance-table td[data-label="شماره شبا"],#content .sy-finance-table td[data-label="شماره حساب بانکی"]{font-variant-numeric:tabular-nums;direction:ltr;text-align:right;white-space:nowrap}
+#modal #editForm:has([name=bankName]) :is([name=bankAccount],[name=iban]){direction:ltr;text-align:left;font-variant-numeric:tabular-nums;letter-spacing:.2px}
+#modal #editForm:has([name=companyAccountId]) [name=companyAccountId]{font-weight:700;background:#f0f8f3}
+@media(max-width:720px){
+ #content .sy-method-setting{grid-template-columns:1fr 1fr;align-items:center}
+ #content .sy-method-setting label{grid-column:1/-1;grid-row:1}
+ #content .sy-method-settings-actions button{flex:1 1 140px}
+}
+@media print{#content .sy-payment-method-settings{display:none!important}}
