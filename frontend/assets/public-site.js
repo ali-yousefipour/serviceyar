@@ -111,9 +111,6 @@
  const faNumber=value=>new Intl.NumberFormat('fa-IR').format(value);
  function selectPublicSchool(school){
   selectedSchool=school;
-  const input=document.getElementById('syQuoteSchoolName');
-  if(input)input.value=school.name+' — '+school.company;
-  document.getElementById('syQuoteResult').textContent='مدرسه انتخاب شد؛ مسافت و کلاس خودرو را وارد کنید.';
   if(schoolMap)schoolMap.setView([school.latitude,school.longitude],15);
   root.querySelectorAll('[data-school-id]').forEach(el=>el.classList.toggle('sy-selected-school',String(school.id)===el.dataset.schoolId));
  }
@@ -128,6 +125,10 @@
    const title=document.createElement('strong');title.textContent=school.name;
    const company=document.createElement('small');company.textContent='شرکت سرویس‌دهنده: '+school.company;
    const region=document.createElement('span');region.textContent=school.region||'ناحیه ثبت نشده';
+   if(school.photoUrl){
+    const img=document.createElement('img');img.className='sy-school-thumbnail';img.src=school.photoUrl;
+    img.alt='';img.loading='lazy';img.onerror=()=>img.remove();button.append(img);
+   }
    button.append(title,company,region);button.addEventListener('click',()=>selectPublicSchool(school));
    result.append(button);
   });
@@ -185,17 +186,29 @@
    schoolSearchTimer=setTimeout(()=>searchPublicSchools(search.value.trim()),350);
   });
   document.getElementById('syServiceQuote')?.addEventListener('submit',async event=>{
-   event.preventDefault();const status=document.getElementById('syQuoteResult');
-   if(!selectedSchool){status.textContent='ابتدا مدرسه را انتخاب کنید.';return;}
-   const form=event.currentTarget;
-   const distance=form.elements.distanceKm.value,vehicleClass=form.elements.vehicleClass.value;
-   status.textContent='در حال بررسی نرخ‌نامه شرکت…';
+   event.preventDefault();
+   const form=event.currentTarget,status=document.getElementById('syQuoteResult');
+   const district=form.elements.district.value;
+   const distance=form.elements.distanceKm.value.replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+   const vehicleClass=form.elements.vehicleClass.value;
+   const button=form.querySelector('button[type=submit]');
+   if(!district||!vehicleClass||!Number.isFinite(Number(distance))||Number(distance)<=0){
+    status.textContent='ناحیه، نوع خودرو و مسافت معتبر را وارد کنید.';return;
+   }
+   status.textContent='در حال محاسبه تعرفه مصوب…';
+   if(button)button.disabled=true;
    try{
-    const url='/api/v1/public/service-quote?schoolId='+selectedSchool.id+'&distanceKm='+encodeURIComponent(distance)+'&vehicleClass='+encodeURIComponent(vehicleClass);
-    const response=await fetch(url,{credentials:'omit'});const body=await response.json();
+    const params=new URLSearchParams({district,vehicleClass,distanceKm:distance});
+    const response=await fetch('/api/v1/public/service-quote?'+params,{credentials:'omit'});
+    const body=await response.json();
     if(!response.ok||!body.ok)throw Error(body.error?.message||'محاسبه انجام نشد');
-    status.textContent=body.data.monthlyFee==null?'برای این مدرسه، مسافت و کلاس خودرو تعرفه ثبت نشده است.':'تعرفه ماهانه: '+faNumber(body.data.monthlyFee)+' ریال';
-   }catch(error){status.textContent=error.message;}
+    status.replaceChildren();
+    const amount=document.createElement('strong');amount.textContent=faNumber(body.data.monthlyFee)+' ریال';
+    const detail=document.createElement('span');
+    detail.textContent='مبلغ ماهانه · مسافت مبنا: '+faNumber(body.data.distanceAppliedKm)+' کیلومتر · ضریب ترافیک: '+faNumber(body.data.trafficPercent)+'٪';
+    status.append(amount,detail);status.classList.add('sy-quote-success');
+   }catch(error){status.classList.remove('sy-quote-success');status.textContent=error.message||'خطا در محاسبه مبلغ';}
+   finally{if(button)button.disabled=false;}
   });
   await searchPublicSchools();
  }
