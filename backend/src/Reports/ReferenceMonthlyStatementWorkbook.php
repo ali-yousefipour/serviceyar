@@ -352,11 +352,21 @@ final class ReferenceMonthlyStatementWorkbook
         $zip->addFromString('xl/worksheets/sheet'.$sheet.'.xml',$doc->saveXML());
     }
 
+    /** Whether this month fits the reference template's fixed data ranges. */
+    public static function fitsTemplateCapacity(array $d): bool
+    {
+        return count($d['items']??[])<=630
+            && count($d['reference_drivers']??$d['drivers']??[])<=122;
+    }
+
     public static function downloadIfAvailable(array $d,string $agency,int $statementId,bool $preview=false): bool
     {
         if(!self::available())return false;
-        if(count($d['items']??[])>630 || count($d['reference_drivers']??$d['drivers']??[])>122){
-            throw new \RuntimeException('صورت‌وضعیت از ظرفیت ردیف‌های قالب مرجع بیشتر است؛ ابتدا قالب و محدوده جدول‌ها باید توسعه داده شوند.');
+        if(!self::fitsTemplateCapacity($d)){
+            // The reference template has fixed worksheet/footer/table ranges.
+            // Do not fail with HTTP 500 or corrupt them for larger agencies.
+            // The caller will use the scalable, local 14-sheet XLSX writer.
+            return false;
         }
         $temp=tempnam(sys_get_temp_dir(),'sy-ref-');
         if($temp===false || !copy(self::TEMPLATE,$temp))throw new \RuntimeException('Cannot prepare reference workbook');
