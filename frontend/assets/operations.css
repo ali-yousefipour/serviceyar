@@ -2057,3 +2057,23 @@ body.sy-menu-palette-open{overflow:hidden}
 #modal .sy-account-fieldset :is(select,input):focus-visible{outline:3px solid #83c49b;outline-offset:2px}
 #modal .sy-company-account-editor #saveRecord{justify-self:start;min-width:160px;min-height:44px}
 @media(max-width:650px){#modal .sy-account-fieldset{padding:12px}#modal .sy-account-fieldset .sy-account-fields{grid-template-columns:minmax(0,1fr)}#modal .sy-company-account-editor #saveRecord{width:100%}}
+
+/* Company logo branding across dashboards and printed reports */
+#content .sy-dashboard-identity{display:flex;align-items:center;gap:17px;min-width:0}
+#content .sy-dashboard-identity>div{min-width:0}
+.sy-company-logo{width:auto;height:auto;max-width:100%;object-fit:contain;flex:none;background:#fff;border-radius:10px}
+#content .sy-dashboard-identity>.sy-company-logo{width:76px;height:76px;padding:7px;border:1px solid #d4e8d8}
+#content .sy-agency-logo-layout{display:grid;grid-template-columns:115px minmax(0,1fr);align-items:center;gap:22px;padding:18px;background:#f7fbf8;border:1px solid #d8e8dc;border-radius:14px;margin-top:12px}
+#content .sy-agency-logo-layout>.sy-company-logo{width:100px;height:100px;padding:8px;border:1px solid #d9e6dc}
+#content .sy-agency-logo-layout form{min-width:0}
+#content .sy-agency-logo-layout label{display:grid;gap:8px;font-size:12px;font-weight:750;color:#315c42}
+#content .sy-agency-logo-layout input[type=file]{width:100%;box-sizing:border-box;border:1px dashed #afcfbb;background:#fff;border-radius:9px;padding:12px}
+#content .sy-agency-logo-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:13px}
+#content .sy-agency-logo-actions button{min-height:42px}
+#content #agencyLogoStatus{margin:12px 0 0;color:#41684c;font-size:12px;line-height:1.8}
+.sy-report-company-letterhead{display:none;align-items:center;justify-content:flex-start;gap:14px;min-height:70px;margin:0 0 18px;padding:0 0 12px;border-bottom:2px solid #325940}
+.sy-report-company-letterhead .sy-company-logo{width:64px;height:64px;object-fit:contain}
+.sy-report-company-letterhead strong{font-weight:850;font-size:16px;color:#244b34}
+.sy-report-company-letterhead p{font-size:11px;margin:0;color:#5d7567}
+@media(max-width:600px){#content .sy-agency-logo-layout{grid-template-columns:1fr}#content .sy-dashboard-identity{gap:9px}#content .sy-dashboard-identity>.sy-company-logo{width:58px;height:58px}}
+@media print{.sy-report-company-letterhead{display:flex!important;break-inside:avoid}#content .sy-agency-logo-settings{display:none!important}.sy-company-logo{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
