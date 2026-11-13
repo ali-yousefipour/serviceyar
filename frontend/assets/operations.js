@@ -1658,9 +1658,9 @@ function showDriverPayslip(doc,line){
      if(existing){if(existing.dataset.ready==='true'){resolve();return;}existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true});return;}
      const script=document.createElement('script');
      script.dataset.syHtml2pdf='true';
-     script.src='https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
+     script.src='/assets/html2pdf.bundle.min.js';
      script.onload=()=>{script.dataset.ready='true';resolve();};
-     script.onerror=()=>{script.remove();reject(new Error('کتابخانه ساخت PDF بارگذاری نشد. اتصال اینترنت را بررسی کنید.'));};
+     script.onerror=()=>{script.remove();reject(new Error('کتابخانه ساخت PDF از فایل‌های سامانه بارگذاری نشد. صفحه را تازه‌سازی کنید و دوباره تلاش کنید.'));};
      document.head.appendChild(script);
     });
    }
