@@ -161,6 +161,11 @@ try {
    if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Settings\PlatformSettings::overview($s['id'])]);
    if($method==='PUT'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Settings\PlatformSettings::save($s['id'],Request::json())]);}
  }
+ if($path==='/api/v1/agency/logo'){
+  if($method==='GET')\ServiceYar\Agency\AgencyLogo::output($s['id'],$aid);
+  if($method==='POST'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Agency\AgencyLogo::upload($s['id'],$aid,$_FILES['file']??[])]);}
+  if($method==='DELETE'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Agency\AgencyLogo::delete($s['id'],$aid)]);}
+ }
  if($method==='GET'&&$path==='/api/v1/settings')Response::json(['ok'=>true,'data'=>SettingsService::get($s['id'],$aid)]);
  if(($method==='PUT'||$method==='PATCH')&&$path==='/api/v1/settings'){ $auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>SettingsService::put($s['id'],$aid,Request::json())]); }
  if($method==='GET'&&$path==='/api/v1/holidays')Response::json(['ok'=>true,'data'=>HolidayService::list($s['id'],$aid)]);
