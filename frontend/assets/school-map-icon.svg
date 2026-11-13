@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="نماد مدرسه">
+<title>مدرسه</title>
+<path d="M254 22v108" stroke="#5b5269" stroke-width="8" stroke-linecap="round"/>
+<path d="M259 31h100v28H259z" fill="#199d4e"/><path d="M259 59h100v27H259z" fill="#fff"/><path d="M259 86h100v28H259z" fill="#e62536"/>
+<g fill="#e32236" transform="translate(306 72)"><circle r="7"/><path d="M-4-12 0-3 6-12M-5 12 0 4 5 12" stroke="#e32236" stroke-width="2" fill="none"/></g>
+<path d="M16 245 252 42 496 245v220H16z" fill="#f3c6a4"/>
+<path d="M0 247 252 27 512 247v40H489L252 88 24 287H0z" fill="#fe5622"/>
+<path d="M87 244 253 92 424 244" fill="none" stroke="#cf0b29" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M16 462h480l16 22H0z" fill="#5a5468"/>
+<circle cx="253" cy="221" r="58" fill="#ffe6a6" stroke="#775f72" stroke-width="16"/>
+<path d="M253 189v35h-24" fill="none" stroke="#775f72" stroke-width="12" stroke-linecap="round"/>
+<g fill="#826b78"><rect x="43" y="264" width="64" height="77" rx="23"/><rect x="122" y="264" width="64" height="77" rx="23"/><rect x="327" y="264" width="64" height="77" rx="23"/><rect x="406" y="264" width="64" height="77" rx="23"/>
+<rect x="43" y="362" width="64" height="77" rx="8"/><rect x="122" y="362" width="64" height="77" rx="8"/><rect x="327" y="362" width="64" height="77" rx="8"/><rect x="406" y="362" width="64" height="77" rx="8"/></g>
+<g fill="#66bfd7"><path d="M56 298a18 18 0 0 1 37 0v10H56z"/><path d="M135 298a18 18 0 0 1 37 0v10h-37z"/><path d="M340 298a18 18 0 0 1 37 0v10h-37z"/><path d="M419 298a18 18 0 0 1 37 0v10h-37z"/>
+<path d="M56 390h37v13H56zM135 390h37v13h-37zM340 390h37v13h-37zM419 390h37v13h-37z"/></g>
+<path d="M206 478V368q0-20 20-20h55q20 0 20 20v110" fill="#896474" stroke="#775e6d" stroke-width="11"/>
+<path d="M221 373h66v21h-66z" fill="#58bed7"/><path d="M223 411h29v67h-29zM257 411h29v67h-29z" fill="#b87a68"/>
+</svg>
