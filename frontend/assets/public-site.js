@@ -2,6 +2,7 @@
 (() => {
  'use strict';
  const root=document.getElementById('publicSite');
+ if(root)root.classList.add('sy-public-v3');
  const login=document.getElementById('login');
  const pages=new Set(['home','features','about','contact','faq']);
  const titles={home:'سرویس‌یار | سامانه مدیریت سرویس مدارس',features:'امکانات سامانه | سرویس‌یار',about:'درباره ما | سرویس‌یار',contact:'ارتباط با ما | سرویس‌یار',faq:'پرسش‌های متداول | سرویس‌یار'};
@@ -110,8 +111,8 @@
 
  let schoolMap=null,publicCompanyMarkers=null,schoolMarkers=null,publicSchoolList=[],publicCompanies=[],selectedSchool=null,schoolSearchTimer=null,schoolSearchSequence=0;
  const faNumber=value=>new Intl.NumberFormat('fa-IR').format(value);
- const DEFAULT_SCHOOL_IMAGE='/assets/school-placeholder.png';
- const DEFAULT_COMPANY_IMAGE='/assets/company-placeholder.png';
+ const DEFAULT_SCHOOL_IMAGE='/assets/school-map-icon.webp';
+ const DEFAULT_COMPANY_IMAGE='/assets/company-map-icon.webp';
  const validPoint=row=>row&&Number.isFinite(Number(row.latitude))&&Number.isFinite(Number(row.longitude))&&row.latitude!==null&&row.longitude!==null;
  function publicMapStatus(message){
   const el=document.getElementById('syPublicMapStatus');if(el)el.textContent=message;
@@ -155,7 +156,7 @@
   const color=type==='agency'?'green':'yellow';
   const imageUrl=photo||(type==='agency'?DEFAULT_COMPANY_IMAGE:DEFAULT_SCHOOL_IMAGE);
   const content='<img alt="" src="'+imageUrl.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'">';
-  return L.divIcon({className:'sy-public-pin sy-public-pin-'+color,html:'<span class="sy-public-pin-face '+''+'">'+content+'<span class="sy-public-pin-symbol">⌖</span></span>',
+  return L.divIcon({className:'sy-public-pin sy-public-pin-'+color,html:'<span class="sy-public-pin-face">'+content+'<span class="sy-public-pin-symbol">⌖</span></span>',
    iconSize:[54,58],iconAnchor:[27,56],popupAnchor:[0,-50]});
  }
  function attachPinFallback(marker){
