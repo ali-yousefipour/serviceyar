@@ -318,12 +318,13 @@ final class ExportService
             $cells=[];
             foreach($names as $field){
                 $value=$row[$field]??'';
-                if(is_int($value)||is_float($value)){
-                    $cells[]='<style nf="#,##0">'.($value).'</style>';
+                $numericField=(bool)preg_match('/(^|_)(amount|fee|salary|balance|debit|credit|receipt|payment|paid|earned|deduction|invoiced|received|total|monthly|estimated|work|insurance|supervision|coordination|overhead|net)(_|$)/i',$field);
+                if((is_int($value)||is_float($value)||($numericField&&is_string($value)&&is_numeric($value)))&&is_numeric($value)){
+                    // Only genuine amounts are coerced; identifiers never lose leading zeros.
+                    $cells[]='<style nf="#,##0">'.(string)(0+$value).'</style>';
                 }else{
                     // ID, IBAN, tracking number, dates and text stay text.
-                    $text=(string)($value??'');
-                    $cells[]=$safeText($text);
+                    $cells[]=$safeText($value);
                 }
             }
             $grid[]=$cells;
