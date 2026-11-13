@@ -64,6 +64,7 @@ try {
  if($method==='GET'&&preg_match('#^/api/v1/reports/school-statements/(\\d+)\\.xlsx$#',$path,$statementExport))\ServiceYar\Reports\MonthlyStatementWorkbook::download($s['id'],$aid,(int)$statementExport[1]);
  if($method==='GET'&&$path==='/api/v1/operations/school-statements')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\MonthlyStatements::list($s['id'],$aid,($_GET['includeDeleted']??'')==='1')]);
  if($method==='POST'&&$path==='/api/v1/operations/school-statements/preview'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\MonthlyStatements::preview($s['id'],$aid,Request::json())]);}
+ if($method==='POST'&&$path==='/api/v1/reports/school-statements/preview.xlsx'){$auth->requireCsrf($s);\ServiceYar\Reports\MonthlyStatementWorkbook::downloadPreview($s['id'],$aid,Request::json());}
  if($method==='POST'&&$path==='/api/v1/operations/school-statements'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\MonthlyStatements::finalize($s['id'],$aid,Request::json())],201);}
  if(preg_match('#^/api/v1/operations/school-statements/(\\d+)(?:/(delete|restore))?$#',$path,$sm)){
   if($method==='GET'&&empty($sm[2]))Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\MonthlyStatements::get($s['id'],$aid,(int)$sm[1])]);
