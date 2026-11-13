@@ -795,3 +795,59 @@ body{background:var(--canvas);color:var(--ink)}
 @media(prefers-reduced-motion:reduce){
  .sy-public-v3 .sy-v3-real-preview{transition:none!important;transform:none!important}
 }
+
+
+/* Public school-service fare calculator: education-level selector and distinct full-year quote. */
+.sy-public-v3 #syPublicSchools .sy-quote-fields{
+ grid-template-columns:repeat(4,minmax(0,1fr)) minmax(125px,.74fr)!important;
+ gap:11px!important;align-items:end!important;
+}
+.sy-public-v3 #syPublicSchools .sy-quote-fields label{
+ min-width:0!important;overflow:visible!important;
+}
+.sy-public-v3 #syPublicSchools .sy-quote-fields select[name="educationLevel"]{
+ background:#fcfefa!important;color:#1a4634!important;
+}
+.sy-public-v3 #syPublicSchools .sy-quote-result.sy-quote-success{
+ display:grid!important;gap:9px!important;
+ padding:12px!important;
+ background:#f7faf4!important;border:1px solid #d3e3d3!important;
+}
+.sy-public-v3 #syPublicSchools .sy-quote-amounts{
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;
+ direction:rtl!important;
+}
+.sy-public-v3 #syPublicSchools .sy-quote-amount-card{
+ display:flex!important;flex-direction:column!important;justify-content:center!important;
+ min-width:0!important;gap:4px!important;
+ padding:11px 14px!important;border:1px solid #d5e6d5!important;
+ border-radius:11px!important;background:#fffefa!important;
+}
+.sy-public-v3 #syPublicSchools .sy-quote-amount-card>span{
+ color:#315a45!important;font:750 12px/1.65 Vazirmatn,Tahoma,sans-serif!important;
+}
+.sy-public-v3 #syPublicSchools .sy-quote-amount-card strong{
+ color:#075b40!important;font:850 clamp(16px,1.5vw,21px)/1.6 Vazirmatn,Tahoma,sans-serif!important;
+ overflow-wrap:anywhere!important;font-variant-numeric:tabular-nums!important;
+}
+.sy-public-v3 #syPublicSchools .sy-quote-annual{
+ background:linear-gradient(120deg,#f7f1df,#fffdf6)!important;
+ border-color:#ddcca0!important;
+}
+.sy-public-v3 #syPublicSchools .sy-quote-annual strong{color:#785619!important}
+.sy-public-v3 #syPublicSchools .sy-quote-annual small{
+ color:#876e35!important;font:600 10.5px/1.7 Vazirmatn,Tahoma,sans-serif!important;
+}
+.sy-public-v3 #syPublicSchools .sy-quote-details{
+ font:500 10.5px/1.8 Vazirmatn,Tahoma,sans-serif!important;
+ color:#5a7664!important;padding-inline:4px!important;
+}
+@media(max-width:1120px){
+ .sy-public-v3 #syPublicSchools .sy-quote-fields{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ }
+}
+@media(max-width:560px){
+ .sy-public-v3 #syPublicSchools .sy-quote-fields{grid-template-columns:minmax(0,1fr)!important}
+ .sy-public-v3 #syPublicSchools .sy-quote-amounts{grid-template-columns:minmax(0,1fr)!important}
+}
