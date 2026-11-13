@@ -10,6 +10,8 @@ final class AgencyLogo
     private static function directory(): string {return dirname(__DIR__,3).'/storage/uploads/agency-logos';}
     private static function filename(int $aid): string {return self::directory().'/agency-'.(int)$aid.'.img';}
 
+    public static function hasCustomLogo(int $aid): bool {return $aid>0 && is_file(self::filename($aid));}
+
     public static function upload(int $uid,int $aid,array $file): array
     {
         Authorization::requirePermission($uid,'settings.manage');
