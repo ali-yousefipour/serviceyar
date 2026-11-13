@@ -13,6 +13,11 @@ const navCss=read('frontend/assets/operations.css');
 const brandCss=read('frontend/assets/brand-theme.css');
 assert.ok(index.includes('/assets/brand-theme.css')&&brandCss.includes('--sy-org-gold')&&brandCss.includes('.sy-public'),'Public, login and panel must share institutional green and gold palette');
 assert.ok(index.includes('sy-command-sidebar')&&index.includes('sy-sidebar-brand-copy')&&index.includes('sy-sidebar-bottom'),'Sidebar must have separate brand, navigation and account regions');
+assert.ok(index.includes('id="syAccountMenu"')&&index.includes('id="syEditProfile"')&&index.includes('id="ownPassword"'),'Sidebar user menu must expose profile and password actions');
+assert.ok(!index.includes('id="userName"')&&!index.includes('id="avatar"')&&!index.includes('class="eyebrow"'),'Dashboard header must not duplicate the brand or user');
+assert.ok(navJs.includes("function ownProfileDialog()")&&navJs.includes("'/api/v1/auth/profile'")&&navJs.includes("passwordDialog({id:session.user.id"),'Account dropdown must wire self profile edit and password actions');
+assert.ok(read('backend/public/index.php').includes("'/api/v1/auth/profile'")&&read('backend/src/Users/UserService.php').includes('function updateOwnProfile('),'Self profile route and service must be available');
+
 assert.ok(index.includes('aria-label="ناوبری اصلی سامانه"'),'Sidebar navigation needs semantic labeling');
 assert.ok(navCss.includes('ServiceYar Command Navigation v3')&&navCss.includes('.sy-command-sidebar #nav .nav-group>summary'),'Premium navigation must use full-width inline accordion groups');
 assert.ok(navCss.includes('max-width:920px')&&navCss.includes('.sy-command-sidebar.nav-open'),'Sidebar must be a functional mobile drawer');
