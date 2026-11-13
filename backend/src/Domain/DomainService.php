@@ -20,7 +20,7 @@ final class DomainService {
   'service-charges'=>['table'=>'service_charges','permission'=>'finance','fields'=>['service_id','title','amount','due_date','status'],'search'=>['title']],
   'invoices'=>['table'=>'invoices','permission'=>'finance','fields'=>['title','party_type','party_id','amount','status','issue_date','due_date'],'search'=>['title']],
   'payments'=>['table'=>'payments','permission'=>'finance','fields'=>['invoice_id','amount','payment_date','method','reference_no','note'],'search'=>['reference_no','note']],
-  'accounts'=>['table'=>'accounting_accounts','permission'=>'finance','fields'=>['code','title','parent_id','is_active'],'search'=>['code','title']],
+  'accounts'=>['table'=>'accounting_accounts','permission'=>'finance','fields'=>['code','title','bank_name','bank_account','iban','parent_id','is_active'],'search'=>['code','title','bank_name','bank_account','iban']],
   'accounting-documents'=>['table'=>'accounting_documents','permission'=>'finance','fields'=>['document_no','document_date','description','status','total_amount'],'search'=>['document_no','description']],
   'wallets'=>['table'=>'wallets','permission'=>'finance','fields'=>['owner_type','owner_id','balance'],'search'=>['owner_type']],
   'messages'=>['table'=>'messages','permission'=>'messages','fields'=>['channel','recipient_type','recipient_id','subject','body','status'],'search'=>['subject','body']],
@@ -28,7 +28,7 @@ final class DomainService {
  ];
  private static function cfg(string $r): array {
   $extra=[
-   'ledger'=>['table'=>'ledger_entries','permission'=>'finance','fields'=>['party_type','party_id','direction','amount','entry_date','method','reference_no','note'],'search'=>['reference_no','note']],
+   'ledger'=>['table'=>'ledger_entries','permission'=>'finance','fields'=>['party_type','party_id','company_account_id','direction','amount','entry_date','method','reference_no','note'],'search'=>['reference_no','note']],
    'driver-ratings'=>['table'=>'driver_ratings','permission'=>'drivers','fields'=>['driver_id','score','note'],'search'=>['note']],
    'parent-reports'=>['table'=>'parent_reports','permission'=>'messages','fields'=>['student_id','subject','body','status','response'],'search'=>['subject','body']]
   ];
@@ -138,7 +138,7 @@ final class DomainService {
     throw new AuthException(422,'نوع عملیات معتبر نیست.','VALIDATION_ERROR');
    if($direction!==''){$where.=' AND direction=:ledger_direction';$params['ledger_direction']=$direction;}
    $method=$q['method']??'';
-   if($method!==''&&(!is_string($method)||!in_array($method,['cash','card','bank','transfer','cheque','wallet'],true)))
+   if($method!==''&&(!is_string($method)||!preg_match('/^[a-z][a-z0-9_]{1,39}$/D',$method)))
     throw new AuthException(422,'روش پرداخت معتبر نیست.','VALIDATION_ERROR');
    if($method!==''){$where.=' AND method=:ledger_method';$params['ledger_method']=$method;}
    foreach(['dateFrom'=>'>=','dateTo'=>'<='] as $name=>$operator){
@@ -190,7 +190,8 @@ final class DomainService {
     WHEN 'driver' THEN (SELECT CONCAT_WS(' ',d.first_name,d.last_name) FROM drivers d WHERE d.id=ledger_entries.party_id AND d.agency_id=ledger_entries.agency_id)
     WHEN 'school' THEN (SELECT sc.name FROM schools sc WHERE sc.id=ledger_entries.party_id AND sc.agency_id=ledger_entries.agency_id)
     WHEN 'agency' THEN (SELECT a.name FROM agencies a WHERE a.id=ledger_entries.party_id AND a.id=ledger_entries.agency_id)
-   END AS party_name";
+   END AS party_name,
+   (SELECT CONCAT_WS(' · ',a.code,a.title) FROM accounting_accounts a WHERE a.id=ledger_entries.company_account_id AND a.agency_id=ledger_entries.agency_id) AS company_account_name";
   if($resource==='services')$select="services.*,
    (SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id WHERE ss.service_id=services.id) AS students_monthly_total,
    (SELECT COALESCE(SUM(ROUND(COALESCE(st.monthly_fee,0) *
@@ -422,8 +423,27 @@ final class DomainService {
   if(isset($data['mobile'])&&!preg_match('/^09[0-9]{9}$/',(string)$data['mobile']))throw new AuthException(422,'شماره همراه باید ۱۱ رقمی و با ۰۹ شروع شود.','VALIDATION_ERROR');
   if(isset($data['score'])&&(!is_numeric($data['score'])||(float)$data['score']<0||(float)$data['score']>5))throw new AuthException(422,'امتیاز باید بین صفر و پنج باشد.','VALIDATION_ERROR');
   if(isset($data['service_status'])&&!in_array($data['service_status'],['no_request','pending','prepayment','waiting','assigned','cancelled'],true))throw new AuthException(422,'وضعیت سرویس نامعتبر است.','VALIDATION_ERROR');
+  if($resource==='accounts'){
+   $bank=$merged['bank_name']??null;$account=$merged['bank_account']??null;$iban=$merged['iban']??null;
+   if($bank!==null && !in_array((string)$bank,IranBankDetails::banks(),true))throw new AuthException(422,'نام بانک باید از فهرست بانک‌های ایرانی انتخاب شود.','INVALID_BANK');
+   if($account!==null && (!is_string($account)||mb_strlen($account)>100||!preg_match('/^[0-9A-Za-z.\/-]+$/D',IranBankDetails::normalize($account))))throw new AuthException(422,'شماره حساب بانکی نامعتبر است.','INVALID_BANK_ACCOUNT');
+   if($iban!==null){$iban=IranBankDetails::normalize((string)$iban);if(!PayrollDocuments::validIban($iban))throw new AuthException(422,'شماره شبا معتبر نیست.','INVALID_IBAN');$data['iban']=$iban;}
+   if(($account!==null||$iban!==null)&&$bank===null)throw new AuthException(422,'برای حساب بانکی، نام بانک را نیز انتخاب کنید.','BANK_REQUIRED');
+  }
   if($resource==='ledger'){
    if(!in_array($merged['direction'],['receipt','payment'],true)||(float)$merged['amount']<=0)throw new AuthException(422,'نوع دریافت/پرداخت یا مبلغ نامعتبر است.','VALIDATION_ERROR');
+   $method=(string)($merged['method']??'');
+   if($method==='')throw new AuthException(422,'روش دریافت یا پرداخت را انتخاب کنید.','PAYMENT_METHOD_REQUIRED');
+   AgencyPaymentMethods::assertUsable($aid,$method,$id?(string)($existing['method']??''):null);
+   $accountId=$merged['company_account_id']??null;
+   if($accountId===null||$accountId===''){
+     if(!$id)throw new AuthException(422,'حساب دریافت یا پرداخت شرکت را انتخاب کنید.','COMPANY_ACCOUNT_REQUIRED');
+   }else{
+     if(!ctype_digit((string)$accountId)||(int)$accountId<1)throw new AuthException(422,'حساب شرکت معتبر نیست.','COMPANY_ACCOUNT_INVALID');
+     $bankQuery=$pdo->prepare('SELECT id FROM accounting_accounts WHERE id=? AND agency_id=? AND is_active=1');
+     $bankQuery->execute([(int)$accountId,$aid]);
+     if(!$bankQuery->fetchColumn())throw new AuthException(422,'حساب شرکت باید فعال و متعلق به همین شرکت باشد.','CROSS_SCOPE_REFERENCE');
+   }
    self::party($pdo,$aid,(string)$merged['party_type'],(int)$merged['party_id']);
    if(!$id)$data['created_by']=$uid;
   }
