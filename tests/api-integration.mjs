@@ -15,6 +15,23 @@ for(const field of ['agencies','schools','students','drivers','services'])assert
 assert.deepEqual(Object.keys(publicOverview),['counts'],'Public overview must not expose tenant/user information');checks+=6;
 await request('/api/v1/auth/login',{method:'POST',body:{username:'preview',password:'Preview-Only-2026!'}});
 const me=(await request('/api/v1/auth/me')).data;csrf=me.csrfToken;aid=me.agencies[0].id;
+
+const publicCompanies=(await request('/api/v1/public/companies')).data;
+assert.ok(Array.isArray(publicCompanies.companies));checks++;
+const publicCompany=(await request('/api/v1/public/company?id='+aid)).data;
+assert.equal(Number(publicCompany.id),Number(aid));checks++;
+assert.equal(publicCompany.managerMobile,null,'Private contact must not appear before public consent');checks++;
+await request('/api/v1/public/schools?q=x',{status:422});
+const publicSchoolEmpty=(await request('/api/v1/public/schools')).data;
+assert.deepEqual(publicSchoolEmpty.schools,[]);checks++;
+const publicProfile=(await request(scoped('/api/v1/agency/public-profile'))).data;
+assert.equal(typeof publicProfile,'object');checks++;
+await request(scoped('/api/v1/agency/public-profile'),{method:'PUT',body:{public_contact_enabled:'1',public_manager_name:'مسئول ارتباط عمومی',public_manager_mobile:'09120000123',public_office_address:'نشانی دفتر قابل انتشار'}});
+const publishedCompany=(await request('/api/v1/public/company?id='+aid)).data;
+assert.equal(publishedCompany.managerMobile,'09120000123');checks++;
+await request(scoped('/api/v1/agency/public-profile'),{method:'PUT',body:{public_contact_enabled:'0'}});
+const hiddenCompany=(await request('/api/v1/public/company?id='+aid)).data;
+assert.equal(hiddenCompany.managerMobile,null);checks++;
 const logoResponse=await request(scoped('/api/v1/agency/logo'),{raw:true});
 assert.ok(logoResponse.data.length>100,'Company logo must have a fallback image');checks++;
 assert.ok(['image/png','image/jpeg','image/webp'].some(type=>(logoResponse.response.headers.get('content-type')||'').startsWith(type)));checks++;
