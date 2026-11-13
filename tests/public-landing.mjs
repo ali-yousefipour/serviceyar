@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import {readFileSync,existsSync} from 'node:fs';
+const root=new URL('../',import.meta.url);
+const read=path=>readFileSync(new URL(path,root),'utf8');
+const index=read('frontend/index.html');
+const html=read('frontend/assets/public-site-content.html');
+const css=read('frontend/assets/public-site.css');
+const js=read('frontend/assets/public-site.js');
+const app=read('frontend/assets/app.js');
+const api=read('backend/public/index.php');
+for(const link of ['home','features','about','contact','faq','login'])assert.ok(html.includes('href="#'+link+'"'),'Missing navigation '+link);
+for(const page of ['home','features','about','contact','faq'])assert.ok(html.includes('data-public-page="'+page+'"'),'Missing page '+page);
+for(const key of ['agencies','schools','students','drivers','services'])assert.ok(html.includes('data-stat="'+key+'"'),'Missing real public count '+key);
+assert.ok(index.includes('id="publicSite"')&&index.includes('id="login"'),'Missing public/login mounts');
+assert.ok(index.includes('/assets/public-site.css')&&index.includes('/assets/public-site.js'),'Missing static references');
+assert.ok(index.includes('id="loginForm"')&&index.includes('id="password"'),'Existing login form must remain');
+assert.ok(js.includes('/api/v1/public/overview')&&js.includes('toLocaleString(\'fa-IR\')'),'Real Persian stats required');
+assert.ok(css.includes('max-width:540px')&&css.includes('max-width:800px'),'Mobile responsive rules missing');
+assert.ok(app.includes('serviceyarPublic?.show()')&&app.includes('serviceyarPublic?.hide()'),'Login/public transition missing');
+const route=api.indexOf("'/api/v1/public/overview'");
+const guard=api.indexOf('$auth->current(); $aid=null;');
+assert.ok(route>=0 &&route<guard,'Public overview route must not require login');
+assert.ok(api.includes("foreach(['agencies','schools','students','drivers','services']"),'Missing grouped safe count queries');
+assert.ok(!html.includes('example.com'),'Do not publish made-up contact details');
+for(const path of ['frontend/assets/logo.png','frontend/assets/Vazirmatn-Regular.woff2'])
+ assert.ok(existsSync(new URL(path,root)),'Missing asset: '+path);
+console.log('Public landing pages, accessibility structure, real statistics and login integration OK');
