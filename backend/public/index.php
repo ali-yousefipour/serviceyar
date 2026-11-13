@@ -119,6 +119,17 @@ try {
  if($method==='GET'&&$path==='/api/v1/auth/csrf'){ $s=$auth->current();Response::json(['ok'=>true,'data'=>['csrfToken'=>$s['csrfToken']]]); }
  $s=$auth->current(); $aid=null;
 
+ // Agency-scoped school photo endpoint: no public listing or direct object-store URL.
+ if(preg_match('#^/api/v1/schools/(\\d+)/photo$#',$path,$photoMatch)){
+  $s=$auth->current();$photoAgency=agencyId($s);$schoolId=(int)$photoMatch[1];
+  if($method==='GET')\ServiceYar\Domain\SchoolPhotos::stream($s['id'],$photoAgency,$schoolId);
+  if($method==='POST'){
+   $auth->requireCsrf($s);
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolPhotos::upload($s['id'],$photoAgency,$schoolId,$_FILES)]);
+  }
+ }
+
+
  if($method==='GET'&&$path==='/api/v1/agencies')Response::json(['ok'=>true,'data'=>AgencyService::list($s['id'])]);
  if($method==='POST'&&$path==='/api/v1/agencies'){ $auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>AgencyService::create($s['id'],Request::json())],201); }
  if(preg_match('#^/api/v1/agencies/(\d+)$#',$path,$m)){ $id=(int)$m[1];if($method==='PUT'||$method==='PATCH'){ $auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>AgencyService::update($s['id'],$id,Request::json())]);} }
