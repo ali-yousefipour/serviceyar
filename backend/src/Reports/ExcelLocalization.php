@@ -83,6 +83,9 @@ final class ExcelLocalization
         if($text[0]==='=')return $text;
         // An internationally interoperable account number must retain ASCII.
         if(preg_match('/^IR[0-9]{24}$/i',$text))return strtoupper($text);
+        // Some source templates store account numbers without an IR prefix.
+        // Large numeric banking identifiers must remain lossless ASCII text.
+        if(preg_match('/^[0-9]{16,30}$/D',$text))return $text;
         $key=strtolower($text);
         if(isset(self::STATUSES[$key]))return self::STATUSES[$key];
         if(preg_match('/^(?:19|20|21)\d{2}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?)?$/D',$text))return self::jalali($text);
