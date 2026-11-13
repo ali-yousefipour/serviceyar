@@ -249,3 +249,20 @@
 .sy-public .sy-public-pin-face img{height:100%;width:100%;object-fit:cover}
 .sy-public .sy-public-pin-face span{color:#b98204;font-size:27px;font-weight:900}
 @media(max-width:800px){.sy-public .sy-hero{min-height:unset}.sy-public .sy-hero-copy h1{max-width:none}.sy-public .sy-schools-layout{gap:12px}}
+
+
+/* Prevent blank sections in full-page screenshots, fast scroll and restored tabs.
+   Reveals enhance the page but must never be a prerequisite for seeing content. */
+.sy-public.sy-motion-ready [data-reveal]:not(.sy-in-view),
+.sy-public.sy-motion-ready [data-reveal-group]>*:not(.sy-in-view),
+.sy-public.sy-motion-ready .sy-section-heading:not(.sy-in-view),
+.sy-public.sy-motion-ready .sy-stat-grid>*:not(.sy-in-view){
+ opacity:1!important;
+ transform:none!important;
+}
+.sy-public .sy-explorer-panel-heading{margin-bottom:16px}
+.sy-public .sy-school-results{scrollbar-color:#93cbb5 #eef7f2;scrollbar-width:thin}
+.sy-public .sy-school-choice{min-height:76px;transition:transform .18s ease,box-shadow .18s ease}
+.sy-public .sy-school-choice:focus-visible{outline:3px solid #0b8559;outline-offset:2px}
+.sy-public .sy-school-map .leaflet-container{z-index:0}
+.sy-public .sy-map-privacy-note{font-size:.82rem;color:#58766a}
