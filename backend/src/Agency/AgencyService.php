@@ -65,12 +65,12 @@ final class AgencyService {
   $p=Connection::get()->prepare('UPDATE agencies SET name=:n,code=:c,city_id=:city,is_active=:active WHERE id=:id'); $p->execute(['n'=>$name,'c'=>trim((string)($b['code']??''))!==''?$b['code']:null, 'city'=>isset($b['cityId'])&&$b['cityId']!==''?(int)$b['cityId']:null,'active'=>isset($b['isActive'])?(int)$b['isActive']:(int)$old,'id'=>$id]);
   $profileKeys=['company_manager_name','company_ceo_mobile','company_phone','company_address'];
  $profile=[];
- foreach($profileKeys as $key){if(array_key_exists($key,$b)){$value=trim((string)$b[$key]);if(mb_strlen($value,'UTF-8')>450)throw new \ServiceYar\\Auth\\AuthException(422,'اطلاعات شرکت بیش از حد طولانی است.','VALIDATION_ERROR');$profile[$key]=$value;}}
+ foreach($profileKeys as $key){if(array_key_exists($key,$b)){$value=trim((string)$b[$key]);if(mb_strlen($value,'UTF-8')>450)throw new \ServiceYar\Auth\AuthException(422,'اطلاعات شرکت بیش از حد طولانی است.','VALIDATION_ERROR');$profile[$key]=$value;}}
  if(array_key_exists('latitude',$b)||array_key_exists('longitude',$b)){
   if($b['latitude']!==''&&$b['longitude']!==''&&$b['latitude']!==null&&$b['longitude']!==null)
-   $profile['company_location']=\ServiceYar\\Integrations\\Neshan::coordinate($b['latitude'],$b['longitude']);
+   $profile['company_location']=\ServiceYar\Integrations\Neshan::coordinate($b['latitude'],$b['longitude']);
  }
- if($profile)\ServiceYar\\Settings\\SettingsService::put($userId,$id,$profile);
+ if($profile)\ServiceYar\Settings\SettingsService::put($userId,$id,$profile);
  $s=Connection::get()->prepare('SELECT id,uuid,name,code,city_id,is_active,created_at,updated_at FROM agencies WHERE id=:id'); $s->execute(['id'=>$id]); return $s->fetch() ?: [];
  }
  public static function create(int $userId,array $b): array {
