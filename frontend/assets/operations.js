@@ -1677,6 +1677,24 @@ function showDriverPayslip(doc,line){
    const docStyle=document.createElement('style');
    docStyle.textContent='.sy-payslip-pdf-render .sy-payslip-header{display:flex!important;flex-direction:row!important;align-items:center!important;gap:12px!important;min-width:0!important}.sy-payslip-pdf-render .sy-payslip-header>img{flex:0 0 50px!important;width:50px!important;height:50px!important;max-width:50px!important;max-height:50px!important}.sy-payslip-pdf-render .sy-payslip-header>div{flex:1 1 auto!important;min-width:0!important}.sy-payslip-pdf-render .sy-payslip-document-state{flex:0 0 116px!important;min-width:116px!important;max-width:116px!important}.sy-payslip-pdf-render .sy-payslip-columns{display:block!important;margin:12px 0!important}.sy-payslip-pdf-render .sy-payslip-columns>section{display:block!important;width:100%!important;max-width:100%!important;margin:0 0 14px!important;break-inside:avoid!important}.sy-payslip-pdf-render .sy-payslip-columns table{table-layout:fixed!important;width:100%!important;border-collapse:collapse!important}.sy-payslip-pdf-render .sy-payslip-columns :is(th,td){display:table-cell!important;width:50%!important;max-width:50%!important;box-sizing:border-box!important;white-space:normal!important;overflow:visible!important;word-break:normal!important}.sy-payslip-pdf-render .sy-payslip-meta{display:block!important;width:100%!important;overflow:visible!important}.sy-payslip-pdf-render .sy-payslip-field{box-sizing:border-box!important;display:flex!important;width:100%!important;min-height:28px!important;padding:4px 10px!important;border-bottom:1px solid #d9e3db!important}.sy-payslip-pdf-render .sy-payslip-field dt{flex:0 0 45%!important}.sy-payslip-pdf-render .sy-payslip-field dd{flex:1 1 auto!important;overflow-wrap:anywhere!important}.sy-payslip-pdf-render .sy-payslip-signatures{display:flex!important;gap:16px!important;margin-top:22px!important}.sy-payslip-pdf-render .sy-payslip-signatures>div{flex:1 1 0!important}.sy-payslip-pdf-render :is(h2,h3,p,td,th,dt,dd,span,strong){letter-spacing:normal!important;text-transform:none!important}';
    wrap.appendChild(docStyle);
+   // The PDF library clones only the sheet, not its wrapper. Apply all
+   // critical layout overrides inline so they survive that clone.
+   const inlineStyle=(selector,value)=>copy.querySelectorAll(selector).forEach(element=>{element.style.cssText+=';'+value;});
+   inlineStyle('.sy-payslip-header','display:flex!important;flex-direction:row!important;align-items:center!important;gap:12px!important;min-width:0!important');
+   inlineStyle('.sy-payslip-header>img','flex:0 0 50px!important;width:50px!important;height:50px!important;max-width:50px!important;max-height:50px!important');
+   inlineStyle('.sy-payslip-header>div','flex:1 1 auto!important;min-width:0!important');
+   inlineStyle('.sy-payslip-document-state','flex:0 0 116px!important;min-width:116px!important;max-width:116px!important');
+   inlineStyle('.sy-payslip-columns','display:block!important;width:100%!important;margin:12px 0!important');
+   inlineStyle('.sy-payslip-columns>section','display:block!important;width:100%!important;max-width:100%!important;margin:0 0 14px!important');
+   inlineStyle('.sy-payslip-columns table','table-layout:fixed!important;width:100%!important;border-collapse:collapse!important');
+   inlineStyle('.sy-payslip-columns th,.sy-payslip-columns td','display:table-cell!important;box-sizing:border-box!important;white-space:normal!important;overflow:visible!important');
+   inlineStyle('.sy-payslip-columns td','width:35%!important;max-width:35%!important');
+   inlineStyle('.sy-payslip-meta','display:block!important;width:100%!important;overflow:visible!important');
+   inlineStyle('.sy-payslip-field','box-sizing:border-box!important;display:flex!important;width:100%!important;min-height:28px!important;padding:4px 10px!important;border-bottom:1px solid #d9e3db!important');
+   inlineStyle('.sy-payslip-field dt','flex:0 0 45%!important');
+   inlineStyle('.sy-payslip-field dd','flex:1 1 auto!important;overflow-wrap:anywhere!important');
+   inlineStyle('.sy-payslip-signatures','display:flex!important;gap:16px!important;margin-top:22px!important');
+   inlineStyle('.sy-payslip-signatures>div','flex:1 1 0!important');
    wrap.appendChild(copy);
    document.body.appendChild(wrap);
    await Promise.all(Array.from(copy.querySelectorAll('img')).map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve;})));
