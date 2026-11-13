@@ -437,6 +437,26 @@ try{
  rejected(fn()=>D::list($uid,$a,'vehicles',['plateLetter'=>'@']),'INVALID_PLATE_FILTER');
  D::save($uid,$a,'vehicles',['ownerName'=>'مالک اصلاح شده'],(int)$vehicleRecord['id']);
  check(D::get($uid,$a,'vehicles',(int)$vehicleRecord['id'])['owner_name']==='مالک اصلاح شده','Vehicle owner edit retains linked driver');
+ // Regression: a larger linked vehicle permits assigning additional students to its running service.
+ $seatVehicle=D::save($uid,$a,'vehicles',['plate'=>'88ب98765','capacity'=>4]);
+ $seatDriver=D::save($uid,$a,'drivers',['firstName'=>'ظرفیت','lastName'=>'آزمایشی','status'=>'active','vehicleId'=>$seatVehicle['id']]);
+ $seatService=D::save($uid,$a,'services',['title'=>'سرویس افزایش ظرفیت','schoolId'=>$school['id'],'driverId'=>$seatDriver['id'],'capacity'=>4]);
+ $seatStudents=[];
+ for($i=0;$i<6;$i++){
+  $seatStudents[]=D::save($uid,$a,'students',['schoolId'=>$school['id'],'firstName'=>'دانش‌آموز ظرفیت','lastName'=>(string)($i+1),'mobile'=>'09120008'.str_pad((string)(100+$i),3,'0',STR_PAD_LEFT)]);
+ }
+ for($i=0;$i<4;$i++)D::assignStudent($uid,$a,(int)$seatService['id'],(int)$seatStudents[$i]['id']);
+ rejected(fn()=>D::assignStudent($uid,$a,(int)$seatService['id'],(int)$seatStudents[4]['id']),'CAPACITY_EXCEEDED');
+ $seatVehicle=D::save($uid,$a,'vehicles',['capacity'=>5],(int)$seatVehicle['id']);
+ check((int)$seatVehicle['capacity']===5,'Updated vehicle capacity persists');
+ check((int)D::get($uid,$a,'services',(int)$seatService['id'])['capacity']===5,'Active service inherits expanded vehicle capacity');
+ D::assignStudent($uid,$a,(int)$seatService['id'],(int)$seatStudents[4]['id']);
+ check(count(D::serviceStudents($uid,$a,(int)$seatService['id']))===5,'The new fifth seat accepts a student');
+ rejected(fn()=>D::assignStudent($uid,$a,(int)$seatService['id'],(int)$seatStudents[5]['id']),'CAPACITY_EXCEEDED');
+ // Re-saving the vehicle should also repair older mismatches without changing its capacity again.
+ $p->prepare('UPDATE services SET capacity=4 WHERE id=?')->execute([$seatService['id']]);
+ D::save($uid,$a,'vehicles',['capacity'=>5],(int)$seatVehicle['id']);
+ check((int)D::get($uid,$a,'services',(int)$seatService['id'])['capacity']===5,'Legacy capacity mismatches recover on vehicle resave');
  echo "Transport integration: $checks checks passed. All fixtures rolled back.\n";
 }finally{if($p->inTransaction())$p->rollBack();}
 
