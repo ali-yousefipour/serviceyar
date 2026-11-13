@@ -51,10 +51,9 @@ final class ReferenceMonthlyStatementWorkbook
                 if(!@$sheet->loadXML($raw,LIBXML_NONET))
                     return ['valid'=>false,'reason'=>'INVALID_SHEET_XML','sheet'=>$i];
             }
-            // Fixed reference template has 630 student/table data rows.
-            // A larger month must be handled with explicit table-range expansion,
-            // not silent overflow, orphaned formulas or broken sheet relations.
-            return ['valid'=>true,'max_student_rows'=>630,'max_driver_rows'=>122];
+            // Data ranges are expanded at export time. Excel's physical sheet
+            // limit (1,048,576 rows) remains the only hard row ceiling.
+            return ['valid'=>true,'max_student_rows'=>1048569,'max_driver_rows'=>1048560];
         }finally{$zip->close();}
     }
 
@@ -355,18 +354,18 @@ final class ReferenceMonthlyStatementWorkbook
     /** Whether this month fits the reference template's fixed data ranges. */
     public static function fitsTemplateCapacity(array $d): bool
     {
-        return count($d['items']??[])<=630
-            && count($d['reference_drivers']??$d['drivers']??[])<=122;
+        // Excel worksheets cannot exceed 1,048,576 rows. Allow arbitrary
+        // business-sized months, retaining room for headers and the driver
+        // statement's moved footer. This replaces the historical 630/122 cap.
+        return count($d['items']??[])<=1048569
+            && count($d['reference_drivers']??$d['drivers']??[])<=1048560;
     }
 
     public static function downloadIfAvailable(array $d,string $agency,int $statementId,bool $preview=false): bool
     {
         if(!self::available())return false;
         if(!self::fitsTemplateCapacity($d)){
-            // The reference template has fixed worksheet/footer/table ranges.
-            // Do not fail with HTTP 500 or corrupt them for larger agencies.
-            // The caller will use the scalable, local 14-sheet XLSX writer.
-            return false;
+            throw new \RuntimeException('تعداد ردیف‌ها از سقف فیزیکی Excel بیشتر است.');
         }
         $temp=tempnam(sys_get_temp_dir(),'sy-ref-');
         if($temp===false || !copy(self::TEMPLATE,$temp))throw new \RuntimeException('Cannot prepare reference workbook');
