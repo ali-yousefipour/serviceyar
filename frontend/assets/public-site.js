@@ -154,10 +154,14 @@
  }
  function publicPin(type,photo){
   const color=type==='agency'?'green':'yellow';
+  const isDefault=!photo;
   const imageUrl=photo||(type==='agency'?DEFAULT_COMPANY_IMAGE:DEFAULT_SCHOOL_IMAGE);
   const content='<img alt="" src="'+imageUrl.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'">';
-  return L.divIcon({className:'sy-public-pin sy-public-pin-'+color,html:'<span class="sy-public-pin-face">'+content+'<span class="sy-public-pin-symbol">⌖</span></span>',
-   iconSize:[54,58],iconAnchor:[27,56],popupAnchor:[0,-50]});
+  // A genuine photo/logo keeps its framed pin; the bundled transparent artwork does not.
+  const faceClass='sy-public-pin-face'+(isDefault?' sy-public-pin-no-frame':'');
+  return L.divIcon({className:'sy-public-pin sy-public-pin-'+color+(isDefault?' sy-public-pin-default':''),
+   html:'<span class="'+faceClass+'">'+content+'<span class="sy-public-pin-symbol">⌖</span></span>',
+   iconSize:[64,68],iconAnchor:[32,64],popupAnchor:[0,-60]});
  }
  function attachPinFallback(marker){
   const icon=marker.getElement();
@@ -165,14 +169,22 @@
   if(!img)return;
   const face=icon.querySelector('.sy-public-pin-face');
   const defaultUrl=icon.classList.contains('sy-public-pin-green')?DEFAULT_COMPANY_IMAGE:DEFAULT_SCHOOL_IMAGE;
+  const isDefault=()=>img.getAttribute('src')===defaultUrl;
   const fail=()=>{
-   if(!img.src.endsWith(defaultUrl)){img.src=defaultUrl;return;}
+   if(!isDefault()){
+    face?.classList.add('sy-public-pin-no-frame');
+    icon.classList.add('sy-public-pin-default');
+    img.src=defaultUrl;
+    return;
+   }
    img.hidden=true;
-   face?.classList.add('sy-public-pin-fallback');
+   face?.classList.add('sy-public-pin-fallback','sy-public-pin-no-frame');
   };
   img.addEventListener('error',fail);
   img.addEventListener('load',()=>{
    img.hidden=false;
+   face?.classList.toggle('sy-public-pin-no-frame',isDefault());
+   icon.classList.toggle('sy-public-pin-default',isDefault());
    face?.classList.remove('sy-public-pin-fallback');
   });
   if(img.complete&&img.naturalWidth===0)fail();
