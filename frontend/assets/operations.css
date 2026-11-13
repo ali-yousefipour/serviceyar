@@ -1937,3 +1937,10 @@ body.sy-menu-palette-open{overflow:hidden}
  body:has(.ledger-print-sheet) .ledger-report-table td{display:table-cell!important;padding:5px!important;border-bottom:1px solid #ddd!important;text-align:right!important}
  body:has(.ledger-print-sheet) .ledger-report-table td::before{display:none!important}
 }
+
+/* Report freshness and export safety feedback */
+#content .sy-ledger-report-freshness{display:flex;align-items:center;gap:9px;min-height:38px;padding:10px 14px;margin:-8px 0 14px;border:1px solid #d8e7de;border-radius:10px;background:#f5faf6;color:#345c47;font-size:12px;font-weight:650;line-height:1.8}
+#content .sy-ledger-report-freshness::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:#348a61}
+#content .ledger-report-actions button:focus-visible,#content .ledger-filters :is(input,select,button,summary):focus-visible{outline:3px solid #77b896;outline-offset:2px}
+@media(max-width:750px){#content .sy-ledger-report-freshness{margin:0 0 13px;padding:10px 12px}#content .ledger-report-actions{margin-bottom:10px}}
+@media print{body:has(.ledger-print-sheet) .sy-ledger-report-freshness{display:none!important}}
