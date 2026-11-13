@@ -155,20 +155,26 @@
   const color=type==='agency'?'green':'yellow';
   const imageUrl=photo||(type==='agency'?DEFAULT_COMPANY_IMAGE:DEFAULT_SCHOOL_IMAGE);
   const content='<img alt="" src="'+imageUrl.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'">';
-  return L.divIcon({className:'sy-public-pin sy-public-pin-'+color,html:'<span class="sy-public-pin-face '+(!photo?'sy-public-pin-fallback':'')+'">'+content+'<span class="sy-public-pin-symbol">⌖</span></span>',
+  return L.divIcon({className:'sy-public-pin sy-public-pin-'+color,html:'<span class="sy-public-pin-face '+''+'">'+content+'<span class="sy-public-pin-symbol">⌖</span></span>',
    iconSize:[54,58],iconAnchor:[27,56],popupAnchor:[0,-50]});
  }
  function attachPinFallback(marker){
   const icon=marker.getElement();
   const img=icon?.querySelector('img');
   if(!img)return;
-  const fallback=()=>{
-   const defaultUrl=icon.classList.contains('sy-public-pin-green')?DEFAULT_COMPANY_IMAGE:DEFAULT_SCHOOL_IMAGE;
+  const face=icon.querySelector('.sy-public-pin-face');
+  const defaultUrl=icon.classList.contains('sy-public-pin-green')?DEFAULT_COMPANY_IMAGE:DEFAULT_SCHOOL_IMAGE;
+  const fail=()=>{
    if(!img.src.endsWith(defaultUrl)){img.src=defaultUrl;return;}
-   img.remove();icon.querySelector('.sy-public-pin-face')?.classList.add('sy-public-pin-fallback');
+   img.hidden=true;
+   face?.classList.add('sy-public-pin-fallback');
   };
-  if(img.complete&&img.naturalWidth===0)fallback();
-  else img.addEventListener('error',fallback,{once:true});
+  img.addEventListener('error',fail);
+  img.addEventListener('load',()=>{
+   img.hidden=false;
+   face?.classList.remove('sy-public-pin-fallback');
+  });
+  if(img.complete&&img.naturalWidth===0)fail();
  }
  function focusPoints(points){
   if(!schoolMap||!points.length)return;
@@ -419,7 +425,7 @@
    });
    document.addEventListener('keydown',event=>{
     if(root.hidden||requestedPage()==='login')return;
-    const key=event.key.toLowerCase();
+    const key=(typeof event.key==='string'?event.key.toLowerCase():'');
     if((event.ctrlKey||event.metaKey)&&['s','p','u'].includes(key)){event.preventDefault();event.stopPropagation();}
    },true);
    addEventListener('beforeprint',()=>{if(!root.hidden)root.classList.add('sy-print-blocked');});
