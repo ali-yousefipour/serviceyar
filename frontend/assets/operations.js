@@ -449,10 +449,10 @@ function dashboardCompanyPin(hasLogo){
  const img='<img class="sy-map-marker-photo" alt="" loading="lazy" decoding="async" src="'+esc(hasLogo?agencyLogoUrl():'/assets/company-map-icon.svg')+'">';
  return L.divIcon({className:'sy-map-marker sy-map-company'+(!hasLogo?' sy-company-default-photo':''),
   html:'<span class="sy-map-marker-bubble">'+img+'<span class="sy-map-marker-symbol">'+syLocationSvg('#0b985b')+'</span></span>',
-  iconSize:[56,64],iconAnchor:[28,62],popupAnchor:[0,-58]});
+  iconSize:[38,42],iconAnchor:[19,40],popupAnchor:[0,-37]});
 }
 function dashboardCompanyMarker(map,point,hasLogo){
- const marker=L.marker(point,{icon:dashboardCompanyPin(hasLogo),title:currentAgency?.name||'دفتر شرکت'}).addTo(map).bindPopup(esc(currentAgency?.name||'دفتر شرکت'));
+ const marker=L.marker(point,{icon:dashboardCompanyPin(hasLogo),title:currentAgency?.name||'دفتر شرکت'}).addTo(map).bindPopup('<div class="sy-map-popup"><strong>'+esc(currentAgency?.name||'دفتر شرکت')+'</strong><small>شرکت سرویس مدارس</small></div>',{className:'sy-dashboard-popup',maxWidth:230,minWidth:140});
  const icon=marker.getElement(),img=icon?.querySelector('.sy-map-marker-photo');
  if(img){
   const fallback=()=>{
@@ -471,10 +471,10 @@ function dashboardSchoolPin(sc){
  const label=String(sc.name||'مدرسه');
  return L.divIcon({className:'sy-map-marker sy-map-school'+(!url?' sy-school-default-photo':''),
   html:'<span class="sy-map-marker-bubble">'+img+'<span class="sy-map-marker-symbol">'+syLocationSvg('#e5ae0a')+'</span></span><span class="sy-map-school-label" title="'+esc(label)+'">'+esc(label)+'</span>',
-  iconSize:[112,82],iconAnchor:[56,63],popupAnchor:[0,-58]});
+  iconSize:[78,59],iconAnchor:[39,40],popupAnchor:[0,-36]});
 }
 function dashboardSchoolMarker(map,point,sc){
- const marker=L.marker(point,{icon:dashboardSchoolPin(sc),title:String(sc.name||'مدرسه')}).addTo(map).bindPopup(esc(sc.name));
+ const marker=L.marker(point,{icon:dashboardSchoolPin(sc),title:String(sc.name||'مدرسه')}).addTo(map).bindPopup('<div class="sy-map-popup"><strong>'+esc(sc.name||'مدرسه')+'</strong><small>مدرسه ثبت‌شده</small></div>',{className:'sy-dashboard-popup',maxWidth:230,minWidth:140});
  const icon=marker.getElement();
  const img=icon?.querySelector('.sy-map-marker-photo');
  if(img){
