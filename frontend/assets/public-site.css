@@ -266,3 +266,6 @@
 .sy-public .sy-school-choice:focus-visible{outline:3px solid #0b8559;outline-offset:2px}
 .sy-public .sy-school-map .leaflet-container{z-index:0}
 .sy-public .sy-map-privacy-note{font-size:.82rem;color:#58766a}
+
+.sy-public .sy-map-tile-status{position:absolute;z-index:650;top:14px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 32px);border:1px solid #f3d4a6;background:#fff9e9;color:#855411;padding:8px 13px;border-radius:12px;font-size:12px;box-shadow:0 6px 25px #312b211c}
+.sy-public .sy-map-tile-status[hidden]{display:none!important}
