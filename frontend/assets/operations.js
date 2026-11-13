@@ -1616,22 +1616,22 @@ async function renderPayroll(data,token){
 }
 function showDriverPayslip(doc,line){
  const amount=v=>number(v);
- const net=Number(line.expected_net_salary||0),saved=Number(line.salary||0),difference=saved-net;
+ const isPreview=doc.preview_only===true,net=Number(line.expected_net_salary||0),saved=Number(line.salary||0),difference=saved-net;
  const data=[['کارکرد ناخالص',line.earned],['کسور نظارت و بازرسی',line.supervision_deduction],['کسور اطلاع‌رسانی و هماهنگی',line.coordination_deduction],['کسور بالاسری شرکت',line.overhead_deduction],['حق بیمه راننده',line.insurance_deduction]];
  const item=(label,value)=>'<div class="sy-payslip-field"><dt>'+esc(label)+'</dt><dd>'+esc(value||'—')+'</dd></div>';
  const sumRow=(label,value,cls='')=>'<tr class="'+cls+'"><th scope="row">'+esc(label)+'</th><td>'+amount(value)+'</td></tr>';
  const agency=doc.agency_name||currentAgency?.name||'سرویس‌یار';
  dialog('فیش حقوق انفرادی · '+person(line),'<div class="sy-payslip-actions"><p>فیش از آخرین اطلاعات ذخیره‌شده سند تهیه می‌شود. برای خروجی PDF در پنجره چاپ، گزینه «ذخیره به‌صورت PDF» را انتخاب کنید.</p><button type="button" class="primary" id="payslipPrint">چاپ / ذخیره PDF</button><button type="button" id="payslipBack">بازگشت به سند حقوق</button></div>'+
  '<article class="sy-payslip-sheet" dir="rtl" aria-label="فیش حقوق '+esc(person(line))+'">'+
- '<header class="sy-payslip-header">'+agencyLogoImage('لوگوی '+agency,66)+'<div><strong>'+esc(agency)+'</strong><h2>فیش حقوق و کارکرد راننده</h2><p>سرویس حمل‌ونقل دانش‌آموزی · مبالغ به ریال</p></div><span class="sy-payslip-document-state">'+(doc.status==='approved'?'سند تأییدشده':'پیش‌نویس / تأییدنشده')+'</span></header>'+
- (doc.status!=='approved'?'<div class="sy-payslip-draft">پیش‌نویس ـ فاقد تأیید نهایی حسابداری</div>':'')+
- (!line.deductions_historical?'<div class="sy-payslip-draft">توجه: کسورات این سند قدیمی با نرخ‌های فعلی برآورد شده‌اند؛ مقدار تاریخی کسورات ثبت نشده است.</div>':'')+
+ '<header class="sy-payslip-header">'+agencyLogoImage('لوگوی '+agency,66)+'<div><strong>'+esc(agency)+'</strong><h2>فیش حقوق و کارکرد راننده</h2><p>سرویس حمل‌ونقل دانش‌آموزی · مبالغ به ریال</p></div><span class="sy-payslip-document-state">'+(isPreview?'پیش‌نمایش محاسباتی':doc.status==='approved'?'سند تأییدشده':'پیش‌نویس / تأییدنشده')+'</span></header>'+
+ (isPreview?'<div class="sy-payslip-draft sy-payslip-preview-alert">نمونه محاسباتی ـ هنوز هیچ سند حقوقی برای این راننده در این دوره ثبت نشده است. این برگه سند حقوق تأییدشده یا رسید پرداخت نیست.</div>':doc.status!=='approved'?'<div class="sy-payslip-draft">پیش‌نویس ـ فاقد تأیید نهایی حسابداری</div>':'')+
+ (!line.deductions_historical&&!isPreview?'<div class="sy-payslip-draft">توجه: کسورات این سند قدیمی با نرخ‌های فعلی برآورد شده‌اند؛ مقدار تاریخی کسورات ثبت نشده است.</div>':'')+
  '<dl class="sy-payslip-meta">'+item('نام و نام خانوادگی راننده',person(line))+item('شماره سند',doc.document_no)+item('تاریخ شروع دوره',dateText(doc.date_from))+item('تاریخ پایان دوره',dateText(doc.date_to))+item('نام بانک',line.bank_name)+item('شماره حساب',line.bank_account)+item('شماره شبا',line.iban)+'</dl>'+
  '<div class="sy-payslip-columns"><section><h3>مزایا و کارکرد</h3><table><thead><tr><th scope="col">شرح</th><th scope="col">مبلغ (ریال)</th></tr></thead><tbody>'+sumRow('کارکرد ناخالص',line.earned)+'</tbody><tfoot>'+sumRow('جمع کارکرد',line.earned)+'</tfoot></table></section>'+
  '<section><h3>کسورات</h3><table><thead><tr><th scope="col">شرح</th><th scope="col">مبلغ (ریال)</th></tr></thead><tbody>'+data.slice(1).map(([k,v])=>sumRow(k,v)).join('')+'</tbody><tfoot>'+sumRow('جمع کسورات',line.total_deductions)+'</tfoot></table></section></div>'+
  '<section class="sy-payslip-settlement"><h3>خلاصه تسویه</h3><div><span>خالص محاسباتی پس از کسورات</span><strong>'+amount(net)+' ریال</strong></div><div class="sy-payslip-net"><span>مبلغ حقوق ثبت‌شده در سند</span><strong>'+amount(saved)+' ریال</strong></div>'+
  (Math.abs(difference)>=1?'<p class="sy-payslip-discrepancy">توجه: مبلغ ثبت‌شده با خالص محاسباتی '+amount(Math.abs(difference))+' ریال مغایرت دارد. علت اختلاف باید توسط واحد مالی بررسی شود.</p>':'')+'</section>'+
- '<footer class="sy-payslip-signatures"><div>تنظیم‌کننده سند<span></span></div><div>مسئول مالی<span></span></div><div>مهر و امضای شرکت<span></span></div></footer><p class="sy-payslip-footnote">این فیش فقط بر اساس سند حقوق ثبت‌شده تهیه شده و به‌تنهایی به معنای انجام انتقال وجه نیست.</p></article>');
+ '<footer class="sy-payslip-signatures"><div>تنظیم‌کننده سند<span></span></div><div>مسئول مالی<span></span></div><div>مهر و امضای شرکت<span></span></div></footer><p class="sy-payslip-footnote">'+(isPreview?'این برگه صرفاً پیش‌نمایش غیررسمی از محاسبات بازه انتخابی است و سند ثبت‌شده محسوب نمی‌شود.':'این فیش فقط بر اساس سند حقوق ثبت‌شده تهیه شده و به‌تنهایی به معنای انجام انتقال وجه نیست.')+'</p></article>');
  $('payslipPrint').onclick=()=>{
   const slip=document.querySelector('#modal .sy-payslip-sheet');
   if(!slip)return;
