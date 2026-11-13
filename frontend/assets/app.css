@@ -171,3 +171,33 @@ button{min-height:36px;font-size:12px}.primary{padding:8px 14px;border-radius:9p
 @media(max-width:1100px){.main>main{padding:14px 16px}.header{padding:10px 16px}}
 @media(max-width:760px){.sidebar{width:auto}.main{margin-right:0;width:100%}.main>main{padding:12px}.header{min-height:58px;padding:9px 12px}.panel{padding:12px}.stats{gap:9px}}
 @media(max-width:520px){.main>main{padding:10px}.toolbar h2{font-size:17px}.stats article{min-height:96px}.stats strong{font-size:22px}}
+
+
+/* Responsive super-admin company registry */
+.sy-admin-agency-panel{border-radius:22px!important;background:#fff;border:1px solid #dcebe2;box-shadow:0 16px 45px #0b593014}
+.sy-admin-agency-panel>.toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:18px}
+.sy-admin-agency-panel>.toolbar h2{font-size:clamp(19px,2.6vw,26px);color:#0c5039}
+.sy-agency-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:16px 0}
+.sy-agency-kpis article{display:grid;gap:10px;padding:18px 20px;border:1px solid #dce9df;border-radius:16px;background:linear-gradient(125deg,#f2faf5,#fff)}
+.sy-agency-kpis article span{font-size:12px;color:#557362}
+.sy-agency-kpis article strong{font-size:clamp(22px,2vw,32px);font-variant-numeric:tabular-nums;color:#115b3e}
+.sy-agency-kpis article:nth-child(3){background:#fff8ed;border-color:#efdfc5}.sy-agency-kpis article:nth-child(3) strong{color:#a66d18}
+.sy-agency-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:18px 0 7px;padding:14px;background:#f5faf7;border:1px solid #e0eee5;border-radius:16px}
+.sy-agency-controls label{display:grid;gap:7px;flex:1 1 180px;font-size:12px;font-weight:750;color:#4b6a58}
+.sy-agency-controls label:first-child{flex:3 1 290px}
+.sy-agency-controls :is(input,select){width:100%;height:43px;border-radius:10px;border:1px solid #cddfd3;padding:8px 12px;background:#fff;font:inherit;font-size:13px}
+.sy-agency-controls button{height:43px;min-width:115px;border-radius:10px;padding:8px 12px;border:1px solid #cce1d5;color:#176147;background:#fff;cursor:pointer;font-weight:800}
+.sy-agency-controls button:hover{background:#e3f5ea}
+.sy-agency-result-count{font-size:12px;color:#557163;margin:4px 0 12px}
+.sy-agency-table-scroll{max-height:575px;overflow:auto;scrollbar-color:#a9c8b4 #f0f6f1;scrollbar-width:thin;border:1px solid #dce7df;border-radius:15px}
+.sy-agency-data-table{width:100%;min-width:1060px;border-collapse:separate;border-spacing:0;font-size:12px}
+.sy-agency-data-table thead th{position:sticky;top:0;z-index:2;background:#eaf5ed!important;color:#24543e!important;white-space:nowrap;border-bottom:2px solid #bddbc9}
+.sy-agency-data-table td{max-width:250px;overflow-wrap:anywhere;line-height:1.7;padding:10px!important;vertical-align:middle;border-bottom:1px solid #eaf1eb}
+.sy-agency-data-table tbody tr:hover{background:#f2faf5}
+.sy-agency-data-table tbody tr[hidden]{display:none!important}
+.sy-agency-data-table td:last-child{min-width:195px}
+.sy-agency-data-table td:last-child button{margin:2px;white-space:nowrap}
+.sy-agency-activate{background:#d9f5e4!important;color:#076d42!important;border:1px solid #a8dfbd!important;border-radius:8px!important;font-weight:800}
+.sy-agency-activate:disabled{opacity:.6}
+@media(max-width:750px){.sy-agency-kpis{grid-template-columns:1fr 1fr}.sy-agency-kpis article:first-child{grid-column:1/-1}.sy-agency-controls label{flex-basis:100%}.sy-agency-controls button{flex:1 1 120px}.sy-admin-agency-panel{padding:14px!important}}
+@media(prefers-reduced-motion:no-preference){.sy-agency-kpis article,.sy-agency-controls button{transition:box-shadow .2s,transform .2s}.sy-agency-kpis article:hover{transform:translateY(-2px);box-shadow:0 12px 28px #14613d12}}
