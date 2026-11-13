@@ -419,12 +419,15 @@ final class ReferenceMonthlyStatementWorkbook
         if(!self::fitsTemplateCapacity($d)){
             throw new \RuntimeException('تعداد ردیف‌ها از سقف فیزیکی Excel بیشتر است.');
         }
+        $stage='TEMPLATE_COPY';
         $temp=tempnam(sys_get_temp_dir(),'sy-ref-');
         if($temp===false || !copy(self::TEMPLATE,$temp))throw new \RuntimeException('Cannot prepare reference workbook');
         try{
             $zip=new \ZipArchive();
+            $stage='ZIP_OPEN';
             if($zip->open($temp)!==true)throw new \RuntimeException('Cannot open reference XLSX');
             try{
+                $stage='BUILD_SOURCE_ROWS';
                 $items=$d['items'];
                 $students=[];$drivers=[];$parents=[];$final=[];$archive=[];
                 $driverRowNumber=[];$driverCounter=0;
@@ -532,13 +535,16 @@ final class ReferenceMonthlyStatementWorkbook
                         'E'=>['formula'=>"D{$r}*3%"],'F'=>['formula'=>"D{$r}*1%"],
                         'G'=>['formula'=>"D{$r}*7%"],'H'=>['formula'=>"SUM(D{$r}:G{$r})"]];
                 }
+                $stage='REPLACE_DATA_SHEETS';
                 self::replaceRows($zip,3,2,$archive);
                 self::replaceRows($zip,4,3,$students);
                 self::replaceRows($zip,5,3,$drivers);
                 self::replaceRows($zip,6,3,$parents);
                 self::replaceRows($zip,7,4,$final,true);
+                $stage='NORMALIZE_FORMULAS';
                 self::normalizeSharedFormulas($zip,7);
                 self::normalizeSharedFormulas($zip,12);
+                $stage='UPDATE_HEADINGS';
                 require_once __DIR__.'/ExcelLocalization.php';
                 $periodLabel=ExcelLocalization::digits($d['month_name'].' '.$d['year']);
                 // Show the month/year in worksheet titles, not merely in the
@@ -612,12 +618,18 @@ final class ReferenceMonthlyStatementWorkbook
                         'A2'=>'این فایل فقط برای بررسی محاسبات ماه انتخابی است و سند مالی نهایی محسوب نمی‌شود.'
                     ]);
                 }
+                $stage='SYNC_TABLES';
                 self::synchronizeTableHeaders($zip);
+                $stage='PRINT_AREAS';
                 self::expandPrintAreas($zip,count($students),count($drivers));
                 // Do not invent journal voucher account codes or contract IDs.
                 // The reference accounting sheet remains unposted until mapped.
-                $zip->close();
-            }catch(\Throwable $e){$zip->close();throw $e;}
+                $stage='ZIP_FINALIZE';
+                if(!$zip->close())throw new \RuntimeException('Failed to finalize XLSX ZIP');
+            }catch(\Throwable $e){
+                if($zip->status===\ZipArchive::ER_OK)$zip->close();
+                throw new \RuntimeException('REFERENCE_STAGE_'.$stage,0,$e);
+            }
             header('X-ServiceYar-Statement-Template: reference-14-sheet');
             header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             header('Content-Disposition: attachment; filename="'.($preview?'preview-':'').'school-statement-reference-'.$d['year'].'-'.str_pad((string)$d['month'],2,'0',STR_PAD_LEFT).($preview?'':'-'.$statementId).'.xlsx"');
