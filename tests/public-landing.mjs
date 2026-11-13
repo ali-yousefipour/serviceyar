@@ -33,6 +33,7 @@ assert.ok(api.includes('PublicExplorer::countSchools()'),'School count must use 
 assert.ok(read('backend/src/Domain/PublicExplorer.php').includes('school_catalog'),'School count must include central catalog');
 assert.ok(js.includes('/api/v1/public/map-config')&&js.includes('static.neshan.org/sdk')&&js.includes('invalidateSize(true)'),'Public map must use configured Neshan web key');
 assert.ok(html.includes('syCatalogAdvantageTitle')&&html.includes('فهرست بسیاری از مدارس'),'Catalog advantage must be visible');
+assert.ok(html.includes('sy-v3-dashboard-art')&&html.includes('sy-v3-map-intro'),'Landing should show the redesigned dashboard showcase and map introduction');
 const operations=read('frontend/assets/operations.js');
 assert.ok(operations.includes("function iranPlateInput(kind='filter')"),'Vehicle search/edit must share a single plate component');
 assert.ok(operations.includes('${iranPlateInput("filter")}')&&operations.includes("iranPlateInput('edit')"),'Both vehicle contexts must use the shared plate component');
@@ -45,7 +46,7 @@ const markerEnd=operations.indexOf('async function dashboard(',markerStart);
 const markerSource=operations.slice(markerStart,markerEnd);
 assert.ok(markerSource.includes('function dashboardCompanyMarker(')&&markerSource.includes("img.addEventListener('error',fallback"),'Company marker must attach CSP-safe image failure handler');
 assert.ok(!markerSource.includes('onerror='),'Map markers must not use inline handlers with CSP');
-assert.ok(markerSource.includes('/assets/school-placeholder.png'),'School markers should show the bundled placeholder picture');
+assert.ok(markerSource.includes('/assets/school-map-icon.webp')&&markerSource.includes('/assets/company-map-icon.webp'),'Map markers must use user-supplied icon artwork');
 assert.ok(markerSource.includes('sy-map-school-label'),'School name should accompany map photo');
 assert.ok(operations.includes('dashboardCompanyMarker(map,point,config.hasCustomLogo)'),'Dashboard must call the bounded company marker');
 const dashboardCss=read('frontend/assets/operations.css');
@@ -63,8 +64,8 @@ assert.ok(read('backend/src/Domain/PublicExplorer.php').includes('public_contact
 assert.ok(js.includes("typeof event.key==='string'"),'Keyboard shortcuts must tolerate events without key');
 assert.ok(app.includes('/api/v1/auth/status'),'Guest landing must check status without calling protected /me endpoint');
 assert.ok(api.includes('/api/v1/auth/status'),'Missing anonymous-safe auth status route');
-assert.ok(js.includes('DEFAULT_COMPANY_IMAGE')&&js.includes('attachPinFallback('),'Missing company image fallback');
-for(const img of ['frontend/assets/company-placeholder.png','frontend/assets/school-placeholder.png'])
+assert.ok(js.includes('DEFAULT_COMPANY_IMAGE')&&js.includes('attachPinFallback(')&&js.includes('/assets/company-map-icon.webp')&&js.includes('/assets/school-map-icon.webp'),'Missing user-provided map icon fallbacks');
+for(const img of ['frontend/assets/company-map-icon.webp','frontend/assets/school-map-icon.webp'])
  assert.ok(existsSync(new URL(img,root)),'Missing uploaded image asset: '+img);
 assert.ok(!html.includes('sy-dialog-privacy'),'Do not display unnecessary publication note in public modal');
 const adminApp=read('frontend/assets/app.js');
