@@ -12,7 +12,7 @@ final class Neshan {
   if($key===''){$file=dirname(__DIR__,3).'/storage/cache/neshan-web-key.txt';$key=is_file($file)?trim(file_get_contents($file)):'';}
   return preg_match('/^web\.[a-zA-Z0-9-]{16,200}$/D',$key)?$key:'';
  }
- public static function config(int $aid): array {$s=self::settings($aid);return ['provider'=>'neshan','webKey'=>self::webKey($s),'serviceConfigured'=>self::key($aid)!=='','companyLocation'=>isset($s['company_location'])?json_decode($s['company_location'],true):null];}
+ public static function config(int $aid): array {$s=self::settings($aid);return ['provider'=>'neshan','webKey'=>self::webKey($s),'serviceConfigured'=>self::key($aid)!=='','hasCustomLogo'=>\ServiceYar\Agency\AgencyLogo::hasCustomLogo($aid),'companyLocation'=>isset($s['company_location'])?json_decode($s['company_location'],true):null];}
  public static function coordinate(mixed $lat,mixed $lng): array {
   if(!is_numeric($lat)||!is_numeric($lng)||!is_finite((float)$lat)||!is_finite((float)$lng)||abs((float)$lat)>90||abs((float)$lng)>180)throw new AuthException(422,'مختصات معتبر منزل و مدرسه را ثبت کنید.','LOCATION_REQUIRED');
   return ['latitude'=>(float)$lat,'longitude'=>(float)$lng];
