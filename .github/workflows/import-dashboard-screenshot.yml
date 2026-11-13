@@ -1,4 +1,4 @@
-name: Import actual ServiceYar dashboard screenshot
+name: Install actual ServiceYar dashboard screenshot
 on:
   push:
     branches: [main]
@@ -11,28 +11,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Fetch the user's real dashboard capture
-        env:
-          ORIGINAL_URL: "https://media.canva.com/v2/image-resize/format:PNG/height:739/quality:100/uri:ifs%3A%2F%2FM%2F156fa096-541f-4daa-8882-8ccbf1163501/watermark:F/width:1440?csig=AAAAAAAAAAAAAAAAAAAAAKuhxhU7P14Su-1Gp86Brtb2qLHRLWqIZXtF1eqArZqP&exp=1794626086&osig=AAAAAAAAAAAAAAAAAAAAABt7ZAQiamrvGblzvqzYv4YQTRSa7lguxwCnHHC3hgu5&signer=media-rpc&token=AAIAAU0AJDE1NmZhMDk2LTU0MWYtNGRhYS04ODgyLThjY2JmMTE2MzUwMQAAAAABodgM5HAGW65QS7MoNLT3fT9GeVagXQaqw9ROqaNjroaiZNIgVw&x-canva-quality=thumbnail"
-          THUMBNAIL_URL: "https://media.canva.com/v2/image-resize/format:PNG/height:102/quality:100/uri:ifs%3A%2F%2FM%2F156fa096-541f-4daa-8882-8ccbf1163501/watermark:F/width:200?csig=AAAAAAAAAAAAAAAAAAAAAKuhxhU7P14Su-1Gp86Brtb2qLHRLWqIZXtF1eqArZqP&exp=1794626086&osig=AAAAAAAAAAAAAAAAAAAAABt7ZAQiamrvGblzvqzYv4YQTRSa7lguxwCnHHC3hgu5&signer=media-rpc&token=AAIAAU0AJDE1NmZhMDk2LTU0MWYtNGRhYS04ODgyLThjY2JmMTE2MzUwMQAAAAABodgM5HAGW65QS7MoNLT3fT9GeVagXQaqw9ROqaNjroaiZNIgVw&x-canva-quality=thumbnail"
+      - name: Reconstitute verified dashboard image from uploaded asset chunks
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           mkdir -p frontend/assets
-          curl --fail --silent --show-error --location --retry 2 "$ORIGINAL_URL" --output /tmp/dashboard-image.png
-          python3 - <<'PY'
-          import struct
-          data=open('/tmp/dashboard-image.png','rb').read()
-          assert data[:8] == b'\x89PNG\r\n\x1a\n', 'Canva source was not a PNG'
-          w,h=struct.unpack('>II',data[16:24])
-          assert w >= 1000 and h >= 500, f'Full resolution download unavailable: {w}x{h}'
-          print('Validated screenshot',w,h,'bytes:',len(data))
-          PY
-          cp /tmp/dashboard-image.png frontend/assets/dashboard-real-capture.png
-      - name: Commit original screenshot to static assets
+          : > frontend/assets/dashboard-real-capture.webp
+          for blob in 3dbc877b25141f37ab8a561c13851f243b02e603 3f3ad7ce8a35119be942d0afafe7494ecd56fe09; do
+            curl --fail --silent --show-error --location --retry 2 \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              "https://api.github.com/repos/$REPO/git/blobs/$blob" \
+              | python3 -c 'import json,sys,base64; sys.stdout.buffer.write(base64.b64decode(json.load(sys.stdin)["content"]))' \
+              >> frontend/assets/dashboard-real-capture.webp
+          done
+          echo "a0f10798c6bb221db8374df39d8cb4e2b158075ba8897ad2b8c6acaf44ebd5f1  frontend/assets/dashboard-real-capture.webp" | sha256sum -c -
+          file frontend/assets/dashboard-real-capture.webp
+      - name: Commit permanent screenshot to public static assets
+        shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add frontend/assets/dashboard-real-capture.png
-          git commit -m "assets(public): add real dashboard screenshot" || exit 0
+          git add frontend/assets/dashboard-real-capture.webp
+          git commit -m "assets(public): add user-supplied real dashboard screenshot" || exit 0
           git push
