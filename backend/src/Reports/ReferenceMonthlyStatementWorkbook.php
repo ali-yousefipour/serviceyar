@@ -181,6 +181,43 @@ final class ReferenceMonthlyStatementWorkbook
         $zip->addFromString('xl/worksheets/sheet'.$sheet.'.xml',$doc->saveXML());
     }
 
+    /**
+     * Excel insists that structured table column names equal the worksheet's
+     * displayed header cells. The sanitized reference stores line breaks as
+     * _x000a_ inside tableColumn names but as actual LF in sheet headers,
+     * triggering Excel's "Repaired Records: Table" warning.
+     */
+    private static function synchronizeTableHeaders(\ZipArchive $zip): void
+    {
+        foreach([2=>[4,2],3=>[5,2],4=>[6,2],5=>[12,4]] as $tableNo=>$parts){
+            [$sheetNo,$headerRow]=$parts;
+            $tableFile='xl/tables/table'.$tableNo.'.xml';
+            $xml=$zip->getFromName($tableFile);
+            if(!is_string($xml))continue;
+            $table=new \DOMDocument('1.0','UTF-8');
+            if(!@$table->loadXML($xml,LIBXML_NONET))throw new \RuntimeException('Invalid XLSX table');
+            $sheet=self::document($zip,$sheetNo);
+            $head=[];
+            foreach($sheet->getElementsByTagNameNS(self::NS,'row') as $row){
+                if((int)$row->getAttribute('r')!==$headerRow)continue;
+                foreach($row->getElementsByTagNameNS(self::NS,'c') as $cell){
+                    $ref=$cell->getAttribute('r');
+                    $col=preg_replace('/[0-9]/','',$ref);
+                    $head[$col]=$cell->textContent;
+                }
+                break;
+            }
+            $columns=$table->getElementsByTagNameNS(self::NS,'tableColumn');
+            for($i=0;$i<$columns->length;$i++){
+                $label=$head[self::col($i+1)]??null;
+                if($label===null||$label==='')continue;
+                // setAttribute XML-escapes newlines as character references.
+                $columns->item($i)->setAttribute('name',$label);
+            }
+            $zip->addFromString($tableFile,$table->saveXML());
+        }
+    }
+
     private static function replaceRows(\ZipArchive $zip,int $sheet,int $start,array $records,bool $withTotal=false): void
     {
         $doc=self::document($zip,$sheet);
@@ -500,6 +537,7 @@ final class ReferenceMonthlyStatementWorkbook
                         'A2'=>'این فایل فقط برای بررسی محاسبات ماه انتخابی است و سند مالی نهایی محسوب نمی‌شود.'
                     ]);
                 }
+                self::synchronizeTableHeaders($zip);
                 // Do not invent journal voucher account codes or contract IDs.
                 // The reference accounting sheet remains unposted until mapped.
                 $zip->close();
