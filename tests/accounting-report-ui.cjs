@@ -71,4 +71,8 @@ assert(source.includes('sy-payslip-preview-alert'),'Unregistered payslips must b
 assert(source.includes('id="payrollDocumentDriverSearch"'),'Saved document detail needs driver search');
 assert(source.includes('data-expand-payroll'),'Saved document rows should keep deductions collapsed');
 assert(source.includes('checkbox.checked=false'),'Filtering must clear invisible driver selections');
+assert(source.includes('sy-print-toolbar'),'Individual payslip should provide an explicit independent print toolbar');
+assert(source.includes('printSlipNow'),'PDF and print action should remain in the separate slip preview');
+assert(source.includes('popup.document.write('),'Payslip print should render independently of application layout');
+assert(source.includes('sy-payslip-print-window'),'Print preview should use dedicated A4 print stylesheet');
 console.log('Accounting account search and safe report filters passed');
