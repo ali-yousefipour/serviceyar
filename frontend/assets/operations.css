@@ -1875,3 +1875,14 @@ body.sy-menu-palette-open{overflow:hidden}
  #content .sy-journal-lines-head{display:block}
 }
 @media print{body:has(.journal-print) .sy-journal-help{display:none!important}}
+
+/* Accounting document list search and empty-state refinements */
+#content .sy-journal-reset{min-height:43px;padding:8px 13px;border:1px solid #ceded2;border-radius:9px;background:#fff;color:#2a6444;font-size:12px;font-weight:750;white-space:nowrap}
+#content .sy-journal-list :is(button,a,input,select,.sy-journal-list-table):focus-visible{outline:3px solid #76b993;outline-offset:2px}
+#content .sy-journal-list-table:focus-visible{outline-offset:4px}
+#content .sy-journal-empty{display:grid;justify-items:center;gap:10px;background:#f7fbf8;border:1px dashed #cbded1;border-radius:12px;padding:34px 18px}
+#content .sy-journal-empty p{margin:0;line-height:1.9;color:#658071}
+#content .sy-journal-empty button{min-height:42px;padding:8px 18px;border-radius:10px;border:1px solid #b9d8c4;background:#eaf6ee;color:#145a39;font-weight:800}
+#content .sy-journal-list-table{scrollbar-gutter:stable}
+@media(max-width:1050px){#content .sy-journal-list-filters .sy-journal-reset{justify-self:start}}
+@media(max-width:700px){#content .sy-journal-list-filters .sy-journal-reset{width:100%;justify-self:stretch}#content .sy-journal-list-table{scrollbar-gutter:auto}}
