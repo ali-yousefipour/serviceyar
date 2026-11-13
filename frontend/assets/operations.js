@@ -1621,7 +1621,7 @@ function showDriverPayslip(doc,line){
  const item=(label,value)=>'<div class="sy-payslip-field"><dt>'+esc(label)+'</dt><dd>'+esc(value||'—')+'</dd></div>';
  const sumRow=(label,value,cls='')=>'<tr class="'+cls+'"><th scope="row">'+esc(label)+'</th><td>'+amount(value)+'</td></tr>';
  const agency=doc.agency_name||currentAgency?.name||'سرویس‌یار';
- dialog('فیش حقوق انفرادی · '+person(line),'<div class="sy-payslip-actions"><p>'+(isPreview?'پیش‌نمایش محاسباتی بر اساس فیلتر فعلی است و سند مالی تأییدشده محسوب نمی‌شود.':'اطلاعات این فیش از سند حقوق ذخیره‌شده تهیه شده است.')+' برای دریافت PDF در پنجره چاپ، «ذخیره به‌صورت PDF» را انتخاب کنید.</p><button type="button" class="primary" id="payslipPrint">چاپ / ذخیره PDF</button><button type="button" id="payslipBack">'+(isPreview?'بازگشت به فهرست رانندگان':'بازگشت به سند حقوق')+'</button></div>'+
+ dialog('فیش حقوق انفرادی · '+person(line),'<div class="sy-payslip-actions"><p>'+(isPreview?'پیش‌نمایش محاسباتی بر اساس فیلتر فعلی است و سند مالی تأییدشده محسوب نمی‌شود.':'اطلاعات این فیش از سند حقوق ذخیره‌شده تهیه شده است.')+' برای چاپ روی «چاپ فیش» و برای دریافت فایل روی «ذخیره PDF» بزنید.</p><button type="button" class="primary" id="payslipPrint">چاپ فیش</button><button type="button" id="payslipDownloadPdf">ذخیره PDF</button><button type="button" id="payslipBack">'+(isPreview?'بازگشت به فهرست رانندگان':'بازگشت به سند حقوق')+'</button></div>'+
  '<article class="sy-payslip-sheet" dir="rtl" aria-label="فیش حقوق '+esc(person(line))+'">'+
  '<header class="sy-payslip-header">'+agencyLogoImage('لوگوی '+agency,56).replace('class="sy-company-logo"','class="sy-company-logo sy-payslip-logo" style="display:block;width:56px;height:56px;max-width:56px;max-height:56px;object-fit:contain;flex:none"')+'<div><strong>'+esc(agency)+'</strong><h2>فیش حقوق و کارکرد راننده</h2><p>سرویس حمل‌ونقل دانش‌آموزی · مبالغ به ریال</p></div><span class="sy-payslip-document-state">'+(isPreview?'پیش‌نمایش محاسباتی':doc.status==='approved'?'سند تأییدشده':'پیش‌نویس / تأییدنشده')+'</span></header>'+
  (isPreview?'<div class="sy-payslip-draft sy-payslip-preview-alert">نمونه محاسباتی ـ هنوز هیچ سند حقوقی برای این راننده در این دوره ثبت نشده است. این برگه سند حقوق تأییدشده یا رسید پرداخت نیست.</div>':doc.status!=='approved'?'<div class="sy-payslip-draft">پیش‌نویس ـ فاقد تأیید نهایی حسابداری</div>':'')+
@@ -1638,12 +1638,54 @@ function showDriverPayslip(doc,line){
   const popup=window.open('','_blank');
   if(!popup){notify('اجازه باز شدن پنجره جدید را برای چاپ فیش در مرورگر فعال کنید.',true);return;}
   const title='فیش حقوق '+person(line);
-  const toolbar='<div class="sy-print-toolbar"><span>پیش‌نمایش '+esc(title)+'</span><button id="printSlipNow" type="button">چاپ / ذخیره PDF</button><button id="closeSlipWindow" type="button">بستن</button></div>';
+  const toolbar='<div class="sy-print-toolbar"><span>پیش‌نمایش '+esc(title)+'</span><button id="printSlipNow" type="button">چاپ فیش</button><button id="closeSlipWindow" type="button">بستن</button></div>';
   const script="(function(){var btn=document.getElementById('printSlipNow');btn.disabled=true;btn.onclick=function(){window.focus();window.print();};document.getElementById('closeSlipWindow').onclick=function(){window.close();};var unlock=function(){btn.disabled=false;};setTimeout(unlock,3500);Promise.all([document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve(),Promise.all(Array.from(document.images).map(function(img){if(img.complete)return Promise.resolve();return new Promise(function(done){img.addEventListener('load',done,{once:true});img.addEventListener('error',done,{once:true});});}))]).then(unlock).catch(unlock);})();";
   popup.document.open();
   popup.document.write('<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>'+esc(title)+'</title><link rel="stylesheet" href="/assets/app.css"><link rel="stylesheet" href="/assets/operations.css"><style>.sy-print-toolbar{position:sticky;top:0;z-index:10;display:flex;gap:10px;align-items:center;padding:12px;background:#eef7f0;border-bottom:1px solid #d1e2d5;font:13px Tahoma,sans-serif}.sy-print-toolbar span{margin-inline-end:auto}.sy-print-toolbar button{padding:10px 12px;border:1px solid #bfd6c4;border-radius:9px;background:#fff;cursor:pointer}.sy-print-toolbar #printSlipNow{background:#165f3c;color:white}.sy-print-toolbar button:disabled{opacity:.5}@page{size:A4 portrait;margin:12mm}body.sy-payslip-print-window{margin:0;direction:rtl;min-width:0}body.sy-payslip-print-window .sy-payslip-sheet{box-sizing:border-box;max-width:190mm;margin:12px auto;padding:12mm;background:#fff}body.sy-payslip-print-window .sy-payslip-header{display:grid;grid-template-columns:56px minmax(0,1fr) minmax(0,145px);gap:12px;align-items:center}body.sy-payslip-print-window .sy-payslip-header img.sy-company-logo{width:56px!important;height:56px!important;max-width:56px!important;max-height:56px!important;object-fit:contain!important}body.sy-payslip-print-window .sy-payslip-header>div{min-width:0}body.sy-payslip-print-window .sy-payslip-header :is(strong,h2,p){word-break:normal;overflow-wrap:normal}@media print{.sy-print-toolbar{display:none!important}body.sy-payslip-print-window .sy-payslip-sheet{width:100%!important;max-width:none!important;padding:0!important;margin:0!important;border:0!important;box-shadow:none!important}body.sy-payslip-print-window .sy-payslip-header img.sy-company-logo{width:50px!important;height:50px!important;max-width:50px!important;max-height:50px!important}}</style></head><body class="sy-payslip-print-window">'+toolbar+slip.outerHTML+'<script>'+script+'</script></body></html>');
   popup.document.close();
- }; $('payslipBack').onclick=()=>{if(isPreview){closeDialog();return;}payrollDocument(Number(doc.id));};
+ };
+ $('payslipDownloadPdf').onclick=async()=>{
+  const button=$('payslipDownloadPdf'),slip=document.querySelector('#modal .sy-payslip-sheet');
+  if(!slip){notify('فیش برای ذخیره آماده نیست.',true);return;}
+  button.disabled=true;
+  const label=button.textContent;
+  button.textContent='در حال ساخت PDF…';
+  let wrap;
+  try{
+   if(typeof window.html2pdf!=='function'){
+    await new Promise((resolve,reject)=>{
+     const existing=document.querySelector('script[data-sy-html2pdf]');
+     if(existing){if(existing.dataset.ready==='true'){resolve();return;}existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true});return;}
+     const script=document.createElement('script');
+     script.dataset.syHtml2pdf='true';
+     script.src='https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
+     script.onload=()=>{script.dataset.ready='true';resolve();};
+     script.onerror=()=>{script.remove();reject(new Error('کتابخانه ساخت PDF بارگذاری نشد. اتصال اینترنت را بررسی کنید.'));};
+     document.head.appendChild(script);
+    });
+   }
+   if(typeof window.html2pdf!=='function')throw new Error('امکان ایجاد PDF در حال حاضر فراهم نیست.');
+   wrap=document.createElement('div');
+   wrap.dir='rtl';
+   wrap.style.cssText='position:fixed;z-index:-1;top:0;left:0;width:794px;padding:38px;background:#fff;pointer-events:none';
+   const copy=slip.cloneNode(true);
+   copy.style.cssText='box-sizing:border-box;width:100%;max-width:none;margin:0;padding:0;border:0;box-shadow:none';
+   wrap.appendChild(copy);
+   document.body.appendChild(wrap);
+   await Promise.all(Array.from(copy.querySelectorAll('img')).map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve;})));
+   if(document.fonts?.ready)await document.fonts.ready;
+   const name=person(line).replace(/[\\/:*?"<>|]/g,'-').trim()||'راننده';
+   await window.html2pdf().set({
+    margin:[10,10,10,10],filename:'فیش-حقوق-'+name+'.pdf',
+    image:{type:'jpeg',quality:0.98},
+    html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0,windowWidth:1200},
+    jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+    pagebreak:{mode:['css','legacy'],avoid:['.sy-payslip-header','.sy-payslip-signatures','tr']}
+   }).from(copy).save();
+  }catch(error){notify(error?.message||'خطا در ساخت فایل PDF',true);}
+  finally{wrap?.remove();button.disabled=false;button.textContent=label;}
+ };
+ $('payslipBack').onclick=()=>{if(isPreview){closeDialog();return;}payrollDocument(Number(doc.id));};
 }
 async function payrollDocument(id){
  try{
