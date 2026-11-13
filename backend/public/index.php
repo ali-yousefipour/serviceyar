@@ -40,6 +40,18 @@ try {
  }
  // Public school directory. No student, driver, contact or private tenant data exposed.
 
+ // A web SDK key is public by design: restrict it to the site's domain in Neshan.
+ // Never expose the private service API key through this route.
+ if($method==='GET'&&$path==='/api/v1/public/map-config'){
+  try{
+   $key=\ServiceYar\Integrations\Neshan::webKey([]);
+   header('Cache-Control: public, max-age=300');
+   Response::json(['ok'=>true,'data'=>['provider'=>$key!==''?'neshan':'osm','webKey'=>$key]]);
+  }catch(\Throwable $e){
+   error_log('[ServiceYar][public-map-config] '.$e->getMessage());
+   Response::json(['ok'=>true,'data'=>['provider'=>'osm','webKey'=>'']]);
+  }
+ }
  // Public directory: minimum search length, no bulk enumeration and no sensitive media/location fields.
  // Exact locations, original images and boundaries are available only in authorized workflows.
  if($method==='GET'&&$path==='/api/v1/public/schools'){
