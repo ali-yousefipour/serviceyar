@@ -21,6 +21,13 @@ final class PayrollWorkbook
         if ($payroll['status'] !== 'approved') {
             throw new AuthException(422, 'ابتدا سند حقوق را تأیید کنید.', 'PAYROLL_NOT_APPROVED');
         }
+        // Preserve the reference template by default. The locally bundled
+        // XLSX writer supplies a standards-compliant fallback when the template
+        // is missing, or when an explicit standard export is requested.
+        if ((!is_file(__DIR__.'/payroll-mehr-layout.xlsx') || (($_GET['workbookFormat']??'')==='standard'))
+            && extension_loaded('mbstring') && extension_loaded('zlib')) {
+            self::downloadStandardWithLibrary($payroll,$id);
+        }
         if (!class_exists(ZipArchive::class) || !class_exists(DOMDocument::class)) {
             throw new AuthException(500, 'امکان ساخت فایل اکسل روی سرور فعال نیست.', 'EXPORT_DEPENDENCY_MISSING');
         }
@@ -51,6 +58,41 @@ final class PayrollWorkbook
         } finally {
             unlink($path);
         }
+        exit;
+    }
+
+    /** Data-only fallback; source Mehr template is never overwritten. */
+    private static function downloadStandardWithLibrary(array $payroll,int $id): never
+    {
+        require_once __DIR__.'/../Vendor/SimpleXLSXGen.php';
+        $headers=['ردیف','نام','نام خانوادگی','کد ملی','شماره حساب','شبا','کارکرد ناخالص','نظارت و بازرسی ۳٪','اطلاع‌رسانی ۱٪','بالاسری ۷٪','بیمه راننده ۷٫۸٪','جمع کسورات','خالص محاسباتی','حقوق سند'];
+        $rows=[array_map(static fn($name)=>'<b><style color="#FFFFFF" bgcolor="#165F3C"><wraptext>'.htmlspecialchars($name,ENT_XML1|ENT_QUOTES,'UTF-8').'</wraptext></style></b>',$headers)];
+        $totals=array_fill(0,count($headers),0);
+        foreach($payroll['lines'] as $i=>$line){
+            $row=[$i+1,(string)($line['first_name']??''),(string)($line['last_name']??''),(string)($line['national_code']??''),(string)($line['bank_account']??''),(string)($line['iban']??''),(float)($line['earned']??0),(float)($line['supervision_deduction']??0),(float)($line['coordination_deduction']??0),(float)($line['overhead_deduction']??0),(float)($line['insurance_deduction']??0),(float)($line['total_deductions']??0),(float)($line['net_earned']??0),(float)($line['salary']??0)];
+            foreach($row as $col=>$value){
+                if($col>=6)$totals[$col]+=$value;
+                elseif($col>0)$row[$col]=\Shuchkin\SimpleXLSXGen::raw($value);
+            }
+            $rows[]=$row;
+        }
+        $summary=array_fill(0,count($headers),'');$summary[0]=\Shuchkin\SimpleXLSXGen::raw('جمع کل');
+        for($i=6;$i<count($headers);$i++)$summary[$i]=$totals[$i];
+        $rows[]=$summary;
+        $writer=\Shuchkin\SimpleXLSXGen::fromArray($rows,'حقوق رانندگان')
+            ->setDefaultFont('Vazirmatn')->setDefaultFontSize(11)->rightToLeft()
+            ->freezePanes('A2')->autoFilter('A1:N'.max(1,count($rows)))->setAuthor('ServiceYar');
+        foreach($headers as $i=>$heading)$writer->setColWidth($i+1,($i>=6?22:($i===5?33:23)));
+        $tmp=tempnam(sys_get_temp_dir(),'serviceyar-payroll-xlsx-');
+        if($tmp===false)throw new \RuntimeException('Cannot allocate payroll XLSX');
+        try{
+            if(!$writer->saveAs($tmp))throw new \RuntimeException('Cannot create payroll XLSX');
+            while(ob_get_level()>0)ob_end_clean();
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            header('Content-Disposition: attachment; filename="payroll-standard-'.$id.'.xlsx"');
+            header('Cache-Control: no-store');header('X-Content-Type-Options: nosniff');
+            readfile($tmp);
+        }finally{@unlink($tmp);}
         exit;
     }
 
