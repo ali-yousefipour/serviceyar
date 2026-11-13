@@ -137,7 +137,10 @@
   const positions=[];
   rows.forEach(school=>{
    if(!Number.isFinite(school.latitude)||!Number.isFinite(school.longitude))return;
-   const marker=L.marker([school.latitude,school.longitude]).addTo(schoolMarkers);
+   const icon=L.divIcon({className:'sy-public-pin',html:'<span class="sy-public-pin-face">'+
+    (school.photoUrl?'<img src="'+school.photoUrl.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'" alt="" onerror="this.replaceWith(document.createTextNode(\'⌖\'))">':'<span>⌖</span>')+
+    '</span>',iconSize:[46,46],iconAnchor:[23,42],popupAnchor:[0,-38]});
+   const marker=L.marker([school.latitude,school.longitude],{icon,title:school.name}).addTo(schoolMarkers);
    const popup=document.createElement('div');
    const name=document.createElement('strong');name.textContent=school.name;
    const company=document.createElement('p');company.textContent='شرکت: '+school.company;
