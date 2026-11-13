@@ -1634,21 +1634,16 @@ function showDriverPayslip(doc,line){
  '<footer class="sy-payslip-signatures"><div>تنظیم‌کننده سند<span></span></div><div>مسئول مالی<span></span></div><div>مهر و امضای شرکت<span></span></div></footer><p class="sy-payslip-footnote">'+(isPreview?'این برگه صرفاً پیش‌نمایش غیررسمی از محاسبات بازه انتخابی است و سند ثبت‌شده محسوب نمی‌شود.':'این فیش فقط بر اساس سند حقوق ثبت‌شده تهیه شده و به‌تنهایی به معنای انجام انتقال وجه نیست.')+'</p></article>');
  $('payslipPrint').onclick=()=>{
   const slip=document.querySelector('#modal .sy-payslip-sheet');
-  if(!slip)return;
+  if(!slip){notify('فیش برای چاپ آماده نیست.',true);return;}
   const popup=window.open('','_blank');
-  if(!popup){notify('اجازه بازشدن پنجره چاپ را در مرورگر فعال کنید.',true);return;}
-  popup.addEventListener('load',async()=>{
-   try{
-    await popup.document.fonts?.ready;
-    await Promise.all([...popup.document.images].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve;})));
-    popup.focus();popup.print();
-   }catch{popup.focus();popup.print();}
-  },{once:true});
+  if(!popup){notify('اجازه باز شدن پنجره جدید را برای چاپ فیش در مرورگر فعال کنید.',true);return;}
+  const title='فیش حقوق '+person(line);
+  const toolbar='<div class="sy-print-toolbar"><span>پیش‌نمایش '+esc(title)+'</span><button id="printSlipNow" type="button">چاپ / ذخیره PDF</button><button id="closeSlipWindow" type="button">بستن</button></div>';
+  const script="(function(){var btn=document.getElementById('printSlipNow');btn.disabled=true;btn.onclick=function(){window.focus();window.print();};document.getElementById('closeSlipWindow').onclick=function(){window.close();};Promise.all([document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve(),Promise.all(Array.from(document.images).map(function(img){if(img.complete)return Promise.resolve();return new Promise(function(done){img.addEventListener('load',done,{once:true});img.addEventListener('error',done,{once:true});});}))]).then(function(){btn.disabled=false;}).catch(function(){btn.disabled=false;});})();";
   popup.document.open();
-  popup.document.write('<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>'+esc('فیش حقوق '+person(line))+'</title><link rel="stylesheet" href="/assets/operations.css"></head><body class="sy-payslip-print-window">'+slip.outerHTML+'</body></html>');
+  popup.document.write('<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>'+esc(title)+'</title><link rel="stylesheet" href="/assets/operations.css"><style>.sy-print-toolbar{position:sticky;top:0;z-index:10;display:flex;gap:10px;align-items:center;padding:12px;background:#eef7f0;border-bottom:1px solid #d1e2d5;font:13px Tahoma,sans-serif}.sy-print-toolbar span{margin-inline-end:auto}.sy-print-toolbar button{padding:10px 12px;border:1px solid #bfd6c4;border-radius:9px;background:#fff;cursor:pointer}.sy-print-toolbar #printSlipNow{background:#165f3c;color:white}.sy-print-toolbar button:disabled{opacity:.5}@media print{.sy-print-toolbar{display:none!important}}</style></head><body class="sy-payslip-print-window">'+toolbar+slip.outerHTML+'<script>'+script+'</script></body></html>');
   popup.document.close();
- };
- $('payslipBack').onclick=()=>{if(isPreview){closeDialog();return;}payrollDocument(Number(doc.id));};
+ }; $('payslipBack').onclick=()=>{if(isPreview){closeDialog();return;}payrollDocument(Number(doc.id));};
 }
 async function payrollDocument(id){
  try{
