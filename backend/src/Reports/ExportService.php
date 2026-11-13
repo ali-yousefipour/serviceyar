@@ -294,8 +294,73 @@ final class ExportService
         ], $rows, 'service-finance.xlsx');
     }
 
+    /**
+     * Use the vendored XLSX writer for ordinary reports. Keep the legacy ZIP
+     * writer as a compatibility fallback for hosts without mbstring.
+     * Template-based accounting and monthly statement exports stay untouched.
+     */
+    private static function downloadRowsWithLibrary(array $columns,array $rows,string $filename,bool $styled): never
+    {
+        require_once __DIR__.'/../Vendor/SimpleXLSXGen.php';
+        $names=array_keys($columns);
+        $last=count($names);
+        $lastColumn=static function(int $n):string {
+            $s=''; while($n>0){$n--; $s=chr(65+$n%26).$s; $n=intdiv($n,26);} return $s;
+        };
+        $safeText=static function(mixed $v):string {
+            $v=preg_replace('/[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]/u','',(string)($v??''))??'';
+            // Raw values prevent implicit date, formula, URL and number conversion.
+            return "\\0".$v;
+        };
+        $safeStyle=static fn(string $value):string => htmlspecialchars($value,ENT_XML1|ENT_QUOTES,'UTF-8');
+        $grid=[];
+        $grid[]=array_map(static fn($heading)=>'<b><style color="#FFFFFF" bgcolor="#165F3C"><wraptext>'.htmlspecialchars((string)$heading,ENT_XML1|ENT_QUOTES,'UTF-8').'</wraptext></style></b>',array_values($columns));
+        foreach($rows as $index=>$row){
+            $cells=[];
+            $isFinal=$styled && $index===count($rows)-1;
+            foreach($names as $field){
+                $value=$row[$field]??'';
+                if(is_int($value)||is_float($value)){
+                    $cells[]='<style nf="#,##0">'.($value).'</style>';
+                }else{
+                    // ID, IBAN, tracking number, dates and text stay text.
+                    $text=(string)($value??'');
+                    $cells[]=$safeText($text);
+                }
+            }
+            $grid[]=$cells;
+        }
+        $book=\\Shuchkin\\SimpleXLSXGen::fromArray($grid,'گزارش')
+            ->setDefaultFont('Vazirmatn')->setDefaultFontSize(11)
+            ->rightToLeft()->freezePanes('A2')
+            ->autoFilter('A1:'.$lastColumn($last).max(1,count($grid)))
+            ->setAuthor('ServiceYar')->setCompany('ServiceYar');
+        foreach(array_values($columns) as $i=>$heading){
+            $width=max(15,min(44,(int)ceil(mb_strlen((string)$heading,'UTF-8')*1.3)+6));
+            $book->setColWidth($i+1,$width);
+        }
+        $tmp=tempnam(sys_get_temp_dir(),'serviceyar-xlsx-');
+        if($tmp===false)self::jsonError(500,'EXPORT_TEMP_FAILED','ساخت فایل گزارش با خطا مواجه شد.');
+        try{
+            if(!$book->saveAs($tmp))self::jsonError(500,'EXPORT_WRITE_FAILED','ذخیره فایل Excel با خطا مواجه شد.');
+            $data=file_get_contents($tmp);
+        }finally{@unlink($tmp);}
+        if(!is_string($data)||$data==='')self::jsonError(500,'EXPORT_READ_FAILED','دریافت فایل گزارش با خطا مواجه شد.');
+        while(ob_get_level()>0)ob_end_clean();
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="'.preg_replace('/[\\r\\n"]/', '',$filename).'"; filename*=UTF-8\'\''.rawurlencode($filename));
+        header('Content-Length: '.strlen($data));
+        header('Cache-Control: no-store, no-cache, must-revalidate');
+        header('X-Content-Type-Options: nosniff');
+        echo $data;
+        exit;
+    }
+
     private static function downloadRows(array $columns,array $rows,string $filename,bool $styled=false): never
     {
+        if(extension_loaded('mbstring') && extension_loaded('zlib')){
+            self::downloadRowsWithLibrary($columns,$rows,$filename,$styled);
+        }
         if (!class_exists(\ZipArchive::class)) self::jsonError(500,'EXPORT_DEPENDENCY_MISSING','امکان ساخت فایل Excel روی سرور فعال نیست.');
         $columnNames=array_keys($columns);
         $xml = static function (mixed $value): string {
