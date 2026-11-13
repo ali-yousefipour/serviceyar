@@ -1886,3 +1886,54 @@ body.sy-menu-palette-open{overflow:hidden}
 #content .sy-journal-list-table{scrollbar-gutter:stable}
 @media(max-width:1050px){#content .sy-journal-list-filters .sy-journal-reset{justify-self:start}}
 @media(max-width:700px){#content .sy-journal-list-filters .sy-journal-reset{width:100%;justify-self:stretch}#content .sy-journal-list-table{scrollbar-gutter:auto}}
+
+/* Ledger report: professional responsive finance reporting */
+#content .sy-ledger-report-intro{padding:4px 0 20px;border-bottom:1px solid #e0e9e4;margin-bottom:20px}
+#content .sy-ledger-report-intro h2{font-size:clamp(19px,2.3vw,25px);color:#173e2c;margin:5px 0 8px}
+#content .sy-ledger-report-intro p{font-size:13px;line-height:1.9;color:#5c7464;max-width:740px;margin:0}
+#content .ledger-report-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+#content .ledger-report-actions button{min-height:44px}
+#content .ledger-report-panel :is(button,input,select,summary,.sy-ledger-report-table-wrap):focus-visible{outline:3px solid #79b99a;outline-offset:2px}
+#content .sy-ledger-report-loading{display:flex;align-items:center;justify-content:center;gap:12px;min-height:135px;background:#f7fbf9;border:1px dashed #ccded3;border-radius:14px;color:#365e4a;font-size:14px;font-weight:700}
+#content .sy-ledger-loading-icon{width:22px;height:22px;border:3px solid #cbded2;border-top-color:#18774c;border-radius:100%;animation:sy-ledger-spin .8s linear infinite}
+@keyframes sy-ledger-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){#content .sy-ledger-loading-icon{animation:none}}
+#content .sy-ledger-report-state{display:grid;justify-items:center;gap:10px;text-align:center;padding:28px 16px;border:1px solid #e4d8bb;background:#fffaf1;border-radius:14px;color:#785525}
+#content .sy-ledger-report-state.is-error{border-color:#e8c6c6;background:#fff7f6;color:#913d3d}
+#content .sy-ledger-report-state strong{font-size:15px}
+#content .sy-ledger-report-state p{font-size:13px;line-height:1.9;max-width:620px;margin:0}
+#content .sy-ledger-report-state button{min-height:42px;border-radius:10px;border:1px solid #d5b1b1;background:#fff;color:#8f3434;padding:8px 16px;font-weight:800}
+#content .sy-ledger-report-table-wrap{max-height:560px;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+#content .ledger-report-table{min-width:1080px}
+#content .ledger-report-table th{position:sticky;top:0;z-index:1}
+#content .ledger-report-table :is(th,td){font-variant-numeric:tabular-nums}
+#content .ledger-report-table td{overflow-wrap:anywhere;line-height:1.8}
+#content .ledger-report-table .sy-ledger-money{font-weight:800;white-space:nowrap;color:#165c48}
+#content .sy-ledger-no-results{padding:36px 15px!important;text-align:center;color:#62776d}
+@media(max-width:750px){
+ #content .ledger-report-panel{padding:12px}
+ #content .ledger-report-actions button{flex:1 1 140px}
+ #content .ledger-report-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #content .sy-ledger-report-table-wrap{max-height:none;overflow:visible;scrollbar-gutter:auto;border:0}
+ #content .ledger-report-table{display:block;min-width:0}
+ #content .ledger-report-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+ #content .ledger-report-table tbody{display:grid;gap:12px;padding:12px}
+ #content .ledger-report-table tbody tr{display:grid;border:1px solid #dae8df;border-radius:13px;overflow:hidden;background:#fff}
+ #content .ledger-report-table tbody tr:nth-child(even){background:#fff}
+ #content .ledger-report-table td{display:grid;grid-template-columns:minmax(95px,38%) minmax(0,1fr);gap:10px;text-align:left;padding:10px 12px;border-bottom:1px solid #e9f1ec}
+ #content .ledger-report-table td::before{content:attr(data-label);font-size:12px;text-align:right;color:#557162;font-weight:800}
+ #content .ledger-report-table td:last-child{border-bottom:0}
+ #content .ledger-report-table td[colspan]{display:block;text-align:center}
+ #content .ledger-report-table td[colspan]::before{display:none}
+}
+@media(max-width:420px){#content .ledger-report-kpis{grid-template-columns:1fr 1fr}#content .ledger-report-kpis>div{padding:10px}#content .ledger-report-kpis strong{font-size:13px}}
+@media print{
+ body:has(.ledger-print-sheet) .sy-ledger-report-intro{display:none!important}
+ body:has(.ledger-print-sheet) .sy-ledger-report-table-wrap{overflow:visible!important;max-height:none!important}
+ body:has(.ledger-print-sheet) .ledger-report-table{display:table!important;min-width:0!important;width:100%!important;font-size:9px!important}
+ body:has(.ledger-print-sheet) .ledger-report-table thead{display:table-header-group!important;position:static!important;clip:auto!important;width:auto!important;height:auto!important;overflow:visible!important}
+ body:has(.ledger-print-sheet) .ledger-report-table tbody{display:table-row-group!important;padding:0!important}
+ body:has(.ledger-print-sheet) .ledger-report-table tbody tr{display:table-row!important;break-inside:avoid!important}
+ body:has(.ledger-print-sheet) .ledger-report-table td{display:table-cell!important;padding:5px!important;border-bottom:1px solid #ddd!important;text-align:right!important}
+ body:has(.ledger-print-sheet) .ledger-report-table td::before{display:none!important}
+}
