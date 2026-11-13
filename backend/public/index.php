@@ -28,12 +28,12 @@ try {
   // Only aggregate, non-personal counts; no agency/user identifiers exposed.
   try{
    $pdo=Connection::get();$counts=[];
-   foreach(['agencies','schools','students','drivers','services'] as $table){
-    // School totals include every registered record, regardless of activation status.
-    $where=$table==='schools'?'':' WHERE is_active=1';
-    $counts[$table]=(int)$pdo->query('SELECT COUNT(*) FROM '.$table.$where)->fetchColumn();
+   foreach(['agencies','students','drivers','services'] as $table){
+    $counts[$table]=(int)$pdo->query('SELECT COUNT(*) FROM '.$table.' WHERE is_active=1')->fetchColumn();
    }
-   header('Cache-Control: public, max-age=120');
+   // Both the central catalog and registered schools (active or inactive), deduplicated.
+   $counts['schools']=\ServiceYar\Domain\PublicExplorer::countSchools();
+   header('Cache-Control: no-store, max-age=0');
    Response::json(['ok'=>true,'data'=>['counts'=>$counts]]);
   }catch(\Throwable $e){
    error_log('[ServiceYar][public-overview] aggregate query failed: '.$e->getMessage());
