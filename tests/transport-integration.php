@@ -363,7 +363,7 @@ try{
  $inactiveAgency=insertFixture('agencies',['uuid'=>Uuid::v4(),'name'=>'شرکت بازیابی آزمایشی']);
  \ServiceYar\Agency\AgencyService::deactivate($uid,$inactiveAgency);
  check((int)$p->query('SELECT is_active FROM agencies WHERE id='.(int)$inactiveAgency)->fetchColumn()===0,'Super-admin can deactivate agency');
- rejected(fn()=>\ServiceYar\Agency\AgencyService::activate($manager,$inactiveAgency),'SUPER_ADMIN_REQUIRED');
+ rejected(fn()=>\ServiceYar\Agency\AgencyService::activate($manager,$inactiveAgency),'FORBIDDEN');
  \ServiceYar\Agency\AgencyService::activate($uid,$inactiveAgency);
  check((int)$p->query('SELECT is_active FROM agencies WHERE id='.(int)$inactiveAgency)->fetchColumn()===1,'Super-admin can reactivate agency without recreation');
  \ServiceYar\Agency\AgencyService::activate($uid,$inactiveAgency);
