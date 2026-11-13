@@ -232,12 +232,39 @@ final class ReferenceMonthlyStatementWorkbook
                 $style[$letter]=$cell->getAttribute('s')?:null;
             }
         }
-        // The final statement sheet has print/footer rows 220-230. Preserve
-        // those separately; other data sheets have no footer after the table.
-        $footer=null;
+        // The reference's final sheet uses a footer at rows 220-230.
+        // Move its styled rows and merged ranges after the last driver when
+        // monthly attendance exceeds the legacy 216-driver print area.
+        $footer=null;$footerStart=220;$footerEnd=230;
         if($sheet===7){
+            $lastDataRow=$start+count($records)+($withTotal?0:-1);
+            $delta=max(0,$lastDataRow+3-$footerStart);
+            if($delta>0){
+                foreach($body->childNodes as $row){
+                    if(!$row instanceof \DOMElement||$row->localName!=='row')continue;
+                    $index=(int)$row->getAttribute('r');
+                    if($index<220)continue;
+                    $row->setAttribute('r',(string)($index+$delta));
+                    foreach($row->getElementsByTagNameNS(self::NS,'c') as $cell){
+                        $reference=$cell->getAttribute('r');
+                        $cell->setAttribute('r',preg_replace('/[0-9]+$/',(string)($index+$delta),$reference));
+                    }
+                }
+                foreach($doc->getElementsByTagNameNS(self::NS,'mergeCell') as $merge){
+                    $range=$merge->getAttribute('ref');
+                    $shifted=preg_replace_callback('/([A-Z]+)([0-9]+)/',
+                        static fn(array $m):string=>$m[1].((int)$m[2]>=220?(int)$m[2]+$delta:$m[2]),
+                        $range);
+                    $merge->setAttribute('ref',$shifted);
+                }
+                foreach($doc->getElementsByTagNameNS(self::NS,'brk') as $break){
+                    if($break->hasAttribute('id')&&(int)$break->getAttribute('id')>=220)
+                        $break->setAttribute('id',(string)((int)$break->getAttribute('id')+$delta));
+                }
+            }
+            $footerStart+=max(0,$delta);$footerEnd+=max(0,$delta);
             foreach($body->childNodes as $row){
-                if($row instanceof \DOMElement && $row->localName==='row' && (int)$row->getAttribute('r')>=220){
+                if($row instanceof \DOMElement&&$row->localName==='row'&&(int)$row->getAttribute('r')>=$footerStart){
                     $footer=$row;break;
                 }
             }
@@ -245,7 +272,7 @@ final class ReferenceMonthlyStatementWorkbook
         foreach(iterator_to_array($body->childNodes) as $row){
             if(!$row instanceof \DOMElement || $row->localName!=='row')continue;
             $n=(int)$row->getAttribute('r');
-            if($n>=$start && ($sheet!==7 || $n<220))$body->removeChild($row);
+            if($n>=$start && ($sheet!==7 || $n<$footerStart))$body->removeChild($row);
         }
         $insert=static function(\DOMElement $new) use ($body,$footer): void {
             if($footer instanceof \DOMElement)$body->insertBefore($new,$footer);
@@ -299,7 +326,7 @@ final class ReferenceMonthlyStatementWorkbook
         $dimension=$doc->getElementsByTagNameNS(self::NS,'dimension')->item(0);
         if($dimension instanceof \DOMElement){
             $bounds=[3=>'BG',4=>'R',5=>'L',6=>'AM',7=>'AA'];
-            $last=max($start+count($records)+($sheet===6||$withTotal?0:-1),$sheet===7?230:2);
+            $last=max($start+count($records)+($sheet===6||$withTotal?0:-1),$sheet===7?$footerEnd:2);
             $dimension->setAttribute('ref','A1:'.($bounds[$sheet]??'Z').$last);
         }
         $zip->addFromString('xl/worksheets/sheet'.$sheet.'.xml',$doc->saveXML());
