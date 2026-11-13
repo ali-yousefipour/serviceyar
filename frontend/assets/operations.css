@@ -2638,3 +2638,19 @@ body.sy-menu-palette-open{overflow:hidden}
  .sy-school-photo-editor-preview:has(img){width:min(100%,calc(210px * var(--sy-school-aspect,1)))!important;max-width:100%!important;height:180px!important}
  .sy-school-details-cover:has(.sy-school-details-image){width:min(100%,calc(290px * var(--sy-school-aspect,1)))!important;max-height:290px!important}
 }
+
+
+/* Service membership action stays visible above long student tables when seats reopen. */
+.sy-service-member-header{
+ display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
+ gap:12px;margin:4px 0 13px;padding:15px 18px;
+ background:linear-gradient(120deg,#eaf7ef,#f7fbf8);
+ border:1px solid #cfe7d8;border-radius:15px;
+}
+.sy-service-member-header>div{display:grid;gap:4px;min-width:0}
+.sy-service-member-header strong{font-size:15px;color:#09563b}
+.sy-service-member-header span{font-size:12px;color:#557464}
+.sy-service-add-student{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 18px!important;white-space:nowrap;border-radius:11px!important;font-weight:800}
+#assignForm{scroll-margin-top:24px;border:1px solid #d3e7dc;border-radius:16px;padding:16px;margin-block:16px;background:#f9fcfa}
+#assignForm:focus-within{border-color:#0b9965;box-shadow:0 0 0 3px #0c9d6216}
+@media(max-width:550px){.sy-service-member-header{padding:12px}.sy-service-member-header .sy-service-add-student{width:100%}}
