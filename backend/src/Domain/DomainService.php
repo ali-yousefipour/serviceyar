@@ -182,7 +182,7 @@ final class DomainService {
   if($resource==='students' && ($q['unassigned']??'')==='1')$where.=' AND NOT EXISTS (SELECT 1 FROM service_students ss JOIN services sv ON sv.id=ss.service_id WHERE ss.student_id=students.id AND sv.agency_id=students.agency_id AND sv.is_active=1)';
   if($resource==='students'&&!empty($q['eligibleServiceId'])){self::get($uid,$aid,'services',(int)$q['eligibleServiceId']);$where.=" AND students.service_status<>'cancelled' AND EXISTS(SELECT 1 FROM services sv LEFT JOIN service_schools ss ON ss.service_id=sv.id WHERE sv.id=:eligible_service AND sv.agency_id=students.agency_id AND (sv.school_id=students.school_id OR ss.school_id=students.school_id))";$params['eligible_service']=(int)$q['eligibleServiceId'];}
   $limit=min(max((int)($q['limit']??50),1),200);$page=max((int)($q['page']??1),1);$off=($page-1)*$limit;
-  $pdo=Connection::get();$count=$pdo->prepare("SELECT COUNT(*) FROM {$c['table']} WHERE $where");$count->execute($params);
+  $pdo=Connection::get();if($resource==='ledger'&&!in_array('company_account_id',thisColumns('ledger_entries',$pdo),true))throw new AuthException(503,'ساختار حساب‌های شرکت به‌روزرسانی نشده است؛ مهاجرت دیتابیس 0031 باید اجرا شود.','FINANCE_SCHEMA_UPDATE_REQUIRED');$count=$pdo->prepare("SELECT COUNT(*) FROM {$c['table']} WHERE $where");$count->execute($params);
   $select='*';
   if($resource==='ledger')$select="ledger_entries.*,
    CASE ledger_entries.party_type
@@ -293,6 +293,7 @@ final class DomainService {
    $annual->execute(['id'=>$id,'a'=>$aid]);$row=array_merge($row,$annual->fetch()?:[]);
   }
   if($resource==='ledger'){
+   if(!in_array('company_account_id',thisColumns('ledger_entries',Connection::get()),true))throw new AuthException(503,'ساختار حساب‌های شرکت نیازمند اجرای مهاجرت دیتابیس 0031 است.','FINANCE_SCHEMA_UPDATE_REQUIRED');
    $p=Connection::get()->prepare("SELECT
     CASE le.party_type
      WHEN 'student' THEN (SELECT NULLIF(TRIM(CONCAT_WS(' ',st.first_name,st.last_name)),'') FROM students st WHERE st.id=le.party_id AND st.agency_id=le.agency_id)
@@ -353,7 +354,7 @@ final class DomainService {
  }
  private static function saveRecord(int $uid,int $aid,string $resource,array $b,?int $id=null): array {
   $c=self::cfg($resource); Authorization::requirePermission($uid,$c['permission'].'.manage'); Authorization::requireAgencyAccess($uid,$aid);
-  $pdo=Connection::get();$data=[];foreach($c['fields'] as $f){$camel=preg_replace_callback('/_([a-z])/',fn($m)=>strtoupper($m[1]),$f);if(array_key_exists($camel,$b))$data[$f]=$b[$camel];elseif(array_key_exists($f,$b))$data[$f]=$b[$f];}
+  $pdo=Connection::get();if($resource==='ledger'&&!in_array('company_account_id',thisColumns('ledger_entries',$pdo),true))throw new AuthException(503,'برای ثبت دریافت و پرداخت جدید، ابتدا مهاجرت دیتابیس 0031 را اجرا کنید.','FINANCE_SCHEMA_UPDATE_REQUIRED');if($resource==='accounts'&&!in_array('bank_name',thisColumns('accounting_accounts',$pdo),true))throw new AuthException(503,'ساختار اطلاعات بانکی حساب‌ها نیازمند اجرای مهاجرت 0031 است.','FINANCE_SCHEMA_UPDATE_REQUIRED');$data=[];foreach($c['fields'] as $f){$camel=preg_replace_callback('/_([a-z])/',fn($m)=>strtoupper($m[1]),$f);if(array_key_exists($camel,$b))$data[$f]=$b[$camel];elseif(array_key_exists($f,$b))$data[$f]=$b[$f];}
   foreach($data as $f=>$v){if(is_array($v)||is_object($v))throw new AuthException(422,'مقدار ورودی نامعتبر است.','VALIDATION_ERROR');}
   if($resource==='vehicles'&&!in_array('owner_name',thisColumns('vehicles',$pdo),true))
    throw new AuthException(503,'برای ثبت یا ویرایش مالک خودرو، مهاجرت دیتابیس 0029_vehicle_owner_name.sql باید اجرا شود.','VEHICLE_SCHEMA_UPDATE_REQUIRED');
