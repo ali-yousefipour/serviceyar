@@ -139,3 +139,14 @@
  .sy-public.sy-motion-ready [data-reveal],.sy-public.sy-motion-ready [data-reveal-group]>*{opacity:1!important;transform:none!important}
  .sy-hero-visual{transform:none!important;will-change:auto!important}
 }
+
+
+.sy-public #syNumbers,.sy-public #syCapabilities,.sy-public #syHowItWorks{scroll-margin-top:100px}
+.sy-scroll-cue{position:absolute;z-index:3;left:50%;bottom:17px;transform:translateX(-50%);display:flex;align-items:center;gap:12px;color:#d7f6e5;font-size:11px;font-weight:750;padding:6px 12px;border-radius:30px;background:#ffffff12;border:1px solid #ffffff25;transition:background .25s,color .25s}
+.sy-scroll-cue b{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;border:1px solid #ffffff6b;font-size:18px;animation:sy-bounce-down 2.5s ease-in-out infinite}
+.sy-scroll-cue:hover{background:#ffffff2b;color:#fff}
+@keyframes sy-bounce-down{0%,100%{transform:translateY(-2px)}50%{transform:translateY(4px)}}
+.sy-public.sy-motion-ready .sy-hero-visual.sy-in-view{transform:translateY(var(--sy-parallax,0px)) perspective(1200px) rotateY(-6deg)}
+@media(max-width:800px){.sy-public.sy-motion-ready .sy-hero-visual.sy-in-view{transform:translateY(var(--sy-parallax,0px))}}
+@media(max-width:540px){.sy-scroll-cue{bottom:10px;font-size:9px;gap:5px}}
+@media(prefers-reduced-motion:reduce){.sy-scroll-cue b{animation:none!important}.sy-public.sy-motion-ready .sy-hero-visual.sy-in-view{transform:none!important}}
