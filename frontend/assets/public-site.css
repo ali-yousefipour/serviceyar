@@ -269,3 +269,65 @@
 
 .sy-public .sy-map-tile-status{position:absolute;z-index:650;top:14px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 32px);border:1px solid #f3d4a6;background:#fff9e9;color:#855411;padding:8px 13px;border-radius:12px;font-size:12px;box-shadow:0 6px 25px #312b211c}
 .sy-public .sy-map-tile-status[hidden]{display:none!important}
+
+
+/* ServiceYar public directory v3: Neshan-focused, responsive, map-first composition */
+#syPublicSchools .sy-explorer-grid{display:flex;flex-direction:column;gap:22px}
+#syPublicSchools .sy-directory-panel{order:0;padding:clamp(18px,2.5vw,36px);background:linear-gradient(150deg,#ffffff,#f6fbf8)}
+#syPublicSchools .sy-tariff-panel{order:1;background:#fff}
+#syPublicSchools .sy-directory-panel .sy-explorer-panel-heading{margin-bottom:16px}
+#syPublicSchools .sy-directory-panel .sy-explorer-panel-heading h2{font-size:clamp(1.25rem,2.3vw,1.85rem);color:#064c38;letter-spacing:-.015em}
+#syPublicSchools .sy-directory-panel .sy-explorer-panel-heading p{font-size:.9rem;margin:4px 0 0;color:#59746b}
+#syPublicSchools .sy-map-guidance{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+#syPublicSchools .sy-map-guidance span{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:750;color:#365b4a;padding:5px 12px;border-radius:99px;background:#eef6f1}
+#syPublicSchools .sy-map-guidance i{display:block;width:11px;height:11px;border-radius:50%;box-shadow:0 0 0 3px #fff}
+#syPublicSchools .sy-map-legend-green{background:#0d9861}
+#syPublicSchools .sy-map-legend-yellow{background:#e5b52a}
+#syPublicSchools .sy-school-search{max-width:500px}
+#syPublicSchools .sy-schools-layout{display:grid;grid-template-columns:minmax(250px,.68fr) minmax(0,1.7fr);gap:18px;direction:rtl;align-items:stretch}
+#syPublicSchools .sy-school-results{max-height:540px;min-height:420px;overflow-y:auto;padding:12px;border:1px solid #dbece3;border-radius:18px;background:#f6faf8;box-shadow:inset 0 1px 5px #104b3010}
+#syPublicSchools .sy-map-frame{position:relative;min-width:0}
+#syPublicSchools .sy-school-map{height:540px;min-height:440px;border-radius:20px;background:#e5f1e9;border:1px solid #cfe5d8;box-shadow:0 18px 35px #0e4f3024}
+#syPublicSchools .sy-map-privacy-note{padding:10px 3px 0;color:#688174;font-size:12px}
+#syPublicSchools .sy-public-map-status{position:absolute;z-index:600;top:14px;right:14px;max-width:min(350px,calc(100% - 30px));pointer-events:none;background:#fffef2eb;color:#385c46;border:1px solid #d6e6d8;box-shadow:0 8px 24px #14462f23;border-radius:12px;padding:9px 13px;font-size:12px;line-height:1.8}
+#syPublicSchools .sy-school-choice{display:flex;align-items:center;flex-direction:row;gap:12px;padding:12px!important;min-height:90px;text-align:right;border:1px solid #dcebe2;border-radius:16px;transition:transform .2s,box-shadow .2s,border-color .2s;background:#fff}
+#syPublicSchools .sy-school-choice:hover,#syPublicSchools .sy-school-choice.sy-selected-school{border-color:#14a06b;box-shadow:0 10px 24px #0c57331b;transform:translateY(-2px)}
+#syPublicSchools .sy-school-choice-visual{display:grid;place-items:center;overflow:hidden;flex:none;width:62px;height:62px;border-radius:12px;background:#fff7db;color:#a77809;font-size:27px;border:1px solid #f0dfb1}
+#syPublicSchools .sy-school-choice-visual img{width:100%;height:100%;object-fit:cover}
+#syPublicSchools .sy-school-choice-body{display:grid;gap:2px;min-width:0}
+#syPublicSchools .sy-school-choice-body strong{font-size:14px;color:#173f32;line-height:1.65}
+#syPublicSchools .sy-school-choice-body small,#syPublicSchools .sy-school-choice-body span{font-size:12px;color:#678075}
+#syPublicSchools .sy-public-pin{background:none;border:0}
+#syPublicSchools .sy-public-pin-face{display:grid;place-items:center;position:relative;border-radius:16px;width:54px;height:54px;border:3px solid #e3b530;background:#fff;box-shadow:0 6px 22px #092f2350;overflow:hidden;transition:transform .18s ease}
+#syPublicSchools .sy-public-pin:hover .sy-public-pin-face{transform:translateY(-4px)}
+#syPublicSchools .sy-public-pin-green .sy-public-pin-face{border-color:#0c9d61}
+#syPublicSchools .sy-public-pin-face img{width:100%;height:100%;object-fit:cover}
+#syPublicSchools .sy-public-pin-symbol{display:none;align-items:center;justify-content:center;font-size:31px;font-weight:850;color:#d19b0d}
+#syPublicSchools .sy-public-pin-green .sy-public-pin-symbol{color:#07965b}
+#syPublicSchools .sy-public-pin-fallback .sy-public-pin-symbol{display:flex}
+#syPublicSchools .sy-public-detail-modal{padding:0;width:min(780px,calc(100vw - 30px));max-width:780px;border:0;border-radius:26px;box-shadow:0 25px 70px #092c2477;overflow:hidden}
+#syPublicSchools .sy-public-detail-modal::backdrop{background:#05291d96;backdrop-filter:blur(7px)}
+#syPublicSchools .sy-public-detail-modal .sy-school-dialog-body{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(200px,.8fr);gap:0;padding:0;position:relative}
+#syPublicSchools .sy-public-modal-visual{min-height:300px;display:grid;place-items:center;background:linear-gradient(135deg,#dbefe5,#eef8f3);color:#678e7b;overflow:hidden;grid-column:2;grid-row:1}
+#syPublicSchools .sy-public-modal-visual img{height:100%;width:100%;object-fit:cover;max-height:520px}
+#syPublicSchools .sy-public-modal-content{grid-column:1;grid-row:1;padding:32px 28px}
+#syPublicSchools .sy-public-modal-content h3{margin:4px 0 20px;color:#064b35;font-size:clamp(19px,2.4vw,26px)}
+#syPublicSchools .sy-public-facts{display:grid;gap:0;margin:0}
+#syPublicSchools .sy-public-facts div{display:grid;grid-template-columns:minmax(100px,.4fr) minmax(0,1fr);gap:12px;border-bottom:1px solid #edf3ef;padding:10px 0}
+#syPublicSchools .sy-public-facts dt{font-size:12px;color:#6d8277}
+#syPublicSchools .sy-public-facts dd{font-size:13px;color:#23493b;margin:0;overflow-wrap:anywhere}
+#syPublicSchools .sy-public-detail-modal .sy-school-dialog-close{position:absolute;right:auto;left:15px;top:14px;z-index:5;width:35px;height:35px;background:#fff;border:1px solid #dce9e2;border-radius:50%;cursor:pointer;font-size:21px;line-height:1}
+#syPublicSchools .sy-dialog-privacy{font-size:11px;color:#7c8b82;margin:16px 0 0}
+@media(max-width:860px){
+ #syPublicSchools .sy-schools-layout{grid-template-columns:1fr}
+ #syPublicSchools .sy-map-frame{grid-row:1}
+ #syPublicSchools .sy-school-map{height:390px;min-height:350px}
+ #syPublicSchools .sy-school-results{min-height:130px;max-height:320px}
+}
+@media(max-width:590px){
+ #syPublicSchools .sy-public-detail-modal .sy-school-dialog-body{display:flex;flex-direction:column}
+ #syPublicSchools .sy-public-modal-visual{min-height:170px;max-height:190px}
+ #syPublicSchools .sy-public-modal-content{padding:20px}
+ #syPublicSchools .sy-public-facts div{grid-template-columns:100px 1fr}
+ #syPublicSchools .sy-school-map{height:340px;min-height:300px}
+}
