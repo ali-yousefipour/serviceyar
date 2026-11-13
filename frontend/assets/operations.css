@@ -2495,3 +2495,39 @@ body.sy-menu-palette-open{overflow:hidden}
  #gridFilters .iran-plate.iran-plate-input,.sy-vehicle-edit-form .iran-plate.iran-plate-input{width:270px!important}
  #gridFilters .iran-plate-input .iran-plate-main,.sy-vehicle-edit-form .iran-plate-input .iran-plate-main{grid-template-columns:39px 41px minmax(57px,1fr)!important}
 }
+
+
+/* Dashboard company logo has the same bounded raster icon treatment as school markers.
+   Explicitly override global dashboard image styling, including Neshan/Leaflet defaults. */
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-company{
+ box-sizing:border-box!important;width:56px!important;height:64px!important;
+ max-width:56px!important;max-height:64px!important;
+ padding:0!important;border:0!important;background:transparent!important;
+ overflow:visible!important;box-shadow:none!important;
+}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-company .sy-map-marker-bubble{
+ box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;
+ width:56px!important;height:56px!important;min-width:56px!important;min-height:56px!important;
+ max-width:56px!important;max-height:56px!important;
+ border:3px solid #0b985b!important;border-radius:16px!important;
+ background:#fff!important;overflow:hidden!important;transform:none!important;
+ box-shadow:0 5px 16px #173d2e44!important;
+}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-company .sy-map-marker-photo{
+ display:block!important;position:static!important;float:none!important;
+ box-sizing:border-box!important;width:50px!important;height:50px!important;
+ min-width:0!important;min-height:0!important;max-width:50px!important;max-height:50px!important;
+ aspect-ratio:1/1!important;object-fit:contain!important;object-position:center!important;
+ padding:2px!important;margin:0!important;border:0!important;border-radius:12px!important;
+ transform:none!important;box-shadow:none!important;
+}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-company .sy-map-marker-symbol{display:none!important}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-company.sy-marker-fallback .sy-map-marker-symbol{
+ display:flex!important;width:50px!important;height:50px!important;
+ align-items:center!important;justify-content:center!important;
+}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-company .sy-map-marker-symbol svg{width:29px!important;height:29px!important}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-company .sy-map-marker-bubble:after{display:none!important}
+/* Missing-photo schools use the project's actual placeholder asset. */
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-school.sy-school-default-photo .sy-map-marker-bubble{background:#fff9df!important}
+#dashboardSchoolMap .leaflet-marker-icon.sy-map-school.sy-school-default-photo .sy-map-marker-photo{object-fit:contain!important}
