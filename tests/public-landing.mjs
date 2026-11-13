@@ -10,6 +10,8 @@ const app=read('frontend/assets/app.js');
 
 const navJs=read('frontend/assets/operations.js');
 const navCss=read('frontend/assets/operations.css');
+const brandCss=read('frontend/assets/brand-theme.css');
+assert.ok(index.includes('/assets/brand-theme.css')&&brandCss.includes('--sy-org-gold')&&brandCss.includes('.sy-public'),'Public, login and panel must share institutional green and gold palette');
 assert.ok(index.includes('sy-command-sidebar')&&index.includes('sy-sidebar-brand-copy')&&index.includes('sy-sidebar-bottom'),'Sidebar must have separate brand, navigation and account regions');
 assert.ok(index.includes('aria-label="ناوبری اصلی سامانه"'),'Sidebar navigation needs semantic labeling');
 assert.ok(navCss.includes('ServiceYar Command Navigation v3')&&navCss.includes('.sy-command-sidebar #nav .nav-group>summary'),'Premium navigation must use full-width inline accordion groups');
@@ -34,7 +36,7 @@ assert.ok(app.includes('serviceyarPublic?.show()')&&app.includes('serviceyarPubl
 const route=api.indexOf("'/api/v1/public/overview'");
 const guard=api.indexOf('$auth->current(); $aid=null;');
 assert.ok(route>=0 &&route<guard,'Public overview route must not require login');
-assert.ok(api.includes("foreach(['agencies','schools','students','drivers','services']"),'Missing grouped safe count queries');
+assert.ok(api.includes("foreach(['agencies','students','drivers','services']"),'Active non-school overview counts must remain permission-independent');
 assert.ok(!html.includes('example.com'),'Do not publish made-up contact details');
 for(const path of ['frontend/assets/logo.png','frontend/assets/Vazirmatn-Regular.woff2'])
  assert.ok(existsSync(new URL(path,root)),'Missing asset: '+path);
@@ -43,8 +45,8 @@ for(const marker of ['syScrollProgress','syBackToTop','data-reveal','data-reveal
 for(const feature of ['IntersectionObserver','requestAnimationFrame','prefers-reduced-motion','scrollIntoView','aria-expanded','sy-page-enter','sy-in-view','toLocaleString'])assert.ok(js.includes(feature),'Missing accessible animation: '+feature);
 for(const cssHook of ['sy-page-in','sy-dashboard-sheen','sy-bars-rise','sy-scroll-progress','sy-backtop','prefers-reduced-motion:reduce','sy-scroll-cue'])assert.ok(css.includes(cssHook),'Missing motion system: '+cssHook);
 assert.ok(!js.includes('setInterval('),'Do not use polling or unbounded timers for scroll animation');
-assert.ok(api.includes("$where=$table==='schools'?'':' WHERE is_active=1'"),'Public school count must include both active and inactive registered schools');
-assert.ok(!api.includes("$counts['schools']=\\ServiceYar\\Domain\\PublicExplorer::countSchools()"),'Public school total must not include a de-duplicated central directory');
+assert.ok(api.includes("$counts['schools']=\\ServiceYar\\Domain\\PublicExplorer::countSchools()"),'Public school counts must include registered and central catalog schools');
+assert.ok(!read('backend/src/Domain/PublicExplorer.php').includes('FROM schools WHERE is_active=1'),'School count must include both active and inactive records');
 assert.ok(js.includes('/api/v1/public/map-config')&&js.includes('static.neshan.org/sdk')&&js.includes('invalidateSize(true)'),'Public map must use configured Neshan web key');
 assert.ok(html.includes('syCatalogAdvantageTitle')&&html.includes('فهرست بسیاری از مدارس'),'Catalog advantage must be visible');
 assert.ok(html.includes('sy-v3-dashboard-art')&&html.includes('sy-v3-map-intro'),'Landing should show the redesigned dashboard showcase and map introduction');
