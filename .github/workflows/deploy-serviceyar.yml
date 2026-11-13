@@ -52,7 +52,7 @@ jobs:
           php tests/monthly-statement-render-smoke.php render-preview > /tmp/serviceyar-statement-preview-test.xlsx
           php tests/monthly-statement-render-smoke.php verify /tmp/serviceyar-statement-preview-test.xlsx
           php tests/monthly-statement-render-smoke.php render-large > /tmp/serviceyar-statement-large-test.xlsx
-          # Verify the legacy appearance, expanded print ranges, totals and table relationships.
+          # Verify dynamic student/driver ranges, footer rows and original reference print settings.
           php tests/monthly-statement-render-smoke.php verify /tmp/serviceyar-statement-large-test.xlsx --large
           rm /tmp/serviceyar-statement-large-test.xlsx
           rm /tmp/serviceyar-statement-preview-test.xlsx
