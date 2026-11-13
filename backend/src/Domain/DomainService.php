@@ -512,9 +512,9 @@ final class DomainService {
   $wasCreate=!$id;
   if(!$id){$data['agency_id']=$aid;if(in_array('uuid',thisColumns($c['table'],$pdo),true))$data['uuid']=Uuid::v4();$cols=array_keys($data);$sql='INSERT INTO '.$c['table'].' ('.implode(',',$cols).') VALUES ('.implode(',',array_map(fn($x)=>':'.$x,$cols)).')';$st=$pdo->prepare($sql);$st->execute($data);$id=(int)$pdo->lastInsertId();}
   else{$sets=[];$params=['id'=>$id,'agency'=>$aid];foreach($data as $f=>$v){if($f==='agency_id'||$f==='uuid')continue;$sets[]="$f=:$f";$params[$f]=$v;}if(!$sets)throw new AuthException(422,'تغییری ارسال نشده است.','VALIDATION_ERROR');$pdo->prepare('UPDATE '.$c['table'].' SET '.implode(',',$sets).' WHERE id=:id AND agency_id=:agency')->execute($params);}
-  // Vehicle seating increases must immediately be reflected by its assigned services.
+  // Vehicle seating capacity must be reflected by assigned services, including older unsynchronized records.
   // Both writes share the current transaction; existing assignments are untouched.
-  if($resource==='vehicles'&&$id&&isset($data['capacity'])&&(int)$data['capacity']>(int)($existing['capacity']??0)){
+  if($resource==='vehicles'&&$id&&isset($data['capacity'])){
    $newCapacity=(int)$data['capacity'];
    $sync=$pdo->prepare("UPDATE services sv JOIN drivers d ON d.id=sv.driver_id AND d.agency_id=sv.agency_id
     SET sv.capacity=:capacity
