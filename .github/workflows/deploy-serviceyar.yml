@@ -62,6 +62,9 @@ jobs:
           node --check frontend/assets/app.js
           node --check frontend/assets/public-site.js
           node tests/public-landing.mjs
+          node tests/deploy-staging.cjs
+          test -f frontend/assets/public-site-content.html
+          test -f frontend/assets/public-site.css
           node --check frontend/assets/operations.js
           node tests/wizard-lookup.cjs
           node tests/finance-form-inputs.cjs
