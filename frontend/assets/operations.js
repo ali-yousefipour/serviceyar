@@ -885,7 +885,7 @@ async function formResource(key,id,onSaved){
  if(key==='schools'&&id){
   const section=document.createElement('section');section.className='sy-school-photo-editor';
   const photo=schoolPhotoUrl(row);
-  section.innerHTML=`<div class="sy-school-photo-editor-preview">`<img id="sySchoolEditorPreview" src="${esc(photo||'/assets/school-placeholder.png')}" alt="تصویر مدرسه">`</div><div class="sy-school-photo-editor-controls"><h4>تصویر مدرسه</h4><p>می‌توانید تصویر مدرسه را بارگذاری یا با تصویر جدید جایگزین کنید. JPG، PNG یا WebP تا ۵ مگابایت.</p><label class="sy-school-photo-choose">انتخاب تصویر<input type="file" id="sySchoolPhotoUpload" accept="image/jpeg,image/png,image/webp"></label><span id="sySchoolPhotoFileName" role="status"></span></div>`;
+  section.innerHTML=`<div class="sy-school-photo-editor-preview"><img id="sySchoolEditorPreview" src="${esc(photo||'/assets/school-placeholder.png')}" alt="تصویر مدرسه"></div><div class="sy-school-photo-editor-controls"><h4>تصویر مدرسه</h4><p>می‌توانید تصویر مدرسه را بارگذاری یا با تصویر جدید جایگزین کنید. JPG، PNG یا WebP تا ۵ مگابایت.</p><label class="sy-school-photo-choose">انتخاب تصویر<input type="file" id="sySchoolPhotoUpload" accept="image/jpeg,image/png,image/webp"></label><span id="sySchoolPhotoFileName" role="status"></span></div>`;
   form.querySelector('.form-grid')?.after(section);
   const fileInput=section.querySelector('#sySchoolPhotoUpload');
   fileInput?.addEventListener('change',()=>{
