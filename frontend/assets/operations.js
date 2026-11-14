@@ -713,7 +713,7 @@ async function contractsPage(token=pageToken){
     '<form id="syContractCreateForm" class="form-grid sy-contract-create-grid">'+
     '<label>'+(kind==='parent'?'دانش‌آموز':'راننده')+'<input type="search" id="syContractPersonSearch" placeholder="جستجوی نام یا کد ملی" autocomplete="off"><select name="partyId" required><option value="">انتخاب کنید</option>'+available.map(p=>'<option value="'+Number(p.id)+'">'+esc(personLabel(p))+'</option>').join('')+'</select></label>'+
     '<label>تاریخ شروع<input name="startDate" type="date" required></label><label>تاریخ پایان<input name="endDate" type="date" required></label>'+
-    '<label>مبلغ کل قرارداد (ریال)<input name="amount" type="text" inputmode="numeric" required placeholder="مبلغ صحیح بدون اعشار"></label>'+
+    '<label>'+(kind==='driver'?'مبلغ خالص سالانه قرارداد راننده (ریال)':'مبلغ کل قرارداد (ریال)')+'<input name="amount" type="text" inputmode="numeric" required '+(kind==='driver'?'readonly aria-readonly="true" ':'')+'placeholder="'+(kind==='driver'?'محاسبه خودکار پس از انتخاب راننده':'مبلغ صحیح بدون اعشار')+'"></label>'+
     '<section class="sy-contract-draft-data" id="syContractDraftData" aria-live="polite">برای مشاهده و تکمیل اطلاعات طرفین، ابتدا شخص را انتخاب کنید.</section>'+
     '<div class="sy-contract-create-actions"><button class="primary" type="submit">صدور و ثبت قرارداد</button><span id="syContractCreateStatus" aria-live="polite"></span></div></form></details>':'')+
     '<header class="sy-settings-section-head"><div><h3>قراردادهای صادرشده</h3><p>برای هر قرارداد نسخه چاپی ذخیره‌شده زمان صدور استفاده می‌شود.</p></div></header>'+
@@ -768,8 +768,21 @@ async function contractsPage(token=pageToken){
        field.append(input);grid.append(field);
       }
       draftBox.replaceChildren(title,description,grid);
-      if(kind==='parent'&&!money.value.trim()&&Number(result.suggestedTotal)>0)
+      if((kind==='driver'||!money.value.trim())&&Number(result.suggestedTotal)>=0)
        money.value=persianDigits(String(result.suggestedTotal).replace(/\B(?=(\d{3})+(?!\d))/g,'٬'));
+      if(kind==='driver'&&result.driverAnnual){
+       const data=result.driverAnnual,rateText=Object.entries(data.rates||{}).map(([k,v])=>({supervision:'مدیریت، نظارت و بازرسی',coordination:'اطلاع‌رسانی و هماهنگی',overhead:'بالاسری شرکت',insurance:'بیمه'}[k]||k)+': '+persianDigits(v)+'٪').join(' | ');
+       const hint=document.createElement('div');hint.className='sy-driver-contract-breakdown';
+       const lead=document.createElement('p');lead.textContent='مجموع ناخالص سالانه: '+number(data.grossAnnual)+' ریال | مجموع کسورات: '+number(data.deductionsAnnual)+' ریال | مبلغ خالص قرارداد: '+number(data.netAnnual)+' ریال';
+       const rates=document.createElement('p');rates.textContent='کسورات مطابق تنظیمات شرکت: '+rateText+'؛ مبلغ سرویس‌های خالص دوباره مشمول کسر نمی‌شود.';
+       hint.append(lead,rates);
+       for(const service of data.services||[]){
+        const item=document.createElement('p');
+        item.textContent=service.serviceTitle+' · '+persianDigits(service.months)+' ماه · '+persianDigits(service.students)+' دانش‌آموز · خالص سالانه '+number(service.netAnnual)+' ریال';
+        hint.append(item);
+       }
+       draftBox.append(hint);
+      }
       if(kind==='parent'){
        const hint=document.createElement('p');hint.className='muted';
        hint.textContent='ضریب محاسبه پیشنهادی: '+persianDigits(result.academicMonths)+' ماه. مبلغ قرارداد را پیش از صدور بررسی کنید.';
@@ -788,7 +801,7 @@ async function contractsPage(token=pageToken){
       const overrides={};
       form.querySelectorAll('[name^="override_"]').forEach(input=>{overrides[input.name.slice(9)]=input.value.trim();});
       if(!Object.keys(overrides).length)throw Error('ابتدا اطلاعات طرفین قرارداد را دریافت و بررسی کنید.');
-      const record=await write('/api/v1/contract-documents/'+kind,{partyId:Number(select.value),startDate:form.elements.startDate.value,endDate:form.elements.endDate.value,amount,overrides});
+      const record=await write('/api/v1/contract-documents/'+kind,{partyId:Number(select.value),startDate:form.elements.startDate.value,endDate:form.elements.endDate.value,...(kind==='parent'?{amount}:{}),overrides});
       status.textContent='قرارداد '+persianDigits(record.contractNo)+' صادر شد.';
       await render();
      }catch(error){status.textContent=error.message;submit.disabled=false;}
