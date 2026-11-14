@@ -74,6 +74,10 @@ try{
   'partyId'=>(int)$s1['id'],'startDate'=>'2026-09-23','endDate'=>'2027-06-22','amount'=>76500000,
   'overrides'=>['guardianName'=>'ولی آزمایشی','guardianNationalCode'=>'1234567890','guardianMobile'=>'09120000099','managerName'=>'مدیر نمونه']
  ]);
+ $legacyPrint=$docApi::printable($uid,$a,(int)$contract['id']);
+ check(($legacyPrint['legacyReconstructed']??false)===true
+   && str_contains($legacyPrint['html'],'نسخه بازسازی‌شده'),
+   'Old contracts without issuance snapshots are labeled as reconstructions, not originals');
  $savedPrint=$docApi::printable($uid,$a,(int)$issued['id'])['html'];
  check(str_contains($savedPrint,'ولی آزمایشی')&&str_contains($savedPrint,'آرمان آزمایشی'),'Print snapshot contains substituted guardian and student data');
  check(str_contains($savedPrint,'ماده -12')&&str_contains($savedPrint,'ماده -11'),'Parent reference includes final legal clauses');
