@@ -2,9 +2,29 @@
 async function sepandAdminPanel(anchor){
  const panel=document.createElement('section');panel.id='syAdminSepand';panel.className='panel sy-super-admin-card sy-sepand-admin';
  panel.innerHTML='<header class="sy-settings-section-head"><div><h2>به‌روزرسانی رانندگان و خودروها از سپند</h2><p>ابتدا فایل رانندگان و خودروها را انتخاب کنید؛ پیش‌نمایش هیچ داده‌ای را تغییر نمی‌دهد. پس از بررسی شرکت‌های دارای اختلاف نام، عملیات را تأیید کنید.</p></div></header>'+
+ '<section class="sy-sepand-db-health" aria-label="وضعیت ساختار پایگاه داده"><div id="sySepandDbStatus" role="status">در حال بررسی آماده‌بودن دیتابیس سپند…</div><button type="button" id="sySepandDbRepair" hidden>آماده‌سازی دیتابیس سپند</button><p class="muted">قبل از تغییر ساختار دیتابیس، از اطلاعات هاست نسخه پشتیبان تهیه کنید. آماده‌سازی صرفاً ستون‌ها و جدول‌های لازم را اضافه می‌کند.</p></section>'+ 
  '<form id="sySepandImport"><div class="form-grid"><label>فایل رانندگان سپند (XLSX)<input type="file" name="drivers" accept=".xlsx" required></label><label>فایل خودروهای سپند (XLSX)<input type="file" name="vehicles" accept=".xlsx" required></label></div><div id="sySepandMapping" class="sy-sepand-mappings"></div><div class="member-actions"><button type="button" id="sySepandPreview" class="primary">پیش‌نمایش و تطبیق شرکت‌ها</button><button type="button" id="sySepandApply" disabled>تأیید و اعمال به‌روزرسانی</button></div></form><div id="sySepandResult" aria-live="polite" role="status"></div>';
  anchor.after(panel);
  const form=panel.querySelector('form'),preview=panel.querySelector('#sySepandPreview'),apply=panel.querySelector('#sySepandApply'),mapping=panel.querySelector('#sySepandMapping'),result=panel.querySelector('#sySepandResult');
+ const dbStatus=panel.querySelector('#sySepandDbStatus'),dbRepair=panel.querySelector('#sySepandDbRepair');
+ const checkSchema=async()=>{
+  try{
+   const state=await api('/api/v1/admin/sepand-registry/schema');
+   if(!panel.isConnected)return;
+   dbStatus.textContent=state.ready?'ساختار دیتابیس سپند آماده است. امکان پیش‌نمایش فایل‌ها وجود دارد.':'ساختار دیتابیس سپند ناقص است؛ '+number(state.missingColumns.length)+' ستون و '+number(state.missingIndexes.length)+' ایندکس و '+(state.missingAuditTable?'جدول سوابق ایمپورت':'بدون جدول مفقود')+' باید آماده شود.';
+   dbRepair.hidden=state.ready;preview.disabled=!state.ready;
+  }catch(e){dbStatus.textContent='بررسی دیتابیس سپند ممکن نشد: '+e.message;preview.disabled=true;dbRepair.hidden=true;}
+ };
+ dbRepair.onclick=async()=>{
+  if(!confirm('پس از تهیه نسخه پشتیبان، ستون‌ها و جدول‌های سپند در دیتابیس ساخته شوند؟ هیچ داده راننده یا خودرویی حذف نمی‌شود.'))return;
+  dbRepair.disabled=true;dbStatus.textContent='در حال آماده‌سازی ساختار دیتابیس سپند…';
+  try{
+   await api('/api/v1/admin/sepand-registry/schema',{method:'POST',headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify({confirm:'REPAIR_SEPAND_SCHEMA'})});
+   await checkSchema();
+  }catch(e){dbStatus.textContent='آماده‌سازی دیتابیس انجام نشد: '+e.message;}
+  finally{dbRepair.disabled=false;}
+ };
+ void checkSchema();
  let digest='',report=null;
  const mappingValue=()=>Object.fromEntries([...mapping.querySelectorAll('[data-national]')].filter(s=>s.value).map(s=>[s.dataset.national,Number(s.value)]));
  const refreshAllowed=()=>{const ss=[...mapping.querySelectorAll('[data-national]')],v=ss.map(s=>s.value).filter(Boolean);apply.disabled=!digest||v.length!==ss.length||new Set(v).size!==v.length;};
