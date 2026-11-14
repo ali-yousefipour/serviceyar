@@ -84,6 +84,12 @@ final class OperationsService
             $feeCheck=$p->prepare('SELECT monthly_fee FROM students WHERE id=? AND agency_id=?');
             $feeCheck->execute([$studentId,$aid]);
             if((float)$feeCheck->fetchColumn()>0)StudentServiceBilling::sync($p,$aid,$studentId);
+            // Keep the saved driver net consistent for direct assignments as well
+            // as the new-service wizard; avoid leaving a zero legacy monthly total.
+            $driverGross=$p->prepare('SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
+            $driverGross->execute([$aid,$serviceId]);
+            $net=self::driverDeductions((float)$driverGross->fetchColumn(),$aid)['net_earned'];
+            $p->prepare('UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?')->execute([$net,$serviceId,$aid]);
         });
         self::audit($uid,$aid,'assign_student','services',$serviceId);
     }
