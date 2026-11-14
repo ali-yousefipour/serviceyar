@@ -102,7 +102,7 @@ final class VehicleClassCatalog {
  private static function scan(PDO $pdo): array {
   $models=self::entries($pdo);
   $rows=$pdo->query("SELECT v.id,v.agency_id,v.plate,v.vin,v.model,v.vehicle_type,v.vehicle_system,v.vehicle_trim,
-    v.tariff_vehicle_class FROM vehicles v WHERE v.tariff_vehicle_class IS NULL
+    v.tariff_vehicle_class FROM vehicles v WHERE (v.tariff_vehicle_class IS NULL OR v.tariff_vehicle_class=0)
     ORDER BY v.agency_id,v.id")->fetchAll(PDO::FETCH_ASSOC);
   $classified=[];$unresolved=[];
   foreach($rows as $v){
@@ -128,7 +128,7 @@ final class VehicleClassCatalog {
   try{
    $data=self::scan($pdo);$data['updated']=0;
    if($apply){
-    $stmt=$pdo->prepare('UPDATE vehicles SET tariff_vehicle_class=? WHERE id=? AND agency_id=? AND tariff_vehicle_class IS NULL');
+    $stmt=$pdo->prepare('UPDATE vehicles SET tariff_vehicle_class=? WHERE id=? AND agency_id=? AND (tariff_vehicle_class IS NULL OR tariff_vehicle_class=0)');
     foreach($data['classified'] as $v){
      $stmt->execute([$v['vehicleClass'],$v['vehicleId'],$v['agencyId']]);$data['updated']+=$stmt->rowCount();
     }
