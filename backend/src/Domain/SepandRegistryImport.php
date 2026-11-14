@@ -153,6 +153,15 @@ final class SepandRegistryImport {
    // Match vehicles with VIN first, then plate if the VIN has not been stored yet.
    $findVin=$pdo->prepare('SELECT id FROM vehicles WHERE agency_id=? AND vin=? LIMIT 2');
    $findPlate=$pdo->prepare('SELECT id FROM vehicles WHERE agency_id=? AND plate=? LIMIT 2');
+   // Old vehicle plates often use spacing, Persian digits or a different
+   // separator. Keep a scoped canonical index so importing Sepand cannot
+   // create a blank-class duplicate and reassign the existing driver.
+   $registered=$pdo->query('SELECT id,agency_id,plate FROM vehicles')->fetchAll(PDO::FETCH_ASSOC);
+   $normalizedPlates=[];
+   foreach($registered as $registeredVehicle){
+    $key=(int)$registeredVehicle['agency_id'].':'.VehicleTariffClassRecovery::plateKey($registeredVehicle['plate']);
+    $normalizedPlates[$key][]=(int)$registeredVehicle['id'];
+   }
    $insertVehicle=$pdo->prepare('INSERT INTO vehicles(agency_id,plate,capacity,model,vin,plate_part_1,plate_letter,plate_part_3,plate_iran,vehicle_type,vehicle_system,vehicle_trim,make_year,fuel_type,color,engine_number,chassis_number,insurance_number) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
    $updateVehicle=$pdo->prepare('UPDATE vehicles SET vin=?,plate_part_1=?,plate_letter=?,plate_part_3=?,plate_iran=?,vehicle_type=?,vehicle_system=?,vehicle_trim=?,make_year=?,fuel_type=?,color=?,engine_number=?,chassis_number=?,insurance_number=? WHERE id=? AND agency_id=?');
    $vehicleIds=[];
@@ -165,6 +174,7 @@ final class SepandRegistryImport {
     $plate=$p1.$letter.$p3.'-'.$p4;
     $findVin->execute([$aid,$vin]);$matches=$findVin->fetchAll(PDO::FETCH_COLUMN);
     if(!$matches){$findPlate->execute([$aid,$plate]);$matches=$findPlate->fetchAll(PDO::FETCH_COLUMN);}
+    if(!$matches)$matches=$normalizedPlates[$aid.':'.VehicleTariffClassRecovery::plateKey($plate)]??[];
     if(count($matches)>1){$counts['vehiclesSkipped']++;$addIssue('vehicles',$r['line'],'چند خودروی همسان در شرکت ثبت شده‌اند.');continue;}
     $capacity=(int)($c['K']??4);if($capacity<1||$capacity>200)$capacity=4;
     $year=(int)($c['J']??0);if($year<1300||$year>1600)$year=null;
@@ -174,7 +184,9 @@ final class SepandRegistryImport {
      if($apply)$updateVehicle->execute([...$common,$vid,$aid]);
     }else{
      $counts['vehiclesCreated']++;$vid=0;
-     if($apply){$insertVehicle->execute([$aid,$plate,$capacity,trim(($c['H']??'').' '.($c['I']??'')),...$common]);$vid=(int)$pdo->lastInsertId();}
+     if($apply){$insertVehicle->execute([$aid,$plate,$capacity,trim(($c['H']??'').' '.($c['I']??'')),...$common]);$vid=(int)$pdo->lastInsertId();
+      $normalizedPlates[$aid.':'.VehicleTariffClassRecovery::plateKey($plate)][]=$vid;
+     }
     }
     $vehicleIds[$company.':'.$vin]=$vid;
    }
@@ -201,6 +213,9 @@ final class SepandRegistryImport {
     if($apply&&$vid)$setCarStatus->execute([$status,$vid,$aid]);
    }
    if($apply){
+    // Never replace a known class from the Sepand report (no class exists
+    // there). Restore only blank classes with unanimous historical evidence.
+    $counts['vehicleClassesRecovered']=VehicleTariffClassRecovery::recoverKnownClasses($pdo);
     foreach($mapped as $national=>$id){
      $pdo->prepare('UPDATE agencies SET sepand_national_id=? WHERE id=? AND (sepand_national_id IS NULL OR sepand_national_id=?)')
       ->execute([$national,$id,$national]);
