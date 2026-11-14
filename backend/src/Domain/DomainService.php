@@ -9,8 +9,8 @@ final class DomainService {
  private const MAP=[
   'schools'=>['table'=>'schools','permission'=>'schools','fields'=>['name','code','school_type','manager_name','phone','address','latitude','longitude','region','is_active'],'search'=>['name','code','manager_name']],
   'students'=>['table'=>'students','permission'=>'students','fields'=>['school_id','first_name','last_name','national_code','grade','mobile','address','latitude','longitude','is_active'],'search'=>['first_name','last_name','national_code']],
-  'drivers'=>['table'=>'drivers','permission'=>'drivers','fields'=>['first_name','last_name','national_code','mobile','status','rating','vehicle_id','address','is_active'],'search'=>['first_name','last_name','national_code','mobile']],
-  'vehicles'=>['table'=>'vehicles','permission'=>'drivers','fields'=>['plate','model','tariff_vehicle_class','capacity','owner_name','is_active'],'search'=>['plate','model','owner_name']],
+  'drivers'=>['table'=>'drivers','permission'=>'drivers','fields'=>['first_name','last_name','national_code','mobile','gender','sepand_request_id','sepand_status','status','rating','vehicle_id','address','is_active'],'search'=>['first_name','last_name','national_code','mobile']],
+  'vehicles'=>['table'=>'vehicles','permission'=>'drivers','fields'=>['plate','model','tariff_vehicle_class','capacity','owner_name','vin','plate_part_1','plate_letter','plate_part_3','plate_iran','vehicle_type','vehicle_system','vehicle_trim','make_year','fuel_type','color','engine_number','chassis_number','insurance_number','sepand_status','is_active'],'search'=>['plate','model','owner_name']],
   'services'=>['table'=>'services','permission'=>'services','fields'=>['title','code','school_id','driver_id','capacity','status','start_address','end_address','pack_id','shift','monthly_fee','agreed_amount','fee_source','is_active'],'search'=>['title','code']],
   'packs'=>['table'=>'packs','permission'=>'services','fields'=>['title','status','capacity'],'search'=>['title']],
   'contracts'=>['table'=>'contracts','permission'=>'services','fields'=>['title','contract_no','party_type','party_id','start_date','end_date','amount','status'],'search'=>['title','contract_no']],
@@ -500,6 +500,22 @@ final class DomainService {
      $data['fee_source']='agency';$data['tariff_calculated_at']=date('Y-m-d H:i:s');
     }
    }
+  }
+  if(in_array($resource,['vehicles','drivers'],true)&&array_key_exists('sepand_status',$data)){
+   if(!in_array((string)$data['sepand_status'],['unknown','approved','rejected','pending'],true))
+     throw new AuthException(422,'وضعیت سپند باید تأییدشده، ردشده، درحال بررسی یا نامشخص باشد.','INVALID_SEPAND_STATUS');
+   if(($existing['sepand_status']??'')!==$data['sepand_status'])$data['sepand_status_updated_at']=date('Y-m-d H:i:s');
+  }
+  if($resource==='vehicles'&&array_key_exists('vin',$data)&&trim((string)$data['vin'])!==''){
+   $data['vin']=strtoupper(trim((string)$data['vin']));
+   if(!preg_match('/^[A-Z0-9]{11,40}$/D',$data['vin']))throw new AuthException(422,'شناسه VIN خودرو معتبر نیست.','INVALID_VIN');
+   $test=$pdo->prepare('SELECT id FROM vehicles WHERE agency_id=? AND vin=? AND id<>? LIMIT 1');
+   $test->execute([$aid,$data['vin'],$id??0]);
+   if($test->fetchColumn())throw new AuthException(409,'این VIN قبلاً برای خودروی دیگری در شرکت ثبت شده است.','DUPLICATE_VIN');
+  }
+  if($resource==='vehicles'&&array_key_exists('make_year',$data)&&$data['make_year']!==''){
+   if(!ctype_digit((string)$data['make_year'])||(int)$data['make_year']<1300||(int)$data['make_year']>1600)
+    throw new AuthException(422,'سال ساخت خودرو نامعتبر است.','INVALID_MAKE_YEAR');
   }
   if($resource==='vehicles'&&array_key_exists('tariff_vehicle_class',$data)){
    $class=(string)($data['tariff_vehicle_class']??'');
