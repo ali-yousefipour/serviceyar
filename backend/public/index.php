@@ -308,7 +308,7 @@ try {
   $district=filter_var($_GET['district']??null,FILTER_VALIDATE_INT);
   $class=(string)($_GET['vehicleClass']??'');
   if(!$district||$district<1||$district>8||!in_array($class,['1','2','3'],true))throw new AuthException(422,'ناحیه یا کلاس خودرو نامعتبر است.','INVALID_TAXI_TARIFF');
-  $rates=\ServiceYar\Domain\TaxiOrganizationTariffs::rates(Connection::get(),$district,$class);
+  $rates=\ServiceYar\Domain\TaxiOrganizationTariffs::rates(Connection::get(),$district,\ServiceYar\Domain\TaxiOrganizationTariffs::CLASSES[$class]);
   ksort($rates);
   $rows=[];foreach($rates as $km=>$rate)$rows[]=['distanceKm'=>(int)$km,'driverMonthly'=>(int)$rate['driverMonthly'],'parentMonthly'=>(int)$rate['parentMonthly']];
   Response::json(['ok'=>true,'data'=>['district'=>$district,'vehicleClass'=>$class,'rows'=>$rows]]);
