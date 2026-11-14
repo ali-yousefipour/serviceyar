@@ -25,7 +25,7 @@ final class AgencyService {
    $where=' WHERE a.id IN ('.implode(',',array_fill(0,count($ids),'?')).')';
    $args=$ids;
   }
-  $sql="SELECT a.id,a.uuid,a.name,a.code,a.city_id,a.is_active,a.created_at,a.updated_at,
+  $sql="SELECT a.id,a.uuid,a.name,a.code,a.city_id,a.sepand_national_id,a.is_active,a.created_at,a.updated_at,
     (SELECT st.setting_value FROM agency_settings st WHERE st.agency_id=a.id AND st.setting_key='company_manager_name') AS manager_name,
     (SELECT st.setting_value FROM agency_settings st WHERE st.agency_id=a.id AND st.setting_key='company_ceo_mobile') AS manager_mobile,
     (SELECT st.setting_value FROM agency_settings st WHERE st.agency_id=a.id AND st.setting_key='company_phone') AS office_phone,
@@ -62,6 +62,17 @@ final class AgencyService {
   if(isset($b['isActive'])&&!in_array($b['isActive'],[0,1,'0','1'],true))throw new \ServiceYar\Auth\AuthException(422,'وضعیت نامعتبر است.','VALIDATION_ERROR');
   if(isset($b['isActive'])&&(int)$b['isActive']!==(int)$old&&!Authorization::isSuperAdmin($userId))throw new \ServiceYar\Auth\AuthException(403,'فقط مدیر کل می‌تواند وضعیت شرکت را تغییر دهد.','FORBIDDEN');
   $name=trim((string)($b['name']??'')); if($name==='') throw new \ServiceYar\Auth\AuthException(422,'نام شرکت الزامی است.','VALIDATION_ERROR');
+  if(array_key_exists('sepandNationalId',$b)){
+   if(!Authorization::isSuperAdmin($userId))throw new \ServiceYar\Auth\AuthException(403,'فقط ادمین کل می‌تواند شناسه ملی سپند شرکت را تغییر دهد.','SUPER_ADMIN_REQUIRED');
+   $national=preg_replace('/\D/','',strtr((string)$b['sepandNationalId'],['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9']));
+   if($national!==''&&!preg_match('/^\d{11}$/D',$national))throw new \ServiceYar\Auth\AuthException(422,'شناسه ملی شرکت باید دقیقاً ۱۱ رقم باشد.','INVALID_COMPANY_NATIONAL_ID');
+   if($national!==''){
+    $unique=Connection::get()->prepare('SELECT id FROM agencies WHERE sepand_national_id=? AND id<>? LIMIT 1');
+    $unique->execute([$national,$id]);
+    if($unique->fetchColumn())throw new \ServiceYar\Auth\AuthException(409,'این شناسه ملی قبلاً برای شرکت دیگری ثبت شده است.','DUPLICATE_COMPANY_NATIONAL_ID');
+   }
+   Connection::get()->prepare('UPDATE agencies SET sepand_national_id=? WHERE id=?')->execute([$national!==''?$national:null,$id]);
+  }
   $p=Connection::get()->prepare('UPDATE agencies SET name=:n,code=:c,city_id=:city,is_active=:active WHERE id=:id'); $p->execute(['n'=>$name,'c'=>trim((string)($b['code']??''))!==''?$b['code']:null, 'city'=>isset($b['cityId'])&&$b['cityId']!==''?(int)$b['cityId']:null,'active'=>isset($b['isActive'])?(int)$b['isActive']:(int)$old,'id'=>$id]);
   $profileKeys=['company_manager_name','company_ceo_mobile','company_phone','company_address'];
  $profile=[];
@@ -71,7 +82,7 @@ final class AgencyService {
    $profile['company_location']=\ServiceYar\Integrations\Neshan::coordinate($b['latitude'],$b['longitude']);
  }
  if($profile)\ServiceYar\Settings\SettingsService::put($userId,$id,$profile);
- $s=Connection::get()->prepare('SELECT id,uuid,name,code,city_id,is_active,created_at,updated_at FROM agencies WHERE id=:id'); $s->execute(['id'=>$id]); return $s->fetch() ?: [];
+ $s=Connection::get()->prepare('SELECT id,uuid,name,code,city_id,sepand_national_id,is_active,created_at,updated_at FROM agencies WHERE id=:id'); $s->execute(['id'=>$id]); return $s->fetch() ?: [];
  }
  public static function create(int $userId,array $b): array {
   Authorization::requirePermission($userId,'agencies.manage'); $name=trim((string)($b['name']??'')); if($name==='') throw new \ServiceYar\Auth\AuthException(422,'نام شرکت الزامی است.','VALIDATION_ERROR');
