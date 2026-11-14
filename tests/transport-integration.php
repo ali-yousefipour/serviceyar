@@ -78,6 +78,7 @@ try{
  check(($legacyPrint['legacyReconstructed']??false)===true
    && str_contains($legacyPrint['html'],'نسخه بازسازی‌شده'),
    'Old contracts without issuance snapshots are labeled as reconstructions, not originals');
+ rejected(fn()=>D::save($uid,$a,'contracts',['amount'=>'1'],(int)$issued['id']),'ISSUED_CONTRACT_IMMUTABLE');
  $savedPrint=$docApi::printable($uid,$a,(int)$issued['id'])['html'];
  check(str_contains($savedPrint,'ولی آزمایشی')&&str_contains($savedPrint,'آرمان آزمایشی'),'Print snapshot contains substituted guardian and student data');
  check(str_contains($savedPrint,'ماده -12')&&str_contains($savedPrint,'ماده -11'),'Parent reference includes final legal clauses');
