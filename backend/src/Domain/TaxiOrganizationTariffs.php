@@ -118,12 +118,11 @@ final class TaxiOrganizationTariffs
         }
         $pdo=Connection::get();
         try {
-            $pdo->beginTransaction();
-            $stmt=$pdo->prepare('INSERT INTO taxi_organization_tariffs(academic_year,district,vehicle_class,distance_km,driver_monthly_irr,parent_monthly_irr,updated_by) VALUES(?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE driver_monthly_irr=VALUES(driver_monthly_irr),parent_monthly_irr=VALUES(parent_monthly_irr),updated_by=VALUES(updated_by)');
-            foreach($validated as [$km,$driver,$parent])$stmt->execute([self::YEAR,$district,$class,$km,$driver,$parent,$uid]);
-            $pdo->commit();
+            OperationsService::transaction(function(PDO $pdo)use($validated,$district,$class,$uid){
+                $stmt=$pdo->prepare('INSERT INTO taxi_organization_tariffs(academic_year,district,vehicle_class,distance_km,driver_monthly_irr,parent_monthly_irr,updated_by) VALUES(?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE driver_monthly_irr=VALUES(driver_monthly_irr),parent_monthly_irr=VALUES(parent_monthly_irr),updated_by=VALUES(updated_by)');
+                foreach($validated as [$km,$driver,$parent])$stmt->execute([self::YEAR,$district,$class,$km,$driver,$parent,$uid]);
+            });
         } catch(PDOException $e) {
-            if($pdo->inTransaction())$pdo->rollBack();
             if(self::missingTable($e))throw new AuthException(503,'برای ثبت تعرفه تاکسیرانی مهاجرت دیتابیس 0037 را اجرا کنید.','TAXI_TARIFF_MIGRATION_REQUIRED');
             throw $e;
         }
