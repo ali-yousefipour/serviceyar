@@ -380,7 +380,7 @@ final class DomainService {
    OperationsService::setServiceSchools($uid,$aid,(int)$service['id'],['schoolIds'=>$schools]);
    sort($students);foreach($students as $student){
     self::assignStudent($uid,$aid,(int)$service['id'],$student);
-    ServicePricing::updateStudent($pdo,$aid,$student,ServicePricing::source($b['feeSource']??'taxi'));
+    if(array_key_exists('feeSource',$b))ServicePricing::updateStudent($pdo,$aid,$student,ServicePricing::source($b['feeSource']));
    }
    if ($students && !array_key_exists('monthlyFee', $b)) {
     $grossQuery=$pdo->prepare('SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
