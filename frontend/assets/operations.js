@@ -900,6 +900,22 @@ async function loadResource(key){
    <div class="pager sy-services-pager"><button id="prevPage" ${state.page<=1?'disabled':''}>صفحه قبل</button><span>صفحه ${number(state.page)} از ${number(Math.max(1,d.pagination.pages))} · ${number(d.pagination.total)} سرویس</span><button id="nextPage" ${state.page>=d.pagination.pages?'disabled':''}>صفحه بعد</button><label>تعداد در صفحه <select id="pageSize" aria-label="تعداد سرویس در صفحه">${[10,25,50,100].map(n=>`<option value="${n}" ${state.limit===n?'selected':''}>${number(n)}</option>`).join('')}</select></label></div>
   </section>`;
  }
+ if(key==='vehicles'){
+  // Keep the sortable desktop table and show a plate-first card layout on
+  // narrow screens, so long VINs never hide the actual Iranian plate.
+  const wrap=$('table').querySelector('.table-wrap');
+  wrap?.insertAdjacentHTML('afterend','<section class="sy-vehicle-mobile-results" aria-label="فهرست خودروها">'+
+   d.items.map((vehicle,index)=>'<article class="sy-vehicle-mobile-card"><header><label><input type="checkbox" data-select="'+Number(vehicle.id)+'" '+(state.selected.has(Number(vehicle.id))?'checked':'')+' aria-label="انتخاب خودرو"> انتخاب</label><span>ردیف '+number((state.page-1)*state.limit+index+1)+'</span></header>'+
+   '<div class="sy-vehicle-card-plate">'+iranPlate(vehicle.plate)+'</div>'+
+   '<h3>'+esc(vehicle.vehicle_trim||vehicle.model||vehicle.vehicle_system||'خودروی بدون مدل')+'</h3>'+
+   '<dl><div><dt>کلاس تعرفه</dt><dd>'+esc(vehicle.tariff_vehicle_class?'کلاس '+number(vehicle.tariff_vehicle_class):'نامشخص')+'</dd></div>'+
+   '<div><dt>وضعیت سپند</dt><dd>'+esc({approved:'تأیید شده',rejected:'رد شده',pending:'در حال بررسی'}[vehicle.sepand_status]||'نامشخص')+'</dd></div>'+
+   '<div><dt>ظرفیت</dt><dd>'+number(vehicle.capacity)+'</dd></div>'+
+   '<div><dt>VIN</dt><dd dir="ltr">'+esc(vehicle.vin||'—')+'</dd></div>'+
+   '<div><dt>راننده</dt><dd>'+esc(vehicle.driver_name||'—')+'</dd></div></dl>'+
+   (can(key,'manage')?'<footer><button type="button" data-edit="'+Number(vehicle.id)+'">ویرایش</button><button type="button" class="danger" data-del="'+Number(vehicle.id)+'">'+(Number(vehicle.is_active)===0?'بازیابی':'غیرفعال')+'</button></footer>':'')+
+   '</article>').join('')+'</section>');
+ }
  $('table').querySelectorAll('[data-grid-sort]').forEach(button=>button.onclick=()=>{
   const form=$('gridFilters');if(!form||!form.elements.sortBy)return;
   const column=button.dataset.gridSort;
