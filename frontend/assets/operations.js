@@ -4,6 +4,7 @@ const labels={creatorName:'ثبت‌کننده',partyName:'شخص / طرف حس�
 const statuses={no_request:'بدون درخواست',pending:'در انتظار تأیید',prepayment:'در انتظار پیش‌پرداخت',waiting:'در انتظار سرویس',assigned:'دارای سرویس',cancelled:'انصراف',active:'فعال',inactive:'غیرفعال',draft:'پیش‌نویس',open:'باز',paid:'پرداخت شده',overdue:'سررسید گذشته',approved:'تأیید شده',rejected:'رد شده',queued:'در صف ارسال',sent:'پذیرفته شده توسط سرویس',uncertain:'نیازمند بررسی',failed:'ناموفق',closed:'بسته شده'};
 Object.assign(labels,{invoiceTotal:'جمع فاکتور بدهی (ریال)',tariffDistanceKm:'مسافت تعرفه (کیلومتر)',tariffVehicleClass:'کلاس خودرو در تعرفه',feeSource:'مبنای محاسبه هزینه سرویس',paidTotal:'جمع دریافتی ثبت‌شده (ریال)',outstandingFee:'مانده بدهی دانش‌آموز (ریال)'});
 const transportFields={
+ vehicles:['plate','ownerName','model','tariffVehicleClass','capacity','isActive'],
  schools:['name','code','schoolType','gender','region','managerName','phone','shift','educationLevels','address','latitude','longitude'],
  students:['mobile','guardianFirstName','guardianLastName','guardianNationalCode','guardianRelation','address','returnAddress','latitude','longitude','schoolId','grade','shift','academicYear','firstName','lastName','gender','nationality','nationalCode','fatherName','emergencyPhone','healthStatus','serviceStatus','tariffDistanceKm','tariffVehicleClass','feeSource','monthlyFee'],
  drivers:['firstName','lastName','nationalCode','mobile','status','vehicleId','isRepresentative','address','bankName','bankAccount','iban'],
@@ -41,7 +42,7 @@ function schoolPhotoUrl(row){
  if(!path||!row?.id||!currentAgency?.id)return '';
  return '/api/v1/schools/'+encodeURIComponent(row.id)+'/photo?agencyId='+encodeURIComponent(currentAgency.id);
 }
-const columns={messages:['channel','recipientType','recipientId','subject','status','providerStatus','attempts'],schools:['code','name','shift','schoolType','region'],students:['fullName','schoolId','driverName','serviceStatus','paymentStatus','mobile','monthlyFee','invoiceTotal','paidTotal','outstandingFee'],drivers:['firstName','lastName','mobile','status','vehicleId','bankAccount'],vehicles:['plate','ownerName','driverName','model','capacity'],services:['code','title','driverId','schoolId','capacity','monthlyFee','agreedAmount','shift']};
+const columns={messages:['channel','recipientType','recipientId','subject','status','providerStatus','attempts'],schools:['code','name','shift','schoolType','region'],students:['fullName','schoolId','driverName','serviceStatus','paymentStatus','mobile','monthlyFee','invoiceTotal','paidTotal','outstandingFee'],drivers:['firstName','lastName','mobile','status','vehicleId','bankAccount'],vehicles:['plate','ownerName','driverName','model','tariffVehicleClass','capacity'],services:['code','title','driverId','schoolId','capacity','monthlyFee','agreedAmount','shift']};
 const relations={schoolId:'schools',driverId:'drivers',oldDriverId:'drivers',newDriverId:'drivers',studentId:'students',vehicleId:'vehicles',serviceId:'services',packId:'packs',invoiceId:'invoices',parentId:'accounts'};
 const permissionFor={'installments':'finance','school-statement':'finance','daily-schedule':'services','driver-assignment':'services','school-report':'reports',schools:'schools',students:'students',drivers:'drivers',vehicles:'drivers',services:'services',packs:'services',contracts:'services','driver-work':'finance','driver-payments':'finance','school-charges':'finance','service-charges':'finance',invoices:'finance',payments:'finance',accounts:'finance','accounting-documents':'finance',wallets:'finance',ledger:'finance',messages:'messages','driver-changes':'services','driver-ratings':'drivers','parent-reports':'messages',reports:'reports',monitoring:'monitoring','bale-payments':'finance',settings:'settings',dashboard:'dashboard',grouping:'services',payroll:'finance','finance-report':'finance',distances:'reports',import:'students','previous-students':'students',agreements:'services'};
 const menus=[
@@ -1057,7 +1058,7 @@ async function formResource(key,id,onSaved){
    }
  }
  if(key==='accounts'){bankOptions=(await api(scoped('/api/v1/finance/banks'))).map(name=>[name,name]);if(token!==pageToken)return;}
- const required={schools:['name'],students:['firstName','lastName','mobile','schoolId'],drivers:['firstName','lastName'],services:['title'],vehicles:['plate'],ledger:['partyType','partyId','direction','amount','entryDate'],'driver-work':['driverId','workDate','amount'],'driver-payments':['driverId','paymentDate','amount']};
+ const required={schools:['name'],vehicles:['plate','tariffVehicleClass'],students:['firstName','lastName','mobile','schoolId'],drivers:['firstName','lastName'],services:['title'],vehicles:['plate'],ledger:['partyType','partyId','direction','amount','entryDate'],'driver-work':['driverId','workDate','amount'],'driver-payments':['driverId','paymentDate','amount']};
  dialog((id?'ویرایش ':'ثبت ')+resourceName(key),`<form id="editForm" class="${key==='ledger'?'sy-ledger-editor':''}"><div class="form-grid">${resources[key][1].map(f=>{const defaults={academicYear:year(),nationality:'iranian',capacity:4,feeSource:'taxi',serviceStatus:'no_request',isRepresentative:0,direction:'receipt',channel:'internal',monthlyFee:0,agreedAmount:0};const original=val(row,f);const v=original!==''?original:(id?'':defaults[f]??''),options=f==='companyAccountId'&&key==='ledger'?companyAccountOptions:f==='bankName'&&key==='accounts'?bankOptions:f==='method'&&key==='ledger'&&id&&row.method&&!fieldOptions(key,f).some(([code])=>code===row.method)?[...fieldOptions(key,f),[row.method,methodLabel(row.method)+' (روش سابق)']]:fieldOptions(key,f),req=required[key]?.includes(f)||f==='companyAccountId'&&key==='ledger'&&!id?'required':'',text=/address|body|note|reason|description|response/i.test(f),relation=relations[f]||(['partyId','ownerId','recipientId'].includes(f)?'party':null),rialField=f==='amount'&&['invoices','payments','driver-payments','school-charges','service-charges','contracts'].includes(key);return `<label>${labels[f]||esc(f)}${req?' *':''}${f==='amount'&&key==='ledger'?`<div class="sy-money-field"><input type="text" name="amountDisplay" data-money-display inputmode="numeric" autocomplete="off" spellcheck="false" dir="ltr" placeholder="۰" aria-label="مبلغ به ریال" ${req} value="${esc(v!==''?number(v):'')}"><span class="sy-money-unit">ریال</span><input type="hidden" name="amount" value="${esc(v)}"></div><small class="sy-money-hint">مبلغ را بدون اعشار وارد کنید؛ ارقام به‌صورت سه‌رقمی جدا می‌شوند.</small>`:options?`<select name="${f}" ${req}><option value="">انتخاب کنید</option>${options.map(([value,title])=>`<option value="${esc(value)}" ${String(v)===String(value)?'selected':''}>${esc(title)}</option>`).join('')}</select>`:relation?`<input data-lookup-search="${f}" placeholder="جستجوی ${labels[f]}" aria-label="جستجوی ${labels[f]}"><select name="${f}" aria-label="${esc(labels[f]||f)}" data-relation="${relation}" ${req}><option value="">انتخاب کنید</option>${v?`<option value="${esc(v)}" selected>#${esc(v)}</option>`:''}</select>`:rialField?`<input type="text" name="${f}" data-rial-amount inputmode="numeric" autocomplete="off" dir="ltr" ${req} placeholder="۰" value="${esc(v!==''?number(v):'')}" aria-label="${esc(labels[f]||f)} به ریال"><small class="sy-money-hint">مبلغ به ریال؛ بدون اعشار و با جداکننده هزارگان</small>`:text?`<textarea name="${f}" maxlength="6000" ${req}>${esc(v)}</textarea>`:`<input name="${f}" ${req} ${/Date$/.test(f)?'type="date"':/distanceKm/i.test(f)?'type="number" min="0" step="1" inputmode="numeric"':/amount|fee|capacity|score|latitude|longitude|rating|balance/i.test(f)?'type="number" step="any"':/mobile|phone/i.test(f)?'inputmode="tel"':'maxlength="255"'} value="${esc(v)}">`}</label>`}).join('')}</div><p class="muted">مبالغ به ریال و تمام تاریخ‌های ورودی و نمایشی شمسی هستند.</p><button class="primary" id="saveRecord">ذخیره</button></form>`);
  const form=$('editForm');
  if(key==='services'){
@@ -1074,7 +1075,7 @@ async function formResource(key,id,onSaved){
    if(!id){status.textContent='پس از انتخاب دانش‌آموزان مبلغ تعرفه محاسبه می‌شود.';return;}
    status.textContent='در حال دریافت محاسبه بر اساس '+(mode==='taxi'?'نرخ سازمان':'تعرفه شرکت')+'…';
    try{const members=await api(scoped('/api/v1/services/'+id+'/students'));let total=0;
-    for(const student of members){const result=await write('/api/v1/operations/tariffs/quote',{studentId:student.id,feeSource:mode});if(result.monthlyFee===null)throw Error('تعرفه یکی از دانش‌آموزان موجود نیست.');total+=Number(result.monthlyFee);}
+    for(const student of members){const result=await write('/api/v1/operations/tariffs/quote',{studentId:student.id,driverId:form.elements.driverId?.value||row.driver_id,feeSource:mode});if(result.monthlyFee===null)throw Error('تعرفه یکی از دانش‌آموزان موجود نیست.');total+=Number(result.monthlyFee);}
     if(version!==priceRequest||!form.isConnected)return;
     status.textContent='جمع شهریه ماهانه اولیا: '+number(total)+' ریال · مبلغ نهایی پس از ذخیره روی سرویس اعمال می‌شود.';
    }catch(e){if(version===priceRequest&&form.isConnected)status.textContent='محاسبه ناموفق: '+e.message;}
@@ -1112,9 +1113,11 @@ async function formResource(key,id,onSaved){
    form.addEventListener('submit',event=>{if(!sync()){event.preventDefault();event.stopImmediatePropagation();[first,letter,middle,region].find(x=>!x.value||(x!==letter&&x.value.length!==x.maxLength))?.focus();notify('تمام قسمت‌های پلاک ایران را کامل کنید.',true);}},true);
    if(match)sync();
   }
-  for(const [name,css] of [['ownerName','sy-vehicle-owner-field'],['model','sy-vehicle-model-field'],['capacity','sy-vehicle-capacity-field']]){
+  for(const [name,css] of [['ownerName','sy-vehicle-owner-field'],['model','sy-vehicle-model-field'],['tariffVehicleClass','sy-vehicle-tariff-class-field'],['capacity','sy-vehicle-capacity-field']]){
    const input=form.elements[name];input?.closest('label')?.classList.add(css);
   }
+  const tariffClass=form.elements.tariffVehicleClass;
+  if(tariffClass){tariffClass.required=true;tariffClass.closest('label')?.append(Object.assign(document.createElement('small'),{textContent:'کلاس خودرو مبنای محاسبه خودکار سرویس‌های مرتبط است. تغییر آن می‌تواند شهریه دانش‌آموزان و سهم راننده را دوباره محاسبه کند.'}));}
   const owner=form.elements.ownerName;
   if(owner&&!owner.value.trim()&&row.effective_owner_name)owner.value=row.effective_owner_name;
   if(owner){const hint=document.createElement('small');hint.className='sy-vehicle-owner-hint';hint.textContent='در نبود مالک اختصاصی، راننده مرتبط مالک پیش‌فرض است.';owner.closest('label')?.append(hint);}
@@ -2726,7 +2729,9 @@ async function newServicePage(token,initialDriverId){
  const form=$('newServiceSetup'),chosen=new Set(),show=$('showServiceStudents'),quote=$('quoteServiceStudents'),result=$('serviceQuoteResult'),save=$('createService');
  let selectedSchools=[],driverId=null,revision=0,saving=false;
  const vehicleFor=driver=>vehicles.find(v=>Number(v.id)===Number(driver.vehicle_id));
- const driverCaption=driver=>[person(driver),vehicleFor(driver)?.model].filter(Boolean).join(' · ');
+ const vehicleClass=driver=>vehicleFor(driver)?.tariff_vehicle_class;
+ const classLabel=driver=>vehicleClass(driver)?' · کلاس تعرفه '+number(vehicleClass(driver)):' · کلاس تعرفه نامشخص؛ از قسمت خودروها تکمیل کنید';
+ const driverCaption=driver=>[person(driver),vehicleFor(driver)?.model].filter(Boolean).join(' · ')+classLabel(driver);
  const hasMehrDriver=student=>Number(student.mehr_driver_id)===Number(driverId);
  const schoolIds=()=>selectedSchools;
 
@@ -2741,7 +2746,7 @@ async function newServicePage(token,initialDriverId){
   if(valid)input.value=persianDigits(value.replace(/\B(?=(\d{3})+(?!\d))/g,'٬'));
   return valid;
  };
- const canSubmit=()=>Boolean(driverId&&selectedSchools.length&&chosen.size&&!saving&&form.elements.title.value.trim()&&form.elements.capacity.checkValidity()&&chosen.size<=Number(form.elements.capacity.value)&&(form.elements.feeSource.value!=='agreed'||syncAgreed()));
+ const canSubmit=()=>Boolean(driverId&&['1','2','3'].includes(String(vehicleClass(drivers.find(d=>Number(d.id)===driverId))))&&selectedSchools.length&&chosen.size&&!saving&&form.elements.title.value.trim()&&form.elements.capacity.checkValidity()&&chosen.size<=Number(form.elements.capacity.value)&&(form.elements.feeSource.value!=='agreed'||syncAgreed()));
  const refreshSave=()=>{save.disabled=!canSubmit();};
  const sync=()=>{
   const agreedMode=form.elements.feeSource.value==='agreed';
@@ -2851,7 +2856,7 @@ async function newServicePage(token,initialDriverId){
     }
     if(!current())return;
     const distance=s.tariff_distance_km;
-    const rate=await write('/api/v1/operations/tariffs/quote',{studentId:s.id,feeSource:form.elements.feeSource.value});
+    const rate=await write('/api/v1/operations/tariffs/quote',{studentId:s.id,driverId,feeSource:form.elements.feeSource.value});
     const months=serviceAcademicMonths(s,school);if(rate.monthlyFee===null)missing++;else{total+=Number(rate.monthlyFee);driverBaseTotal+=Number(rate.driverBaseMonthly??rate.monthlyFee);annualTotal+=Math.round(Number(rate.monthlyFee)*months);}
     lines.push([person(s),km(distance),routeText,rate.monthlyFee===null?'نرخ ثبت نشده':number(rate.monthlyFee),rate.monthlyFee===null?'—':number(Math.round(Number(rate.monthlyFee)*months)),rate.saved?'مبلغ ثبت‌شده':rate.monthlyFee===null?'—':can('students','manage')?'نرخ‌نامه · ذخیره با ثبت سرویس':'نرخ‌نامه · پیش‌نمایش']);
    }
