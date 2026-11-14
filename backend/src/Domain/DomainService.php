@@ -381,6 +381,7 @@ final class DomainService {
    sort($students);foreach($students as $student){
     self::assignStudent($uid,$aid,(int)$service['id'],$student);
     if(array_key_exists('feeSource',$b))ServicePricing::updateStudent($pdo,$aid,$student,ServicePricing::source($b['feeSource']));
+    StudentServiceBilling::sync($pdo,$aid,(int)$student);
    }
    if ($students && !array_key_exists('monthlyFee', $b)) {
     $grossQuery=$pdo->prepare('SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
@@ -599,6 +600,9 @@ final class DomainService {
     $pdo->prepare('UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?')->execute([$net,$serviceId,$aid]);
    }
   }
+  if($resource==='students'&&array_intersect(['monthly_fee','driver_base_monthly','fee_source','tariff_distance_km','tariff_vehicle_class'],array_keys($data))) {
+   StudentServiceBilling::sync($pdo,$aid,(int)$id);
+  }
   if($resource==='services'&&!empty($data['school_id']))$pdo->prepare('INSERT IGNORE INTO service_schools(service_id,school_id) VALUES(?,?)')->execute([$id,$data['school_id']]);
   // Changing a service source explicitly also re-prices its current students atomically.
   if($resource==='services'&&!$wasCreate&&array_key_exists('fee_source',$data)
@@ -606,7 +610,7 @@ final class DomainService {
    $members=$pdo->prepare('SELECT student_id FROM service_students WHERE service_id=?');
    $members->execute([$id]);
    foreach($members->fetchAll(\PDO::FETCH_COLUMN) as $studentId)
-    ServicePricing::updateStudent($pdo,$aid,(int)$studentId,(string)$data['fee_source']);
+    {ServicePricing::updateStudent($pdo,$aid,(int)$studentId,(string)$data['fee_source']);StudentServiceBilling::sync($pdo,$aid,(int)$studentId);}
    $gross=$pdo->prepare('SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
    $gross->execute([$aid,$id]);
    $net=OperationsService::driverDeductions((float)$gross->fetchColumn(),$aid)['net_earned'];
