@@ -239,10 +239,10 @@ final class DomainService {
    $total=(int)$count->fetchColumn();$items=$s->fetchAll();if($resource==='services')foreach($items as &$item)self::attachServicePayable($item);if($resource==='students')foreach($items as &$item)self::attachStudentBalance($item);unset($item);return ['items'=>$items,'pagination'=>['page'=>$page,'limit'=>$limit,'total'=>$total,'pages'=>(int)ceil($total/$limit)]];
  }
  private static function attachStudentBalance(array &$row): void {
-  $annual=(float)($row['annual_fee']??0);
+  $invoiced=(float)($row['invoice_total']??0);
   $paid=(float)($row['paid_total']??0);
-  $row['outstanding_fee']=max(0,round($annual-$paid));
-  $row['student_credit']=max(0,round($paid-$annual));
+  $row['outstanding_fee']=max(0,round($invoiced-$paid));
+  $row['student_credit']=max(0,round($paid-$invoiced));
  }
  private static function attachServicePayable(array &$row): void {
   $gross=max(0,(float)($row['driver_base_monthly_total']??$row['students_monthly_total']??0));
@@ -327,7 +327,10 @@ final class DomainService {
     + (SELECT COALESCE(SUM(CASE WHEN le.direction='receipt' THEN le.amount ELSE -le.amount END),0)
        FROM ledger_entries le WHERE le.agency_id=:agency2 AND le.party_type='student' AND le.party_id=:student2 AND le.is_active=1)");
    $payments->execute(['student1'=>$id,'agency1'=>$aid,'student2'=>$id,'agency2'=>$aid]);
-   $row['paid_total']=(float)$payments->fetchColumn();self::attachStudentBalance($row);
+   $row['paid_total']=(float)$payments->fetchColumn();
+   $invoiceSum=Connection::get()->prepare("SELECT COALESCE(SUM(amount),0) FROM invoices WHERE agency_id=? AND party_type='student' AND party_id=? AND status<>'cancelled'");
+   $invoiceSum->execute([$aid,$id]);$row['invoice_total']=(float)$invoiceSum->fetchColumn();
+   self::attachStudentBalance($row);
   }
   if($resource==='ledger'){
    if(!in_array('company_account_id',thisColumns('ledger_entries',Connection::get()),true))throw new AuthException(503,'ساختار حساب‌های شرکت نیازمند اجرای مهاجرت دیتابیس 0031 است.','FINANCE_SCHEMA_UPDATE_REQUIRED');
