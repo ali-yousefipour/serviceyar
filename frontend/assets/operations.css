@@ -2918,3 +2918,33 @@ body.sy-menu-palette-open{overflow:hidden}
 .sy-vehicle-class-detect details{margin-top:12px;overflow-x:auto}
 .sy-vehicle-class-detect h3{margin:0 0 9px}
 @media(max-width:1100px){.sy-vehicle-class-cards{grid-template-columns:1fr}}
+
+/* Searchable approved vehicle model picker and readable Iranian plates */
+.sy-vehicle-model-picker{position:relative;min-width:0;width:100%;z-index:4}
+.sy-vehicle-model-picker input[type=search]{width:100%;min-height:44px}
+.sy-vehicle-model-options{position:absolute;z-index:60;inset-inline:0;top:calc(100% - 1px);max-height:230px;overflow-y:auto;background:var(--surface,#fff);border:1px solid #a7c8b7;border-radius:0 0 12px 12px;box-shadow:0 12px 25px #123b261f;padding:5px}
+.sy-vehicle-model-options[hidden]{display:none!important}
+.sy-vehicle-model-option{display:block;width:100%;min-height:40px;border:0;border-radius:7px;background:transparent;color:inherit;text-align:right;padding:10px 12px;font:inherit;cursor:pointer}
+.sy-vehicle-model-option:hover,.sy-vehicle-model-option:focus-visible{background:#e9f5ee;outline:2px solid #2b9367;outline-offset:-2px}
+.sy-vehicle-model-empty{padding:9px;color:#80622c}
+.sy-vehicle-model-hint{display:block;margin:6px 0;color:#536e62;font-size:.76rem;line-height:1.7}
+.sy-service-vehicle-selection{border:1px solid #cee1d3;border-radius:14px;padding:12px 15px;background:#f7fbf7;grid-column:1/-1}
+.sy-service-vehicle-selection h4{margin:0 0 10px}
+.sy-service-vehicle-selection>.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.sy-service-vehicle-selection>small{display:block;margin-top:9px;color:#617268}
+.sy-vehicle-mobile-results{display:none}
+@media(max-width:860px){
+ .sy-vehicle-mobile-results{display:grid;grid-template-columns:1fr;gap:12px;padding:10px 0}
+ #table:has(.sy-vehicle-mobile-results)>.table-wrap{display:none}
+ .sy-vehicle-mobile-card{border:1px solid #dae7dc;border-radius:15px;background:#fff;padding:13px;min-width:0}
+ .sy-vehicle-mobile-card>header{display:flex;justify-content:space-between;align-items:center;color:#597265;font-size:.85rem;margin-bottom:12px}
+ .sy-vehicle-card-plate{display:flex;justify-content:center;overflow-x:auto;padding:8px 0 13px}
+ .sy-vehicle-card-plate .iran-plate{flex-shrink:0}
+ .sy-vehicle-mobile-card h3{margin:0 0 12px;color:#164e39;font-size:1rem}
+ .sy-vehicle-mobile-card dl{margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .sy-vehicle-mobile-card dl>div{border-radius:9px;background:#f5f9f6;padding:8px;min-width:0}
+ .sy-vehicle-mobile-card dt{font-size:.72rem;color:#6c8074;margin-bottom:4px}
+ .sy-vehicle-mobile-card dd{margin:0;overflow-wrap:anywhere;font-size:.84rem}
+ .sy-vehicle-mobile-card footer{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+ .sy-service-vehicle-selection>.form-grid{grid-template-columns:1fr}
+}
