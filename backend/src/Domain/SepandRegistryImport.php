@@ -50,7 +50,9 @@ final class SepandRegistryImport {
    while($reader->read())if($reader->nodeType===\XMLReader::ELEMENT&&$reader->localName==='si'){
     $node=simplexml_load_string($reader->readOuterXml(),'SimpleXMLElement',LIBXML_NONET);
     $text='';if($node)foreach($node->xpath('.//*[local-name()="t"]')?:[] as $item)$text.=(string)$item;
-    $shared[]=$text;$reader->next('si');
+    // readOuterXml does not advance the reader. Let read() traverse to
+    // the following <si>; calling next('si') here skips every other entry.
+    $shared[]=$text;
    }$reader->close();unset($xml);
   }
   $zip->close();
