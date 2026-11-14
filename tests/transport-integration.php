@@ -97,13 +97,6 @@ try{
  check(str_contains($newPrint,'نسخه جدید قرارداد')&&!str_contains($savedPrint,'نسخه جدید قرارداد'),
   'New template changes only newly issued contracts');
  check(count($docApi::listing($uid,$a,'parent'))>=2,'Parent tab lists issued document history');
- $p->prepare('UPDATE drivers SET national_code=? WHERE id=? AND agency_id=?')->execute(['1234567890',$ad['id'],$a]);
- $driverDoc=$docApi::issue($uid,$a,'driver',[
-  'partyId'=>(int)$ad['id'],'startDate'=>'2026-09-23','endDate'=>'2027-06-22','amount'=>50000000,
-  'overrides'=>['managerName'=>'مدیر نمونه']
- ]);
- check(str_contains($docApi::printable($uid,$a,(int)$driverDoc['id'])['html'],'تخصیص آزمون'),'Driver contract prints the actual company driver');
- check(count($docApi::listing($uid,$a,'driver'))===1,'Driver tab excludes parent contracts');
  check($as['shift']==='صبح','Service shift persists from setup wizard');
  $updatedService=D::save($uid,$a,'services',['agreedAmount'=>'1250000.00'],(int)$as['id']);
  check((int)$updatedService['agreed_amount']===1250000,'Unchanged SQL decimal amount remains editable');
@@ -606,6 +599,53 @@ try{
  check(count($draftError)>0 && ($draftError[0]['studentName']??'')==='آزمون مهر'
   && !empty($draftError[0]['schoolName']) && in_array('پیش‌نویس مهر',array_map(static fn($name)=>preg_replace('/\\s*\\(.*$/u','',$name),$draftError[0]['serviceNames']??[]),true),
   'Repricing diagnostics identify the real student, school and service instead of only numeric ids');
+ // Annual driver contract uses each assigned student's gross driver basis and the
+ // agency's current deductions once, not already-net services.monthly_fee.
+ $p->prepare('UPDATE drivers SET national_code=? WHERE id=? AND agency_id=?')
+  ->execute(['1234567890',$ad['id'],$a]);
+ $contractPrimary=insertFixture('students',['uuid'=>Uuid::v4(),'agency_id'=>$a,
+  'school_id'=>$school['id'],'first_name'=>'اول','last_name'=>'ابتدایی',
+  'grade'=>'ابتدایی','monthly_fee'=>18000000,'driver_base_monthly'=>10000000]);
+ $contractSecondary=insertFixture('students',['uuid'=>Uuid::v4(),'agency_id'=>$a,
+  'school_id'=>$school['id'],'first_name'=>'دوم','last_name'=>'دبیرستان',
+  'grade'=>'متوسطه','monthly_fee'=>30000000,'driver_base_monthly'=>20000000]);
+ $firstService=insertFixture('services',['uuid'=>Uuid::v4(),'agency_id'=>$a,
+  'driver_id'=>$ad['id'],'school_id'=>$school['id'],'title'=>'سرویس دبستان',
+  'status'=>'active','monthly_fee'=>111111]);
+ $secondService=insertFixture('services',['uuid'=>Uuid::v4(),'agency_id'=>$a,
+  'driver_id'=>$ad['id'],'school_id'=>$school['id'],'title'=>'سرویس دبیرستان',
+  'status'=>'active','monthly_fee'=>222222]);
+ $p->prepare('INSERT INTO service_students(service_id,student_id) VALUES(?,?),(?,?)')
+  ->execute([$firstService,$contractPrimary,$secondService,$contractSecondary]);
+ $policy=\ServiceYar\Domain\DriverDeductionPolicy::rates($a);
+ $primaryNet=\ServiceYar\Domain\DriverDeductionPolicy::calculate(10000000,$policy)['net_earned'];
+ $secondaryNet=\ServiceYar\Domain\DriverDeductionPolicy::calculate(20000000,$policy)['net_earned'];
+ $expectedAnnual=(int)round($primaryNet*8.5)+(int)round($secondaryNet*9);
+ $driverPreview=$docApi::draftData($uid,$a,'driver',(int)$ad['id']);
+ check($driverPreview['suggestedTotal']===$expectedAnnual,
+  'Annual driver preview sums 8.5/9-month net fees without double deduction');
+ check(count($driverPreview['driverAnnual']['services'])===2,
+  'Annual preview includes every assigned student service and its duration');
+ $driverDoc=$docApi::issue($uid,$a,'driver',[
+  'partyId'=>(int)$ad['id'],'startDate'=>'2026-09-23','endDate'=>'2027-06-22',
+  'amount'=>1, // UI value cannot override the authoritative server calculation
+  'overrides'=>['managerName'=>'مدیر نمونه']
+ ]);
+ $driverContract=$p->prepare('SELECT amount,snapshot_json FROM contracts WHERE id=? AND agency_id=?');
+ $driverContract->execute([$driverDoc['id'],$a]);$storedDriver=$driverContract->fetch(PDO::FETCH_ASSOC);
+ check((int)$storedDriver['amount']===$expectedAnnual,
+  'Server stores the actual annual net fee regardless of submitted amount');
+ $calculation=json_decode($storedDriver['snapshot_json'],true)['driverAnnualCalculation'];
+ check($calculation['netAnnual']===$expectedAnnual&&count($calculation['services'])===2,
+  'Issued contract snapshots exact service and deduction breakdown');
+ $driverPrint=$docApi::printable($uid,$a,(int)$driverDoc['id'])['html'];
+ check(str_contains($driverPrint,'تخصیص آزمون')&&str_contains($driverPrint,'سرویس دبستان'),
+  'Driver contract prints annual net amount and assigned services');
+ check(count($docApi::listing($uid,$a,'driver'))===1,'Driver tab excludes parent contracts');
+ $p->prepare('UPDATE services SET monthly_fee=0 WHERE id IN (?,?) AND agency_id=?')
+  ->execute([$firstService,$secondService,$a]);
+ check($docApi::printable($uid,$a,(int)$driverDoc['id'])['html']===$driverPrint,
+  'Driver contract historical print is invariant when service fees later change');
  echo "Transport integration: $checks checks passed. All fixtures rolled back.\n";
 }finally{if($p->inTransaction())$p->rollBack();}
 
