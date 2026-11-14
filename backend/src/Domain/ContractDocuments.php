@@ -260,10 +260,28 @@ HTML;
  }
  public static function printable(int $uid,int $agencyId,int $contractId): array {
   self::scope($uid,$agencyId);$pdo=Connection::get();self::ensureSchema($pdo);
-  $q=$pdo->prepare('SELECT id,contract_no,rendered_html FROM contracts WHERE id=? AND agency_id=?');
+  $q=$pdo->prepare('SELECT id,contract_no,rendered_html,party_type,party_id,start_date,end_date,amount FROM contracts WHERE id=? AND agency_id=?');
   $q->execute([$contractId,$agencyId]);$row=$q->fetch(PDO::FETCH_ASSOC);
   if(!$row)throw new AuthException(404,'قرارداد یافت نشد.','NOT_FOUND');
-  if(!$row['rendered_html'])throw new AuthException(409,'این قرارداد قدیمی فاقد نسخه چاپی ذخیره‌شده است. محتوای اصلی آن باید از پرونده قدیمی بازیابی شود؛ ساخت نسخه جدید به نام نسخه قدیم مجاز نیست.','LEGACY_CONTRACT_SNAPSHOT_MISSING');
-  return ['html'=>$row['rendered_html'],'contractNo'=>$row['contract_no']];
+  if($row['rendered_html'])return ['html'=>$row['rendered_html'],'contractNo'=>$row['contract_no'],'legacyReconstructed'=>false];
+  // Existing records before versioned issuance have no historical content.
+  // Provide an explicitly watermarked reconstruction, never claim it is the
+  // original and never overwrite the legal issuance snapshot column.
+  $kind=$row['party_type']==='student'?'parent':($row['party_type']==='driver'?'driver':null);
+  if(!$kind||!(int)$row['party_id'])throw new AuthException(409,'نوع یا طرف قرارداد قدیمی برای بازسازی مشخص نیست.','LEGACY_CONTRACT_DATA_MISSING');
+  $data=self::data($pdo,$agencyId,$kind,(int)$row['party_id']);
+  $total=(int)round((float)$row['amount']);
+  $months=$kind==='parent'?(preg_match('/ابتدایی|دبستان|primary|elementary/u',(string)($data['schoolType']??'').(string)($data['grade']??''))?8.5:9):0;
+  $values=$data+['contractNo'=>self::persian((string)($row['contract_no']??'—')),'issueDate'=>'نامشخص',
+   'startDate'=>self::jalali((string)($row['start_date']??'')),
+   'endDate'=>self::jalali((string)($row['end_date']??'')),
+   'durationMonths'=>self::persian((string)$months),
+   'totalAmount'=>self::persian(number_format($total,0,'.',',')),
+   'payment40'=>self::persian(number_format((int)round($total*.4),0,'.',',')),
+   'payment20'=>self::persian(number_format((int)round($total*.2),0,'.',','))];
+  $warning='<p style="border:2px solid #a83232;padding:8px;font-weight:bold">نسخه بازسازی‌شده از اطلاعات فعلی سامانه؛ اصل قالب و محتوای زمان صدور این قرارداد قدیمی در آرشیو موجود نیست و این نسخه جایگزین نسخه اصلی نیست.</p>';
+  $html=self::document(self::template($pdo,$kind)['body_html'],$values);
+  $html=str_replace('<body>','<body>'.$warning,$html);
+  return ['html'=>$html,'contractNo'=>$row['contract_no'],'legacyReconstructed'=>true];
  }
 }
