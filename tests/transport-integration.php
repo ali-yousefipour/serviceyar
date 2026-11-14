@@ -461,6 +461,18 @@ try{
   'Conflicting Pride and Tiba descriptions must not be auto classified');
  check(in_array((int)$genericManufacturer['id'],$unresolvedIds,true),
   'Pars Khodro manufacturer must not be misclassified as Peugeot Pars');
+ $operatorVehicle=D::save($uid,$a,'vehicles',['plate'=>'44ج'.substr($tag,0,4).'15','capacity'=>4,'tariffVehicleClass'=>1]);
+ $operatorDriver=D::save($uid,$a,'drivers',['firstName'=>'آزمون','lastName'=>'ویرایش کلاس خودرو','vehicleId'=>$operatorVehicle['id'],'status'=>'active']);
+ \ServiceYar\Domain\ServicePricing::setDriverVehicleType($p,$a,(int)$operatorDriver['id'],
+   ['vehicleModel'=>'دوو سی یلو','vehicleClass'=>'2']);
+ $selectedVehicle=D::get($uid,$a,'vehicles',(int)$operatorVehicle['id']);
+ check((int)$selectedVehicle['tariff_vehicle_class']===2 && $selectedVehicle['model']==='دوو سی یلو',
+  'Service model selection persists approved family and recommended vehicle class');
+ \ServiceYar\Domain\ServicePricing::setDriverVehicleType($p,$a,(int)$operatorDriver['id'],
+   ['vehicleModel'=>'دوو سی یلو','vehicleClass'=>'1']);
+ check((int)D::get($uid,$a,'vehicles',(int)$operatorVehicle['id'])['tariff_vehicle_class']===1,
+  'Operator may explicitly change the suggested class on the registered vehicle');
+
 
  $unnamedVehicle=D::save($uid,$a,'vehicles',['plate'=>'77ی12345','capacity'=>4]);
  $fallbackDriver=D::save($uid,$a,'drivers',['firstName'=>'راننده','lastName'=>'مالک پیش‌فرض','status'=>'active','vehicleId'=>$unnamedVehicle['id']]);
