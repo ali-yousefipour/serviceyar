@@ -737,7 +737,7 @@ async function contractsPage(token=pageToken){
     const detailFields=kind==='parent'?[
      ['guardianName','نام و نام خانوادگی ولی'],['guardianNationalCode','کد ملی ولی'],
      ['guardianFatherName','نام پدر ولی'],['guardianMobile','شماره همراه ولی'],
-     ['guardianAddress','نشانی ولی'],['managerName','نام مدیر شرکت'],
+     ['guardianAddress','نشانی ولی'],['managerName','نام مدیر شرکت'],['managerTitle','سمت مدیر شرکت'],
      ['managerNationalCode','کد ملی مدیر شرکت'],['companyRegistration','شماره ثبت شرکت'],
      ['companyNationalId','شناسه ملی شرکت'],['companyAddress','نشانی شرکت'],
      ['companyPhone','تلفن شرکت'],['bankName','نام بانک شرکت'],['bankAccount','شماره حساب شرکت'],
