@@ -73,7 +73,7 @@ HTML;
 <p>-6-8 ثبت گزارش تخلفات و شکایات احتمالی از شرکت در سامانه سپند</p>
 <h2>ماده -7 تعهدات شرکت:</h2>
 <p>-7-1 تامین راننده و ناوگان دانشآموزی دارای گواهی صلاحیت معتبر مطابق با ضوابط مندرج در آئیننامه اجرایی حملونقل دانشآموزان</p>
-<div class="reference-page-two"></div>
+<hr>
 <p>-7-2 جایگزینی راننده و ناوگان دانشآموزی صرفاً با هماهنگی ولی دانشآموز و با شرط دارا بودن گواهی صلاحیت معتبر</p>
 <p>تبصره :4 در صورت تخلف ،مطابق ضوابط و مقررات انضباطی اعمال قانون خواهد گردید.</p>
 <p>-7-3 تخصیص ناوگان دانشآموزی با رعایت حداکثر یک ساعت مدت زمان رفت و برگشت دانشآموز</p>
@@ -213,7 +213,7 @@ HTML;
   $output=preg_replace_callback('/\{\{([a-zA-Z][a-zA-Z0-9]*)\}\}/',
    static fn(array $match)=>htmlspecialchars((string)($values[$match[1]]??'—'),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8'),$html);
   return '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>قرارداد '.htmlspecialchars((string)($values['contractNo']??''),ENT_QUOTES,'UTF-8').'</title><style>'.
-    '@page{size:A4;margin:8mm 11mm}*{box-sizing:border-box}body{font-family:Tahoma,"Vazirmatn",sans-serif;direction:rtl;font-size:8.6pt;line-height:1.3;color:#171717;max-width:190mm;margin:auto}h1{text-align:center;font-size:13pt;margin:0 0 7px}h2{font-size:9.3pt;margin:7px 0 2px;font-weight:700}p{margin:2px 0;text-align:justify}.contract-top{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #333;padding-top:5px;font-size:9.5pt}.center{text-align:center}.signatures{display:flex;justify-content:space-between;margin-top:20px;min-height:60px;page-break-inside:avoid}.reference-page-two{break-before:page;page-break-before:always}table{width:100%;border-collapse:collapse}td,th{border:1px solid #555;padding:3px}ul,ol{margin:3px 0}@media print{button{display:none}}'.
+    '@page{size:A4;margin:8mm 11mm}*{box-sizing:border-box}body{font-family:Tahoma,"Vazirmatn",sans-serif;direction:rtl;font-size:8.6pt;line-height:1.3;color:#171717;max-width:190mm;margin:auto}h1{text-align:center;font-size:13pt;margin:0 0 7px}h2{font-size:9.3pt;margin:7px 0 2px;font-weight:700}p{margin:2px 0;text-align:justify}.contract-top{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #333;padding-top:5px;font-size:9.5pt}.center{text-align:center}.signatures{display:flex;justify-content:space-between;margin-top:20px;min-height:60px;page-break-inside:avoid}hr{break-before:page;page-break-before:always;border:0;height:0;margin:0}body>div:first-of-type{display:flex;justify-content:space-between}body>div:last-of-type{display:flex;justify-content:space-between;page-break-inside:avoid}table{width:100%;border-collapse:collapse}td,th{border:1px solid #555;padding:3px}ul,ol{margin:3px 0}@media print{button{display:none}}'.
     '</style></head><body><button type="button" style="margin:8px 0;padding:9px 16px;cursor:pointer" onclick="window.print()">چاپ قرارداد / ذخیره PDF</button>'.$output.'</body></html>';
  }
  public static function issue(int $uid,int $agencyId,string $kind,array $input): array {
