@@ -1741,16 +1741,19 @@ async function taxiOrganizationAdminPanel(container,token){
  form.onsubmit=e=>{e.preventDefault();load();};
  save.onclick=async()=>{
   if(!snapshot)return;
-  const rows=[...table.querySelectorAll('tbody tr')].map(tr=>{
-   const driver=tr.querySelector('[name=driverMonthly]'),parent=tr.querySelector('[name=parentMonthly]');
-   for(const input of [driver,parent])if(!input.reportValidity()||!/^\d+$/.test(input.value))throw new Error('مبلغ هر ردیف باید عدد صحیح ریالی معتبر باشد.');
-   return {distanceKm:Number(tr.dataset.distance),driverMonthly:Number(driver.value),parentMonthly:Number(parent.value)};
-  });
+  let rows;
+  try{
+   rows=[...table.querySelectorAll('tbody tr')].map(tr=>{
+    const driver=tr.querySelector('[name=driverMonthly]'),parent=tr.querySelector('[name=parentMonthly]');
+    for(const input of [driver,parent])if(!input.reportValidity()||!/^\d+$/.test(input.value))throw new Error('مبلغ هر ردیف باید عدد صحیح ریالی معتبر باشد.');
+    return {distanceKm:Number(tr.dataset.distance),driverMonthly:Number(driver.value),parentMonthly:Number(parent.value)};
+   });
+  }catch(error){status.textContent=error.message;return;}
   save.disabled=true;status.textContent='در حال ذخیره نرخ‌های جدید…';
   try{
    await write('/api/v1/admin/taxi-tariffs',{district:Number(form.elements.district.value),vehicleClass:form.elements.vehicleClass.value,rows},'PUT');
-   status.textContent='تعرفه‌ها ذخیره شدند. تغییرات برای محاسبات بعدی اعمال خواهند شد.';
    await load();
+   status.textContent='تعرفه‌ها ذخیره شدند؛ مبلغ جدید در محاسبه بعدی اعمال می‌شود.';
   }catch(error){status.textContent=error.message;save.disabled=false;}
  };
  await load();
