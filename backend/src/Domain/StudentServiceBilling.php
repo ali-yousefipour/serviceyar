@@ -75,13 +75,31 @@ final class StudentServiceBilling {
   $q=$pdo->prepare("SELECT sv.id,sv.code,sv.monthly_fee FROM services sv WHERE sv.agency_id=? AND sv.driver_id=? AND sv.is_active=1 AND sv.status<>'cancelled'");
   $q->execute([$agencyId,$driverId]);$services=$q->fetchAll(PDO::FETCH_ASSOC);
   $monthly=(float)array_sum(array_column($services,'monthly_fee'));
+  // Full academic-year driver entitlement is based on each student's driver
+  // tariff and actual school duration, with agency deductions applied once.
+  $grossQuery=$pdo->prepare("SELECT
+   COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee) *
+     (CASE WHEN sc.school_type REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9
+           WHEN sc.school_type REGEXP 'ابتدایی|دبستان|primary|elementary' THEN 8.5
+           WHEN st.grade REGEXP 'ابتدایی|دبستان|primary|elementary' OR st.grade IN ('1','2','3','4','5','6','۱','۲','۳','۴','۵','۶') THEN 8.5
+           ELSE 9 END)),0)
+   FROM service_students ss JOIN services sv ON sv.id=ss.service_id
+   JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id
+   JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id
+   WHERE sv.agency_id=? AND sv.driver_id=? AND sv.is_active=1 AND sv.status<>'cancelled'");
+  $grossQuery->execute([$agencyId,$driverId]);
+  $annualGross=(float)$grossQuery->fetchColumn();
+  $deductions=OperationsService::driverDeductions($annualGross,$agencyId);
+  $annualNet=(float)$deductions['net_earned'];
   $p=$pdo->prepare('SELECT id,amount,payment_date,reference_no FROM driver_payments WHERE agency_id=? AND driver_id=? ORDER BY payment_date DESC,id DESC');
   $p->execute([$agencyId,$driverId]);$paid=$p->fetchAll(PDO::FETCH_ASSOC);
   $l=$pdo->prepare("SELECT id,amount,entry_date,direction FROM ledger_entries WHERE agency_id=? AND party_type='driver' AND party_id=? AND is_active=1");
   $l->execute([$agencyId,$driverId]);$ledger=$l->fetchAll(PDO::FETCH_ASSOC);
   $paidTotal=(float)array_sum(array_column($paid,'amount'));
   foreach($ledger as $entry)$paidTotal+=($entry['direction']==='payment'?1:-1)*(float)$entry['amount'];
-  return ['services'=>$services,'payments'=>$paid,'monthlyEntitlement'=>$monthly,'paidTotal'=>$paidTotal,
-   'note'=>'مانده قطعی راننده نیازمند دوره کارکرد است؛ پرداخت‌های تاریخی نباید فقط از مبلغ ماه جاری کسر شوند.'];
+  return ['services'=>$services,'payments'=>$paid,'monthlyEntitlement'=>$monthly,
+   'estimatedAnnualEntitlement'=>$annualNet,'grossAnnualEntitlement'=>$annualGross,'paidTotal'=>$paidTotal,
+   'remaining'=>max(0,$annualNet-$paidTotal),'overpaid'=>max(0,$paidTotal-$annualNet),
+   'note'=>'برآورد سالانه بر اساس نرخ دانش‌آموزان تخصیص‌یافته و کسورات شرکت است؛ پرداخت‌های ثبت‌شده به راننده از آن کسر می‌شوند. اسناد نهایی حقوق مستقل هستند.'];
  }
 }
