@@ -53,6 +53,24 @@ final class VehicleClassCatalog {
    'فهرست کلاس‌ها هنوز در دیتابیس آماده نشده است. از تنظیمات ادمین کل گزینه آماده‌سازی را اجرا کنید.',
    'VEHICLE_CATALOG_NOT_READY');
  }
+ public static function options(int $uid,int $agencyId): array {
+  Authorization::requirePermission($uid,'drivers.view');
+  Authorization::requireAgencyAccess($uid,$agencyId);
+  $pdo=Connection::get();
+  if(!self::ready($pdo))return ['ready'=>false,'items'=>[]];
+  $items=[];
+  foreach(self::entries($pdo) as $entry){
+   $family=(string)$entry['family_name'];$key=(int)$entry['class_number'].':'.$family;
+   if(!isset($items[$key]))$items[$key]=['name'=>$family,'vehicleClass'=>(int)$entry['class_number'],'aliases'=>[]];
+   $items[$key]['aliases'][]=(string)$entry['alias'];
+  }
+  return ['ready'=>true,'items'=>array_values($items)];
+ }
+ public static function validSelection(PDO $pdo,string $value): bool {
+  if(!self::ready($pdo))return false;
+  $q=$pdo->prepare("SELECT 1 FROM vehicle_tariff_class_models WHERE family_name=? OR alias=? LIMIT 1");
+  $q->execute([$value,$value]);return (bool)$q->fetchColumn();
+ }
  public static function add(int $uid,array $body): array {
   self::requireAdmin($uid);
   $class=(int)($body['vehicleClass']??0);
