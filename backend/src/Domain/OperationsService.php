@@ -91,9 +91,18 @@ final class OperationsService
         self::transaction(function(PDO $p)use($ids,$aid,$mode,$value){
             $q=$p->prepare('SELECT id,monthly_fee FROM students WHERE agency_id=? AND is_active=1 AND id IN ('.implode(',',array_fill(0,count($ids),'?')).') FOR UPDATE');$q->execute(array_merge([$aid],$ids));$rows=$q->fetchAll();
             if(count($rows)!==count($ids))throw new AuthException(422,'انتخاب‌ها نامعتبر یا خارج از شرکت هستند.','CROSS_SCOPE_REFERENCE');
-            $u=$p->prepare('UPDATE students SET monthly_fee=:v WHERE id=:id AND agency_id=:a');
+            $u=$p->prepare("UPDATE students SET monthly_fee=:v,driver_base_monthly=:base,fee_source='agreed' WHERE id=:id AND agency_id=:a");
             foreach($rows as $r){$old=(float)$r['monthly_fee'];$new=match($mode){'set'=>(float)$value,'increase'=>$old+(float)$value,'decrease'=>$old-(float)$value,'percent'=>$old*(1+(float)$value/100)};
-                if($new<0||$new>999999999999999)throw new AuthException(422,'نتیجه تغییر هزینه خارج از محدوده است.','VALIDATION_ERROR');$u->execute(['v'=>round($new,2),'id'=>$r['id'],'a'=>$aid]);}
+                if($new<0||$new>999999999999999)throw new AuthException(422,'نتیجه تغییر هزینه خارج از محدوده است.','VALIDATION_ERROR');
+                $amount=round($new,2);$u->execute(['v'=>$amount,'base'=>round($amount),'id'=>$r['id'],'a'=>$aid]);}
+            $serviceIds=$p->prepare('SELECT DISTINCT ss.service_id FROM service_students ss JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=? AND sv.is_active=1 WHERE ss.student_id IN ('.implode(',',array_fill(0,count($ids),'?')).')');
+            $serviceIds->execute(array_merge([$aid],$ids));
+            foreach($serviceIds->fetchAll(PDO::FETCH_COLUMN) as $serviceId){
+                $sum=$p->prepare('SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
+                $sum->execute([$aid,$serviceId]);
+                $net=self::driverDeductions((float)$sum->fetchColumn(),$aid)['net_earned'];
+                $p->prepare('UPDATE services SET monthly_fee=? WHERE agency_id=? AND id=?')->execute([$net,$aid,$serviceId]);
+            }
         });self::audit($uid,$aid,'bulk_fees','students',null);return ['updated'=>count($ids)];
     }
 
