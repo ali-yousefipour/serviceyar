@@ -33,6 +33,8 @@ jobs:
           node tests/sepand-schema-ui.cjs
           node --check frontend/assets/operations.js
           node --check frontend/assets/vehicle-class-admin.js
+          node --check frontend/assets/vehicle-model-picker.js
+          node tests/vehicle-model-selector.cjs
           node tests/wizard-lookup.cjs
           node tests/finance-form-inputs.cjs
           node tests/new-service-wizard.cjs
