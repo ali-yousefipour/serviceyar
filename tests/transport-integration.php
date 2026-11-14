@@ -457,6 +457,25 @@ try{
  $p->prepare('UPDATE services SET capacity=4 WHERE id=?')->execute([$seatService['id']]);
  D::save($uid,$a,'vehicles',['capacity'=>5],(int)$seatVehicle['id']);
  check((int)D::get($uid,$a,'services',(int)$seatService['id'])['capacity']===5,'Legacy capacity mismatches recover on vehicle resave');
+ // Official taxi tariff defaults from supplied Excel: 3 km, economy, district 1.
+ $default=\ServiceYar\Domain\TaxiOrganizationTariffs::quote($p,1,'economy',3);
+ check($default['driverMonthly']===10000000&&$default['parentMonthly']===12090569,'Taxi workbook fee baseline matches 1405 reference');
+ $taxiSchool=D::save($uid,$a,'schools',['name'=>'مدرسه نرخ سازمانی','region'=>'ناحیه 1','schoolType'=>'ابتدایی']);
+ $taxiStudent=D::save($uid,$a,'students',['schoolId'=>$taxiSchool['id'],'firstName'=>'نرخ','lastName'=>'سازمانی',
+   'mobile'=>'09120000966','academicYear'=>'1405/1406','tariffDistanceKm'=>3,'tariffVehicleClass'=>1,'feeSource'=>'taxi','grade'=>'ابتدایی']);
+ check((int)$taxiStudent['monthly_fee']===12090569&&(int)$taxiStudent['driver_base_monthly']===10000000,'Taxi student rate separates parent tuition and driver base');
+ $taxiAccount=D::save($uid,$a,'accounts',['code'=>'TAXI-'.$tag,'title'=>'دریافت‌های تعرفه سازمانی']);
+ D::save($uid,$a,'ledger',['partyType'=>'student','partyId'=>$taxiStudent['id'],'direction'=>'receipt','amount'=>1000000,
+   'entryDate'=>'2026-11-05','method'=>'cash','companyAccountId'=>$taxiAccount['id']]);
+ $tuition=D::get($uid,$a,'students',(int)$taxiStudent['id']);
+ check((int)$tuition['paid_total']===1000000&&(int)$tuition['outstanding_fee']===101769837,'Student ledger receipt offsets annual tuition balance');
+ \ServiceYar\Domain\TaxiOrganizationTariffs::save($uid,['district'=>1,'vehicleClass'=>'economy',
+   'rows'=>[['distanceKm'=>3,'driverMonthly'=>11000000,'parentMonthly'=>14000000]]]);
+ check((int)\ServiceYar\Domain\TaxiOrganizationTariffs::quote($p,1,'economy',3)['parentMonthly']===14000000,'Admin rate overrides the selected district');
+ check((int)\ServiceYar\Domain\TaxiOrganizationTariffs::quote($p,2,'economy',3)['parentMonthly']!==14000000,'Global tariff changes do not leak to other districts');
+ check((int)D::get($uid,$a,'students',(int)$taxiStudent['id'])['monthly_fee']===12090569,'Historical stored rate remains fixed after tariff edit');
+ $repriced=D::save($uid,$a,'students',['feeSource'=>'taxi'],(int)$taxiStudent['id']);
+ check((int)$repriced['monthly_fee']===14000000&&(int)$repriced['driver_base_monthly']===11000000,'Explicit fee selection recomputes parent and driver pricing');
  echo "Transport integration: $checks checks passed. All fixtures rolled back.\n";
 }finally{if($p->inTransaction())$p->rollBack();}
 
