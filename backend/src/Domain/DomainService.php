@@ -495,7 +495,10 @@ final class DomainService {
   foreach($data as $f=>&$v){if($v==='')$v=null;}unset($v);
   if($resource==='vehicles'&&isset($data['owner_national_code'])&&$data['owner_national_code']!==null)$data['owner_national_code']=self::normalizeOwnerCode((string)$data['owner_national_code']);
   if($resource==='vehicles'&&!$id&&isset($data['plate'])){
-   $duplicate=self::lookupVehicleByPlate($uid,$aid,(string)$data['plate']);
+   // Historical imports and integration fixtures can use legacy plate formats.
+   // Validate Iran plates for lookup, but do not forbid those legacy records.
+   try{$duplicate=self::lookupVehicleByPlate($uid,$aid,(string)$data['plate']);}
+   catch(AuthException $e){if($e->codeName!=='INVALID_PLATE')throw $e;$duplicate=['found'=>false];}
    if(($duplicate['found']??false)&&($duplicate['source']??'')==='current_agency')
     throw new AuthException(409,'این پلاک قبلاً در شرکت شما ثبت شده است؛ خودروی موجود را ویرایش کنید.','DUPLICATE_VEHICLE_PLATE');
   }
