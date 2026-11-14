@@ -61,8 +61,19 @@ final class LegacyServiceTariffMigration {
    $usedCodes[$candidate]=true;
    $codeUpdates[(int)$service['id']]=$candidate;
   }
+  $studentCandidates=array_fill_keys(array_column($changes,'id'),true);
+  $membership=$pdo->prepare('SELECT ss.service_id,ss.student_id FROM service_students ss JOIN services sv ON sv.id=ss.service_id WHERE sv.agency_id=?');
+  $membership->execute([$aid]);$serviceMembers=[];
+  foreach($membership->fetchAll(PDO::FETCH_ASSOC) as $m)$serviceMembers[(int)$m['service_id']][]=(int)$m['student_id'];
+  $eligibleServices=0;$skippedServices=0;
+  foreach($allServices as $service){
+   $memberIds=$serviceMembers[(int)$service['id']]??[];
+   if($memberIds&&count(array_filter($memberIds,static fn($id)=>isset($studentCandidates[$id])))===count($memberIds))$eligibleServices++;
+   else $skippedServices++;
+  }
   $response=['agencyId'=>$aid,'studentsChecked'=>count($changes)+count($issues),'studentsReady'=>count($changes),
    'servicesChecked'=>count($allServices),'servicesWithoutCode'=>count($codeUpdates),
+   'servicesReady'=>$eligibleServices,'servicesSkipped'=>$skippedServices,
    'schoolsToNormalize'=>count($regions),'errors'=>$issues,'applied'=>false,
    'monthlyDifference'=>array_sum(array_column($changes,'newFee'))-array_sum(array_column($changes,'oldFee'))];
   if(!$apply)return $response;
@@ -84,31 +95,50 @@ final class LegacyServiceTariffMigration {
     $audit->execute([$run,$aid,'service-code',$sid,json_encode(['code'=>null]),json_encode(['code'=>$newCode]),$uid]);
     $updateCode->execute([$newCode,$sid,$aid]);
    }
-   if($issues){
-    // Repair identifiers even when incomplete school/student data prevents fee repricing.
-    $pdo->commit();
-    $response['applied']=false;
-    $response['codesFilled']=count($codeUpdates);
-    $response['runId']=$run;
-    $response['pricingBlocked']=true;
-    return $response;
-   }
+   // Invalid records must not prevent repricing unrelated valid services.
+   // Each student is isolated with a savepoint so an invoice-specific error
+   // cannot roll back the company's other valid tuition corrections.
    $updateStudent=$pdo->prepare("UPDATE students SET fee_source='taxi',monthly_fee=?,driver_base_monthly=?,tariff_calculated_at=NOW() WHERE id=? AND agency_id=?");
+   $successStudents=[];$updatedStudents=0;$invoicesSynced=0;
    foreach($changes as $c){
-    $audit->execute([$run,$aid,'student',$c['id'],json_encode(['monthlyFee'=>$c['oldFee'],'driverBaseMonthly'=>$c['oldDriverBase'],'feeSource'=>$c['oldSource']]),json_encode(['monthlyFee'=>$c['newFee'],'driverBaseMonthly'=>$c['newDriverBase'],'feeSource'=>'taxi']),$uid]);
-    $updateStudent->execute([$c['newFee'],$c['newDriverBase'],$c['id'],$aid]);
-    StudentServiceBilling::sync($pdo,$aid,(int)$c['id']);
+    $pdo->exec('SAVEPOINT sy_reprice_student');
+    try{
+     $audit->execute([$run,$aid,'student',$c['id'],json_encode(['monthlyFee'=>$c['oldFee'],'driverBaseMonthly'=>$c['oldDriverBase'],'feeSource'=>$c['oldSource']]),json_encode(['monthlyFee'=>$c['newFee'],'driverBaseMonthly'=>$c['newDriverBase'],'feeSource'=>'taxi']),$uid]);
+     $updateStudent->execute([$c['newFee'],$c['newDriverBase'],$c['id'],$aid]);
+     if(StudentServiceBilling::sync($pdo,$aid,(int)$c['id'])!==null)$invoicesSynced++;
+     $pdo->exec('RELEASE SAVEPOINT sy_reprice_student');
+     $successStudents[(int)$c['id']]=true;$updatedStudents++;
+    }catch(\Throwable $error){
+     $pdo->exec('ROLLBACK TO SAVEPOINT sy_reprice_student');
+     $pdo->exec('RELEASE SAVEPOINT sy_reprice_student');
+     $issues[]=['studentId'=>(int)$c['id'],'reason'=>'خطای اصلاح شهریه یا فاکتور: '.$error->getMessage()];
+    }
    }
    $services=$pdo->prepare('SELECT id,monthly_fee,fee_source FROM services WHERE agency_id=? ORDER BY id FOR UPDATE');
    $services->execute([$aid]);$rows=$services->fetchAll(PDO::FETCH_ASSOC);
    $gross=$pdo->prepare('SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
    $updateService=$pdo->prepare("UPDATE services SET fee_source='taxi',monthly_fee=? WHERE id=? AND agency_id=?");
+   $updatedServices=0;
    foreach($rows as $s){
+    $memberIds=$serviceMembers[(int)$s['id']]??[];
+    if(!$memberIds){
+     $issues[]=['serviceId'=>(int)$s['id'],'reason'=>'سرویس دانش‌آموز تخصیص‌یافته ندارد؛ مبلغ قبلی بدون تغییر باقی ماند.'];
+     continue;
+    }
+    if(count(array_filter($memberIds,static fn($id)=>isset($successStudents[$id])))!==count($memberIds)){
+     $issues[]=['serviceId'=>(int)$s['id'],'reason'=>'اطلاعات تعرفه یا فاکتور یک یا چند دانش‌آموز ناقص است؛ از درج مبلغ ناقص برای راننده جلوگیری شد.'];
+     continue;
+    }
     $gross->execute([$aid,$s['id']]);$net=OperationsService::driverDeductions((float)$gross->fetchColumn(),$aid)['net_earned'];
     $audit->execute([$run,$aid,'service',$s['id'],json_encode(['monthlyFee'=>$s['monthly_fee'],'feeSource'=>$s['fee_source']]),json_encode(['monthlyFee'=>$net,'feeSource'=>'taxi']),$uid]);
-    $updateService->execute([$net,$s['id'],$aid]);
+    $updateService->execute([$net,$s['id'],$aid]);$updatedServices++;
    }
-   $pdo->commit();$response['applied']=true;$response['runId']=$run;$response['servicesUpdated']=count($rows);$response['codesFilled']=count($codeUpdates);
+   $pdo->commit();
+   $response['applied']=true;$response['runId']=$run;
+   $response['studentsUpdated']=$updatedStudents;$response['invoicesSynced']=$invoicesSynced;
+   $response['servicesUpdated']=$updatedServices;$response['servicesSkipped']=count($rows)-$updatedServices;
+   $response['codesFilled']=count($codeUpdates);$response['errors']=$issues;
+   $response['partial']=count($issues)>0;
   }catch(\Throwable $e){$pdo->rollBack();throw $e;}
   return $response;
  }
