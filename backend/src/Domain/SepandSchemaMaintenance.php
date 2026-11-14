@@ -33,16 +33,24 @@ final class SepandSchemaMaintenance {
   'vehicles'=>['idx_vehicles_sepand_vin'=>['agency_id,vin',false]]
  ];
  private static function tables(PDO $pdo): array {
-  return array_fill_keys(array_map('strtolower',$pdo->query('SELECT table_name FROM information_schema.tables WHERE table_schema=DATABASE()')->fetchAll(PDO::FETCH_COLUMN)),true);
+  // SHOW TABLES/COLUMNS also works on restricted shared-host MySQL users
+  // that cannot query INFORMATION_SCHEMA directly.
+  return array_fill_keys(array_map('strtolower',$pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN)),true);
  }
  private static function columns(PDO $pdo): array {
-  $q=$pdo->query("SELECT table_name,column_name FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name IN ('agencies','drivers','vehicles')");
-  $out=[];foreach($q->fetchAll(PDO::FETCH_ASSOC) as $r)$out[strtolower($r['table_name'])][strtolower($r['column_name'])]=true;
+  $out=[];
+  foreach(array_keys(self::COLS) as $table){
+   foreach($pdo->query('SHOW COLUMNS FROM `'.$table.'`')->fetchAll(PDO::FETCH_ASSOC) as $row)
+    $out[$table][strtolower((string)$row['Field'])]=true;
+  }
   return $out;
  }
  private static function indexes(PDO $pdo): array {
-  $q=$pdo->query("SELECT table_name,index_name FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name IN ('agencies','drivers','vehicles')");
-  $out=[];foreach($q->fetchAll(PDO::FETCH_ASSOC) as $r)$out[strtolower($r['table_name'])][strtolower($r['index_name'])]=true;
+  $out=[];
+  foreach(array_keys(self::COLS) as $table){
+   foreach($pdo->query('SHOW INDEX FROM `'.$table.'`')->fetchAll(PDO::FETCH_ASSOC) as $row)
+    $out[$table][strtolower((string)$row['Key_name'])]=true;
+  }
   return $out;
  }
  public static function inspect(PDO $pdo): array {
