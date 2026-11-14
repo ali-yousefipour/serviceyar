@@ -33,7 +33,9 @@ final class ContractDocuments {
 <h2>ماده ۲ ـ موضوع قرارداد</h2>
 <p>ارائه خدمات حمل‌ونقل دانش‌آموزی مطابق سرویس‌های تخصیص‌یافته، مقررات مرتبط و گواهی صلاحیت معتبر راننده.</p>
 <h2>ماده ۳ ـ مدت و مبلغ قرارداد</h2>
-<p>شروع: {{startDate}} | پایان: {{endDate}} | مبلغ توافق‌شده: {{totalAmount}} ریال.</p>
+<p>شروع: {{startDate}} | پایان: {{endDate}} | مبلغ خالص سالانه قرارداد راننده پس از کسورات: {{totalAmount}} ریال.</p>
+<p>جمع مبلغ ناخالص سالانه سرویس‌های تخصیص‌یافته: {{grossAnnual}} ریال؛ جمع کسورات طبق تنظیمات شرکت: {{deductionsAnnual}} ریال (نرخ کل: {{driverDeductionRate}} درصد).</p>
+<p>ریز سرویس‌های مبنای محاسبه: {{driverServicesSummary}}</p>
 <h2>ماده ۴ ـ تعهدات راننده</h2>
 <p>رعایت زمان‌بندی، ظرفیت مجاز خودرو، مقررات ایمنی، بیمه، گواهی صلاحیت و ضوابط خدمت‌رسانی به دانش‌آموزان الزامی است.</p>
 <h2>ماده ۵ ـ تعهدات شرکت</h2>
@@ -136,6 +138,61 @@ HTML;
    return ['kind'=>$kind,'version'=>$version,'title'=>$title];
   });
  }
+ /**
+  * A driver's contracted annual income is derived from the *gross driver base*
+  * of active assigned students, never from services.monthly_fee (already net).
+  * Apply the existing agency deduction policy once per service/month tier.
+  * Elementary: 8.5 months; secondary: 9 months.
+  */
+ private static function driverAnnualAmount(PDO $pdo,int $agencyId,int $driverId): array {
+  $query=$pdo->prepare("SELECT sv.id service_id,sv.title service_title,st.id student_id,
+   st.grade,sc.school_type,COALESCE(st.driver_base_monthly,st.monthly_fee) base_monthly
+   FROM services sv
+   JOIN service_students ss ON ss.service_id=sv.id
+   JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id
+   LEFT JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=sv.agency_id
+   WHERE sv.agency_id=? AND sv.driver_id=? AND sv.is_active=1
+    AND sv.status NOT IN ('cancelled','inactive')
+    AND st.is_active=1 AND st.deleted_at IS NULL
+   ORDER BY sv.id,st.id");
+  $query->execute([$agencyId,$driverId]);$rows=$query->fetchAll(PDO::FETCH_ASSOC);
+  $grouped=[];
+  foreach($rows as $row){
+   $type=(string)($row['school_type']??'');$grade=(string)($row['grade']??'');
+   $secondary=(bool)preg_match('/متوسطه|دبیرستان|secondary|high.school/iu',$type);
+   $primary=(bool)preg_match('/ابتدایی|دبستان|primary|elementary/iu',$type);
+   if(!$secondary&&!$primary){
+    $secondary=(bool)preg_match('/متوسطه|دبیرستان|secondary|high.school/iu',$grade);
+    $primary=(bool)preg_match('/ابتدایی|دبستان|primary|elementary/iu',$grade)
+      ||(bool)preg_match('/^[۱-۶1-6]$/u',trim($grade));
+   }
+   $months=$secondary?9:($primary?8.5:9);
+   $key=(int)$row['service_id'].':'.$months;
+   if(!isset($grouped[$key]))$grouped[$key]=['serviceId'=>(int)$row['service_id'],
+    'serviceTitle'=>(string)$row['service_title'],'months'=>$months,'students'=>0,'grossMonthly'=>0];
+   $base=(float)$row['base_monthly'];
+   if(!is_finite($base)||$base<0)throw new AuthException(422,'مبلغ پایه راننده برای یکی از دانش‌آموزان نامعتبر است.','INVALID_DRIVER_BASE');
+   $grouped[$key]['grossMonthly']+=$base;
+   $grouped[$key]['students']++;
+  }
+  if(!$grouped)throw new AuthException(409,'این راننده سرویس فعال دارای دانش‌آموز ندارد و مبلغ سالانه قابل محاسبه نیست.','DRIVER_CONTRACT_NO_SERVICES');
+  $rates=DriverDeductionPolicy::rates($agencyId);
+  $totalGross=0;$totalDeducted=0;$totalNet=0;$detail=[];
+  foreach($grouped as $row){
+   $monthly=DriverDeductionPolicy::calculate($row['grossMonthly'],$rates);
+   $gross=(int)round($row['grossMonthly']*$row['months']);
+   $net=(int)round($monthly['net_earned']*$row['months']);
+   $deductions=[];
+   foreach(array_keys(DriverDeductionPolicy::DEFAULTS) as $key)
+    $deductions[$key]=(int)round($monthly[$key.'_deduction']*$row['months']);
+   $deducted=$gross-$net;
+   $detail[]=$row+['grossAnnual'=>$gross,'netMonthly'=>(int)$monthly['net_earned'],
+    'deductionsAnnual'=>$deductions,'totalDeductionsAnnual'=>$deducted,'netAnnual'=>$net];
+   $totalGross+=$gross;$totalDeducted+=$deducted;$totalNet+=$net;
+  }
+  return ['grossAnnual'=>$totalGross,'deductionsAnnual'=>$totalDeducted,
+   'netAnnual'=>$totalNet,'rates'=>$rates,'services'=>$detail,'studentCount'=>count($rows)];
+ }
  private static function data(PDO $pdo,int $agencyId,string $kind,int $partyId): array {
   $q=$pdo->prepare('SELECT a.name,a.sepand_national_id FROM agencies a WHERE a.id=?');$q->execute([$agencyId]);$agency=$q->fetch(PDO::FETCH_ASSOC);
   if(!$agency)throw new AuthException(404,'شرکت یافت نشد.','NOT_FOUND');
@@ -182,7 +239,9 @@ HTML;
    :['driverName','driverNationalCode','managerName','companyName'];
   $missing=[];foreach($required as $field)if(trim((string)($data[$field]??''))==='')$missing[]=$field;
   $months=$kind==='parent'?(preg_match('/ابتدایی|دبستان|primary|elementary/u',(string)($data['schoolType']??'').(string)($data['grade']??''))?8.5:9):null;
-  return ['values'=>$data,'missing'=>$missing,'suggestedTotal'=>$kind==='parent'?(int)round((float)($data['monthlyFee']??0)*$months):null,'academicMonths'=>$months];
+  $annual=$kind==='driver'?self::driverAnnualAmount($pdo,$agencyId,$partyId):null;
+  return ['values'=>$data,'missing'=>$missing,'suggestedTotal'=>$kind==='parent'?(int)round((float)($data['monthlyFee']??0)*$months):$annual['netAnnual'],
+   'academicMonths'=>$months,'driverAnnual'=>$annual];
  }
  private static function resolvedOverrides(array $body): array {
   $allowed=['guardianName','guardianNationalCode','guardianFatherName','guardianMobile','guardianAddress',
@@ -226,8 +285,9 @@ HTML;
   if($partyId===false||$partyId<1)throw new AuthException(422,'طرف قرارداد را انتخاب کنید.','INVALID_CONTRACT_PARTY');
   $start=(string)($input['startDate']??'');$end=(string)($input['endDate']??'');
   if(!OperationsService::validDate($start)||!OperationsService::validDate($end)||$end<$start)throw new AuthException(422,'بازه زمانی قرارداد نامعتبر است.','INVALID_CONTRACT_DATES');
-  $amount=filter_var($input['amount']??null,FILTER_VALIDATE_INT);
-  if($amount===false||$amount<0||$amount>999999999999999)throw new AuthException(422,'مبلغ قرارداد باید عدد صحیح ریالی باشد.','INVALID_CONTRACT_AMOUNT');
+  $amount=$kind==='parent'?filter_var($input['amount']??null,FILTER_VALIDATE_INT):0;
+  if($kind==='parent'&&($amount===false||$amount<0||$amount>999999999999999))
+   throw new AuthException(422,'مبلغ قرارداد باید عدد صحیح ریالی باشد.','INVALID_CONTRACT_AMOUNT');
   $values=self::data($pdo,$agencyId,$kind,(int)$partyId);
   $overrides=$input['overrides']??[];
   if(!is_array($overrides))throw new AuthException(422,'اطلاعات تکمیلی قرارداد معتبر نیست.','INVALID_CONTRACT_OVERRIDE');
@@ -237,19 +297,29 @@ HTML;
    throw new AuthException(422,'اطلاعات اصلی طرفین قرارداد کامل نیست؛ ابتدا مشخصات تکمیلی را وارد کنید.','CONTRACT_REQUIRED_DATA_MISSING');
   $template=self::template($pdo,$kind);
   return OperationsService::transaction(function(PDO $pdo)use($uid,$agencyId,$kind,$partyId,$start,$end,$amount,$values,$template) {
+   $annual=$kind==='driver'?self::driverAnnualAmount($pdo,$agencyId,(int)$partyId):null;
+   if($annual!==null)$amount=$annual['netAnnual'];
    $contractNo='SY-'.$agencyId.'-'.date('ymd').'-'.strtoupper(bin2hex(random_bytes(4)));
    $months=$kind==='parent'?(preg_match('/ابتدایی|دبستان|primary|elementary/u',(string)($values['schoolType']??'').(string)($values['grade']??''))?8.5:9):0;
    $data=$values+['contractNo'=>self::persian($contractNo),'issueDate'=>self::jalali(date('Y-m-d')),'startDate'=>self::jalali($start),'endDate'=>self::jalali($end),
     'durationMonths'=>self::persian((string)$months),'totalAmount'=>self::persian(number_format($amount,0,'.',',')),
     'payment40'=>self::persian(number_format((int)round($amount*.4),0,'.',',')),
     'payment20'=>self::persian(number_format((int)round($amount*.2),0,'.',','))];
+   if($annual!==null){
+    $summary=[];
+    foreach($annual['services'] as $row)$summary[]=$row['serviceTitle'].' ('.self::persian((string)$row['months']).' ماه، خالص '.self::persian(number_format($row['netAnnual'],0,'.',',')).' ریال)';
+    $data['grossAnnual']=self::persian(number_format($annual['grossAnnual'],0,'.',','));
+    $data['deductionsAnnual']=self::persian(number_format($annual['deductionsAnnual'],0,'.',','));
+    $data['driverServicesSummary']=implode('؛ ',$summary);
+    $data['driverDeductionRate']=self::persian((string)array_sum($annual['rates']));
+   }
    $rendered=self::document((string)$template['body_html'],$data);
    $title=(string)$template['title'].' - '.($kind==='parent'?$values['studentName']:$values['driverName']);
    $pdo->prepare("INSERT INTO contracts(agency_id,title,contract_no,party_type,party_id,start_date,end_date,amount,status,template_id,rendered_html,snapshot_json,issued_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,NOW())")->execute([
     $agencyId,$title,$contractNo,$kind==='parent'?'student':'driver',$partyId,$start,$end,$amount,'active',$template['id'],$rendered,
-    json_encode(['templateVersion'=>$template['version'],'kind'=>$kind,'values'=>$data],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
+    json_encode(['templateVersion'=>$template['version'],'kind'=>$kind,'values'=>$data,'driverAnnualCalculation'=>$annual],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
    $id=(int)$pdo->lastInsertId();
-   return ['id'=>$id,'contractNo'=>$contractNo,'templateVersion'=>$template['version'],'title'=>$title];
+   return ['id'=>$id,'contractNo'=>$contractNo,'templateVersion'=>$template['version'],'title'=>$title,'amount'=>$amount];
   });
  }
  public static function listing(int $uid,int $agencyId,string $kind): array {
