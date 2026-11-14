@@ -611,7 +611,7 @@ async function ledgerReportPage(token=pageToken){
  <div class="toolbar-buttons"><button type="button" id="ledgerTabRecords" class="sy-ledger-back-to-records">بازگشت به ثبت اسناد</button></div>
  </section>
  <nav class="ledger-report-tabs sy-ledger-report-nav" aria-label="بخش‌های دریافت و پرداخت"><button type="button" data-ledger-records>ثبت و مدیریت اسناد</button><button type="button" class="active" aria-current="page">گزارش‌گیری</button></nav>
- <section class="panel ledger-report-panel sy-ledger-report-page-panel">
+ <section class="panel ledger-report-panel sy-ledger-report-page-panel" aria-label="فیلترها و نتایج گزارش مالی">
 
  ${ledgerFilterForm('report')}
  <div class="sy-ledger-report-output-head"><div class="sy-ledger-report-output-meta"><span class="sy-ledger-report-output-kicker">نتایج گزارش</span><h3>خلاصه و ریز تراکنش‌ها</h3><p id="ledgerReportFreshness" class="sy-ledger-report-freshness" role="status" aria-live="polite">پس از تنظیم فیلترها، «تهیه گزارش» را انتخاب کنید.</p><span id="ledgerFilterSummary" class="sy-ledger-report-count-badge" role="status" aria-live="polite">در حال دریافت سوابق…</span></div><div class="ledger-report-actions"><button type="button" id="ledgerReportPrint" disabled>چاپ گزارش</button><button type="button" id="ledgerReportExcel" disabled>خروجی اکسل</button></div></div>
