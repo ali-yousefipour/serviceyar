@@ -436,6 +436,11 @@ final class DomainService {
   if($id&&$resource==='messages'&&$existing['status']!=='queued')throw new AuthException(409,'پیام پردازش‌شده قابل ویرایش یا ارسال مجدد از این فرم نیست.','MESSAGE_LOCKED');
   if($id&&$resource==='payments'&&$existing['method']==='bale')throw new AuthException(409,'پرداخت استعلام‌شده بله قابل ویرایش نیست.','VERIFIED_PAYMENT_LOCKED');
   foreach($data as $f=>&$v){if($v==='')$v=null;}unset($v);
+  if($resource==='vehicles'&&!$id&&isset($data['plate'])){
+   $duplicate=self::lookupVehicleByPlate($uid,$aid,(string)$data['plate']);
+   if(($duplicate['found']??false)&&($duplicate['source']??'')==='current_agency')
+    throw new AuthException(409,'این پلاک قبلاً در شرکت شما ثبت شده است؛ خودروی موجود را ویرایش کنید.','DUPLICATE_VEHICLE_PLATE');
+  }
   if($resource==='vehicles'){
    if(array_key_exists('owner_name',$data)&&$data['owner_name']===null){
     $driver=$pdo->prepare("SELECT NULLIF(TRIM(CONCAT_WS(' ',first_name,last_name)),'') FROM drivers WHERE vehicle_id=? AND agency_id=? AND is_active=1 ORDER BY id DESC LIMIT 1");
