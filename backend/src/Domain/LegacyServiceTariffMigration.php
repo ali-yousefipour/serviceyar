@@ -30,10 +30,10 @@ final class LegacyServiceTariffMigration {
    if($normalized===null){$issues[]=['studentId'=>(int)$row['id'],'reason'=>'ناحیه مدرسه نامعتبر: '.$row['region']];continue;}
    $regions[(int)$row['school_id']]=$normalized;
    try{
-    $quote=ServicePricing::quote($pdo,$aid,$row,'taxi');
+    $quote=TaxiOrganizationTariffs::quote($pdo,(int)($normalized==='تبادکان'?8:$normalized),$row['tariff_vehicle_class'],$row['tariff_distance_km']);
     $changes[]=['id'=>(int)$row['id'],'schoolId'=>(int)$row['school_id'],
-     'oldFee'=>(int)$row['monthly_fee'],'newFee'=>(int)$quote['monthlyFee'],
-     'oldDriverBase'=>(int)($row['driver_base_monthly']??0),'newDriverBase'=>(int)$quote['driverBaseMonthly'],
+     'oldFee'=>(int)$row['monthly_fee'],'newFee'=>(int)$quote['parentMonthly'],
+     'oldDriverBase'=>(int)($row['driver_base_monthly']??0),'newDriverBase'=>(int)$quote['driverMonthly'],
      'oldSource'=>(string)$row['fee_source']];
    }catch(\Throwable $e){$issues[]=['studentId'=>(int)$row['id'],'reason'=>$e->getMessage()];}
   }
