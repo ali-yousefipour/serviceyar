@@ -45,7 +45,7 @@ final class ServicePricing {
      * Called inside an existing transaction when a service is saved or its
      * driver changes. Missing class fails with an actionable validation error.
      */
-    public static function synchronizeServiceVehicle(PDO $pdo,int $agencyId,int $serviceId,string $source,bool $requireClass=true): array {
+    public static function synchronizeServiceVehicle(PDO $pdo,int $agencyId,int $serviceId,string $source,bool $requireClass=true,bool $reprice=true): array {
         $source=self::source($source);
         $q=$pdo->prepare("SELECT sv.driver_id,sv.code,d.vehicle_id,v.model,
             v.tariff_vehicle_class
@@ -75,14 +75,14 @@ final class ServicePricing {
         $updated=0;
         foreach($ids as $studentId){
             $set->execute([(int)$class,$studentId,$agencyId]);
-            if($source!=='agreed')self::updateStudent($pdo,$agencyId,$studentId,$source);
-            StudentServiceBilling::sync($pdo,$agencyId,$studentId);
+            if($reprice && $source!=='agreed')self::updateStudent($pdo,$agencyId,$studentId,$source);
+            if($reprice)StudentServiceBilling::sync($pdo,$agencyId,$studentId);
             $updated++;
         }
         $gross=$pdo->prepare('SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
         $gross->execute([$agencyId,$serviceId]);
         $net=OperationsService::driverDeductions((float)$gross->fetchColumn(),$agencyId)['net_earned'];
-        if($source!=='agreed')$pdo->prepare('UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?')
+        if($reprice && $source!=='agreed')$pdo->prepare('UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?')
             ->execute([$net,$serviceId,$agencyId]);
         return ['updatedStudents'=>$updated,'vehicleClass'=>(int)$class];
     }
