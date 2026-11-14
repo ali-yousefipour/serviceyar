@@ -325,8 +325,9 @@ try {
     if(!$driverId||$driverId<1)throw new AuthException(422,'راننده انتخاب‌شده نامعتبر است.','INVALID_DRIVER');
     $v=$pdo->prepare("SELECT v.tariff_vehicle_class FROM drivers d JOIN vehicles v ON v.id=d.vehicle_id AND v.agency_id=d.agency_id AND v.is_active=1 WHERE d.id=? AND d.agency_id=? AND d.is_active=1");
     $v->execute([$driverId,$aid]);$class=$v->fetchColumn();
-    if(!in_array((string)$class,['1','2','3'],true))throw new AuthException(422,'ابتدا کلاس تعرفه خودرو را در قسمت خودروها ثبت کنید.','VEHICLE_TARIFF_CLASS_REQUIRED');
-    $student['tariff_vehicle_class']=$class;
+    if(in_array((string)$class,['1','2','3'],true))$student['tariff_vehicle_class']=$class;
+    elseif(!in_array((string)($b['vehicleClass']??''),['1','2','3'],true))
+     throw new AuthException(422,'ابتدا کلاس تعرفه خودرو را در قسمت خودروها یا فرم سرویس تعیین کنید.','VEHICLE_TARIFF_CLASS_REQUIRED');
    }
    // Preview the explicitly selected vehicle class (which the operator
    // may override) without writing changes to vehicle/student records.
