@@ -503,6 +503,8 @@ final class DomainService {
   foreach($data as $f=>$v){if(is_array($v)||is_object($v))throw new AuthException(422,'مقدار ورودی نامعتبر است.','VALIDATION_ERROR');}
   if($resource==='vehicles'&&!in_array('owner_name',thisColumns('vehicles',$pdo),true))
    throw new AuthException(503,'برای ثبت یا ویرایش مالک خودرو، مهاجرت دیتابیس 0029_vehicle_owner_name.sql باید اجرا شود.','VEHICLE_SCHEMA_UPDATE_REQUIRED');
+  if($resource==='vehicles'&&array_key_exists('owner_national_code',$data)&&!in_array('owner_national_code',thisColumns('vehicles',$pdo),true))
+   throw new AuthException(503,'برای فراخوانی راننده با کد ملی، ابتدا مهاجرت دیتابیس 0106_vehicle_owner_national_code.sql را اجرا کنید.','VEHICLE_OWNER_SCHEMA_UPDATE_REQUIRED');
   if($id)FinancialPosting::assertEditable($aid,$resource,$id);
   $existing=$id?self::get($uid,$aid,$resource,$id):[];
   if($id&&$resource==='messages'&&$existing['status']!=='queued')throw new AuthException(409,'پیام پردازش‌شده قابل ویرایش یا ارسال مجدد از این فرم نیست.','MESSAGE_LOCKED');
