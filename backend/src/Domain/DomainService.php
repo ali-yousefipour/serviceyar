@@ -164,8 +164,11 @@ final class DomainService {
    if(!$import)return ['vehicle'=>$vehicle,'driver'=>null,'imported'=>false];
    $driverData=['vehicleId'=>(int)$vehicle['id']];
    if((int)$source['agency_id']===$aid){
-    // Never silently move an existing driver away from another vehicle:
-    // an explicit confirmation here applies only to this registration.
+    // Protect active student services from reassignment of their driver's vehicle.
+    $active=$pdo->prepare("SELECT COUNT(*) FROM services WHERE driver_id=? AND agency_id=? AND is_active=1 AND status='active'");
+    $active->execute([(int)$source['id'],$aid]);
+    if((int)$active->fetchColumn()>0)
+     throw new AuthException(409,'این راننده سرویس فعال دارد. ابتدا تخصیص خودروی او را در بخش رانندگان و سرویس‌ها بررسی کنید.','DRIVER_HAS_ACTIVE_SERVICE');
     $driver=self::saveRecord($uid,$aid,'drivers',$driverData,(int)$source['id']);
     return ['vehicle'=>$vehicle,'driver'=>$driver,'imported'=>false,'linked'=>true];
    }
