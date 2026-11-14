@@ -448,6 +448,24 @@ try {
    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\TaxiOrganizationTariffs::save($s['id'],Request::json())]);
   }
  }
+ if($path==='/api/v1/admin/vehicle-class-catalog'){
+   if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\VehicleClassCatalog::list($s['id'])]);
+   if($method==='POST'){
+    $auth->requireCsrf($s);
+    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\VehicleClassCatalog::add($s['id'],Request::json())]);
+   }
+ }
+ if($method==='DELETE'&&preg_match('#^/api/v1/admin/vehicle-class-catalog/(\d+)$#',$path,$m)){
+   $auth->requireCsrf($s);
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\VehicleClassCatalog::remove($s['id'],(int)$m[1])]);
+ }
+ if($path==='/api/v1/admin/vehicle-class-detection'){
+   if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\VehicleClassCatalog::detect($s['id'])]);
+   if($method==='POST'){
+    $auth->requireCsrf($s);
+    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\VehicleClassCatalog::detect($s['id'],true,(string)(Request::json()['confirm']??''))]);
+   }
+ }
  if($path==='/api/v1/admin/sepand-registry/vehicle-classes'){
    if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\VehicleTariffClassRecovery::run($s['id'])]);
    if($method==='POST'){
