@@ -18,6 +18,7 @@ final class VehicleTariffClassRecovery {
    '۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1',
    '٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9'
   ]);
+  $text=str_replace('ایران','',$text);
   return preg_replace('/[\s\x{200C}\x{200F}\x{200E}\p{P}\p{Z}]+/u','',$text)??$text;
  }
  private static function candidates(PDO $pdo): array {
