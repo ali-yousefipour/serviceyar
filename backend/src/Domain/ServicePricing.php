@@ -40,6 +40,49 @@ final class ServicePricing {
         // is the payout calculation base; do not pretend it came from the taxi schedule.
         return ['monthlyFee'=>$fee,'driverBaseMonthly'=>$fee,'feeSource'=>$source,'currency'=>'IRR'];
     }
+    /**
+     * Vehicle data, not student input, determines the tariff class.
+     * Called inside an existing transaction when a service is saved or its
+     * driver changes. Missing class fails with an actionable validation error.
+     */
+    public static function synchronizeServiceVehicle(PDO $pdo,int $agencyId,int $serviceId,string $source): array {
+        $source=self::source($source);
+        $q=$pdo->prepare("SELECT sv.driver_id,sv.code,d.vehicle_id,v.model,
+            v.tariff_vehicle_class
+            FROM services sv
+            LEFT JOIN drivers d ON d.id=sv.driver_id AND d.agency_id=sv.agency_id
+            LEFT JOIN vehicles v ON v.id=d.vehicle_id AND v.agency_id=sv.agency_id AND v.is_active=1
+            WHERE sv.id=? AND sv.agency_id=? FOR UPDATE");
+        $q->execute([$serviceId,$agencyId]);$service=$q->fetch(PDO::FETCH_ASSOC);
+        if(!$service)throw new AuthException(404,'سرویس پیدا نشد.','NOT_FOUND');
+        $members=$pdo->prepare("SELECT st.id FROM service_students ss
+            JOIN students st ON st.id=ss.student_id AND st.agency_id=?
+            WHERE ss.service_id=? ORDER BY st.id FOR UPDATE");
+        $members->execute([$agencyId,$serviceId]);
+        $ids=array_map('intval',$members->fetchAll(PDO::FETCH_COLUMN));
+        if(!$ids)return ['updatedStudents'=>0,'vehicleClass'=>$service['tariff_vehicle_class']??null];
+        $class=(string)($service['tariff_vehicle_class']??'');
+        if(!in_array($class,['1','2','3'],true)) {
+            throw new AuthException(422,
+             'کلاس تعرفه خودروی راننده برای این سرویس مشخص نیست. ابتدا در قسمت خودروها، کلاس تعرفه خودرو را ۱، ۲ یا ۳ تعیین کنید.',
+             'VEHICLE_TARIFF_CLASS_REQUIRED');
+        }
+        $set=$pdo->prepare('UPDATE students SET tariff_vehicle_class=? WHERE id=? AND agency_id=?');
+        $updated=0;
+        foreach($ids as $studentId){
+            $set->execute([(int)$class,$studentId,$agencyId]);
+            if($source!=='agreed')self::updateStudent($pdo,$agencyId,$studentId,$source);
+            StudentServiceBilling::sync($pdo,$agencyId,$studentId);
+            $updated++;
+        }
+        $gross=$pdo->prepare('SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
+        $gross->execute([$agencyId,$serviceId]);
+        $net=OperationsService::driverDeductions((float)$gross->fetchColumn(),$agencyId)['net_earned'];
+        if($source!=='agreed')$pdo->prepare('UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?')
+            ->execute([$net,$serviceId,$agencyId]);
+        return ['updatedStudents'=>$updated,'vehicleClass'=>(int)$class];
+    }
+
     public static function updateStudent(PDO $pdo,int $aid,int $studentId,string $source): array {
         $q=$pdo->prepare('SELECT id,school_id,academic_year,tariff_distance_km,tariff_vehicle_class,monthly_fee FROM students WHERE id=? AND agency_id=? AND is_active=1 FOR UPDATE');
         $q->execute([$studentId,$aid]);$student=$q->fetch();
