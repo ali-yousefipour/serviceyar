@@ -718,7 +718,7 @@ async function contractsPage(token=pageToken){
     '<div class="sy-contract-create-actions"><button class="primary" type="submit">صدور و ثبت قرارداد</button><span id="syContractCreateStatus" aria-live="polite"></span></div></form></details>':'')+
     '<header class="sy-settings-section-head"><div><h3>قراردادهای صادرشده</h3><p>برای هر قرارداد نسخه چاپی ذخیره‌شده زمان صدور استفاده می‌شود.</p></div></header>'+
     '<div class="table-wrap"><table><thead><tr><th>شماره</th><th>عنوان قرارداد</th><th>تاریخ شروع</th><th>تاریخ پایان</th><th>مبلغ (ریال)</th><th>عملیات</th></tr></thead><tbody>'+
-    (docs.length?docs.map(c=>'<tr><td>'+esc(persianDigits(c.contract_no||'—'))+'</td><td>'+esc(c.title||'—')+'</td><td>'+esc(fmtDate(c.start_date))+'</td><td>'+esc(fmtDate(c.end_date))+'</td><td>'+number(c.amount)+'</td><td><button type="button" data-contract-print="'+Number(c.id)+'" '+(!Number(c.printable)?'disabled title="فاقد نسخه چاپی زمان صدور"':'')+'>مشاهده و چاپ مجدد</button></td></tr>').join(''):'<tr><td colspan="6">قراردادی در این بخش ثبت نشده است.</td></tr>')+
+    (docs.length?docs.map(c=>'<tr><td>'+esc(persianDigits(c.contract_no||'—'))+'</td><td>'+esc(c.title||'—')+'</td><td>'+esc(fmtDate(c.start_date))+'</td><td>'+esc(fmtDate(c.end_date))+'</td><td>'+number(c.amount)+'</td><td><button type="button" data-contract-print="'+Number(c.id)+'" data-contract-legacy="'+(Number(c.printable)?'0':'1')+'">'+(Number(c.printable)?'مشاهده و چاپ مجدد':'بازسازی و چاپ با هشدار')</button></td></tr>').join(''):'<tr><td colspan="6">قراردادی در این بخش ثبت نشده است.</td></tr>')+
     '</tbody></table></div>';
    const form=body.querySelector('#syContractCreateForm');
    if(form){
@@ -795,6 +795,7 @@ async function contractsPage(token=pageToken){
     };
    }
    body.querySelectorAll('[data-contract-print]').forEach(button=>button.onclick=async()=>{
+    if(button.dataset.contractLegacy==='1'&&!window.confirm('این قرارداد قدیمی نسخه چاپی زمان صدور ندارد. آیا نسخه بازسازی‌شده از اطلاعات فعلی با هشدار مشخص چاپ شود؟'))return;
     const printWindow=window.open('','_blank');
     if(!printWindow){notify('مرورگر پنجره چاپ را مسدود کرده است.',true);return;}
     printWindow.document.write('<html lang="fa" dir="rtl"><meta charset="utf-8"><body>در حال دریافت نسخه ذخیره‌شده قرارداد…</body></html>');printWindow.document.close();
