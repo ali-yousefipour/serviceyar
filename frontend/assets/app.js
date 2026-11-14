@@ -147,7 +147,11 @@ async function companiesPage(){
   trs.forEach((tr,i)=>{
    const agency=allCompanies[i];if(!agency)return;
    tr.dataset.status=Number(agency.is_active)===1?'active':'inactive';
-   tr.dataset.query=[agency.name,agency.code,agency.manager_name,agency.office_phone,agency.office_address].join(' ').replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').toLowerCase();
+   tr.dataset.query=[agency.name,agency.code,agency.sepand_national_id,agency.manager_name,agency.office_phone,agency.office_address].join(' ').replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').toLowerCase();
+   if(agency.sepand_national_id&&tr.cells[1]){
+    const line=document.createElement('small');line.className='sy-agency-sepand-id';line.textContent='شناسه ملی سپند: '+String(agency.sepand_national_id).replace(/[0-9]/g,d=>'۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
+    tr.cells[1].append(line);
+   }
    if(tr.cells[0])tr.cells[0].textContent=fa(agency.id);
    for(const cell of [...tr.cells].slice(1,8)){
     if(!cell)continue;
