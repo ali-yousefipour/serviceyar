@@ -39,13 +39,21 @@ final class VehicleClassCatalog {
   if($confirmation!=='INSTALL_VEHICLE_CLASS_CATALOG')
    throw new AuthException(422,'تأیید آماده‌سازی فهرست کلاس‌ها لازم است.','CONFIRMATION_REQUIRED');
   $pdo=Connection::get();
-  if(self::ready($pdo))return self::list($uid);
-  $file=dirname(__DIR__,3).'/database/migrations/0104_vehicle_tariff_class_models.sql';
-  $sql=@file_get_contents($file);
-  if(!$sql)throw new AuthException(503,'فایل ایجاد جدول کلاس‌های خودرو روی سرور پیدا نشد.','VEHICLE_CATALOG_MIGRATION_MISSING');
-  // CREATE TABLE is implicit-commit DDL, therefore only run with explicit approval.
+  if(!self::ready($pdo)){
+   $file=dirname(__DIR__,3).'/database/migrations/0104_vehicle_tariff_class_models.sql';
+   $sql=@file_get_contents($file);
+   if(!$sql)throw new AuthException(503,'فایل ایجاد جدول کلاس‌های خودرو روی سرور پیدا نشد.','VEHICLE_CATALOG_MIGRATION_MISSING');
+   // CREATE TABLE is implicit-commit DDL, therefore only run with explicit approval.
+   $pdo->exec($sql);
+   $pdo->prepare('INSERT IGNORE INTO migrations(migration) VALUES(?)')->execute([basename($file)]);
+  }
+  // A deployed 0104 schema may already exist: safely add newly approved
+  // families through a separate, idempotent seed migration on confirmation.
+  $seed=dirname(__DIR__,3).'/database/migrations/0105_vehicle_class_family_approvals.sql';
+  $sql=@file_get_contents($seed);
+  if(!$sql)throw new AuthException(503,'فایل مدل‌های جدید کلاس خودرو روی سرور پیدا نشد.','VEHICLE_CLASS_APPROVALS_MISSING');
   $pdo->exec($sql);
-  $pdo->prepare('INSERT IGNORE INTO migrations(migration) VALUES(?)')->execute([basename($file)]);
+  $pdo->prepare('INSERT IGNORE INTO migrations(migration) VALUES(?)')->execute([basename($seed)]);
   return self::list($uid);
  }
  private static function ensureReady(PDO $pdo): void {
