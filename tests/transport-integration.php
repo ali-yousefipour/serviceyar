@@ -65,6 +65,7 @@ try{
 
  // Contract documents: both independent party types, tenant isolation and
  // immutable print snapshots across template publication.
+ $p->prepare('UPDATE students SET national_code=? WHERE id=? AND agency_id=?')->execute(['1234567890',$s1['id'],$a]);
  $docApi=\ServiceYar\Domain\ContractDocuments::class;
  $preview=$docApi::draftData($uid,$a,'parent',(int)$s1['id']);
  check(($preview['values']['studentName']??'')==='آرمان آزمایشی','Parent contract preflight resolves the student by company');
