@@ -2967,3 +2967,18 @@ body.sy-menu-palette-open{overflow:hidden}
 .sy-contract-template-admin textarea{min-height:380px;resize:vertical;line-height:1.8;direction:rtl}
 @media(max-width:900px){.sy-contract-create-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.sy-contract-create-grid{grid-template-columns:minmax(0,1fr)}.sy-contract-workspace,.sy-contract-template-admin{padding:14px}.sy-contract-create{padding:12px}.sy-contract-tabs button{flex-basis:100%}.sy-contract-workspace table{font-size:.87rem}}
+
+
+.sy-contract-draft-data{grid-column:1/-1;padding:14px;border:1px dashed #99bcae;background:#f7fbf8;border-radius:12px}
+.sy-contract-draft-data h4{margin:0 0 6px;color:#165b44}
+.sy-contract-draft-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}
+.sy-contract-draft-grid label{font-size:.91rem}
+.sy-contract-draft-grid .is-missing input{border-color:#cd8346;background:#fffaf2}
+.sy-template-editor-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:8px 0}
+.sy-template-editor-toolbar button{padding:7px 12px;min-height:38px}
+.sy-template-editor-toolbar label{display:inline-flex;gap:6px;align-items:center}
+.sy-template-editor-toolbar select{max-width:210px;padding:7px;border:1px solid #bbccbf;border-radius:8px}
+.sy-template-visual-editor{padding:22px;min-height:420px;max-height:680px;overflow:auto;border:1px solid #aebfb6;border-radius:12px;background:#fff;font:9pt/1.55 Tahoma,sans-serif;text-align:right;direction:rtl}
+.sy-template-visual-editor:focus-visible{outline:2px solid #0f8660}
+#syContractTemplatePreview{width:100%;height:670px;border:1px solid #b7c9bf;border-radius:12px;background:#fff}
+@media(max-width:760px){.sy-contract-draft-grid{grid-template-columns:minmax(0,1fr)}}
