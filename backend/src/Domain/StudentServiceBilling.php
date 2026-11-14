@@ -21,7 +21,10 @@ final class StudentServiceBilling {
   if(!$assigned)return null;
   if(count($assigned)>1)throw new AuthException(409,'دانش‌آموز بیش از یک سرویس فعال دارد.','DUPLICATE_SERVICE_ASSIGNMENT');
   $fee=(float)$student['monthly_fee'];
-  if(!is_finite($fee)||$fee<=0)throw new AuthException(422,'برای صدور فاکتور، ابتدا شهریه معتبر دانش‌آموز را محاسبه کنید.','STUDENT_TARIFF_REQUIRED');
+  // Legacy/imported draft assignments may not yet have a usable tariff.
+  // Never issue a zero-value invoice or block the assignment; a later tariff
+  // update will create the invoice idempotently.
+  if(!is_finite($fee)||$fee<=0)return null;
   $type=(string)($student['school_type']??'');$grade=(string)($student['grade']??'');
   $primary=preg_match('/ابتدایی|دبستان|primary|elementary/ui',$type)
    ||(!preg_match('/متوسطه|دبیرستان|secondary|high.school/ui',$type)
