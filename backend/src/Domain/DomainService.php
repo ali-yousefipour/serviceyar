@@ -135,6 +135,17 @@ final class DomainService {
   if((int)$code[9]!==$check||preg_match('/^([0-9])\1{9}$/',$code))throw new AuthException(422,'کد ملی مالک معتبر نیست.','INVALID_OWNER_NATIONAL_CODE');
   return $code;
  }
+ /** Minimal preview after an explicit operator confirmation; no banking data. */
+ public static function ownerDriverPreview(int $uid,int $aid,string $code): array {
+  self::scope($uid,$aid,'drivers');
+  $code=self::normalizeOwnerCode($code);
+  $stmt=Connection::get()->prepare('SELECT agency_id,first_name,last_name,mobile,gender FROM drivers WHERE national_code=? ORDER BY (agency_id=?) DESC,id DESC LIMIT 1');
+  $stmt->execute([$code,$aid]);$driver=$stmt->fetch(\PDO::FETCH_ASSOC);
+  if(!$driver)return ['found'=>false];
+  return ['found'=>true,'inCurrentAgency'=>(int)$driver['agency_id']===$aid,
+    'firstName'=>$driver['first_name'],'lastName'=>$driver['last_name'],
+    'mobile'=>$driver['mobile'],'gender'=>$driver['gender']];
+ }
  /** Atomic tenant-local vehicle registration and optional owner-driver link. */
  public static function createVehicleWithOwnerDriver(int $uid,int $aid,array $body): array {
   Authorization::requirePermission($uid,'drivers.manage');
