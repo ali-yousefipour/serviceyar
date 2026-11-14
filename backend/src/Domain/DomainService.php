@@ -378,6 +378,9 @@ final class DomainService {
    if($vehicleCapacity===false)throw new AuthException(422,'راننده تأییدشده و فعال را انتخاب کنید.','DRIVER_NOT_ELIGIBLE');
    if($vehicleCapacity!==null&&(int)($b['capacity']??4)>(int)$vehicleCapacity)
     throw new AuthException(422,'ظرفیت سرویس از ظرفیت ثبت‌شده خودرو بیشتر است.','CAPACITY_EXCEEDED');
+   // The chosen vehicle model and manually adjustable class belong to the
+   // driver's registered vehicle, not to an unrelated student record.
+   ServicePricing::setDriverVehicleType($pdo,$aid,$driverId,$b);
    $b['schoolId']=$schools[0];$b['status']='active';
    $service=self::saveRecord($uid,$aid,$resource,$b,null);
    OperationsService::setServiceSchools($uid,$aid,(int)$service['id'],['schoolIds'=>$schools]);
@@ -647,6 +650,8 @@ final class DomainService {
    StudentServiceBilling::sync($pdo,$aid,(int)$id);
   }
   if($resource==='services'&&!empty($data['school_id']))$pdo->prepare('INSERT IGNORE INTO service_schools(service_id,school_id) VALUES(?,?)')->execute([$id,$data['school_id']]);
+  if($resource==='services'&&!$wasCreate)
+   ServicePricing::setDriverVehicleType($pdo,$aid,(int)($merged['driver_id']??0),$b);
   // Every service edit re-checks the driver's CURRENT registered vehicle,
   // including changing the driver without explicitly changing fee source.
   if($resource==='services'&&!$wasCreate){
