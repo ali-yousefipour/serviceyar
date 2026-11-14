@@ -32,6 +32,7 @@ final class ServiceFinanceReport
             'assignment_agency' => $aid, 'invoice_agency' => $aid, 'student_agency' => $aid,
             'from_date' => $from, 'to_date' => $to, 'paid_through' => $to,
             'academic_year' => $year, 'months' => $months,
+            'ledger_agency' => $aid, 'ledger_from' => $from, 'ledger_to' => $to,
         ];
         if ($studentId !== null) $params['student'] = $studentId;
 
@@ -53,20 +54,28 @@ final class ServiceFinanceReport
             ), financial AS (
                 SELECT student_id, SUM(amount) invoiced, SUM(received) received
                 FROM invoice_rows GROUP BY student_id
+            ), student_ledger AS (
+                SELECT party_id student_id,SUM(CASE WHEN direction='receipt' THEN amount ELSE -amount END) received
+                FROM ledger_entries
+                WHERE agency_id=:ledger_agency AND party_type='student' AND is_active=1
+                  AND entry_date BETWEEN :ledger_from AND :ledger_to
+                GROUP BY party_id
             ), student_rows AS (
                 SELECT st.id student_id, CONCAT_WS(' ',st.first_name,st.last_name) student,
                     sc.name school, s.title service, CONCAT_WS(' ',d.first_name,d.last_name) driver,
                     COALESCE(a.assignment_count,0) assignment_count,
                     NULLIF(st.monthly_fee,0) monthly_fee,
                     NULLIF(st.monthly_fee,0)*:months estimated_fee,
-                    COALESCE(f.invoiced,0) invoiced, COALESCE(f.received,0) received,
-                    COALESCE(f.invoiced,0)-COALESCE(f.received,0) balance
+                    COALESCE(f.invoiced,0) invoiced,
+                    COALESCE(f.received,0)+COALESCE(l.received,0) received,
+                    GREATEST(0,COALESCE(st.monthly_fee,0)*:months - COALESCE(f.received,0)-COALESCE(l.received,0)) balance
                 FROM students st
                 LEFT JOIN assignments a ON a.student_id=st.id
                 LEFT JOIN services s ON s.id=a.service_id AND s.agency_id=st.agency_id AND a.assignment_count=1
                 LEFT JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id
                 LEFT JOIN drivers d ON d.id=s.driver_id AND d.agency_id=st.agency_id
                 LEFT JOIN financial f ON f.student_id=st.id
+                LEFT JOIN student_ledger l ON l.student_id=st.id
                 WHERE st.agency_id=:student_agency AND REPLACE(st.academic_year,'/','-')=:academic_year".$where."
             )
             SELECT student_rows.*, COUNT(*) OVER () total_students,
