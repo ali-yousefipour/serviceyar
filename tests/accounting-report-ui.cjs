@@ -38,7 +38,8 @@ assert(source.includes('status.onchange=()=>refresh();order.onchange=()=>refresh
 assert(source.includes('searchTimer=setTimeout(()=>refresh(true),400)'),'Search should restore input focus following refresh');
 assert(!source.includes('<header class="sy-ledger-report-intro"'),'Report must not duplicate the primary heading inside the filters panel');
 assert(source.includes('class="ledger-report-letterhead sy-ledger-print-letterhead"'),'Branded document heading must be isolated for print');
-assert(theme.includes('#content .sy-ledger-report-page-panel .sy-ledger-print-letterhead')&&theme.includes('@media print'),'Report letterhead must not appear on screen but must print');
+const letterheadCss=fs.readFileSync(require('node:path').join(__dirname,'../frontend/assets/brand-theme.css'),'utf8');
+assert(letterheadCss.includes('#content .sy-ledger-report-page-panel .sy-ledger-print-letterhead')&&letterheadCss.includes('@media print'),'Report letterhead must not appear on screen but must print');
 assert(source.includes('aria-label="جدول گزارش دریافت‌ها و پرداخت‌ها"'),'Ledger report table needs an accessible label');
 assert(source.includes('data-label="دریافت (ریال)"'),'Ledger report needs mobile amount labels');
 assert(source.includes('id="ledgerReportRetry"'),'Ledger report must expose a retry action');
