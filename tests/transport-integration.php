@@ -551,6 +551,16 @@ try{
    &&(int)$afterRegisteredVehicleEdit['monthly_fee']===$expectedClassThree['parentMonthly'],
    'Editing registered vehicle class reprices its assigned students and synchronizes invoices');
  $tariffPreview=\ServiceYar\Domain\LegacyServiceTariffMigration::run($uid,$a,false);
+ check(($tariffPreview['servicesToChange']??-1)===
+   (($tariffPreview['servicesAmountToChange']??0)+($tariffPreview['servicesSourceOnlyToChange']??0)),
+   'Tariff preview separates actual monetary changes from source-only corrections');
+ check(($tariffPreview['servicesReady']??-1)===
+   (($tariffPreview['servicesToChange']??0)+($tariffPreview['servicesAlreadyCurrent']??0)),
+   'Tariff preview accounts for unchanged service amounts instead of marking all ready rows corrected');
+ check(count($tariffPreview['serviceChanges']??[])===($tariffPreview['servicesToChange']??-1),
+   'Tariff preview includes persisted comparison values for every changed service');
+ check(count($tariffPreview['studentChanges']??[])===($tariffPreview['studentsToChange']??-1),
+   'Tariff preview lists only student rows needing a real update');
  $draftError=array_values(array_filter($tariffPreview['errors'],static fn($e)=>(int)($e['studentId']??0)===(int)$draftStudent['id']));
  check(count($draftError)>0 && ($draftError[0]['studentName']??'')==='آزمون مهر'
   && !empty($draftError[0]['schoolName']) && in_array('پیش‌نویس مهر',array_map(static fn($name)=>preg_replace('/\\s*\\(.*$/u','',$name),$draftError[0]['serviceNames']??[]),true),
