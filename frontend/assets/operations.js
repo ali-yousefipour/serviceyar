@@ -2804,7 +2804,15 @@ async function newServicePage(token,initialDriverId){
    if(driverId&&picker)picker.setVehicle(vehicleFor(drivers.find(d=>Number(d.id)===driverId)));
    refreshSave();
   });
- const vehicleFor=driver=>vehicles.find(v=>Number(v.id)===Number(driver.vehicle_id));
+ const driverVehicleCache=new Map();
+ const vehicleFor=driver=>vehicles.find(v=>Number(v.id)===Number(driver?.vehicle_id))||driverVehicleCache.get(Number(driver?.vehicle_id));
+ const loadDriverVehicle=async driver=>{
+  const id=Number(driver?.vehicle_id);
+  if(!id||vehicleFor(driver))return vehicleFor(driver);
+  const record=await api(scoped('/api/v1/vehicles/'+id));
+  if(record)driverVehicleCache.set(id,record);
+  return record;
+ };
  const vehicleClass=driver=>vehicleFor(driver)?.tariff_vehicle_class;
  const classLabel=driver=>vehicleClass(driver)?' · کلاس تعرفه '+number(vehicleClass(driver)):' · کلاس تعرفه نامشخص؛ از قسمت خودروها تکمیل کنید';
  const driverCaption=driver=>[person(driver),vehicleFor(driver)?.model].filter(Boolean).join(' · ')+classLabel(driver);
@@ -2863,9 +2871,17 @@ async function newServicePage(token,initialDriverId){
    form.elements.vehicleModel.value=vehicle?.vehicle_trim||vehicle?.model||'';
    form.elements.vehicleClass.value=vehicleClass(driver)||'';
   }
-  $('serviceDriverSummary').textContent=driverCaption(driver)+(vehicle?' · ظرفیت '+number(vehicle.capacity):' · ظرفیت خودرو ثبت نشده');
+  $('serviceDriverSummary').textContent=driverCaption(driver)+(vehicle?' · ظرفیت '+number(vehicle.capacity):' · در حال دریافت خودرو…');
   $('pickServiceDriver').textContent='تغییر راننده';
   sync();
+  if(!vehicle&&driver.vehicle_id)void loadDriverVehicle(driver).then(loaded=>{
+   if(!form.isConnected||Number(driver.id)!==driverId)return;
+   if(newModelPicker)newModelPicker.setVehicle(loaded);
+   const vehicleMax=loaded&&Number(loaded.capacity)>0?Math.min(200,Number(loaded.capacity)):200;
+   form.elements.capacity.max=vehicleMax;form.elements.capacity.value=vehicleMax;
+   $('serviceDriverSummary').textContent=driverCaption(driver)+' · ظرفیت '+number(vehicleMax);
+   sync();
+  }).catch(e=>{if(form.isConnected)notify('دریافت مشخصات خودرو ناموفق بود: '+e.message,true);});
  };
  if(initialDriverId){
   const driver=drivers.find(row=>String(row.id)===initialDriverId&&row.status==='active');
