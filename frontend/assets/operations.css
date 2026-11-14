@@ -2884,3 +2884,22 @@ body.sy-menu-palette-open{overflow:hidden}
 @media(prefers-reduced-motion:reduce){
  #app .sy-command-sidebar #nav,#app .sy-command-sidebar #nav .nav-popup a{transition:none!important;scroll-behavior:auto!important}
 }
+
+/* Student account details and visible global tariff maintenance */
+.sy-taxi-settings>.sy-taxi-legacy-reprice[open]{border:1px solid #bed9cb;background:linear-gradient(120deg,#f0faf5,#fffaf0);border-radius:14px;padding:14px 18px;margin:12px 0 20px;box-shadow:0 8px 22px #11453112}
+.sy-taxi-legacy-reprice>summary{cursor:pointer;font-weight:800;color:#155940}
+.sy-taxi-legacy-reprice .member-actions{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
+.sy-student-account-panel{padding:18px 8px;direction:rtl}
+.sy-student-account-header{display:flex;align-items:center;justify-content:space-between;margin:0 0 14px}
+.sy-student-account-header h3{margin:0 0 6px;color:#155c46;font-size:1.1rem}
+.sy-student-account-header p{margin:0;color:#66786f;font-size:.86rem}
+.sy-student-account-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0 20px}
+.sy-student-account-stats>div{background:#f5f9f6;border:1px solid #e1ece3;border-radius:12px;padding:13px;display:grid;gap:8px}
+.sy-student-account-stats>div:nth-child(3){background:#fff7eb;border-color:#f4dfb9}
+.sy-student-account-stats span{font-size:.82rem;color:#5f7268}
+.sy-student-account-stats strong{font-size:1.04rem;color:#165640;overflow-wrap:anywhere}
+.sy-student-account-section{margin:14px 0;border:1px solid #e1e9e5;border-radius:12px;padding:14px;overflow-x:auto}
+.sy-student-account-section h4{margin:0 0 12px;color:#155c46}
+.sy-detailed-profile .sy-detail-section{border-radius:12px;border:1px solid #e4ebe5;background:#fff;padding:12px;margin:10px 0}
+@media(max-width:900px){.sy-student-account-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:500px){.sy-student-account-stats{grid-template-columns:1fr}.sy-taxi-legacy-reprice .member-actions>*{width:100%}}
