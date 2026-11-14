@@ -45,7 +45,7 @@ final class ServicePricing {
      * Called inside an existing transaction when a service is saved or its
      * driver changes. Missing class fails with an actionable validation error.
      */
-    public static function synchronizeServiceVehicle(PDO $pdo,int $agencyId,int $serviceId,string $source): array {
+    public static function synchronizeServiceVehicle(PDO $pdo,int $agencyId,int $serviceId,string $source,bool $requireClass=true): array {
         $source=self::source($source);
         $q=$pdo->prepare("SELECT sv.driver_id,sv.code,d.vehicle_id,v.model,
             v.tariff_vehicle_class
@@ -63,6 +63,10 @@ final class ServicePricing {
         if(!$ids)return ['updatedStudents'=>0,'vehicleClass'=>$service['tariff_vehicle_class']??null];
         $class=(string)($service['tariff_vehicle_class']??'');
         if(!in_array($class,['1','2','3'],true)) {
+            // Unrelated edits of old services must stay possible until their
+            // vehicle is classified. Explicit driver/source changes and new
+            // services always require an authoritative vehicle class.
+            if(!$requireClass)return ['updatedStudents'=>0,'vehicleClass'=>null,'requiresVehicleClass'=>true];
             throw new AuthException(422,
              'کلاس تعرفه خودروی راننده برای این سرویس مشخص نیست. ابتدا در قسمت خودروها، کلاس تعرفه خودرو را ۱، ۲ یا ۳ تعیین کنید.',
              'VEHICLE_TARIFF_CLASS_REQUIRED');
