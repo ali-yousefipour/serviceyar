@@ -2260,6 +2260,44 @@ async function settingsPage(){
 
  const settingsSection=(title,description)=>`<header class="sy-settings-section-head"><div><h2>${title}</h2><p>${description}</p></div></header>`;
  $('content').innerHTML=`<section class="panel sy-settings-panel">${settingsSection('اطلاعات شرکت','مشخصات عمومی و اطلاعات تماس شرکت')}<form id="transportSettings" class="form-grid sy-settings-grid">${Object.entries(fields).map(([k,t])=>`<label>${t}<input name="${k}" value="${esc(setting[k]||'')}" maxlength="500"></label>`).join('')}${can('settings','manage')?'<button class="primary">ذخیره تنظیمات</button>':''}</form><p class="muted">کلیدهای اتصال و سرویس‌دهنده‌ها تنها در تنظیمات سامانه و توسط ادمین کل مدیریت می‌شوند.</p></section>${can('holidays')?'<section class="panel"><h2>تعطیلات</h2><div id="holidayRows"></div><div id="holidayEditor"></div></section>':''}${can('users')?'<section class="panel"><h2>کاربران شرکت</h2><div id="companyUserRows"></div></section>':''}<div id="modal"></div>`;
+ if(session.roles?.includes('super_admin')){
+  const editor=document.createElement('section');editor.className='panel sy-contract-template-admin';
+  editor.innerHTML='<header class="sy-settings-section-head"><div><h2>مدیریت قالب قراردادهای سامانه</h2><p>انتشار هر ویرایش، نسخه جدید می‌سازد؛ قراردادهای صادرشده قبلی با محتوای ذخیره‌شده خود باقی می‌مانند.</p></div></header>'+
+   '<div class="sy-contract-tabs"><button type="button" class="primary" data-template-kind="parent">قالب قرارداد با ولی</button><button type="button" data-template-kind="driver">قالب قرارداد با راننده</button></div>'+
+   '<form id="syContractTemplateForm"><p id="syContractTemplateVersion" role="status"></p>'+
+   '<label>عنوان قالب<input name="title" maxlength="200" required></label>'+
+   '<label>متن و ساختار HTML قالب (برچسب‌های مجاز: h1, h2, p, table و سایر عناصر متنی؛ بدون اسکریپت)<textarea name="html" rows="17" required spellcheck="false" dir="rtl"></textarea></label>'+
+   '<p>فیلدهای پویا را با قالب <code>{{studentName}}</code>، <code>{{guardianName}}</code>، <code>{{managerName}}</code>، <code>{{companyName}}</code>، <code>{{totalAmount}}</code> وارد کنید.</p>'+
+   '<button type="submit" class="primary">انتشار نسخه جدید قالب</button> <span id="syContractTemplateStatus" role="status"></span></form>';
+  $('transportSettings').closest('section').after(editor);
+  const form=editor.querySelector('form'),buttons=[...editor.querySelectorAll('[data-template-kind]')];
+  let kind='parent',serial=0;
+  const load=async()=>{
+   const current=++serial;buttons.forEach(b=>b.classList.toggle('primary',b.dataset.templateKind===kind));
+   form.querySelector('#syContractTemplateStatus').textContent='در حال دریافت قالب…';
+   try{
+    const data=await api('/api/v1/contract-templates/'+kind);
+    if(current!==serial||!form.isConnected)return;
+    form.elements.title.value=data.title||'';
+    form.elements.html.value=data.html||'';
+    form.querySelector('#syContractTemplateVersion').textContent='نسخه فعال: '+number(data.version)+' · انتشار نسخه جدید تنها برای قراردادهای بعدی اعمال می‌شود.';
+    form.querySelector('#syContractTemplateStatus').textContent='';
+   }catch(error){form.querySelector('#syContractTemplateStatus').textContent=error.message;}
+  };
+  buttons.forEach(b=>b.onclick=()=>{kind=b.dataset.templateKind;void load();});
+  form.onsubmit=async e=>{
+   e.preventDefault();
+   if(!window.confirm('نسخه جدید قالب قرارداد منتشر شود؟ قراردادهای صادرشده قبلی بدون تغییر باقی می‌مانند.'))return;
+   const button=form.querySelector('[type=submit]');button.disabled=true;
+   try{
+    const data=await write('/api/v1/contract-templates/'+kind,{title:form.elements.title.value,html:form.elements.html.value});
+    form.querySelector('#syContractTemplateStatus').textContent='نسخه '+number(data.version)+' منتشر شد.';
+    form.querySelector('#syContractTemplateVersion').textContent='نسخه فعال: '+number(data.version);
+   }catch(error){form.querySelector('#syContractTemplateStatus').textContent=error.message;}
+   finally{button.disabled=false;}
+  };
+  void load();
+ }
  const logoPanel=document.createElement('section');logoPanel.className='panel sy-settings-panel sy-agency-logo-settings';
  logoPanel.innerHTML='<header class="sy-settings-section-head"><div><h2>لوگوی اختصاصی شرکت</h2><p>لوگو در داشبورد، سربرگ اسناد و خروجی چاپ و PDF شرکت استفاده می‌شود.</p></div></header><div class="sy-agency-logo-layout">'+agencyLogoImage('نشان شرکت '+(currentAgency?.name||''),100)+'<form id="agencyLogoForm"><label>انتخاب تصویر (PNG، JPG یا WebP؛ حداکثر ۱ مگابایت)<input type="file" name="companyLogo" accept="image/png,image/jpeg,image/webp" '+(can('settings','manage')?'':'disabled')+'></label>'+(can('settings','manage')?'<div class="sy-agency-logo-actions"><button class="primary" type="submit">ثبت لوگو</button><button type="button" id="removeAgencyLogo">حذف لوگوی اختصاصی</button></div>':'')+'<p id="agencyLogoStatus" role="status" aria-live="polite">در صورت ثبت‌نشدن لوگو، نشان پیش‌فرض سرویس‌یار استفاده می‌شود.</p></form></div>';
  $('transportSettings').closest('section').after(logoPanel);
