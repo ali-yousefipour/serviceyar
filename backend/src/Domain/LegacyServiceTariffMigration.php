@@ -76,7 +76,7 @@ final class LegacyServiceTariffMigration {
    'servicesReady'=>$eligibleServices,'servicesSkipped'=>$skippedServices,
    'schoolsToNormalize'=>count($regions),'errors'=>$issues,'applied'=>false,
    'monthlyDifference'=>array_sum(array_column($changes,'newFee'))-array_sum(array_column($changes,'oldFee'))];
-  if(!$apply)return $response;
+  if(!$apply){$response['errors']=self::describeErrors($pdo,$aid,$issues);return $response;}
   $existing=$pdo->query("SHOW TABLES LIKE 'service_tariff_repricing_audit'")->fetchColumn();
   if(!$existing)throw new AuthException(503,'ابتدا مهاجرت پایگاه داده نرخ‌نامه را اجرا کنید.','TARIFF_AUDIT_MIGRATION_REQUIRED');
   $run=bin2hex(random_bytes(16));$pdo->beginTransaction();
@@ -137,10 +137,74 @@ final class LegacyServiceTariffMigration {
    $response['applied']=true;$response['runId']=$run;
    $response['studentsUpdated']=$updatedStudents;$response['invoicesSynced']=$invoicesSynced;
    $response['servicesUpdated']=$updatedServices;$response['servicesSkipped']=count($rows)-$updatedServices;
-   $response['codesFilled']=count($codeUpdates);$response['errors']=$issues;
+   $response['codesFilled']=count($codeUpdates);$response['errors']=self::describeErrors($pdo,$aid,$issues);
    $response['partial']=count($issues)>0;
   }catch(\Throwable $e){$pdo->rollBack();throw $e;}
   return $response;
+ }
+ private static function describeErrors(PDO $pdo,int $agencyId,array $errors): array {
+  if(!$errors)return [];
+  $students=[];$schools=[];$services=[];
+  // Each lookup is scoped to the company; the returned labels are diagnostics
+  // for the authorized super-admin, not client-supplied identifiers.
+  $q=$pdo->prepare("SELECT st.id,st.first_name,st.last_name,st.grade,st.national_code,st.tariff_vehicle_class,
+    st.tariff_distance_km,st.school_id,sc.name AS school_name
+    FROM students st LEFT JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id
+    WHERE st.agency_id=?");
+  $q->execute([$agencyId]);
+  foreach($q->fetchAll(PDO::FETCH_ASSOC) as $st){
+   $st['serviceNames']=[];$students[(int)$st['id']]=$st;
+  }
+  $q=$pdo->prepare('SELECT id,name,region FROM schools WHERE agency_id=?');
+  $q->execute([$agencyId]);
+  foreach($q->fetchAll(PDO::FETCH_ASSOC) as $school)$schools[(int)$school['id']]=$school;
+  $q=$pdo->prepare("SELECT sv.id,sv.title,sv.code,sv.school_id,sc.name AS school_name,
+    CONCAT_WS(' ',dr.first_name,dr.last_name) AS driver_name,
+    st.id AS student_id
+    FROM services sv
+    LEFT JOIN schools sc ON sc.id=sv.school_id AND sc.agency_id=sv.agency_id
+    LEFT JOIN drivers dr ON dr.id=sv.driver_id AND dr.agency_id=sv.agency_id
+    LEFT JOIN service_students ss ON ss.service_id=sv.id
+    LEFT JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id
+    WHERE sv.agency_id=?");
+  $q->execute([$agencyId]);
+  foreach($q->fetchAll(PDO::FETCH_ASSOC) as $sv){
+   $id=(int)$sv['id'];
+   if(!isset($services[$id]))$services[$id]=[
+    'id'=>$id,'title'=>(string)$sv['title'],'code'=>(string)($sv['code']??''),
+    'schoolName'=>(string)($sv['school_name']??''),
+    'driverName'=>trim((string)($sv['driver_name']??'')),'studentNames'=>[]
+   ];
+   $studentId=(int)($sv['student_id']??0);
+   if($studentId && isset($students[$studentId])){
+    $label=trim((string)$students[$studentId]['first_name'].' '.(string)$students[$studentId]['last_name']);
+    $services[$id]['studentNames'][$studentId]=$label;
+    $students[$studentId]['serviceNames'][$id]=trim((string)$sv['title']).($sv['code']?' ('.(string)$sv['code'].')':'');
+   }
+  }
+  foreach($errors as &$error){
+   if(isset($error['studentId'],$students[(int)$error['studentId']])){
+    $st=$students[(int)$error['studentId']];
+    $error['studentName']=trim((string)$st['first_name'].' '.(string)$st['last_name']);
+    $error['schoolName']=(string)($st['school_name']??'');
+    $error['grade']=(string)($st['grade']??'');
+    $error['vehicleClass']=(string)($st['tariff_vehicle_class']??'');
+    $error['distanceKm']=$st['tariff_distance_km'];
+    $error['serviceNames']=array_values($st['serviceNames']);
+   }
+   if(isset($error['schoolId'],$schools[(int)$error['schoolId']])){
+    $school=$schools[(int)$error['schoolId']];
+    $error['schoolName']=(string)$school['name'];
+    $error['region']=(string)$school['region'];
+   }
+   if(isset($error['serviceId'],$services[(int)$error['serviceId']])){
+    $sv=$services[(int)$error['serviceId']];
+    $error['serviceTitle']=$sv['title'];$error['serviceCode']=$sv['code'];
+    $error['schoolName']=$sv['schoolName'];$error['driverName']=$sv['driverName'];
+    $error['studentNames']=array_values($sv['studentNames']);
+   }
+  }unset($error);
+  return $errors;
  }
  private static function normalize(mixed $raw): ?string {
   $v=trim(strtr((string)$raw,['۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7']));
