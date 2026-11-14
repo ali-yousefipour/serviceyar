@@ -1,10 +1,10 @@
 /* Transport operations. All writes use the authenticated API and server-side agency scope. */
 'use strict';
-const labels={creatorName:'ثبت‌کننده',partyName:'شخص / طرف حساب',fullName:'نام و نام خانوادگی',driverName:'راننده تخصیص‌یافته',ownerName:'نام مالک خودرو',paymentStatus:'وضعیت پرداخت',providerStatus:'وضعیت سرویس‌دهنده',attempts:'تعداد تلاش',name:'نام مدرسه',code:'کد',schoolType:'نوع مدرسه',managerName:'نام مدیر',phone:'تلفن',region:'ناحیه',gender:'جنسیت',shift:'شیفت',educationLevels:'مقاطع تحصیلی',firstName:'نام',lastName:'نام خانوادگی',nationalCode:'کد ملی',grade:'پایه تحصیلی',mobile:'شماره همراه',schoolId:'مدرسه',driverId:'راننده',vehicleId:'خودرو',packId:'پک سرویس',plate:'پلاک',model:'مدل خودرو',capacity:'ظرفیت',status:'وضعیت',rating:'امتیاز',title:'عنوان',contractNo:'شماره قرارداد',partyType:'نوع طرف حساب',partyId:'طرف حساب',startDate:'تاریخ شروع',endDate:'تاریخ پایان',amount:'مبلغ (ریال)',workDate:'تاریخ کارکرد',paymentDate:'تاریخ پرداخت',entryDate:'تاریخ',referenceNo:'شماره پیگیری',dueDate:'سررسید',invoiceId:'فاکتور',method:'روش پرداخت',parentId:'حساب بالادست',isActive:'فعال',documentNo:'شماره سند',documentDate:'تاریخ سند',description:'شرح',totalAmount:'مبلغ کل',ownerType:'نوع مالک',ownerId:'مالک',balance:'موجودی',bankName:'نام بانک',bankAccount:'شماره حساب بانکی',iban:'شماره شبا',companyAccountId:'حساب شرکت (مبدأ یا مقصد)',channel:'کانال',recipientType:'نوع گیرنده',recipientId:'گیرنده',subject:'موضوع',body:'متن',serviceId:'سرویس',oldDriverId:'راننده قبلی',newDriverId:'راننده جدید',reason:'دلیل',address:'نشانی',latitude:'عرض جغرافیایی',longitude:'طول جغرافیایی',returnAddress:'نشانی برگشت',startAddress:'نشانی مبدا',endAddress:'نشانی مقصد',guardianFirstName:'نام ولی',guardianLastName:'نام خانوادگی ولی',guardianNationalCode:'کد ملی ولی',guardianRelation:'نسبت ولی',fatherName:'نام پدر',nationality:'ملیت',healthStatus:'وضعیت جسمانی',emergencyPhone:'شماره‌های اضطراری',academicYear:'سال تحصیلی',serviceStatus:'وضعیت سرویس',monthlyFee:'ماهیانه (ریال)',annualFee:'مبلغ سالانه (ریال)',annualMonths:'ماه‌های سال تحصیلی',agreedAmount:'مبلغ توافقی راننده (ریال)',isRepresentative:'نماینده',bankName:'نام بانک',bankAccount:'شماره حساب',iban:'شماره شبا',direction:'نوع عملیات',note:'توضیحات',score:'امتیاز',studentId:'دانش‌آموز',response:'پاسخ',issueDate:'تاریخ صدور',pickupAddress:'نشانی سوار شدن',pickupOrder:'ترتیب توقف'};
+const labels={creatorName:'ثبت‌کننده',partyName:'شخص / طرف حساب',fullName:'نام و نام خانوادگی',driverName:'راننده تخصیص‌یافته',ownerNationalCode:'کد ملی مالک خودرو',ownerName:'نام مالک خودرو',paymentStatus:'وضعیت پرداخت',providerStatus:'وضعیت سرویس‌دهنده',attempts:'تعداد تلاش',name:'نام مدرسه',code:'کد',schoolType:'نوع مدرسه',managerName:'نام مدیر',phone:'تلفن',region:'ناحیه',gender:'جنسیت',shift:'شیفت',educationLevels:'مقاطع تحصیلی',firstName:'نام',lastName:'نام خانوادگی',nationalCode:'کد ملی',grade:'پایه تحصیلی',mobile:'شماره همراه',schoolId:'مدرسه',driverId:'راننده',vehicleId:'خودرو',packId:'پک سرویس',plate:'پلاک',model:'مدل خودرو',capacity:'ظرفیت',status:'وضعیت',rating:'امتیاز',title:'عنوان',contractNo:'شماره قرارداد',partyType:'نوع طرف حساب',partyId:'طرف حساب',startDate:'تاریخ شروع',endDate:'تاریخ پایان',amount:'مبلغ (ریال)',workDate:'تاریخ کارکرد',paymentDate:'تاریخ پرداخت',entryDate:'تاریخ',referenceNo:'شماره پیگیری',dueDate:'سررسید',invoiceId:'فاکتور',method:'روش پرداخت',parentId:'حساب بالادست',isActive:'فعال',documentNo:'شماره سند',documentDate:'تاریخ سند',description:'شرح',totalAmount:'مبلغ کل',ownerType:'نوع مالک',ownerId:'مالک',balance:'موجودی',bankName:'نام بانک',bankAccount:'شماره حساب بانکی',iban:'شماره شبا',companyAccountId:'حساب شرکت (مبدأ یا مقصد)',channel:'کانال',recipientType:'نوع گیرنده',recipientId:'گیرنده',subject:'موضوع',body:'متن',serviceId:'سرویس',oldDriverId:'راننده قبلی',newDriverId:'راننده جدید',reason:'دلیل',address:'نشانی',latitude:'عرض جغرافیایی',longitude:'طول جغرافیایی',returnAddress:'نشانی برگشت',startAddress:'نشانی مبدا',endAddress:'نشانی مقصد',guardianFirstName:'نام ولی',guardianLastName:'نام خانوادگی ولی',guardianNationalCode:'کد ملی ولی',guardianRelation:'نسبت ولی',fatherName:'نام پدر',nationality:'ملیت',healthStatus:'وضعیت جسمانی',emergencyPhone:'شماره‌های اضطراری',academicYear:'سال تحصیلی',serviceStatus:'وضعیت سرویس',monthlyFee:'ماهیانه (ریال)',annualFee:'مبلغ سالانه (ریال)',annualMonths:'ماه‌های سال تحصیلی',agreedAmount:'مبلغ توافقی راننده (ریال)',isRepresentative:'نماینده',bankName:'نام بانک',bankAccount:'شماره حساب',iban:'شماره شبا',direction:'نوع عملیات',note:'توضیحات',score:'امتیاز',studentId:'دانش‌آموز',response:'پاسخ',issueDate:'تاریخ صدور',pickupAddress:'نشانی سوار شدن',pickupOrder:'ترتیب توقف'};
 const statuses={no_request:'بدون درخواست',pending:'در انتظار تأیید',prepayment:'در انتظار پیش‌پرداخت',waiting:'در انتظار سرویس',assigned:'دارای سرویس',cancelled:'انصراف',active:'فعال',inactive:'غیرفعال',draft:'پیش‌نویس',open:'باز',paid:'پرداخت شده',overdue:'سررسید گذشته',approved:'تأیید شده',rejected:'رد شده',queued:'در صف ارسال',sent:'پذیرفته شده توسط سرویس',uncertain:'نیازمند بررسی',failed:'ناموفق',closed:'بسته شده'};
 Object.assign(labels,{sepandStatus:'وضعیت تأیید در سپند',sepandRequestId:'شناسه درخواست سپند',gender:'جنسیت',vin:'شماره VIN',vehicleType:'نوع کاربری خودرو (سواری / ون)',vehicleSystem:'شرکت سازنده',vehicleTrim:'نوع / مدل خودرو (جستجوی لحظه‌ای)',makeYear:'سال ساخت',fuelType:'نوع سوخت',color:'رنگ',engineNumber:'شماره موتور',chassisNumber:'شماره شاسی',insuranceNumber:'شماره بیمه',platePart1:'۲ رقم پلاک',plateLetter:'حرف پلاک',platePart3:'۳ رقم پلاک',plateIran:'کد ایران',invoiceTotal:'جمع فاکتور بدهی (ریال)',tariffDistanceKm:'مسافت تعرفه (کیلومتر)',tariffVehicleClass:'کلاس خودرو در تعرفه',feeSource:'مبنای محاسبه هزینه سرویس',paidTotal:'جمع دریافتی ثبت‌شده (ریال)',outstandingFee:'مانده بدهی دانش‌آموز (ریال)'});
 const transportFields={
- vehicles:['plate','ownerName','vin','model','vehicleType','vehicleSystem','vehicleTrim','makeYear','fuelType','color','engineNumber','chassisNumber','insuranceNumber','tariffVehicleClass','capacity','sepandStatus','isActive'],
+ vehicles:['plate','ownerName','ownerNationalCode','vin','model','vehicleType','vehicleSystem','vehicleTrim','makeYear','fuelType','color','engineNumber','chassisNumber','insuranceNumber','tariffVehicleClass','capacity','sepandStatus','isActive'],
  schools:['name','code','schoolType','gender','region','managerName','phone','shift','educationLevels','address','latitude','longitude'],
  students:['mobile','guardianFirstName','guardianLastName','guardianNationalCode','guardianRelation','address','returnAddress','latitude','longitude','schoolId','grade','shift','academicYear','firstName','lastName','gender','nationality','nationalCode','fatherName','emergencyPhone','healthStatus','serviceStatus','tariffDistanceKm','tariffVehicleClass','feeSource','monthlyFee'],
  drivers:['firstName','lastName','nationalCode','gender','mobile','vehicleId','sepandRequestId','sepandStatus','status','isRepresentative','address','bankName','bankAccount','iban'],
@@ -946,7 +946,7 @@ document.addEventListener('keydown',e=>{const modal=$('modal')?.querySelector('.
 function resourceWizard(form,key){
  const definitions={students:[['اطلاعات ولی',['mobile','guardianFirstName','guardianLastName','guardianNationalCode','guardianRelation','emergencyPhone']],['مشخصات دانش‌آموز',['firstName','lastName','gender','nationality','nationalCode','fatherName','healthStatus']],['نشانی و مدرسه',['address','returnAddress','latitude','longitude','schoolId','grade','shift','academicYear']],['وضعیت و هزینه',['serviceStatus','tariffDistanceKm','tariffVehicleClass','monthlyFee']]],drivers:[['مشخصات راننده',['firstName','lastName','nationalCode','mobile','status']],['خودرو و نشانی',['vehicleId','isRepresentative','address']],['اطلاعات بانکی',['bankName','bankAccount','iban']]],services:[['مشخصات سرویس',['title','code','capacity','shift','status']],['مدرسه و راننده',['schoolId','driverId','packId']],['مسیر و مبالغ',['startAddress','endAddress','monthlyFee','agreedAmount']]]};
  definitions.cheques=[['مشخصات چک',['bankName','branchName','serialNo','bankAccount']],['دریافت و سررسید',['receivedFrom','accountId','amount','receivedDate','dueDate','description','counterAccountId']]];
- definitions.vehicles=[['پلاک و فراخوانی اطلاعات',['plate']],['مشخصات خودرو',['ownerName','vehicleType','vehicleSystem','vehicleTrim','model','tariffVehicleClass','capacity']],['اطلاعات تکمیلی',['vin','makeYear','fuelType','color','engineNumber','chassisNumber','insuranceNumber','sepandStatus','isActive']]];
+ definitions.vehicles=[['پلاک و فراخوانی اطلاعات',['plate']],['مشخصات خودرو',['ownerName','ownerNationalCode','vehicleType','vehicleSystem','vehicleTrim','model','tariffVehicleClass','capacity']],['اطلاعات تکمیلی',['vin','makeYear','fuelType','color','engineNumber','chassisNumber','insuranceNumber','sepandStatus','isActive']]];
  const groups=definitions[key];if(!groups)return;const grid=form.querySelector('.form-grid'),fields=[...grid.children],steps=[];form.classList.add('sy-record-wizard',`sy-record-wizard--${key}`);
  const progress=document.createElement('nav');progress.className='wizard-progress';progress.setAttribute('aria-label','مراحل تکمیل فرم');form.prepend(progress);
  for(const [title,names] of groups){const section=document.createElement('section');section.className='wizard-step';const heading=document.createElement('h4');heading.textContent=title;section.append(heading);const content=document.createElement('div');content.className='form-grid sy-wizard-fields';section.append(content);for(const name of names){const field=fields.find(l=>l.querySelector(`[name="${name}"]`));if(field)content.append(field);}steps.push({title,section,fields:names});grid.before(section);}
@@ -1222,6 +1222,67 @@ async function formResource(key,id,onSaved){
     modelMirror:form.elements.model,initialValue:row.vehicle_trim||row.model||''
    }):Promise.resolve(null);
   if(tariffClass){tariffClass.required=!id;tariffClass.closest('label')?.append(Object.assign(document.createElement('small'),{textContent:'کلاس خودرو مبنای محاسبه سرویس‌های مرتبط است. در خودروهای قدیمی فاقد کلاس، برای سایر ویرایش‌ها می‌توانید این فیلد را خالی بگذارید؛ در اولین فرصت کلاس معتبر را تعیین کنید.'}));}
+  if(!id&&form.elements.ownerNationalCode){
+   const codeInput=form.elements.ownerNationalCode;
+   codeInput.inputMode='numeric';codeInput.maxLength=10;codeInput.autocomplete='off';
+   codeInput.placeholder='کد ملی ۱۰ رقمی مالک خودرو';
+   codeInput.setAttribute('aria-label','کد ملی مالک خودرو');
+   const status=document.createElement('div');
+   status.className='sy-owner-driver-status';
+   status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+   codeInput.closest('label')?.append(status);
+   const retry=document.createElement('button');
+   retry.type='button';retry.className='sy-owner-driver-retry';
+   retry.textContent='بررسی مجدد و فراخوانی راننده';
+   retry.hidden=true;status.after(retry);
+   let approvedCode='',lastChecked='',busy=false,seq=0;
+   const normalized=()=>ServiceYarDates.digits(codeInput.value).replace(/\D/g,'').slice(0,10);
+   const reset=()=>{
+    seq++;approvedCode='';lastChecked='';delete form.dataset.importOwnerDriver;
+    status.textContent='';retry.hidden=true;
+   };
+   codeInput.addEventListener('input',()=>{
+    const normalizedCode=normalized();
+    codeInput.value=persianDigits(normalizedCode);
+    reset();
+   });
+   const check=async()=>{
+    const code=normalized();
+    if(busy||!code||code===lastChecked)return;
+    if(code.length!==10){status.textContent='کد ملی مالک باید ۱۰ رقم باشد.';return;}
+    lastChecked=code;const current=++seq;busy=true;
+    status.textContent='در حال بررسی سوابق راننده…';
+    try{
+     const result=await api(scoped('/api/v1/vehicles/owner-driver-exists?nationalCode='+encodeURIComponent(code)));
+     if(current!==seq||!form.isConnected||normalized()!==code)return;
+     if(!result.found){
+      status.textContent='راننده‌ای با این کد ملی در سوابق سامانه پیدا نشد. خودرو بدون فراخوانی راننده ثبت می‌شود.';
+      retry.hidden=true;return;
+     }
+     retry.hidden=false;
+     const consent=window.confirm('راننده‌ای با این کد ملی در '+(result.inCurrentAgency?'شرکت جاری':'سوابق سامانه و شرکت‌های دیگر')+' یافت شد. آیا اطلاعات راننده فراخوانی و هنگام ثبت خودرو به فهرست رانندگان شرکت اضافه یا متصل شود؟');
+     if(current!==seq||!form.isConnected||normalized()!==code)return;
+     if(!consent){status.textContent='فراخوانی راننده لغو شد. فقط اطلاعات خودرو ثبت خواهد شد.';return;}
+     const preview=await api(scoped('/api/v1/vehicles/owner-driver-preview?nationalCode='+encodeURIComponent(code)));
+     if(current!==seq||!form.isConnected||normalized()!==code)return;
+     if(!preview.found){status.textContent='سوابق راننده تغییر کرده است؛ دوباره بررسی کنید.';return;}
+     approvedCode=code;form.dataset.importOwnerDriver=code;
+     const name=[preview.firstName,preview.lastName].filter(Boolean).join(' ');
+     if(form.elements.ownerName&&!form.elements.ownerName.value.trim())form.elements.ownerName.value=name;
+     status.textContent='راننده آماده فراخوانی: '+name+(preview.mobile?' · '+persianDigits(preview.mobile):'')+'. پس از ذخیره خودرو، راننده نیز در فهرست شرکت ثبت یا متصل می‌شود.';
+     retry.hidden=true;
+    }catch(error){
+     if(current===seq&&form.isConnected){status.textContent='بررسی راننده ناموفق بود: '+error.message;retry.hidden=false;lastChecked='';}
+    }finally{busy=false;}
+   };
+   codeInput.addEventListener('blur',()=>{void check();});
+   retry.addEventListener('click',()=>{lastChecked='';void check();});
+   form.addEventListener('submit',event=>{
+    const code=normalized();
+    if(code&&code.length!==10){event.preventDefault();event.stopImmediatePropagation();codeInput.focus();notify('کد ملی مالک را کامل کنید.',true);return;}
+    if(approvedCode!==code)delete form.dataset.importOwnerDriver;
+   },true);
+  }
   const owner=form.elements.ownerName;
   if(owner&&!owner.value.trim()&&row.effective_owner_name)owner.value=row.effective_owner_name;
   if(owner){const hint=document.createElement('small');hint.className='sy-vehicle-owner-hint';hint.textContent='در نبود مالک اختصاصی، راننده مرتبط مالک پیش‌فرض است.';owner.closest('label')?.append(hint);}
@@ -1387,7 +1448,10 @@ if(form.elements.mobile){const mobile=form.elements.mobile;mobile.pattern='09[0-
     delete body.vehicleModel;delete body.vehicleClass;
    }
   }
-  await write('/api/v1/'+key+(id?'/'+id:''),body,id?'PUT':'POST');
+  if(key==='vehicles'&&!id&&body.ownerNationalCode){
+   body.importOwnerDriver=form.dataset.importOwnerDriver===ServiceYarDates.digits(body.ownerNationalCode);
+   await write('/api/v1/vehicles/create-with-owner',body,'POST');
+  }else await write('/api/v1/'+key+(id?'/'+id:''),body,id?'PUT':'POST');
   if(key==='schools'&&id){
    const file=form.querySelector('#sySchoolPhotoUpload')?.files?.[0];
    if(file){
