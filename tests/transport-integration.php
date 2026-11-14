@@ -446,6 +446,22 @@ try{
   'New Sepand vehicle record inherits confirmed class of old same-company plate');
  check((int)D::get($uid,$a,'vehicles',(int)$knownClassVehicle['id'])['tariff_vehicle_class']===2,
   'Existing valid vehicle class is never overwritten');
+ $saipaClass2=D::save($uid,$a,'vehicles',['plate'=>'40ج'.substr($tag,0,4).'11','vehicleSystem'=>'سایپا','vehicleTrim'=>'ساینا S EX','capacity'=>4]);
+ $narvanClass3=D::save($uid,$a,'vehicles',['plate'=>'41ج'.substr($tag,0,4).'12','vehicleSystem'=>'نارون','vehicleTrim'=>'XML6482E YJD','capacity'=>4]);
+ $conflictingModel=D::save($uid,$a,'vehicles',['plate'=>'42ج'.substr($tag,0,4).'13','vehicleSystem'=>'پراید','vehicleTrim'=>'تیبا','capacity'=>4]);
+ $genericManufacturer=D::save($uid,$a,'vehicles',['plate'=>'43ج'.substr($tag,0,4).'14','vehicleSystem'=>'پارس خودرو','vehicleTrim'=>'نامشخص','capacity'=>4]);
+ $detected=\ServiceYar\Domain\VehicleClassCatalog::detect($uid);
+ $detectedById=array_column($detected['classified'],'vehicleClass','vehicleId');
+ $unresolvedIds=array_map('intval',array_column($detected['unresolved'],'vehicleId'));
+ check(($detectedById[(int)$saipaClass2['id']]??null)===2,
+  'Approved Saina variants are recognized as class two');
+ check(($detectedById[(int)$narvanClass3['id']]??null)===3,
+  'Narvan remains class three even with a non-van Sepand type');
+ check(in_array((int)$conflictingModel['id'],$unresolvedIds,true),
+  'Conflicting Pride and Tiba descriptions must not be auto classified');
+ check(in_array((int)$genericManufacturer['id'],$unresolvedIds,true),
+  'Pars Khodro manufacturer must not be misclassified as Peugeot Pars');
+
  $unnamedVehicle=D::save($uid,$a,'vehicles',['plate'=>'77ی12345','capacity'=>4]);
  $fallbackDriver=D::save($uid,$a,'drivers',['firstName'=>'راننده','lastName'=>'مالک پیش‌فرض','status'=>'active','vehicleId'=>$unnamedVehicle['id']]);
  $fallbackRow=D::get($uid,$a,'vehicles',(int)$unnamedVehicle['id']);
