@@ -10,7 +10,7 @@ final class DomainService {
   'schools'=>['table'=>'schools','permission'=>'schools','fields'=>['name','code','school_type','manager_name','phone','address','latitude','longitude','region','is_active'],'search'=>['name','code','manager_name']],
   'students'=>['table'=>'students','permission'=>'students','fields'=>['school_id','first_name','last_name','national_code','grade','mobile','address','latitude','longitude','is_active'],'search'=>['first_name','last_name','national_code']],
   'drivers'=>['table'=>'drivers','permission'=>'drivers','fields'=>['first_name','last_name','national_code','mobile','status','rating','vehicle_id','address','is_active'],'search'=>['first_name','last_name','national_code','mobile']],
-  'vehicles'=>['table'=>'vehicles','permission'=>'drivers','fields'=>['plate','model','capacity','owner_name','is_active'],'search'=>['plate','model','owner_name']],
+  'vehicles'=>['table'=>'vehicles','permission'=>'drivers','fields'=>['plate','model','tariff_vehicle_class','capacity','owner_name','is_active'],'search'=>['plate','model','owner_name']],
   'services'=>['table'=>'services','permission'=>'services','fields'=>['title','code','school_id','driver_id','capacity','status','start_address','end_address','pack_id','shift','monthly_fee','agreed_amount','fee_source','is_active'],'search'=>['title','code']],
   'packs'=>['table'=>'packs','permission'=>'services','fields'=>['title','status','capacity'],'search'=>['title']],
   'contracts'=>['table'=>'contracts','permission'=>'services','fields'=>['title','contract_no','party_type','party_id','start_date','end_date','amount','status'],'search'=>['title','contract_no']],
@@ -381,11 +381,12 @@ final class DomainService {
    $b['schoolId']=$schools[0];$b['status']='active';
    $service=self::saveRecord($uid,$aid,$resource,$b,null);
    OperationsService::setServiceSchools($uid,$aid,(int)$service['id'],['schoolIds'=>$schools]);
-   sort($students);foreach($students as $student){
+   sort($students);foreach($students as $student)
     self::assignStudent($uid,$aid,(int)$service['id'],$student);
-    if(array_key_exists('feeSource',$b))ServicePricing::updateStudent($pdo,$aid,$student,ServicePricing::source($b['feeSource']));
-    StudentServiceBilling::sync($pdo,$aid,(int)$student);
-   }
+   // Always overwrite the student's former tariff class with the actual
+   // registered vehicle's class before calculating new-service tuition.
+   ServicePricing::synchronizeServiceVehicle($pdo,$aid,(int)$service['id'],
+      ServicePricing::source($b['feeSource']??'taxi'));
    if ($students && !array_key_exists('monthlyFee', $b)) {
     $grossQuery=$pdo->prepare('SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
     $grossQuery->execute([$aid,$service['id']]);
@@ -500,6 +501,12 @@ final class DomainService {
     }
    }
   }
+  if($resource==='vehicles'&&array_key_exists('tariff_vehicle_class',$data)){
+   $class=(string)($data['tariff_vehicle_class']??'');
+   if(!in_array($class,['1','2','3'],true))throw new AuthException(422,
+     'کلاس تعرفه خودرو باید از کلاس‌های ۱، ۲ یا ۳ انتخاب شود.','INVALID_VEHICLE_TARIFF_CLASS');
+   $data['tariff_vehicle_class']=(int)$class;
+  }
   if($resource==='services')$data['fee_source']=ServicePricing::source($merged['fee_source']??'taxi');
   if($resource==='payments'&&($data['method']??'')==='bale')throw new AuthException(422,'پرداخت بله فقط پس از استعلام سرویس ثبت می‌شود.','WORKFLOW_REQUIRED');
   if($resource==='services'&&($data['status']??'')==='cancelled')$data['is_active']=0;
@@ -589,6 +596,17 @@ final class DomainService {
   else{$sets=[];$params=['id'=>$id,'agency'=>$aid];foreach($data as $f=>$v){if($f==='agency_id'||$f==='uuid')continue;$sets[]="$f=:$f";$params[$f]=$v;}if(!$sets)throw new AuthException(422,'تغییری ارسال نشده است.','VALIDATION_ERROR');$pdo->prepare('UPDATE '.$c['table'].' SET '.implode(',',$sets).' WHERE id=:id AND agency_id=:agency')->execute($params);}
   // Vehicle seating capacity must be reflected by assigned services, including older unsynchronized records.
   // Both writes share the current transaction; existing assignments are untouched.
+  // Changing a vehicle's official class reprices all linked service
+  // assignments in this transaction; an invalid tariff rolls everything back.
+  if($resource==='vehicles'&&$id&&array_key_exists('tariff_vehicle_class',$data)){
+   $linked=$pdo->prepare("SELECT sv.id,sv.fee_source FROM services sv
+    JOIN drivers d ON d.id=sv.driver_id AND d.agency_id=sv.agency_id
+    WHERE sv.agency_id=? AND d.vehicle_id=? AND sv.is_active=1");
+   $linked->execute([$aid,$id]);
+   foreach($linked->fetchAll(\PDO::FETCH_ASSOC) as $linkedService)
+    ServicePricing::synchronizeServiceVehicle($pdo,$aid,(int)$linkedService['id'],
+      (string)($linkedService['fee_source']??'taxi'));
+  }
   if($resource==='vehicles'&&$id&&isset($data['capacity'])){
    $newCapacity=(int)$data['capacity'];
    $sync=$pdo->prepare("UPDATE services sv JOIN drivers d ON d.id=sv.driver_id AND d.agency_id=sv.agency_id
@@ -613,18 +631,11 @@ final class DomainService {
    StudentServiceBilling::sync($pdo,$aid,(int)$id);
   }
   if($resource==='services'&&!empty($data['school_id']))$pdo->prepare('INSERT IGNORE INTO service_schools(service_id,school_id) VALUES(?,?)')->execute([$id,$data['school_id']]);
-  // Changing a service source explicitly also re-prices its current students atomically.
-  if($resource==='services'&&!$wasCreate&&array_key_exists('fee_source',$data)
-   &&(string)($existing['fee_source']??'taxi')!==(string)$data['fee_source']){
-   $members=$pdo->prepare('SELECT student_id FROM service_students WHERE service_id=?');
-   $members->execute([$id]);
-   foreach($members->fetchAll(\PDO::FETCH_COLUMN) as $studentId)
-    {ServicePricing::updateStudent($pdo,$aid,(int)$studentId,(string)$data['fee_source']);StudentServiceBilling::sync($pdo,$aid,(int)$studentId);}
-   $gross=$pdo->prepare('SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
-   $gross->execute([$aid,$id]);
-   $net=OperationsService::driverDeductions((float)$gross->fetchColumn(),$aid)['net_earned'];
-   $pdo->prepare('UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?')->execute([$net,$id,$aid]);
-  }
+  // Every service edit re-checks the driver's CURRENT registered vehicle,
+  // including changing the driver without explicitly changing fee source.
+  if($resource==='services'&&!$wasCreate)
+   ServicePricing::synchronizeServiceVehicle($pdo,$aid,(int)$id,
+    (string)($data['fee_source']??$merged['fee_source']??'taxi'));
   if($resource==='services'&&isset($data['is_active']))self::syncStudentStatus($pdo,$aid,$id,(int)$data['is_active']===1);
   if($resource==='students'&&isset($data['is_active'])&&(int)$data['is_active']===0)self::releaseStudent($pdo,$uid,$aid,$id);
   $s=$pdo->prepare('SELECT * FROM '.$c['table'].' WHERE id=:id AND agency_id=:agency');$s->execute(['id'=>$id,'agency'=>$aid]);$row=$s->fetch();if(!$row)throw new AuthException(404,'رکورد پیدا نشد.','NOT_FOUND');self::activity($pdo,$aid,$uid,$wasCreate?'create':'update',$c['table'],$id);return $row;
