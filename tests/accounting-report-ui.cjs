@@ -85,4 +85,18 @@ assert(source.includes("'/api/v1/reports/ledger/export?'+query"),'Ledger export 
 assert(source.includes("filterForm.querySelector('.ledger-filter-more .ledger-filter-grid')"),'Sort controls must remain in the advanced filters');
 for(const marker of ['#content .sy-ledger-kpis','#content .sy-ledger-kpi','#content .sy-ledger-filters-v3','#content .sy-ledger-results .sy-ledger-data-table','@media(max-width:650px)'])
  assert(theme.includes(marker),'Institutional responsive ledger styles missing '+marker);
+// Report tab must use the same financial design without changing the reporting workflow.
+assert(source.includes("ledgerFilterForm(mode='records')"),'Ledger filter must support records/report modes');
+assert(source.includes("ledgerFilterForm('report')"),'Report tab must use the shared redesigned finance filters');
+assert(source.includes("mode==='report'?'id=\"ledgerReportApply\"':''"),'Report submit button must be rendered inside the form');
+assert(source.includes('sy-ledger-report-page-header')&&source.includes('sy-ledger-report-page-panel'),'Report needs a distinct coordinated page and panel layout');
+assert(source.includes('sy-ledger-report-output-head')&&source.includes('sy-ledger-report-nav'),'Report results and navigation must have defined visual regions');
+assert(!source.includes("$('ledgerReportApply').onclick=render;"),'Report must not submit both click and form events');
+assert(source.includes("form.onsubmit=e=>{e.preventDefault();render();};"),'Report generation must remain wired to form submission');
+assert(source.includes("exportQuery=query().toString();ready=true;"),'Excel must preserve the final report filter snapshot');
+assert(source.includes("if(ready&&exportQuery)downloadFile("),'Excel export must require a ready report');
+assert(source.includes("if(ready)window.print()"),'Printing must remain protected by the ready state');
+for(const marker of ['.sy-ledger-report-page-panel .ledger-report-letterhead','.sy-ledger-report-page-panel .ledger-report-kpis','.sy-ledger-report-page-panel .ledger-report-table','@media print']){
+ assert(theme.includes(marker),'Report visual or print styles missing: '+marker);
+}
 console.log('Accounting account search and safe report filters passed');
