@@ -66,6 +66,7 @@ final class LegacyServiceTariffMigration {
   $membership->execute([$aid]);$serviceMembers=[];
   foreach($membership->fetchAll(PDO::FETCH_ASSOC) as $m)$serviceMembers[(int)$m['service_id']][]=(int)$m['student_id'];
   $eligibleServices=0;$skippedServices=0;$servicesToChange=0;$servicesAlreadyCurrent=0;$previewServiceChanges=[];
+  $previewAmountChanges=0;$previewSourceOnly=0;
   $changeByStudent=[];foreach($changes as $change)$changeByStudent[$change['id']]=$change;
   foreach($allServices as $service){
    $memberIds=$serviceMembers[(int)$service['id']]??[];
@@ -78,6 +79,7 @@ final class LegacyServiceTariffMigration {
    $old=(int)round((float)$service['monthly_fee']);
    if($old!==$net||(string)$service['fee_source']!=='taxi'){
     $servicesToChange++;
+    if($old!==$net)$previewAmountChanges++;else $previewSourceOnly++;
     $previewServiceChanges[]=['serviceId'=>(int)$service['id'],'oldFee'=>$old,'newFee'=>$net,'oldSource'=>(string)$service['fee_source']];
    }else $servicesAlreadyCurrent++;
   }
@@ -88,7 +90,8 @@ final class LegacyServiceTariffMigration {
    'studentChanges'=>$differentStudents,
    'servicesChecked'=>count($allServices),'servicesWithoutCode'=>count($codeUpdates),
    'servicesReady'=>$eligibleServices,'servicesSkipped'=>$skippedServices,
-   'servicesToChange'=>$servicesToChange,'servicesAlreadyCurrent'=>$servicesAlreadyCurrent,
+   'servicesToChange'=>$servicesToChange,'servicesAmountToChange'=>$previewAmountChanges,
+   'servicesSourceOnlyToChange'=>$previewSourceOnly,'servicesAlreadyCurrent'=>$servicesAlreadyCurrent,
    'serviceChanges'=>$previewServiceChanges,
    'schoolsToNormalize'=>count($regions),'errors'=>$issues,'applied'=>false,
    'monthlyDifference'=>array_sum(array_column($changes,'newFee'))-array_sum(array_column($changes,'oldFee'))];
@@ -116,6 +119,7 @@ final class LegacyServiceTariffMigration {
    // cannot roll back the company's other valid tuition corrections.
    $updateStudent=$pdo->prepare("UPDATE students SET fee_source='taxi',monthly_fee=?,driver_base_monthly=?,tariff_calculated_at=NOW() WHERE id=? AND agency_id=?");
    $successStudents=[];$updatedStudents=0;$unchangedStudents=0;$invoicesSynced=0;$verifiedStudents=0;
+   $studentAmountsChanged=0;$studentSourcesOnly=0;
    $verifyStudent=$pdo->prepare('SELECT monthly_fee,driver_base_monthly,fee_source FROM students WHERE id=? AND agency_id=?');
    foreach($changes as $c){
     $pdo->exec('SAVEPOINT sy_reprice_student');
@@ -131,7 +135,11 @@ final class LegacyServiceTariffMigration {
       throw new \RuntimeException('تأیید ذخیره شهریه دانش‌آموز ناموفق بود.');
      $pdo->exec('RELEASE SAVEPOINT sy_reprice_student');
      $successStudents[(int)$c['id']]=true;$verifiedStudents++;
-     if($changed)$updatedStudents++;else $unchangedStudents++;
+     if($changed){
+      $updatedStudents++;
+      if($c['oldFee']!==$c['newFee']||$c['oldDriverBase']!==$c['newDriverBase'])$studentAmountsChanged++;
+      else $studentSourcesOnly++;
+     }else $unchangedStudents++;
     }catch(\Throwable $error){
      $pdo->exec('ROLLBACK TO SAVEPOINT sy_reprice_student');
      $pdo->exec('RELEASE SAVEPOINT sy_reprice_student');
@@ -143,6 +151,7 @@ final class LegacyServiceTariffMigration {
    $gross=$pdo->prepare('SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
    $updateService=$pdo->prepare("UPDATE services SET fee_source='taxi',monthly_fee=? WHERE id=? AND agency_id=?");
    $updatedServices=0;$unchangedServices=0;$verifiedServices=0;$actualServiceChanges=[];
+   $serviceAmountsChanged=0;$serviceSourcesOnly=0;
    $verifyService=$pdo->prepare('SELECT monthly_fee,fee_source FROM services WHERE id=? AND agency_id=?');
    foreach($rows as $s){
     $memberIds=$serviceMembers[(int)$s['id']]??[];
@@ -165,14 +174,19 @@ final class LegacyServiceTariffMigration {
     if(!$saved||(int)round((float)$saved['monthly_fee'])!==$newFee||(string)$saved['fee_source']!=='taxi')
      throw new \RuntimeException('تأیید ذخیره مبلغ سرویس '.$s['id'].' ناموفق بود.');
     $verifiedServices++;
-    if($changed){$updatedServices++;$actualServiceChanges[]=['serviceId'=>(int)$s['id'],'oldFee'=>$oldFee,'newFee'=>$newFee,'oldSource'=>(string)$s['fee_source']];}
+    if($changed){
+     $updatedServices++;
+     if($newFee!==$oldFee)$serviceAmountsChanged++;else $serviceSourcesOnly++;
+     $actualServiceChanges[]=['serviceId'=>(int)$s['id'],'oldFee'=>$oldFee,'newFee'=>$newFee,'oldSource'=>(string)$s['fee_source']];}
     else $unchangedServices++;
    }
    $pdo->commit();
    $response['applied']=true;$response['runId']=$run;
-   $response['studentsUpdated']=$updatedStudents;$response['studentsUnchanged']=$unchangedStudents;
+   $response['studentsUpdated']=$updatedStudents;$response['studentAmountsChanged']=$studentAmountsChanged;
+   $response['studentSourcesOnly']=$studentSourcesOnly;$response['studentsUnchanged']=$unchangedStudents;
    $response['studentsVerified']=$verifiedStudents;$response['invoicesSynced']=$invoicesSynced;
-   $response['servicesUpdated']=$updatedServices;$response['servicesUnchanged']=$unchangedServices;
+   $response['servicesUpdated']=$updatedServices;$response['serviceAmountsChanged']=$serviceAmountsChanged;
+   $response['serviceSourcesOnly']=$serviceSourcesOnly;$response['servicesUnchanged']=$unchangedServices;
    $response['servicesVerified']=$verifiedServices;$response['serviceChanges']=$actualServiceChanges;
    $response['servicesSkipped']=count($rows)-$verifiedServices;
    $response['codesFilled']=count($codeUpdates);$response['errors']=self::describeErrors($pdo,$aid,$issues);
