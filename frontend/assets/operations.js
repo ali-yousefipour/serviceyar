@@ -2366,9 +2366,9 @@ async function settingsPage(){
    try{
     const data=await api('/api/v1/contract-templates/'+kind);
     if(current!==serial||!form.isConnected)return;
+    if(visualMode)switchMode('source');
     form.elements.title.value=data.title||'';
     form.elements.html.value=data.html||'';
-    visualMode=true;switchMode('source');
     editor.querySelector('#syContractTemplatePreview').hidden=true;
     form.querySelector('#syContractTemplateVersion').textContent='نسخه فعال: '+number(data.version)+' · انتشار نسخه جدید تنها برای قراردادهای بعدی اعمال می‌شود.';
     form.querySelector('#syContractTemplateStatus').textContent='';
