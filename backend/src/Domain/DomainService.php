@@ -207,6 +207,7 @@ final class DomainService {
    (SELECT CONCAT_WS(' · ',a.code,a.title) FROM accounting_accounts a WHERE a.id=ledger_entries.company_account_id AND a.agency_id=ledger_entries.agency_id) AS company_account_name";
   if($resource==='services')$select="services.*,
    (SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id WHERE ss.service_id=services.id) AS students_monthly_total,
+    (SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id WHERE ss.service_id=services.id) AS driver_base_monthly_total,
    (SELECT COALESCE(SUM(ROUND(COALESCE(st.monthly_fee,0) *
      (CASE WHEN LOWER(COALESCE(sc.school_type,'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9
        WHEN LOWER(COALESCE(sc.school_type,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' THEN 8.5
@@ -238,7 +239,7 @@ final class DomainService {
    $total=(int)$count->fetchColumn();$items=$s->fetchAll();if($resource==='services')foreach($items as &$item)self::attachServicePayable($item);unset($item);return ['items'=>$items,'pagination'=>['page'=>$page,'limit'=>$limit,'total'=>$total,'pages'=>(int)ceil($total/$limit)]];
  }
  private static function attachServicePayable(array &$row): void {
-  $gross=max(0,(float)($row['students_monthly_total']??0));
+  $gross=max(0,(float)($row['driver_base_monthly_total']??$row['students_monthly_total']??0));
   $parts=OperationsService::driverDeductions($gross,(int)($row['agency_id']??0));
   $row['driver_gross_monthly']=$gross;
   $row['driver_net_monthly']=$parts['net_earned'];
@@ -306,7 +307,7 @@ final class DomainService {
    $row['effective_owner_name']=$owner!==''?$owner:$driverName;
   }
   if($resource==='services'){
-   $summary=Connection::get()->prepare("SELECT COALESCE(SUM(st.monthly_fee),0) AS students_monthly_total FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=:agency WHERE ss.service_id=:service");
+   $summary=Connection::get()->prepare("SELECT COALESCE(SUM(st.monthly_fee),0) AS students_monthly_total,COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) AS driver_base_monthly_total FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=:agency WHERE ss.service_id=:service");
    $summary->execute(['agency'=>$aid,'service'=>$id]);$row=array_merge($row,$summary->fetch()?:[]);
    self::attachServicePayable($row);
   }
@@ -550,6 +551,18 @@ final class DomainService {
    $sync->execute(['capacity'=>$newCapacity,'agency'=>$aid,'vehicle'=>$id,'limit_capacity'=>$newCapacity]);
   }
   if($resource==='services'&&!empty($data['school_id']))$pdo->prepare('INSERT IGNORE INTO service_schools(service_id,school_id) VALUES(?,?)')->execute([$id,$data['school_id']]);
+  // Changing a service source explicitly also re-prices its current students atomically.
+  if($resource==='services'&&!$wasCreate&&array_key_exists('fee_source',$data)
+   &&(string)($existing['fee_source']??'taxi')!==(string)$data['fee_source']){
+   $members=$pdo->prepare('SELECT student_id FROM service_students WHERE service_id=?');
+   $members->execute([$id]);
+   foreach($members->fetchAll(\PDO::FETCH_COLUMN) as $studentId)
+    ServicePricing::updateStudent($pdo,$aid,(int)$studentId,(string)$data['fee_source']);
+   $gross=$pdo->prepare('SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
+   $gross->execute([$aid,$id]);
+   $net=OperationsService::driverDeductions((float)$gross->fetchColumn(),$aid)['net_earned'];
+   $pdo->prepare('UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?')->execute([$net,$id,$aid]);
+  }
   if($resource==='services'&&isset($data['is_active']))self::syncStudentStatus($pdo,$aid,$id,(int)$data['is_active']===1);
   if($resource==='students'&&isset($data['is_active'])&&(int)$data['is_active']===0)self::releaseStudent($pdo,$uid,$aid,$id);
   $s=$pdo->prepare('SELECT * FROM '.$c['table'].' WHERE id=:id AND agency_id=:agency');$s->execute(['id'=>$id,'agency'=>$aid]);$row=$s->fetch();if(!$row)throw new AuthException(404,'رکورد پیدا نشد.','NOT_FOUND');self::activity($pdo,$aid,$uid,$wasCreate?'create':'update',$c['table'],$id);return $row;
