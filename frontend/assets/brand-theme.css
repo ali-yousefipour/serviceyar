@@ -1043,3 +1043,20 @@ body{background:var(--canvas);color:var(--ink)}
  #content .sy-ledger-results .sy-ledger-data-table tbody td::before{flex:0 0 35%!important}
  #content .sy-ledger-results .row-actions{min-width:0!important;flex-wrap:wrap!important;white-space:normal!important}
 }
+
+
+/* Ledger top-level actions and row controls: tactile but restrained. */
+#content .sy-ledger-page-header #ledgerExport{
+ background:#f2f8f1!important;border:1px solid #bcd8c4!important;
+ color:#12583e!important;font:750 12.5px/1.6 Vazirmatn,Tahoma,sans-serif!important;
+}
+#content .sy-ledger-page-header #ledgerExport:hover{
+ border-color:#0d7853!important;background:#e5f3e8!important;
+}
+#content .sy-ledger-results .row-actions button[data-view]::before{content:'◉';margin-inline-end:5px;color:#0a8256}
+#content .sy-ledger-results .row-actions button[data-edit]::before{content:'✎';margin-inline-end:5px}
+#content .sy-ledger-results .row-actions button.danger::before{content:'×';margin-inline-end:5px;font-weight:850}
+#content .sy-ledger-results .row-actions button:focus-visible,
+#content .sy-ledger-page-header button:focus-visible{
+ outline:2px solid #bd963e!important;outline-offset:2px!important;
+}
