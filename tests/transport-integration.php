@@ -63,6 +63,41 @@ try{
  rejected(fn()=>D::save($uid,$a,'contracts',['title'=>'مبلغ نامعتبر','partyType'=>'student','startDate'=>'2026-10-01','endDate'=>'2027-06-01','amount'=>'100.5']),'INVALID_CONTRACT_AMOUNT');
  rejected(fn()=>D::save($uid,$a,'contracts',['endDate'=>'2026-09-01'],(int)$contract['id']),'INVALID_CONTRACT_DATES');
 
+ // Contract documents: both independent party types, tenant isolation and
+ // immutable print snapshots across template publication.
+ $docApi=\ServiceYar\Domain\ContractDocuments::class;
+ $preview=$docApi::draftData($uid,$a,'parent',(int)$s1['id']);
+ check(($preview['values']['studentName']??'')==='آرمان آزمایشی','Parent contract preflight resolves the student by company');
+ check(in_array('guardianName',$preview['missing'],true),'Missing guardian is flagged before issuance');
+ $issued=$docApi::issue($uid,$a,'parent',[
+  'partyId'=>(int)$s1['id'],'startDate'=>'2026-09-23','endDate'=>'2027-06-22','amount'=>76500000,
+  'overrides'=>['guardianName'=>'ولی آزمایشی','guardianNationalCode'=>'1234567890','guardianMobile'=>'09120000099','managerName'=>'مدیر نمونه']
+ ]);
+ $savedPrint=$docApi::printable($uid,$a,(int)$issued['id'])['html'];
+ check(str_contains($savedPrint,'ولی آزمایشی')&&str_contains($savedPrint,'آرمان آزمایشی'),'Print snapshot contains substituted guardian and student data');
+ check(str_contains($savedPrint,'ماده ۱۲')&&str_contains($savedPrint,'ماده ۱۱'),'Parent reference includes final legal clauses');
+ check(str_contains($savedPrint,'۱۴۰۵/۰۷/۰۱'),'Contract start date printed in Jalali');
+ rejected(fn()=>$docApi::printable($uid,$b,(int)$issued['id']),'NOT_FOUND');
+ $firstTemplate=$docApi::publishTemplate($uid,'parent',['title'=>'قالب اصلاح‌شده آزمایشی',
+  'html'=>'<h1>نسخه جدید قرارداد {{contractNo}}</h1><p>متن نمونه جدید '+str_repeat('آزمون ',25)+'{{guardianName}}</p>']);
+ check((int)$firstTemplate['version']===1,'Publishing first explicit parent template increments version from fallback');
+ $afterPublish=$docApi::printable($uid,$a,(int)$issued['id'])['html'];
+ check($savedPrint===$afterPublish,'Printing an issued contract stays byte-for-byte immutable after template publishing');
+ $newDoc=$docApi::issue($uid,$a,'parent',[
+  'partyId'=>(int)$s1['id'],'startDate'=>'2026-09-23','endDate'=>'2027-06-22','amount'=>76500000,
+  'overrides'=>['guardianName'=>'ولی آزمایشی','guardianNationalCode'=>'1234567890','guardianMobile'=>'09120000099','managerName'=>'مدیر نمونه']
+ ]);
+ $newPrint=$docApi::printable($uid,$a,(int)$newDoc['id'])['html'];
+ check(str_contains($newPrint,'نسخه جدید قرارداد')&&!str_contains($savedPrint,'نسخه جدید قرارداد'),
+  'New template changes only newly issued contracts');
+ check(count($docApi::listing($uid,$a,'parent'))>=2,'Parent tab lists issued document history');
+ $p->prepare('UPDATE drivers SET national_code=? WHERE id=? AND agency_id=?')->execute(['1234567890',$ad['id'],$a]);
+ $driverDoc=$docApi::issue($uid,$a,'driver',[
+  'partyId'=>(int)$ad['id'],'startDate'=>'2026-09-23','endDate'=>'2027-06-22','amount'=>50000000,
+  'overrides'=>['managerName'=>'مدیر نمونه']
+ ]);
+ check(str_contains($docApi::printable($uid,$a,(int)$driverDoc['id'])['html'],'تخصیص آزمون'),'Driver contract prints the actual company driver');
+ check(count($docApi::listing($uid,$a,'driver'))===1,'Driver tab excludes parent contracts');
  check($as['shift']==='صبح','Service shift persists from setup wizard');
  $updatedService=D::save($uid,$a,'services',['agreedAmount'=>'1250000.00'],(int)$as['id']);
  check((int)$updatedService['agreed_amount']===1250000,'Unchanged SQL decimal amount remains editable');
