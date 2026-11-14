@@ -76,7 +76,7 @@ try{
  ]);
  $savedPrint=$docApi::printable($uid,$a,(int)$issued['id'])['html'];
  check(str_contains($savedPrint,'ولی آزمایشی')&&str_contains($savedPrint,'آرمان آزمایشی'),'Print snapshot contains substituted guardian and student data');
- check(str_contains($savedPrint,'ماده ۱۲')&&str_contains($savedPrint,'ماده ۱۱'),'Parent reference includes final legal clauses');
+ check(str_contains($savedPrint,'ماده -12')&&str_contains($savedPrint,'ماده -11'),'Parent reference includes final legal clauses');
  check(str_contains($savedPrint,'۱۴۰۵/۰۷/۰۱'),'Contract start date printed in Jalali');
  rejected(fn()=>$docApi::printable($uid,$b,(int)$issued['id']),'NOT_FOUND');
  $firstTemplate=$docApi::publishTemplate($uid,'parent',['title'=>'قالب اصلاح‌شده آزمایشی',
