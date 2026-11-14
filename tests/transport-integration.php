@@ -601,8 +601,9 @@ try{
   'Repricing diagnostics identify the real student, school and service instead of only numeric ids');
  // Annual driver contract uses each assigned student's gross driver basis and the
  // agency's current deductions once, not already-net services.monthly_fee.
- $p->prepare('UPDATE drivers SET national_code=? WHERE id=? AND agency_id=?')
-  ->execute(['1234567890',$ad['id'],$a]);
+ $contractDriver=insertFixture('drivers',['uuid'=>Uuid::v4(),'agency_id'=>$a,
+  'first_name'=>'تخصیص','last_name'=>'آزمون','national_code'=>'1234567890',
+  'is_active'=>1]);
  $contractPrimary=insertFixture('students',['uuid'=>Uuid::v4(),'agency_id'=>$a,
   'school_id'=>$school['id'],'first_name'=>'اول','last_name'=>'ابتدایی',
   'grade'=>'ابتدایی','monthly_fee'=>18000000,'driver_base_monthly'=>10000000]);
@@ -610,10 +611,10 @@ try{
   'school_id'=>$school['id'],'first_name'=>'دوم','last_name'=>'دبیرستان',
   'grade'=>'متوسطه','monthly_fee'=>30000000,'driver_base_monthly'=>20000000]);
  $firstService=insertFixture('services',['uuid'=>Uuid::v4(),'agency_id'=>$a,
-  'driver_id'=>$ad['id'],'school_id'=>$school['id'],'title'=>'سرویس دبستان',
+  'driver_id'=>$contractDriver,'school_id'=>$school['id'],'title'=>'سرویس دبستان',
   'status'=>'active','monthly_fee'=>111111]);
  $secondService=insertFixture('services',['uuid'=>Uuid::v4(),'agency_id'=>$a,
-  'driver_id'=>$ad['id'],'school_id'=>$school['id'],'title'=>'سرویس دبیرستان',
+  'driver_id'=>$contractDriver,'school_id'=>$school['id'],'title'=>'سرویس دبیرستان',
   'status'=>'active','monthly_fee'=>222222]);
  $p->prepare('INSERT INTO service_students(service_id,student_id) VALUES(?,?),(?,?)')
   ->execute([$firstService,$contractPrimary,$secondService,$contractSecondary]);
@@ -621,13 +622,13 @@ try{
  $primaryNet=\ServiceYar\Domain\DriverDeductionPolicy::calculate(10000000,$policy)['net_earned'];
  $secondaryNet=\ServiceYar\Domain\DriverDeductionPolicy::calculate(20000000,$policy)['net_earned'];
  $expectedAnnual=(int)round($primaryNet*8.5)+(int)round($secondaryNet*9);
- $driverPreview=$docApi::draftData($uid,$a,'driver',(int)$ad['id']);
+ $driverPreview=$docApi::draftData($uid,$a,'driver',(int)$contractDriver);
  check($driverPreview['suggestedTotal']===$expectedAnnual,
   'Annual driver preview sums 8.5/9-month net fees without double deduction');
  check(count($driverPreview['driverAnnual']['services'])===2,
   'Annual preview includes every assigned student service and its duration');
  $driverDoc=$docApi::issue($uid,$a,'driver',[
-  'partyId'=>(int)$ad['id'],'startDate'=>'2026-09-23','endDate'=>'2027-06-22',
+  'partyId'=>(int)$contractDriver,'startDate'=>'2026-09-23','endDate'=>'2027-06-22',
   'amount'=>1, // UI value cannot override the authoritative server calculation
   'overrides'=>['managerName'=>'مدیر نمونه']
  ]);
