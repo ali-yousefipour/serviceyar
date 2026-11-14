@@ -621,6 +621,26 @@ try {
   header('Cache-Control: no-store, max-age=0');
   Response::json(['ok'=>true,'data'=>DomainService::lookupVehicleByPlate($s['id'],$aid,$value)]);
  }
+ if(preg_match('#^/api/v1/contract-templates/(parent|driver)$#',$path,$match)){
+  $kind=$match[1];
+  if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::templateEditor($s['id'],$kind)]);
+  if($method==='POST'){
+   $auth->requireCsrf($s);
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::publishTemplate($s['id'],$kind,Request::json())],201);
+  }
+ }
+ if(preg_match('#^/api/v1/contract-documents/(parent|driver)$#',$path,$match)){
+  $kind=$match[1];
+  if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::listing($s['id'],$aid,$kind)]);
+  if($method==='POST'){
+   $auth->requireCsrf($s);
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::issue($s['id'],$aid,$kind,Request::json())],201);
+  }
+ }
+ if($method==='GET'&&preg_match('#^/api/v1/contract-documents/([0-9]+)/print$#',$path,$match)){
+  header('Cache-Control: no-store');
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::printable($s['id'],$aid,(int)$match[1])]);
+ }
  $domainMap=['schools','students','drivers','vehicles','services','packs','contracts','driver-work','driver-payments','school-charges','service-charges','invoices','payments','accounts','accounting-documents','wallets','messages','driver-changes','ledger','driver-ratings','parent-reports'];
  foreach($domainMap as $resource){
   $base='/api/v1/'.$resource;
