@@ -594,6 +594,12 @@ try {
   header('Cache-Control: no-store, max-age=0');
   Response::json(['ok'=>true,'data'=>DomainService::ownerDriverExists($s['id'],$aid,$code)]);
  }
+ if($path==='/api/v1/vehicles/owner-driver-preview'&&$method==='GET'){
+  $code=$_GET['nationalCode']??'';
+  if(!is_string($code))throw new AuthException(422,'کد ملی نامعتبر است.','INVALID_OWNER_NATIONAL_CODE');
+  header('Cache-Control: no-store, max-age=0');
+  Response::json(['ok'=>true,'data'=>DomainService::ownerDriverPreview($s['id'],$aid,$code)]);
+ }
  if($path==='/api/v1/vehicles/create-with-owner'&&$method==='POST'){
   $auth->requireCsrf($s);
   Response::json(['ok'=>true,'data'=>DomainService::createVehicleWithOwnerDriver($s['id'],$aid,Request::json())],201);
