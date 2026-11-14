@@ -140,7 +140,7 @@ if(strpos($frontend,'در مسیر Phase 11 توسعه داده می‌شود')!
 $posting=file_get_contents($root.'/backend/src/Domain/FinancialPosting.php');
 $domain=file_get_contents($root.'/backend/src/Domain/DomainService.php');
 if($posting===false || $domain===false)throw new RuntimeException('Cannot read financial deletion services.');
-foreach(["===1146","financial_postings","throw $e;","FINANCIAL_SOURCE_LOCKED"] as $token){
+foreach(['===1146','financial_postings','throw $e;','FINANCIAL_SOURCE_LOCKED'] as $token){
     if(strpos($posting,$token)===false)throw new RuntimeException("Posting protection / legacy fallback missing: $token");
 }
 foreach(["FinancialPosting::assertEditable($aid,$resource,$id)","SET is_active=0 WHERE id=:id AND agency_id=:agency"] as $token){
