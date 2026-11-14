@@ -2737,7 +2737,7 @@ async function newServicePage(token,initialDriverId){
    }
    chosen.clear();
    for(const s of students)if(pending.has(Number(s.id))&&!blocked(s))chosen.add(Number(s.id));
-   closeDialog();sync();
+   closeDialog();sync();if(chosen.size)quote.click();
   };render();name.focus();
  };
  form.elements.title.addEventListener('input',refreshSave);
