@@ -332,6 +332,31 @@ try {
   $quote=\ServiceYar\Domain\ServicePricing::quote($pdo,$aid,$student,$source);
   Response::json(['ok'=>true,'data'=>$quote]);
  }
+ if($path==='/api/v1/admin/taxi-tariffs/reprice-all'){
+  if(!Authorization::isSuperAdmin($s['id']))throw new AuthException(403,'فقط مدیر کل مجاز است.','SUPER_ADMIN_REQUIRED');
+  if($method==='GET'||$method==='POST'){
+   if($method==='POST'){
+    $auth->requireCsrf($s);$body=Request::json();
+    if(($body['confirm']??null)!=='REPRICE_ALL_AGENCIES')throw new AuthException(422,'تأیید اصلاح گروهی کل سامانه الزامی است.','CONFIRMATION_REQUIRED');
+   }
+   $companies=Connection::get()->query('SELECT id FROM agencies ORDER BY id')->fetchAll(\PDO::FETCH_COLUMN);
+   $reports=[];$summary=['agencies'=>count($companies),'services'=>0,'missingCodes'=>0,'codesFilled'=>0,'recalculated'=>0,'blocked'=>0];
+   foreach($companies as $companyId){
+    try{
+     $report=\ServiceYar\Domain\LegacyServiceTariffMigration::run($s['id'],(int)$companyId,$method==='POST');
+     $reports[]=$report;$summary['services']+=(int)($report['servicesChecked']??0);
+     $summary['missingCodes']+=(int)($report['servicesWithoutCode']??0);
+     $summary['codesFilled']+=(int)($report['codesFilled']??0);
+     $summary['recalculated']+=(int)($report['servicesUpdated']??0);
+     if(!empty($report['errors']))$summary['blocked']++;
+    }catch(\Throwable $error){
+     $reports[]=['agencyId'=>(int)$companyId,'error'=>$error->getMessage()];
+     $summary['blocked']++;
+    }
+   }
+   Response::json(['ok'=>true,'data'=>['summary'=>$summary,'agencies'=>$reports]]);
+  }
+ }
  if($path==='/api/v1/admin/taxi-tariffs/reprice-legacy'){
   if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\LegacyServiceTariffMigration::run($s['id'],$aid,false)]);
   if($method==='POST'){
