@@ -10,7 +10,7 @@ final class DomainService {
   'schools'=>['table'=>'schools','permission'=>'schools','fields'=>['name','code','school_type','manager_name','phone','address','latitude','longitude','region','is_active'],'search'=>['name','code','manager_name']],
   'students'=>['table'=>'students','permission'=>'students','fields'=>['school_id','first_name','last_name','national_code','grade','mobile','address','latitude','longitude','is_active'],'search'=>['first_name','last_name','national_code']],
   'drivers'=>['table'=>'drivers','permission'=>'drivers','fields'=>['first_name','last_name','national_code','mobile','gender','sepand_request_id','sepand_status','status','rating','vehicle_id','address','is_active'],'search'=>['first_name','last_name','national_code','mobile']],
-  'vehicles'=>['table'=>'vehicles','permission'=>'drivers','fields'=>['plate','model','tariff_vehicle_class','capacity','owner_name','vin','plate_part_1','plate_letter','plate_part_3','plate_iran','vehicle_type','vehicle_system','vehicle_trim','make_year','fuel_type','color','engine_number','chassis_number','insurance_number','sepand_status','is_active'],'search'=>['plate','model','owner_name']],
+  'vehicles'=>['table'=>'vehicles','permission'=>'drivers','fields'=>['plate','model','tariff_vehicle_class','capacity','owner_name','owner_national_code','vin','plate_part_1','plate_letter','plate_part_3','plate_iran','vehicle_type','vehicle_system','vehicle_trim','make_year','fuel_type','color','engine_number','chassis_number','insurance_number','sepand_status','is_active'],'search'=>['plate','model','owner_name']],
   'services'=>['table'=>'services','permission'=>'services','fields'=>['title','code','school_id','driver_id','capacity','status','start_address','end_address','pack_id','shift','monthly_fee','agreed_amount','fee_source','is_active'],'search'=>['title','code']],
   'packs'=>['table'=>'packs','permission'=>'services','fields'=>['title','status','capacity'],'search'=>['title']],
   'contracts'=>['table'=>'contracts','permission'=>'services','fields'=>['title','contract_no','party_type','party_id','start_date','end_date','amount','status'],'search'=>['title','contract_no']],
@@ -118,6 +118,52 @@ final class DomainService {
   $sameAgency=(int)$record['agency_id']===$aid;
   unset($record['agency_id']);
   return ['found'=>true,'plate'=>$plate,'source'=>$sameAgency?'current_agency':'shared_registry','vehicle'=>$record];
+ }
+ /** Only report existence until the operator explicitly confirms import. */
+ public static function ownerDriverExists(int $uid,int $aid,string $code): array {
+  self::scope($uid,$aid,'drivers');
+  $code=self::normalizeOwnerCode($code);
+  $stmt=Connection::get()->prepare('SELECT agency_id FROM drivers WHERE national_code=? ORDER BY (agency_id=?) DESC,id DESC LIMIT 1');
+  $stmt->execute([$code,$aid]);$agency=$stmt->fetchColumn();
+  return ['found'=>$agency!==false,'inCurrentAgency'=>$agency!==false&&(int)$agency===$aid];
+ }
+ private static function normalizeOwnerCode(string $code): string {
+  $code=strtr(trim($code),['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']);
+  if(!preg_match('/^[0-9]{10}$/D',$code))throw new AuthException(422,'کد ملی مالک باید ۱۰ رقم باشد.','INVALID_OWNER_NATIONAL_CODE');
+  $sum=0;for($i=0;$i<9;$i++)$sum+=(int)$code[$i]*(10-$i);
+  $remainder=$sum%11;$check=$remainder<2?$remainder:11-$remainder;
+  if((int)$code[9]!==$check||preg_match('/^([0-9])\1{9}$/',$code))throw new AuthException(422,'کد ملی مالک معتبر نیست.','INVALID_OWNER_NATIONAL_CODE');
+  return $code;
+ }
+ /** Atomic tenant-local vehicle registration and optional owner-driver link. */
+ public static function createVehicleWithOwnerDriver(int $uid,int $aid,array $body): array {
+  Authorization::requirePermission($uid,'drivers.manage');
+  Authorization::requireAgencyAccess($uid,$aid);
+  return OperationsService::transaction(function()use($uid,$aid,$body){
+   $code=self::normalizeOwnerCode((string)($body['ownerNationalCode']??''));
+   $import=($body['importOwnerDriver']??false)===true;
+   $pdo=Connection::get();
+   $source=null;
+   if($import){
+    $stmt=$pdo->prepare('SELECT id,agency_id,first_name,last_name,national_code,mobile,gender,address FROM drivers WHERE national_code=? ORDER BY (agency_id=?) DESC,id DESC LIMIT 1');
+    $stmt->execute([$code,$aid]);$source=$stmt->fetch(\PDO::FETCH_ASSOC);
+    if(!$source)throw new AuthException(409,'راننده‌ای با کد ملی واردشده پیدا نشد.','OWNER_DRIVER_NOT_FOUND');
+   }
+   $vehicle=self::saveRecord($uid,$aid,'vehicles',$body);
+   if(!$import)return ['vehicle'=>$vehicle,'driver'=>null,'imported'=>false];
+   $driverData=['vehicleId'=>(int)$vehicle['id']];
+   if((int)$source['agency_id']===$aid){
+    // Never silently move an existing driver away from another vehicle:
+    // an explicit confirmation here applies only to this registration.
+    $driver=self::saveRecord($uid,$aid,'drivers',$driverData,(int)$source['id']);
+    return ['vehicle'=>$vehicle,'driver'=>$driver,'imported'=>false,'linked'=>true];
+   }
+   $driverData+=['firstName'=>$source['first_name'],'lastName'=>$source['last_name'],
+     'nationalCode'=>$code,'mobile'=>$source['mobile'],'gender'=>$source['gender'],
+     'address'=>$source['address'],'status'=>'pending','sepandStatus'=>'unknown','isActive'=>1];
+   $driver=self::saveRecord($uid,$aid,'drivers',$driverData);
+   return ['vehicle'=>$vehicle,'driver'=>$driver,'imported'=>true,'linked'=>true];
+  });
  }
  public static function list(int $uid,int $aid,string $resource,array $q): array {
   $c=self::cfg($resource); self::scope($uid,$aid,$c['permission']);
@@ -436,6 +482,7 @@ final class DomainService {
   if($id&&$resource==='messages'&&$existing['status']!=='queued')throw new AuthException(409,'پیام پردازش‌شده قابل ویرایش یا ارسال مجدد از این فرم نیست.','MESSAGE_LOCKED');
   if($id&&$resource==='payments'&&$existing['method']==='bale')throw new AuthException(409,'پرداخت استعلام‌شده بله قابل ویرایش نیست.','VERIFIED_PAYMENT_LOCKED');
   foreach($data as $f=>&$v){if($v==='')$v=null;}unset($v);
+  if($resource==='vehicles'&&isset($data['owner_national_code'])&&$data['owner_national_code']!==null)$data['owner_national_code']=self::normalizeOwnerCode((string)$data['owner_national_code']);
   if($resource==='vehicles'&&!$id&&isset($data['plate'])){
    $duplicate=self::lookupVehicleByPlate($uid,$aid,(string)$data['plate']);
    if(($duplicate['found']??false)&&($duplicate['source']??'')==='current_agency')
