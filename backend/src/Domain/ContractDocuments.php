@@ -165,6 +165,34 @@ HTML;
   }
   return $values;
  }
+ /**
+  * Read-only issuance preflight. Only source fields accessible to the company
+  * are returned; no old contract, other tenant or bank secret is read.
+  */
+ public static function draftData(int $uid,int $agencyId,string $kind,int $partyId): array {
+  self::scope($uid,$agencyId);
+  if(!in_array($kind,['parent','driver'],true)||$partyId<1)
+   throw new AuthException(422,'نوع قرارداد یا طرف قرارداد معتبر نیست.','INVALID_CONTRACT_PARTY');
+  $pdo=Connection::get();$data=self::data($pdo,$agencyId,$kind,$partyId);
+  $required=$kind==='parent'
+   ?['guardianName','guardianNationalCode','guardianMobile','studentName','studentNationalCode','schoolName','schoolRegion','managerName','companyName']
+   :['driverName','driverNationalCode','managerName','companyName'];
+  $missing=[];foreach($required as $field)if(trim((string)($data[$field]??''))==='')$missing[]=$field;
+  $months=$kind==='parent'?(preg_match('/ابتدایی|دبستان|primary|elementary/u',(string)($data['schoolType']??'').(string)($data['grade']??''))?8.5:9):null;
+  return ['values'=>$data,'missing'=>$missing,'suggestedTotal'=>$kind==='parent'?(int)round((float)($data['monthlyFee']??0)*$months):null,'academicMonths'=>$months];
+ }
+ private static function resolvedOverrides(array $body): array {
+  $allowed=['guardianName','guardianNationalCode','guardianFatherName','guardianMobile','guardianAddress',
+   'companyName','companyRegistration','companyNationalId','managerName','managerNationalCode',
+   'companyAddress','companyPhone','bankName','bankAccount','distanceKm','durationMonths','academicYear'];
+  $out=[];
+  foreach($body as $key=>$value){
+   if(!in_array($key,$allowed,true)||!is_string($value)||mb_strlen($value)>500)
+    throw new AuthException(422,'فیلد تکمیلی قرارداد نامعتبر است.','INVALID_CONTRACT_OVERRIDE');
+   $out[$key]=trim($value);
+  }
+  return $out;
+ }
  private static function document(string $html,array $values): string {
   $output=preg_replace_callback('/\{\{([a-zA-Z][a-zA-Z0-9]*)\}\}/',
    static fn(array $match)=>htmlspecialchars((string)($values[$match[1]]??'—'),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8'),$html);
@@ -182,6 +210,12 @@ HTML;
   $amount=filter_var($input['amount']??null,FILTER_VALIDATE_INT);
   if($amount===false||$amount<0||$amount>999999999999999)throw new AuthException(422,'مبلغ قرارداد باید عدد صحیح ریالی باشد.','INVALID_CONTRACT_AMOUNT');
   $values=self::data($pdo,$agencyId,$kind,(int)$partyId);
+  $overrides=$input['overrides']??[];
+  if(!is_array($overrides))throw new AuthException(422,'اطلاعات تکمیلی قرارداد معتبر نیست.','INVALID_CONTRACT_OVERRIDE');
+  $values=array_replace($values,self::resolvedOverrides($overrides));
+  $required=$kind==='parent'?['guardianName','guardianNationalCode','guardianMobile','studentName','studentNationalCode','schoolName','managerName','companyName']:['driverName','driverNationalCode','managerName','companyName'];
+  foreach($required as $field)if(trim((string)($values[$field]??''))==='')
+   throw new AuthException(422,'اطلاعات اصلی طرفین قرارداد کامل نیست؛ ابتدا مشخصات تکمیلی را وارد کنید.','CONTRACT_REQUIRED_DATA_MISSING');
   $template=self::template($pdo,$kind);
   return OperationsService::transaction(function(PDO $pdo)use($uid,$agencyId,$kind,$partyId,$start,$end,$amount,$values,$template) {
    $contractNo='SY-'.$agencyId.'-'.date('ymd').'-'.strtoupper(bin2hex(random_bytes(4)));
