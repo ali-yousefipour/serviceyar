@@ -465,6 +465,16 @@ final class DomainService {
     $quote=ServicePricing::quote($pdo,$aid,$merged,$source);
     $data['monthly_fee']=$quote['monthlyFee'];$data['driver_base_monthly']=$quote['driverBaseMonthly'];
     $data['tariff_calculated_at']=date('Y-m-d H:i:s');
+   }elseif($changed && !empty($merged['tariff_vehicle_class']) && !empty($merged['tariff_distance_km'])){
+    // Legacy API clients did not have an explicit source selector; preserve
+    // their existing contract tariff resolution without inventing a district.
+    $legacy=AgencySchoolTariffs::quote($pdo,$aid,(int)($merged['school_id']??0),
+       (string)(($merged['academic_year']??null)?:AgencySchoolTariffs::YEAR),
+       $merged['tariff_distance_km'],$merged['tariff_vehicle_class']);
+    if($legacy!==null){
+     $data['monthly_fee']=$legacy;$data['driver_base_monthly']=$legacy;
+     $data['fee_source']='agency';$data['tariff_calculated_at']=date('Y-m-d H:i:s');
+    }
    }
   }
   if($resource==='services')$data['fee_source']=ServicePricing::source($merged['fee_source']??'taxi');
