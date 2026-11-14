@@ -19,6 +19,7 @@ jobs:
           find backend tests -name '*.php' -print0 | xargs -0 -n1 php -l
           php tests/static-smoke.php
           php tests/xlsx-writer.php
+          php tests/sepand-xlsx.php
           php tests/excel-localization.php
           php tests/directory-sorting.php
           php tests/installments.php
