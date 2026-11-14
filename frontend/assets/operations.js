@@ -511,6 +511,42 @@ function resourceName(key){return titles[key]||key;}
 async function lookup(key,includeInactive=false){const agencyId=currentAgency.id,cacheKey=agencyId+':'+key+(includeInactive?':all':'');if(lookupCache[cacheKey])return lookupCache[cacheKey];const rows=[];let page=1;while(true){const d=await api('/api/v1/'+key+'?limit=200&active='+(includeInactive?'':'1')+'&page='+page+'&agencyId='+encodeURIComponent(agencyId));if(String(currentAgency?.id)!==String(agencyId))throw new Error('شرکت فعال تغییر کرده است؛ دوباره تلاش کنید.');rows.push(...d.items);if(page>=d.pagination.pages)break;page++;}return lookupCache[cacheKey]=rows;}
 function ledgerFilterForm(mode='records'){
  const methods=agencyMethodChoices||Object.entries(ledgerMethods).map(([code,name])=>({code,name,active:true}));
+ if(mode==='report')return `<form id="gridFilters" class="ledger-filters sy-ledger-filters-v3 sy-ledger-report-filter-form" aria-label="فیلترهای گزارش دریافت و پرداخت">
+  <section class="sy-ledger-report-filter-section" aria-labelledby="syReportSearchTitle">
+   <h3 id="syReportSearchTitle" class="sy-ledger-report-filter-title">جست‌وجوی سریع</h3>
+   <div class="sy-ledger-report-search-grid">
+    <label>شخص، مدرسه یا شرکت<input type="search" name="partySearch" id="ledgerPartySearch" autocomplete="off" maxlength="200" placeholder="نام طرف حساب را وارد کنید"></label>
+    <label>شرح یا شماره پیگیری<input type="search" name="search" autocomplete="off" maxlength="200" placeholder="عنوان، توضیحات یا شماره پیگیری"></label>
+   </div>
+  </section>
+  <section class="sy-ledger-report-filter-section" aria-labelledby="syReportMainTitle">
+   <h3 id="syReportMainTitle" class="sy-ledger-report-filter-title">مشخصات تراکنش‌ها</h3>
+   <div class="sy-ledger-report-main-grid">
+    <label>نوع عملیات<select name="direction"><option value="">همه عملیات</option><option value="receipt">دریافت</option><option value="payment">پرداخت</option></select></label>
+    <label>روش دریافت / پرداخت<select name="method"><option value="">همه روش‌ها</option>${methods.map(m=>`<option value="${esc(m.code)}">${esc(m.name)}${m.active===false?' (غیرفعال)':''}</option>`).join('')}</select></label>
+    <label>طرف حساب<select name="partyType"><option value="">همه طرف حساب‌ها</option><option value="student">دانش‌آموز</option><option value="driver">راننده</option><option value="school">مدرسه</option><option value="agency">شرکت</option></select></label>
+    <label>وضعیت سند<select name="active"><option value="1">فعال</option><option value="0">غیرفعال</option><option value="">همه سوابق</option></select></label>
+   </div>
+  </section>
+  <section class="sy-ledger-report-filter-section" aria-labelledby="syReportDateTitle">
+   <h3 id="syReportDateTitle" class="sy-ledger-report-filter-title">بازه زمانی گزارش</h3>
+   <div class="sy-ledger-report-date-grid">
+    <label>از تاریخ<input name="dateFrom" type="date"></label>
+    <label>تا تاریخ<input name="dateTo" type="date"></label>
+   </div>
+  </section>
+  <details class="ledger-filter-more sy-ledger-report-advanced"><summary>فیلترهای پیشرفته <span>محدوده مبلغ</span></summary>
+   <div class="ledger-filter-grid">
+    <label>حداقل مبلغ (ریال)<input name="amountMin" type="number" min="0" step="1" inputmode="numeric" placeholder="حداقل مبلغ"></label>
+    <label>حداکثر مبلغ (ریال)<input name="amountMax" type="number" min="0" step="1" inputmode="numeric" placeholder="حداکثر مبلغ"></label>
+   </div>
+  </details>
+  <div class="sy-ledger-report-submit-row">
+   <div class="sy-ledger-report-submit-actions"><button type="submit" class="primary" id="ledgerReportApply">تهیه گزارش</button><button type="reset" class="ledger-filter-clear">پاک‌کردن فیلترها</button></div>
+   <span class="sy-ledger-report-submit-hint">ابتدا فیلترها را انتخاب کنید، سپس گزارش را تهیه کنید.</span>
+  </div>
+ </form>`;
+
  return `<form id="gridFilters" class="ledger-filters sy-ledger-filters-v3" aria-label="جست‌وجو و فیلتر دریافت و پرداخت">
   <div class="sy-ledger-searchbar">
    <label>جست‌وجوی طرف حساب<input type="search" name="partySearch" id="ledgerPartySearch" autocomplete="off" maxlength="200" placeholder="نام شخص، مدرسه یا شرکت"></label>
@@ -578,11 +614,11 @@ async function ledgerReportPage(token=pageToken){
  <section class="panel ledger-report-panel sy-ledger-report-page-panel">
  <header class="sy-ledger-report-intro"><div><span class="sy-operation-kicker">فیلتر گزارش مالی</span><h2>جست‌وجو و تهیه گزارش</h2><p>پس از انتخاب فیلترها، دکمه «تهیه گزارش» را برای مشاهده نتایج انتخاب کنید.</p></div><span class="sy-ledger-report-heading-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg></span></header>
  ${ledgerFilterForm('report')}
- <div class="sy-ledger-report-output-head"><div><span class="sy-ledger-report-output-kicker">نتایج گزارش</span><h3>خلاصه و ریز تراکنش‌ها</h3><p id="ledgerReportFreshness" class="sy-ledger-report-freshness" role="status" aria-live="polite">گزارش بر اساس فیلترهای فعلی تهیه می‌شود.</p></div><div class="ledger-report-actions"><button type="button" id="ledgerReportPrint" disabled>چاپ گزارش</button><button type="button" id="ledgerReportExcel" disabled>خروجی اکسل</button></div></div>
+ <div class="sy-ledger-report-output-head"><div class="sy-ledger-report-output-meta"><span class="sy-ledger-report-output-kicker">نتایج گزارش</span><h3>خلاصه و ریز تراکنش‌ها</h3><p id="ledgerReportFreshness" class="sy-ledger-report-freshness" role="status" aria-live="polite">گزارش بر اساس فیلترهای فعلی تهیه می‌شود.</p><span id="ledgerFilterSummary" class="sy-ledger-report-count-badge" role="status" aria-live="polite">در حال دریافت سوابق…</span></div><div class="ledger-report-actions"><button type="button" id="ledgerReportPrint" disabled>چاپ گزارش</button><button type="button" id="ledgerReportExcel" disabled>خروجی اکسل</button></div></div>
  <div id="ledgerReportBody" aria-live="polite" aria-busy="false"><div class="sy-ledger-report-state" role="status"><strong>در حال آماده‌سازی گزارش</strong><p>نتایج پس از دریافت اطلاعات نمایش داده می‌شوند.</p></div></div>
  </section>`;
  const form=$('gridFilters');$('ledgerTabRecords').onclick=()=>resourcePage('ledger',token);$('content').querySelector('[data-ledger-records]')?.addEventListener('click',()=>resourcePage('ledger',token));
- if(saved){const values=new URLSearchParams(saved);for(const [key,value] of values){const el=form.elements[key];if(el)el.value=value;}if(['dateFrom','dateTo','amountMin','amountMax'].some(k=>values.get(k)))form.querySelector('details')?.setAttribute('open','');}
+ if(saved){const values=new URLSearchParams(saved);for(const [key,value] of values){const el=form.elements[key];if(el)el.value=value;}if(['amountMin','amountMax'].some(k=>values.get(k)))form.querySelector('details')?.setAttribute('open','');}
  let ready=false,version=0,exportQuery='';
  const query=()=>{const p=new URLSearchParams(new FormData(form));p.set('agencyId',currentAgency.id);return p;};
  const names={student:'دانش‌آموز',driver:'راننده',school:'مدرسه',agency:'شرکت'};
