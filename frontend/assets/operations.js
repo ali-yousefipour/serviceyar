@@ -1455,7 +1455,7 @@ async function driverAccountPanel(panel,driverId){
    '<div class="sy-student-account-stats">'+
    [['خالص ماهانه سرویس‌های فعال',data.monthlyEntitlement],['برآورد خالص سالانه',data.estimatedAnnualEntitlement],['جمع پرداخت‌ها',data.paidTotal],['مانده برآوردی',data.remaining]].map(([name,value])=>'<div><span>'+esc(name)+'</span><strong>'+esc(money(value))+'</strong></div>').join('')+
    '</div><p class="muted">'+esc(data.note)+'</p><section class="sy-student-account-section"><h4>پرداخت‌های ثبت‌شده راننده</h4>'+
-   (data.payments.length?simpleTable(['تاریخ پرداخت','مبلغ · ریال','شماره پیگیری'],data.payments.map(p=>[dateText(p.payment_date),number(p.amount),p.reference_no||'—'])):'<p class="muted">پرداخت مستقلی ثبت نشده است.</p>')+'</section>';
+   (data.payments.length?simpleTable(['تاریخ پرداخت','منبع ثبت','مبلغ · ریال','شماره پیگیری'],data.payments.map(p=>[dateText(p.payment_date),p.source==='ledger'?'دریافت و پرداخت':'پرداخت راننده',number(p.amount),p.reference_no||'—'])):'<p class="muted">پرداخت مستقلی ثبت نشده است.</p>')+'</section>';
  }catch(e){if(panel.isConnected)panel.innerHTML='<h3>حساب راننده</h3><p class="error">'+esc(e.message)+'</p>';}
 }
 async function studentAccountPanel(panel,studentId){
