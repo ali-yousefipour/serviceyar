@@ -155,14 +155,20 @@ try{
  $feeReport=\ServiceYar\Domain\ServiceFinanceReport::report($uid,$feeAgency,$filter);
  $item=$feeReport['items'][0];
  check($feeReport['totals']['student_count']===1&&(float)$item['estimated_fee']===13500000.0,'Annual estimate uses saved rate and explicit service months');
- check($item['invoiced']==='1200000.50'&&$item['received']==='300000.25'&&$item['balance']==='900000.25','Multiple payments neither duplicate invoice amounts nor include later payments');
+ $autoInvoice=$p->prepare('SELECT i.amount FROM student_service_debt_invoices m JOIN invoices i ON i.id=m.invoice_id WHERE m.agency_id=? AND m.student_id=?');
+ $autoInvoice->execute([$feeAgency,$feeStudent['id']]);$automaticDebt=(float)$autoInvoice->fetchColumn();
+ check($automaticDebt>0,'Assignment creates a linked annual service invoice');
+ check(abs((float)$item['invoiced']-($automaticDebt+1200000.50))<0.01
+   &&$item['received']==='300000.25'
+   &&abs((float)$item['balance']-($automaticDebt+900000.25))<0.01,
+   'Automatic student invoice and manual invoice each counted once; later payments excluded');
  rejected(fn()=>\ServiceYar\Domain\ServiceFinanceReport::report($viewer,$feeAgency,$filter),'SCOPE_FORBIDDEN');
  rejected(fn()=>\ServiceYar\Domain\ServiceFinanceReport::report($uid,$feeAgency,['months'=>13]+$filter),'VALIDATION_ERROR');
  rejected(fn()=>\ServiceYar\Domain\ServiceFinanceReport::report($uid,$feeAgency,$filter,(int)$foreign['id']),'NOT_FOUND');
  D::removeStudent($uid,$feeAgency,(int)$feeService['id'],(int)$feeStudent['id']);
  check(\ServiceYar\Domain\ServiceFinanceReport::report($uid,$feeAgency,$filter)['items']===[],'Operational report omits a removed assignment');
  $individual=\ServiceYar\Domain\ServiceFinanceReport::report($uid,$feeAgency,$filter,(int)$feeStudent['id']);
- check($individual['items'][0]['service']===null&&$individual['items'][0]['balance']==='900000.25','Student retains invoice history after assignment removal');
+ check($individual['items'][0]['service']===null&&abs((float)$individual['items'][0]['balance']-($automaticDebt+900000.25))<0.01,'Student retains invoice history after assignment removal');
  $rows=StudentImport::map([['نام','نام خانوادگی','شماره همراه ولی'],['آزمایش','واردات','۰۹۱۲۰۰۰۰۰۰۴']]);check($rows[0]['mobile']==='09120000004','Import normalizes Persian digits');
  $studentsBefore=(int)$p->query('SELECT COUNT(*) FROM students')->fetchColumn();rejected(fn()=>StudentImport::commit($uid,$a,['schoolId'=>$school['id'],'rows'=>[$rows[0],['firstName'=>'bad','lastName'=>'bad','mobile'=>'bad']]]),'VALIDATION_ERROR');check((int)$p->query('SELECT COUNT(*) FROM students')->fetchColumn()===$studentsBefore,'Import commit rolls back on invalid row');
  $result=StudentImport::commit($uid,$a,['schoolId'=>$school['id'],'rows'=>$rows]);check($result['created']===1,'Valid import persists');
