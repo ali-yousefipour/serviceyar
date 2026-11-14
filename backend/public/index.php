@@ -340,7 +340,7 @@ try {
     if(($body['confirm']??null)!=='REPRICE_ALL_AGENCIES')throw new AuthException(422,'تأیید اصلاح گروهی کل سامانه الزامی است.','CONFIRMATION_REQUIRED');
    }
    $companies=Connection::get()->query('SELECT id FROM agencies ORDER BY id')->fetchAll(\PDO::FETCH_COLUMN);
-   $reports=[];$summary=['agencies'=>count($companies),'services'=>0,'missingCodes'=>0,'codesFilled'=>0,'recalculated'=>0,'blocked'=>0];
+   $reports=[];$summary=['agencies'=>count($companies),'services'=>0,'missingCodes'=>0,'codesFilled'=>0,'recalculated'=>0,'studentsUpdated'=>0,'invoicesSynced'=>0,'skipped'=>0,'blocked'=>0];
    foreach($companies as $companyId){
     try{
      $report=\ServiceYar\Domain\LegacyServiceTariffMigration::run($s['id'],(int)$companyId,$method==='POST');
@@ -348,6 +348,9 @@ try {
      $summary['missingCodes']+=(int)($report['servicesWithoutCode']??0);
      $summary['codesFilled']+=(int)($report['codesFilled']??0);
      $summary['recalculated']+=(int)($report['servicesUpdated']??0);
+     $summary['studentsUpdated']+=(int)($report['studentsUpdated']??0);
+     $summary['invoicesSynced']+=(int)($report['invoicesSynced']??0);
+     $summary['skipped']+=(int)($report['servicesSkipped']??0);
      if(!empty($report['errors']))$summary['blocked']++;
     }catch(\Throwable $error){
      $reports[]=['agencyId'=>(int)$companyId,'error'=>$error->getMessage()];
