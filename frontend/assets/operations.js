@@ -1914,7 +1914,7 @@ companiesPage=async function(){
   if(userSection){userSection.id='syAdminUsers';userSection.classList.add('sy-admin-users-panel');}
   adminPanel.id='syAdminIntegrations';
   const nav=document.createElement('nav');nav.className='sy-admin-section-nav';nav.setAttribute('aria-label','دسترسی سریع به تنظیمات ادمین کل');
-  nav.innerHTML='<a href="#syAdminIntegrations" data-admin-jump="syAdminIntegrations">ارتباطات و سرویس‌ها</a><a href="#syAdminTaxiTariffs" data-admin-jump="syAdminTaxiTariffs">محاسبه سرویس بر اساس سازمان تاکسیرانی</a><a href="#syAdminAgencies" data-admin-jump="syAdminAgencies">مدیریت شرکت‌ها</a><a href="#syAdminUsers" data-admin-jump="syAdminUsers">کاربران سامانه</a>';
+  nav.innerHTML='<a href="#syAdminIntegrations" data-admin-jump="syAdminIntegrations">ارتباطات و سرویس‌ها</a><a href="#syAdminSepand" data-admin-jump="syAdminSepand">ورود اطلاعات رانندگان و خودروهای سپند</a><a href="#syAdminTaxiTariffs" data-admin-jump="syAdminTaxiTariffs">محاسبه سرویس بر اساس سازمان تاکسیرانی</a><a href="#syAdminAgencies" data-admin-jump="syAdminAgencies">مدیریت شرکت‌ها</a><a href="#syAdminUsers" data-admin-jump="syAdminUsers">کاربران سامانه</a>';
   nav.querySelectorAll('[data-admin-jump]').forEach(link=>link.addEventListener('click',event=>{
    const target=workspace.querySelector('#'+link.dataset.adminJump);if(!target)return;
    event.preventDefault();target.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
@@ -1922,6 +1922,7 @@ companiesPage=async function(){
   }));
   workspace.prepend(nav);
    void taxiOrganizationAdminPanel(adminPanel,token);
+   if(typeof sepandAdminPanel==="function")sepandAdminPanel(adminPanel);
 
   const form=$('platformSettingsForm');
   form.onsubmit=async e=>{
