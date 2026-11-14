@@ -1793,7 +1793,7 @@ async function taxiOrganizationAdminPanel(container,token){
   e.reason||'علت نامشخص'
  ]);
  const tariffIssueTable=errors=>(errors?.length?simpleTable(['رکورد دارای خطا','مدرسه','سرویس','دانش‌آموزان / پایه','مشخصات نرخ / راننده','شرح مشکل'],tariffIssueRows(errors)):'<p class="muted">خطایی برای این شرکت گزارش نشده است.</p>');
- const tariffAgenciesReport=agencies=>agencies.map(a=>'<details class="sy-taxi-reprice-company" '+((a.errors?.length||a.error)?'open':'')+'><summary>شرکت '+number(a.agencyId)+' | سرویس قابل اصلاح: '+number(a.servicesReady||0)+' | سرویس نیازمند بررسی: '+number(a.servicesSkipped||0)+' | خطا: '+number(a.errors?.length||Number(Boolean(a.error)))+'</summary>'+(a.error?'<p role="alert">'+esc(a.error)+'</p>':'')+tariffIssueTable(a.errors||[])+'</details>').join('');
+ const tariffAgenciesReport=agencies=>agencies.map(a=>'<details class="sy-taxi-reprice-company" '+((a.errors?.length||a.error)?'open':'')+'><summary><strong>'+esc(a.agencyName||'شرکت بدون نام')+'</strong> <span class="muted">(شناسه '+number(a.agencyId)+')</span> | سرویس قابل اصلاح: '+number(a.servicesReady||0)+' | سرویس نیازمند بررسی: '+number(a.servicesSkipped||0)+' | خطا: '+number(a.errors?.length||Number(Boolean(a.error)))+'</summary>'+(a.error?'<p role="alert">'+esc(a.error)+'</p>':'')+tariffIssueTable(a.errors||[])+'</details>').join('');
  allPreview.onclick=async()=>{
   allApply.disabled=true;allStatus.textContent='در حال بررسی شرکت‌ها…';
   try{
