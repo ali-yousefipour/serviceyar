@@ -75,4 +75,14 @@ assert(source.includes('sy-print-toolbar'),'Individual payslip should provide an
 assert(source.includes('printSlipNow'),'PDF and print action should remain in the separate slip preview');
 assert(source.includes('popup.document.write('),'Payslip print should render independently of application layout');
 assert(source.includes('sy-payslip-print-window'),'Print preview should use dedicated A4 print stylesheet');
+const theme=fs.readFileSync(require('node:path').join(__dirname,'../frontend/assets/brand-theme.css'),'utf8');
+for(const marker of ['function ledgerSummaryMarkup()','sy-ledger-kpis','sy-ledger-filters-v3','sy-ledger-searchbar','sy-ledger-results','sy-ledger-data-table','sy-ledger-direction','syLedgerKpiRecords','syLedgerKpiReceipts','syLedgerKpiPayments','syLedgerKpiBalance'])
+ assert(source.includes(marker),'Ledger finance UI is missing '+marker);
+assert(source.includes("api('/api/v1/reports/ledger?'+summaryQuery)"),'Financial KPI totals must originate from the server report and honor applied filters');
+assert(source.includes("request!==state.request"),'Financial KPIs must discard superseded async filter responses');
+assert(source.includes("id=\\"ledgerExport\\""),'Filtered Excel export action must be available to report-authorized users');
+assert(source.includes("'/api/v1/reports/ledger/export?'+query"),'Ledger export must use the dedicated financial report export');
+assert(source.includes("filterForm.querySelector('.ledger-filter-more .ledger-filter-grid')"),'Sort controls must remain in the advanced filters');
+for(const marker of ['#content .sy-ledger-kpis','#content .sy-ledger-kpi','#content .sy-ledger-filters-v3','#content .sy-ledger-results .sy-ledger-data-table','@media(max-width:650px)'])
+ assert(theme.includes(marker),'Institutional responsive ledger styles missing '+marker);
 console.log('Accounting account search and safe report filters passed');
