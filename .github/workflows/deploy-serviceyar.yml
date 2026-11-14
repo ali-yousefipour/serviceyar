@@ -38,6 +38,7 @@ jobs:
           php -r 'if (!extension_loaded("gd")) { fwrite(STDERR, "GD is required for school photos\\n"); exit(1); }'
           php tests/school-image-processing.php
           php tests/xlsx-writer.php
+          php tests/sepand-xlsx.php
           php tests/excel-localization.php
           php tests/directory-sorting.php
           php tests/installments.php
