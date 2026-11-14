@@ -46,17 +46,19 @@ HTML;
 <h2>مقدمه:</h2>
 <p>قرارداد حاضر بر اساس پیمان منعقده فیمابین سازمان مدیریت و نظارت بر تاکسیرانی شهرداری مشهد مقدس و طرف دوم موصوف در ماده یک و در اجرای بند 9 از ماده 1 آئیننامه اجرایی حملونقل دانشآموزان مصوبه شماره /105024 ت 61289 هیأت وزیران و به منظور ساماندهی ،هماهنگی و یکپارچگی ضوابط در ارائه خدمات حملونقل دانشآموزان در سال تحصیلی ،{{academicYear}}بین طرفین به شرح ذیل منعقد میگردد.</p>
 <h2>ماده ۱- طرفین قرارداد:</h2>
-<p>طرف اول: آقای/خانم {{guardianName}} فرزند {{guardianFatherName}} با کد ملی {{guardianNationalCode}} به نشانی مشهد مقدس، {{guardianAddress}} با شماره همراه {{guardianMobile}} که از این پس در قرارداد <strong>ولی دانش‌آموز</strong> خوانده می‌شود.</p>
-<p>تبصره ۱: مشخصات دانش‌آموز به شرح ذیل می‌باشد: نام و نام خانوادگی: {{studentName}}　کد ملی: {{studentNationalCode}}　نام مدرسه: {{schoolName}}　ناحیه: {{schoolRegion}}</p>
-<p>طرف دوم: شرکت {{companyName}} به شماره ثبت {{companyRegistration}} با شناسه ملی {{companyNationalId}} به نمایندگی آقای/خانم {{managerName}} با کد ملی {{managerNationalCode}} به عنوان مدیرعامل/رئیس هیأت مدیره به نشانی مشهد مقدس، {{companyAddress}} با شماره تماس {{companyPhone}} که به اختصار شرکت نامیده می‌گردد.</p>
+<p>طرف اول :آقای/خانم {{guardianName}}فرزند {{guardianFatherName}}با کد ملی {{guardianNationalCode}}به نشانی مشهد مقدس،</p>
+<p>{{guardianAddress}}با شماره همراه {{guardianMobile}}که از این پس در قرارداد ولی دانشآموز خوانده میشود.</p>
+<p>تبصره :1 مشخصات دانش آموز به شرح ذیل می باشد:</p>
+<p>نام و نام خانوادگی {{studentName}} :کدملی{{studentNationalCode}}:نام مدرسه {{schoolName}}:ناحیه{{schoolRegion}}:</p>
+<p>طرف دوم :شرکت {{companyName}}به شماره ثبت {{companyRegistration}}با شناسه ملی {{companyNationalId}}به نمایندگی آقای/خانم {{managerName}}با کد ملی {{managerNationalCode}}به</p>
+<p>عنوان مدیر عامل/رئیس هیأت مدیره {{managerTitle}}به نشانی مشهد مقدس {{companyAddress}} ،با شماره تماس</p>
+<p>{{companyPhone}}که به اختصار شرکت نامیده میگردد.</p>
 <h2>ماده ۲- موضوع قرارداد:</h2>
 <p>ارائه خدمات حملونقل دانشآموز/دانشآموزان برابر ضوابط مندرج در آئیننامه اجرایی حملونقل دانشآموزی در ساعات رسمی آموزشی و مطابق با فرم ارائه خدمات پیوست با پرداخت بهای ارائه خدمات حملونقل دانشآموزی وفق مصوبه شماره /6/1404/20084 ش مورخه 1404/11/14 شورای اسلامی شهر مشهد مقدس.</p>
 <h2>ماده ۳- مدت قرارداد:</h2>
-<p>مدت قرارداد از تاریخ {{startDate}} به مدت {{durationMonths}} ماه شمسی می‌باشد.</p>
+<p>مدت قرارداد از تاریخ {{startDate}}به مدت {{durationMonths}}ماه شمسی میباشد.</p>
 <h2>ماده ۴- مبلغ قرارداد:</h2>
-<p>مبلغ کل قرارداد برای ارائه خدمات حمل‌ونقل دانش‌آموزی بر مبنای مسافت {{distanceKm}} کیلومتر (میانگین مسافت رفت و برگشت) معادل {{totalAmount}} ریال می‌باشد که مستند به سوابق مندرج در سامانه سپند و فرم ارائه خدمات (پیوست) و بهای ارائه خدمات حمل‌ونقل دانش‌آموزی (مشتمل بر نرخ خرید خدمات راننده به همراه هزینه‌های بالاسری از جمله آموزش، تجهیز ناوگان به علائم ممیزه و غیره) که توسط ولی دانش‌آموز به حساب شرکت پرداخت می‌گردد.</p>
-<p>تبصره :2 در صورت درخواست ولی دانشآموز به دریافت ارائه خدمات در صرفاً یک مسیر)رفت یا برگشت( حداکثر تا میزان %70 بهای خدمات وفق مصوبه شورای اسلامی شهر مشهد مقدس قابل دریافت خواهد بود.</p>
-<p>تبصره :3 دریافت هرگونه وجوهاتی خارج از مصوبه شورای اسلامی شهر مشهد مقدس از ولی دانشآموز برای ارائه خدمات موضوع قرارداد مجاز نمیباشد.</p>
+<p>مبلغ کل قرارداد برای ارائه خدمات حملونقل دانشآموزی بر مبنای مسافت {{distanceKm}}کیلومتر)میانگین مسافت رفت و برگشت( معادل {{totalAmount}}ریال میباشد که مستند به سوابق مندرج در سامانه سپند و فرم ارائه خدمات)پیوست( و بهاء ارائه خدمات حملونقل دانشآموزی )مشتمل بر نرخ خرید خدمات راننده به همراه هزینههای بالاسری از جمله آموزش ،تجهیز ناوگان به علائم ممیزه و غیره( که توسط ولی دانشآموز به حساب شرکت پرداخت میگردد.</p>
 <h2>ماده ۵- نحوه پرداخت:</h2>
 <p>الف :پرداخت مبلغ {{payment40}}ریال)حداقل معادل %40 مبلغ کل قرارداد( به صورت نقد در زمان انعقاد قرارداد صرفاً در وجه شرکت به شماره حساب {{bankAccount}}نزد بانک {{bankName}}واریز و رسید مربوطه پیوست قرارداد گردد.</p>
 <p>ب :پرداخت مبلغ {{payment20}}ریال)حداقل معادل %20 مبلغ کل قرارداد( به صورت واریز به حساب یا چک صیادی در بازه زمانی نیمه ابتدایی آبانماه سال جاری صرفاً در وجه شرکت به شماره حساب {{bankAccount}}نزد بانک {{bankName}}پرداخت و رسید مربوطه تحویل شرکت گردد.</p>
@@ -141,6 +143,7 @@ HTML;
   $setting=[];foreach($settings->fetchAll(PDO::FETCH_ASSOC) as $item)$setting[$item['setting_key']]=$item['setting_value'];
   $values=['companyName'=>$agency['name'],'companyNationalId'=>$setting['company_national_id']??$agency['sepand_national_id']??'',
    'companyRegistration'=>$setting['company_registration_number']??'','managerName'=>$setting['company_manager_name']??'',
+   'managerTitle'=>$setting['company_manager_title']??'مدیرعامل',
    'managerNationalCode'=>$setting['company_manager_national_code']??'','companyAddress'=>$setting['company_address']??'',
    'companyPhone'=>$setting['company_phone']??'','bankName'=>$setting['company_bank_name']??'',
    'bankAccount'=>$setting['company_bank_account']??'','academicYear'=>$setting['academic_year']??'۱۴۰۵-۱۴۰۶'];
@@ -183,7 +186,7 @@ HTML;
  }
  private static function resolvedOverrides(array $body): array {
   $allowed=['guardianName','guardianNationalCode','guardianFatherName','guardianMobile','guardianAddress',
-   'companyName','companyRegistration','companyNationalId','managerName','managerNationalCode',
+   'companyName','companyRegistration','companyNationalId','managerName','managerTitle','managerNationalCode',
    'companyAddress','companyPhone','bankName','bankAccount','distanceKm','durationMonths','academicYear'];
   $out=[];
   foreach($body as $key=>$value){
