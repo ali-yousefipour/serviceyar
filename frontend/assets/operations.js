@@ -1984,7 +1984,7 @@ async function taxiOrganizationAdminPanel(container,token){
    const data=await api('/api/v1/admin/taxi-tariffs/reprice-all');
    if(!allStatus.isConnected)return;
    const summary=data.summary;
-   allStatus.innerHTML='<p>شرکت‌ها: '+number(summary.agencies)+' | کل سرویس‌ها: '+number(summary.services)+' | دارای اختلاف واقعی: '+number(summary.servicesToChange)+' | مبالغ از قبل صحیح: '+number(summary.servicesAlreadyCurrent)+' | نیازمند بررسی: '+number(summary.skipped)+' | کدهای خالی: '+number(summary.missingCodes)+'</p><div class="sy-taxi-reprice-diagnostics">'+tariffAgenciesReport(data.agencies)+'</div>';
+   allStatus.innerHTML='<p>شرکت‌ها: '+number(summary.agencies)+' | کل سرویس‌ها: '+number(summary.services)+' | مبلغ نیازمند تغییر: '+number(summary.servicesAmountToChange)+' | فقط تغییر مبنای تعرفه: '+number(summary.servicesSourceOnlyToChange)+' | مبالغ از قبل صحیح: '+number(summary.servicesAlreadyCurrent)+' | نیازمند بررسی: '+number(summary.skipped)+' | کدهای خالی: '+number(summary.missingCodes)+'</p><div class="sy-taxi-reprice-diagnostics">'+tariffAgenciesReport(data.agencies)+'</div>';
    allApply.disabled=!(summary.servicesToChange>0||summary.studentsToChange>0||summary.missingCodes>0);
   }catch(e){allStatus.textContent=e.message;}
  };
@@ -1995,7 +1995,7 @@ async function taxiOrganizationAdminPanel(container,token){
    const data=await write('/api/v1/admin/taxi-tariffs/reprice-all',{confirm:'REPRICE_ALL_AGENCIES'});
    if(!allStatus.isConnected)return;
    const summary=data.summary;
-   allStatus.innerHTML='<p role="status">سرویس‌های دارای تغییر ثبت‌شده: '+number(summary.recalculated)+' | سرویس‌های تأییدشده از دیتابیس: '+number(summary.servicesVerified)+' | دانش‌آموزان تغییرکرده: '+number(summary.studentsUpdated)+' | دانش‌آموزان بدون تغییر: '+number(summary.studentsUnchanged)+' | فاکتورهای بررسی و همگام‌شده: '+number(summary.invoicesSynced)+' | سرویس‌های نیازمند بررسی: '+number(summary.skipped)+' | کدهای تکمیل‌شده: '+number(summary.codesFilled)+' | شرکت‌های دارای خطا: '+number(summary.blocked)+'</p>'+(summary.blocked?'<p role="alert">اصلاحات ناقص است؛ جزئیات خطاهای هر شرکت را در پایین بررسی کنید.</p>':'')+'<div class="sy-taxi-reprice-diagnostics">'+tariffAgenciesReport(data.agencies)+'</div>';
+   allStatus.innerHTML='<p role="status">سرویس‌های دارای تغییر مبلغ: '+number(summary.serviceAmountsChanged)+' | فقط تغییر مبنا: '+number(summary.serviceSourcesOnly)+' | کل سرویس‌های بروزرسانی‌شده: '+number(summary.recalculated)+' | سرویس‌های تأییدشده از دیتابیس: '+number(summary.servicesVerified)+' | دانش‌آموزان تغییرکرده: '+number(summary.studentsUpdated)+' | دانش‌آموزان بدون تغییر: '+number(summary.studentsUnchanged)+' | فاکتورهای بررسی و همگام‌شده: '+number(summary.invoicesSynced)+' | سرویس‌های نیازمند بررسی: '+number(summary.skipped)+' | کدهای تکمیل‌شده: '+number(summary.codesFilled)+' | شرکت‌های دارای خطا: '+number(summary.blocked)+'</p>'+(summary.blocked?'<p role="alert">اصلاحات ناقص است؛ جزئیات خطاهای هر شرکت را در پایین بررسی کنید.</p>':'')+'<div class="sy-taxi-reprice-diagnostics">'+tariffAgenciesReport(data.agencies)+'</div>';
    lookupCache={};
    // A second read-only calculation establishes whether outstanding fee differences remain.
    try{
@@ -2010,7 +2010,7 @@ async function taxiOrganizationAdminPanel(container,token){
   try{
    const data=await api(scoped('/api/v1/admin/taxi-tariffs/reprice-legacy'));
    if(!output.isConnected)return;
-   output.innerHTML='<p>کل سرویس‌ها: '+number(data.servicesChecked)+' | دارای تغییر واقعی: '+number(data.servicesToChange)+' | بدون تغییر: '+number(data.servicesAlreadyCurrent)+' | سرویس‌های بدون کد: '+number(data.servicesWithoutCode)+' | دانش‌آموز نیازمند اصلاح: '+number(data.studentsToChange)+' | خطای محاسبه: '+number(data.errors.length)+' | اختلاف جمع ماهانه: '+number(data.monthlyDifference)+' ریال</p>'+tariffIssueTable(data.errors);
+   output.innerHTML='<p>کل سرویس‌ها: '+number(data.servicesChecked)+' | تغییر مبلغ: '+number(data.servicesAmountToChange)+' | فقط تغییر مبنا: '+number(data.servicesSourceOnlyToChange)+' | بدون تغییر: '+number(data.servicesAlreadyCurrent)+' | سرویس‌های بدون کد: '+number(data.servicesWithoutCode)+' | دانش‌آموز نیازمند اصلاح: '+number(data.studentsToChange)+' | خطای محاسبه: '+number(data.errors.length)+' | اختلاف جمع ماهانه: '+number(data.monthlyDifference)+' ریال</p>'+tariffIssueTable(data.errors);
    applyBtn.disabled=!data.servicesChecked;
   }catch(e){output.textContent=e.message;}
  };
