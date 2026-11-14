@@ -574,6 +574,18 @@ final class DomainService {
       AND d.vehicle_id=:vehicle AND sv.capacity<:limit_capacity");
    $sync->execute(['capacity'=>$newCapacity,'agency'=>$aid,'vehicle'=>$id,'limit_capacity'=>$newCapacity]);
   }
+  // Editing student tuition must refresh the stored driver net for every
+  // linked service, keeping old caches and printed amounts consistent.
+  if($resource==='students'&&array_intersect(['monthly_fee','driver_base_monthly','fee_source'],array_keys($data))){
+   $linked=$pdo->prepare('SELECT DISTINCT sv.id FROM service_students ss JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=? WHERE ss.student_id=? AND sv.is_active=1');
+   $linked->execute([$aid,$id]);
+   foreach($linked->fetchAll(\PDO::FETCH_COLUMN) as $serviceId){
+    $gross=$pdo->prepare('SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
+    $gross->execute([$aid,$serviceId]);
+    $net=OperationsService::driverDeductions((float)$gross->fetchColumn(),$aid)['net_earned'];
+    $pdo->prepare('UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?')->execute([$net,$serviceId,$aid]);
+   }
+  }
   if($resource==='services'&&!empty($data['school_id']))$pdo->prepare('INSERT IGNORE INTO service_schools(service_id,school_id) VALUES(?,?)')->execute([$id,$data['school_id']]);
   // Changing a service source explicitly also re-prices its current students atomically.
   if($resource==='services'&&!$wasCreate&&array_key_exists('fee_source',$data)
