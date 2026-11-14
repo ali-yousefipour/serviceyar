@@ -488,6 +488,11 @@ try{
  check((int)D::get($uid,$a,'students',(int)$taxiStudent['id'])['monthly_fee']===12090569,'Historical stored rate remains fixed after tariff edit');
  $repriced=D::save($uid,$a,'students',['feeSource'=>'taxi'],(int)$taxiStudent['id']);
  check((int)$repriced['monthly_fee']===14000000&&(int)$repriced['driver_base_monthly']===11000000,'Explicit fee selection recomputes parent and driver pricing');
+ $tariffPreview=\ServiceYar\Domain\LegacyServiceTariffMigration::run($uid,$a,false);
+ $draftError=array_values(array_filter($tariffPreview['errors'],static fn($e)=>(int)($e['studentId']??0)===(int)$draftStudent['id']));
+ check(count($draftError)>0 && ($draftError[0]['studentName']??'')==='آزمون مهر'
+  && !empty($draftError[0]['schoolName']) && in_array('پیش‌نویس مهر',array_map(static fn($name)=>preg_replace('/\\s*\\(.*$/u','',$name),$draftError[0]['serviceNames']??[]),true),
+  'Repricing diagnostics identify the real student, school and service instead of only numeric ids');
  echo "Transport integration: $checks checks passed. All fixtures rolled back.\n";
 }finally{if($p->inTransaction())$p->rollBack();}
 
