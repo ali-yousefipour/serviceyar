@@ -588,6 +588,12 @@ try {
  if($method==='POST'&&$path==='/api/v1/operations/mehr-assignments/drafts'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\MehrWorkbookAssignments::run($s['id'],$aid,true)]);}
  if($path==='/api/v1/school-catalog'&&$method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolCatalog::search($s['id'],$aid,$_GET)]);
  if($path==='/api/v1/school-catalog/select'&&$method==='POST'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolCatalog::select($s['id'],$aid,Request::json())]);}
+ if($path==='/api/v1/vehicles/lookup-by-plate'&&$method==='GET'){
+  $value=$_GET['plate']??'';
+  if(!is_string($value))throw new AuthException(422,'شماره پلاک نامعتبر است.','INVALID_PLATE');
+  header('Cache-Control: no-store, max-age=0');
+  Response::json(['ok'=>true,'data'=>DomainService::lookupVehicleByPlate($s['id'],$aid,$value)]);
+ }
  $domainMap=['schools','students','drivers','vehicles','services','packs','contracts','driver-work','driver-payments','school-charges','service-charges','invoices','payments','accounts','accounting-documents','wallets','messages','driver-changes','ledger','driver-ratings','parent-reports'];
  foreach($domainMap as $resource){
   $base='/api/v1/'.$resource;
