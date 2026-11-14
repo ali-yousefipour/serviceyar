@@ -79,6 +79,11 @@ final class OperationsService
                     ->execute([$fee,$base,$source,$studentId,$aid]);
             }
             $p->prepare("UPDATE students SET service_status='assigned' WHERE id=:id AND agency_id=:a")->execute(['id'=>$studentId,'a'=>$aid]);
+            // A new-service wizard recalculates zero/legacy rates later in the same
+            // transaction; it will synchronize the invoice after repricing.
+            $feeCheck=$p->prepare('SELECT monthly_fee FROM students WHERE id=? AND agency_id=?');
+            $feeCheck->execute([$studentId,$aid]);
+            if((float)$feeCheck->fetchColumn()>0)StudentServiceBilling::sync($p,$aid,$studentId);
         });
         self::audit($uid,$aid,'assign_student','services',$serviceId);
     }
