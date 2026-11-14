@@ -36,7 +36,9 @@ assert(source.includes('id="journalEmptyReset"'),'Empty account document results
 assert(source.includes('role="region" aria-label="فهرست اسناد حسابداری"'),'Accounting document table should support keyboard navigation');
 assert(source.includes('status.onchange=()=>refresh();order.onchange=()=>refresh();'),'Status and order changes should not steal search focus');
 assert(source.includes('searchTimer=setTimeout(()=>refresh(true),400)'),'Search should restore input focus following refresh');
-assert(source.includes('class="sy-ledger-report-intro"'),'Ledger report requires a clear heading');
+assert(!source.includes('<header class="sy-ledger-report-intro"'),'Report must not duplicate the primary heading inside the filters panel');
+assert(source.includes('class="ledger-report-letterhead sy-ledger-print-letterhead"'),'Branded document heading must be isolated for print');
+assert(theme.includes('#content .sy-ledger-report-page-panel .sy-ledger-print-letterhead')&&theme.includes('@media print'),'Report letterhead must not appear on screen but must print');
 assert(source.includes('aria-label="جدول گزارش دریافت‌ها و پرداخت‌ها"'),'Ledger report table needs an accessible label');
 assert(source.includes('data-label="دریافت (ریال)"'),'Ledger report needs mobile amount labels');
 assert(source.includes('id="ledgerReportRetry"'),'Ledger report must expose a retry action');
