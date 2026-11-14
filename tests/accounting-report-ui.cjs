@@ -99,4 +99,22 @@ assert(source.includes("if(ready)window.print()"),'Printing must remain protecte
 for(const marker of ['.sy-ledger-report-page-panel .ledger-report-letterhead','.sy-ledger-report-page-panel .ledger-report-kpis','.sy-ledger-report-page-panel .ledger-report-table','@media print']){
  assert(theme.includes(marker),'Report visual or print styles missing: '+marker);
 }
+// The reporting form is its own predictable sequence; record-management UI remains intact.
+const reportFormStart=source.indexOf("if(mode==='report')return");
+const recordsFormStart=source.indexOf("return `<form id=\"gridFilters\" class=\"ledger-filters sy-ledger-filters-v3\"",reportFormStart);
+assert(reportFormStart>0&&recordsFormStart>reportFormStart,'Separate report and records filters must exist');
+const reportFormSource=source.slice(reportFormStart,recordsFormStart);
+const orderedMarkers=['sy-ledger-report-search-grid','sy-ledger-report-main-grid','sy-ledger-report-date-grid','sy-ledger-report-advanced','sy-ledger-report-submit-row'];
+let previous=-1;
+for(const marker of orderedMarkers){
+ const position=reportFormSource.indexOf(marker);
+ assert(position>previous,'Report controls must follow search > transaction > dates > advanced > actions: '+marker);
+ previous=position;
+}
+assert(!reportFormSource.includes('id="ledgerFilterSummary"'),'Result count must not appear in report filter form');
+assert(source.includes('id="ledgerFilterSummary" class="sy-ledger-report-count-badge"'),'Result count must appear beside report output heading');
+assert(source.includes("if(['amountMin','amountMax'].some(k=>values.get(k)))"),'Advanced filters should expand only for amount restrictions');
+for(const marker of ['.sy-ledger-report-search-grid','.sy-ledger-report-main-grid','.sy-ledger-report-date-grid','.sy-ledger-report-submit-actions','.sy-ledger-report-count-badge']){
+ assert(theme.includes(marker),'Report control hierarchy requires styled marker '+marker);
+}
 console.log('Accounting account search and safe report filters passed');
