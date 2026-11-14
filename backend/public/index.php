@@ -448,6 +448,11 @@ try {
    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\TaxiOrganizationTariffs::save($s['id'],Request::json())]);
   }
  }
+ if($method==='POST'&&$path==='/api/v1/admin/vehicle-class-catalog/prepare'){
+   $auth->requireCsrf($s);
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\VehicleClassCatalog::prepare(
+    $s['id'],(string)(Request::json()['confirm']??''))]);
+ }
  if($path==='/api/v1/admin/vehicle-class-catalog'){
    if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\VehicleClassCatalog::list($s['id'])]);
    if($method==='POST'){
