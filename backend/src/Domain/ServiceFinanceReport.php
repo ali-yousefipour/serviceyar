@@ -32,7 +32,7 @@ final class ServiceFinanceReport
             'assignment_agency' => $aid, 'invoice_agency' => $aid, 'student_agency' => $aid,
             'from_date' => $from, 'to_date' => $to, 'paid_through' => $to,
             'academic_year' => $year, 'months' => $months,
-            'ledger_agency' => $aid, 'ledger_from' => $from, 'ledger_to' => $to, 'balance_months' => $months,
+            'ledger_agency' => $aid, 'ledger_from' => $from, 'ledger_to' => $to,
         ];
         if ($studentId !== null) $params['student'] = $studentId;
 
@@ -68,7 +68,7 @@ final class ServiceFinanceReport
                     NULLIF(st.monthly_fee,0)*:months estimated_fee,
                     COALESCE(f.invoiced,0) invoiced,
                     COALESCE(f.received,0)+COALESCE(l.received,0) received,
-                    GREATEST(0,COALESCE(st.monthly_fee,0)*:balance_months - COALESCE(f.received,0)-COALESCE(l.received,0)) balance
+                    COALESCE(f.invoiced,0)-COALESCE(f.received,0)-COALESCE(l.received,0) balance
                 FROM students st
                 LEFT JOIN assignments a ON a.student_id=st.id
                 LEFT JOIN services s ON s.id=a.service_id AND s.agency_id=st.agency_id AND a.assignment_count=1
