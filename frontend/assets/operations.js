@@ -670,7 +670,7 @@ async function resourcePage(key,token=pageToken,options={}){
   controls.innerHTML='<label>مرتب‌سازی<select name="sortBy" aria-label="ستون مرتب‌سازی">'+sortFields.map(([field,label])=>'<option value="'+field+'">'+esc(label)+'</option>').join('')+'</select></label>'+
    '<label>جهت مرتب‌سازی<select name="sortDir" aria-label="جهت مرتب‌سازی"><option value="desc">نزولی</option><option value="asc">صعودی</option></select></label>';
   const submit=filterForm.querySelector('button[type=submit]')||filterForm.querySelector('button.primary');
-  if(submit)submit.before(controls);else filterForm.append(controls);
+  if(isLedger){const advanced=filterForm.querySelector('.ledger-filter-more .ledger-filter-grid');if(advanced)advanced.append(controls);else filterForm.append(controls);}else if(submit)submit.before(controls);else filterForm.append(controls);
  }
 
  $('ledgerTabReport')?.addEventListener('click',()=>ledgerReportPage(token));
