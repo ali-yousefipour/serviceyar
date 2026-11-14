@@ -488,6 +488,20 @@ try{
  check((int)D::get($uid,$a,'students',(int)$taxiStudent['id'])['monthly_fee']===12090569,'Historical stored rate remains fixed after tariff edit');
  $repriced=D::save($uid,$a,'students',['feeSource'=>'taxi'],(int)$taxiStudent['id']);
  check((int)$repriced['monthly_fee']===14000000&&(int)$repriced['driver_base_monthly']===11000000,'Explicit fee selection recomputes parent and driver pricing');
+ $classVehicle=D::save($uid,$a,'vehicles',['plate'=>'VT-'.$tag,'capacity'=>4,'tariffVehicleClass'=>2]);
+ $classDriver=D::save($uid,$a,'drivers',['firstName'=>'راننده','lastName'=>'کلاس تست','status'=>'active','vehicleId'=>$classVehicle['id']]);
+ D::save($uid,$a,'services',['driverId'=>$classDriver['id']],(int)$taxiService['id']);
+ $expectedClassTwo=\ServiceYar\Domain\TaxiOrganizationTariffs::quote($p,1,2,3);
+ $assignedAfterVehicleChange=D::get($uid,$a,'students',(int)$taxiStudent['id']);
+ check((int)$assignedAfterVehicleChange['tariff_vehicle_class']===2
+   &&(int)$assignedAfterVehicleChange['monthly_fee']===$expectedClassTwo['parentMonthly'],
+   'Changing the service driver derives class and fare from the registered vehicle');
+ D::save($uid,$a,'vehicles',['tariffVehicleClass'=>3],(int)$classVehicle['id']);
+ $expectedClassThree=\ServiceYar\Domain\TaxiOrganizationTariffs::quote($p,1,3,3);
+ $afterRegisteredVehicleEdit=D::get($uid,$a,'students',(int)$taxiStudent['id']);
+ check((int)$afterRegisteredVehicleEdit['tariff_vehicle_class']===3
+   &&(int)$afterRegisteredVehicleEdit['monthly_fee']===$expectedClassThree['parentMonthly'],
+   'Editing registered vehicle class reprices its assigned students and synchronizes invoices');
  $tariffPreview=\ServiceYar\Domain\LegacyServiceTariffMigration::run($uid,$a,false);
  $draftError=array_values(array_filter($tariffPreview['errors'],static fn($e)=>(int)($e['studentId']??0)===(int)$draftStudent['id']));
  check(count($draftError)>0 && ($draftError[0]['studentName']??'')==='آزمون مهر'
