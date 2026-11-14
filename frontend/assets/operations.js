@@ -946,6 +946,7 @@ document.addEventListener('keydown',e=>{const modal=$('modal')?.querySelector('.
 function resourceWizard(form,key){
  const definitions={students:[['اطلاعات ولی',['mobile','guardianFirstName','guardianLastName','guardianNationalCode','guardianRelation','emergencyPhone']],['مشخصات دانش‌آموز',['firstName','lastName','gender','nationality','nationalCode','fatherName','healthStatus']],['نشانی و مدرسه',['address','returnAddress','latitude','longitude','schoolId','grade','shift','academicYear']],['وضعیت و هزینه',['serviceStatus','tariffDistanceKm','tariffVehicleClass','monthlyFee']]],drivers:[['مشخصات راننده',['firstName','lastName','nationalCode','mobile','status']],['خودرو و نشانی',['vehicleId','isRepresentative','address']],['اطلاعات بانکی',['bankName','bankAccount','iban']]],services:[['مشخصات سرویس',['title','code','capacity','shift','status']],['مدرسه و راننده',['schoolId','driverId','packId']],['مسیر و مبالغ',['startAddress','endAddress','monthlyFee','agreedAmount']]]};
  definitions.cheques=[['مشخصات چک',['bankName','branchName','serialNo','bankAccount']],['دریافت و سررسید',['receivedFrom','accountId','amount','receivedDate','dueDate','description','counterAccountId']]];
+ definitions.vehicles=[['پلاک و فراخوانی اطلاعات',['plate']],['مشخصات خودرو',['ownerName','vehicleType','vehicleSystem','vehicleTrim','model','tariffVehicleClass','capacity']],['اطلاعات تکمیلی',['vin','makeYear','fuelType','color','engineNumber','chassisNumber','insuranceNumber','sepandStatus','isActive']]];
  const groups=definitions[key];if(!groups)return;const grid=form.querySelector('.form-grid'),fields=[...grid.children],steps=[];form.classList.add('sy-record-wizard',`sy-record-wizard--${key}`);
  const progress=document.createElement('nav');progress.className='wizard-progress';progress.setAttribute('aria-label','مراحل تکمیل فرم');form.prepend(progress);
  for(const [title,names] of groups){const section=document.createElement('section');section.className='wizard-step';const heading=document.createElement('h4');heading.textContent=title;section.append(heading);const content=document.createElement('div');content.className='form-grid sy-wizard-fields';section.append(content);for(const name of names){const field=fields.find(l=>l.querySelector(`[name="${name}"]`));if(field)content.append(field);}steps.push({title,section,fields:names});grid.before(section);}
@@ -1162,6 +1163,48 @@ async function formResource(key,id,onSaved){
    [first,middle,region].forEach(input=>input.addEventListener('input',sync));
    letter.addEventListener('change',sync);
    form.addEventListener('submit',event=>{if(!sync()){event.preventDefault();event.stopImmediatePropagation();[first,letter,middle,region].find(x=>!x.value||(x!==letter&&x.value.length!==x.maxLength))?.focus();notify('تمام قسمت‌های پلاک ایران را کامل کنید.',true);}},true);
+   if(!id){
+    const lookupButton=document.createElement('button');
+    lookupButton.type='button';lookupButton.className='sy-vehicle-lookup-button primary';
+    lookupButton.textContent='فراخوانی اطلاعات خودرو';
+    const lookupStatus=document.createElement('p');
+    lookupStatus.className='sy-vehicle-lookup-status';lookupStatus.setAttribute('role','status');
+    lookupStatus.setAttribute('aria-live','polite');
+    field.append(lookupButton,lookupStatus);
+    let requestVersion=0;
+    [first,middle,letter,region].forEach(el=>el.addEventListener('input',()=>{requestVersion++;lookupStatus.textContent='';}));
+    letter.addEventListener('change',()=>{requestVersion++;lookupStatus.textContent='';});
+    lookupButton.addEventListener('click',async()=>{
+     if(!sync()){lookupStatus.textContent='ابتدا پلاک را کامل کنید.';return;}
+     const version=++requestVersion,requestedPlate=plate.value;
+     lookupButton.disabled=true;lookupStatus.textContent='در حال جستجوی اطلاعات این پلاک…';
+     try{
+      const result=await api(scoped('/api/v1/vehicles/lookup-by-plate?plate='+encodeURIComponent(requestedPlate)));
+      if(version!==requestVersion||!form.isConnected||plate.value!==requestedPlate)return;
+      if(!result.found){lookupStatus.textContent='خودرویی با این پلاک ثبت نشده است؛ اطلاعات خودرو را دستی تکمیل کنید.';return;}
+      const vehicle=result.vehicle||{};
+      const fields={ownerName:'owner_name',vin:'vin',vehicleType:'vehicle_type',vehicleSystem:'vehicle_system',makeYear:'make_year',fuelType:'fuel_type',color:'color',engineNumber:'engine_number',chassisNumber:'chassis_number',insuranceNumber:'insurance_number',sepandStatus:'sepand_status',capacity:'capacity',tariffVehicleClass:'tariff_vehicle_class'};
+      for(const [fieldName,column] of Object.entries(fields)){
+       const input=form.elements[fieldName];
+       if(input&&vehicle[column]!==null&&vehicle[column]!==undefined&&String(vehicle[column])!==''){
+        input.value=String(vehicle[column]);input.dispatchEvent(new Event('change',{bubbles:true}));
+       }
+      }
+      // Keep the approved model picker synchronized with its validation state.
+      const model=form.elements.vehicleTrim;
+      if(model){
+       const picker=await vehicleModelPickerPromise;
+       if(version!==requestVersion||!form.isConnected||plate.value!==requestedPlate)return;
+       if(picker)picker.setVehicle(vehicle);
+       else {model.value=vehicle.vehicle_trim||vehicle.model||'';model.dispatchEvent(new Event('change',{bubbles:true}));}
+      }
+      // A registry lookup copies facts into this new company record; it does not
+      // update or link the other agency's vehicle or its drivers.
+      lookupStatus.textContent=(result.source==='current_agency'?'این پلاک قبلاً در شرکت شما وجود دارد. ':'اطلاعات خودرو از سوابق موجود فراخوانی شد. ')+'مشخصات را بررسی و در صورت نیاز ویرایش کنید؛ سپس ثبت را انجام دهید.';
+     }catch(error){if(version===requestVersion&&form.isConnected)lookupStatus.textContent='فراخوانی اطلاعات ناموفق بود: '+error.message;}
+     finally{if(version===requestVersion&&form.isConnected)lookupButton.disabled=false;}
+    });
+   }
    if(match)sync();
   }
   for(const [name,css] of [['ownerName','sy-vehicle-owner-field'],['model','sy-vehicle-model-field'],['tariffVehicleClass','sy-vehicle-tariff-class-field'],['capacity','sy-vehicle-capacity-field']]){
@@ -1174,10 +1217,10 @@ async function formResource(key,id,onSaved){
    form.elements.model.readOnly=true;
    form.elements.model.closest('label').hidden=true;
   }
-  if(form.elements.vehicleTrim&&tariffClass&&window.ServiceYarVehicleModels)
-   void window.ServiceYarVehicleModels.attach(form.elements.vehicleTrim,tariffClass,{
+  const vehicleModelPickerPromise=form.elements.vehicleTrim&&tariffClass&&window.ServiceYarVehicleModels
+   ?window.ServiceYarVehicleModels.attach(form.elements.vehicleTrim,tariffClass,{
     modelMirror:form.elements.model,initialValue:row.vehicle_trim||row.model||''
-   });
+   }):Promise.resolve(null);
   if(tariffClass){tariffClass.required=!id;tariffClass.closest('label')?.append(Object.assign(document.createElement('small'),{textContent:'کلاس خودرو مبنای محاسبه سرویس‌های مرتبط است. در خودروهای قدیمی فاقد کلاس، برای سایر ویرایش‌ها می‌توانید این فیلد را خالی بگذارید؛ در اولین فرصت کلاس معتبر را تعیین کنید.'}));}
   const owner=form.elements.ownerName;
   if(owner&&!owner.value.trim()&&row.effective_owner_name)owner.value=row.effective_owner_name;
