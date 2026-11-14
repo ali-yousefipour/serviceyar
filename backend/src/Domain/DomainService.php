@@ -233,10 +233,16 @@ final class DomainService {
     WHERE f.agency_id=students.agency_id AND f.student_national_code=students.national_code AND f.period='Mehr'
       AND f.academic_year=COALESCE(NULLIF(REPLACE(students.academic_year,'/','-'),''),'1405-1406') LIMIT 1) mehr_driver_id,
    (SELECT COALESCE(SUM(i.amount),0) FROM invoices i WHERE i.party_type='student' AND i.party_id=students.id AND i.agency_id=students.agency_id AND i.status<>'cancelled') invoice_total,
-   (SELECT COALESCE(SUM(p.amount),0) FROM payments p JOIN invoices i ON i.id=p.invoice_id AND i.agency_id=p.agency_id WHERE i.party_type='student' AND i.party_id=students.id AND p.agency_id=students.agency_id) paid_total";
+   ((SELECT COALESCE(SUM(p.amount),0) FROM payments p JOIN invoices i ON i.id=p.invoice_id AND i.agency_id=p.agency_id WHERE i.party_type='student' AND i.party_id=students.id AND p.agency_id=students.agency_id) + (SELECT COALESCE(SUM(CASE WHEN le.direction='receipt' THEN le.amount ELSE -le.amount END),0) FROM ledger_entries le WHERE le.agency_id=students.agency_id AND le.party_type='student' AND le.party_id=students.id AND le.is_active=1)) paid_total";
   $ordering=self::listOrdering($resource,$q);
   $s=$pdo->prepare("SELECT $select FROM {$c['table']} WHERE $where ORDER BY $ordering LIMIT $limit OFFSET $off");$s->execute($params);
-   $total=(int)$count->fetchColumn();$items=$s->fetchAll();if($resource==='services')foreach($items as &$item)self::attachServicePayable($item);unset($item);return ['items'=>$items,'pagination'=>['page'=>$page,'limit'=>$limit,'total'=>$total,'pages'=>(int)ceil($total/$limit)]];
+   $total=(int)$count->fetchColumn();$items=$s->fetchAll();if($resource==='services')foreach($items as &$item)self::attachServicePayable($item);if($resource==='students')foreach($items as &$item)self::attachStudentBalance($item);unset($item);return ['items'=>$items,'pagination'=>['page'=>$page,'limit'=>$limit,'total'=>$total,'pages'=>(int)ceil($total/$limit)]];
+ }
+ private static function attachStudentBalance(array &$row): void {
+  $annual=(float)($row['annual_fee']??0);
+  $paid=(float)($row['paid_total']??0);
+  $row['outstanding_fee']=max(0,round($annual-$paid));
+  $row['student_credit']=max(0,round($paid-$annual));
  }
  private static function attachServicePayable(array &$row): void {
   $gross=max(0,(float)($row['driver_base_monthly_total']??$row['students_monthly_total']??0));
@@ -314,6 +320,14 @@ final class DomainService {
   if($resource==='students'){
    $annual=Connection::get()->prepare("SELECT (CASE WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'ابتدایی|دبستان|primary|elementary' THEN 8.5 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR TRIM(COALESCE(students.grade,'')) IN ('1','2','3','4','5','6','۱','۲','۳','۴','۵','۶') THEN 8.5 ELSE 9 END) AS annual_months, ROUND(COALESCE(students.monthly_fee,0) * (CASE WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'ابتدایی|دبستان|primary|elementary' THEN 8.5 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR TRIM(COALESCE(students.grade,'')) IN ('1','2','3','4','5','6','۱','۲','۳','۴','۵','۶') THEN 8.5 ELSE 9 END),0) AS annual_fee FROM students WHERE students.id=:id AND students.agency_id=:a");
    $annual->execute(['id'=>$id,'a'=>$aid]);$row=array_merge($row,$annual->fetch()?:[]);
+   $paid=$pdo??Connection::get();
+   $payments=$paid->prepare("SELECT
+    (SELECT COALESCE(SUM(p.amount),0) FROM payments p JOIN invoices i ON i.id=p.invoice_id AND i.agency_id=p.agency_id
+     WHERE i.party_type='student' AND i.party_id=:student1 AND p.agency_id=:agency1)
+    + (SELECT COALESCE(SUM(CASE WHEN le.direction='receipt' THEN le.amount ELSE -le.amount END),0)
+       FROM ledger_entries le WHERE le.agency_id=:agency2 AND le.party_type='student' AND le.party_id=:student2 AND le.is_active=1)");
+   $payments->execute(['student1'=>$id,'agency1'=>$aid,'student2'=>$id,'agency2'=>$aid]);
+   $row['paid_total']=(float)$payments->fetchColumn();self::attachStudentBalance($row);
   }
   if($resource==='ledger'){
    if(!in_array('company_account_id',thisColumns('ledger_entries',Connection::get()),true))throw new AuthException(503,'ساختار حساب‌های شرکت نیازمند اجرای مهاجرت دیتابیس 0031 است.','FINANCE_SCHEMA_UPDATE_REQUIRED');
