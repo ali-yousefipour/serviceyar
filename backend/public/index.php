@@ -453,6 +453,8 @@ try {
    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\VehicleClassCatalog::prepare(
     $s['id'],(string)(Request::json()['confirm']??''))]);
  }
+ if($method==='GET'&&$path==='/api/v1/vehicle-model-options')
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\VehicleClassCatalog::options($s['id'],$aid)]);
  if($path==='/api/v1/admin/vehicle-class-catalog'){
    if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\VehicleClassCatalog::list($s['id'])]);
    if($method==='POST'){
