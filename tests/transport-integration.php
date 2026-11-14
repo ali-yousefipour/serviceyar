@@ -647,6 +647,19 @@ try{
   ->execute([$firstService,$secondService,$a]);
  check($docApi::printable($uid,$a,(int)$driverDoc['id'])['html']===$driverPrint,
   'Driver contract historical print is invariant when service fees later change');
+ $customRates=['supervision'=>5.0,'coordination'=>2.0,'overhead'=>4.0,'insurance'=>6.0];
+ $p->prepare("INSERT INTO agency_settings(agency_id,setting_key,setting_value,is_secret)
+   VALUES(?,?,?,0) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)")
+   ->execute([$a,\ServiceYar\Domain\DriverDeductionPolicy::KEY,
+    \ServiceYar\Domain\DriverDeductionPolicy::validate($customRates)]);
+ $newAnnual=$docApi::draftData($uid,$a,'driver',(int)$contractDriver)['driverAnnual'];
+ $customExpected=(int)round(\ServiceYar\Domain\DriverDeductionPolicy::calculate(10000000,$customRates)['net_earned']*8.5)
+  +(int)round(\ServiceYar\Domain\DriverDeductionPolicy::calculate(20000000,$customRates)['net_earned']*9);
+ check($newAnnual['netAnnual']===$customExpected,
+  'Driver contract uses current company-specific deduction percentages');
+ check($docApi::printable($uid,$a,(int)$driverDoc['id'])['html']===$driverPrint,
+  'Existing contract document remains unchanged after deduction policy updates');
+
  echo "Transport integration: $checks checks passed. All fixtures rolled back.\n";
 }finally{if($p->inTransaction())$p->rollBack();}
 
