@@ -80,7 +80,7 @@ for(const marker of ['function ledgerSummaryMarkup()','sy-ledger-kpis','sy-ledge
  assert(source.includes(marker),'Ledger finance UI is missing '+marker);
 assert(source.includes("api('/api/v1/reports/ledger?'+summaryQuery)"),'Financial KPI totals must originate from the server report and honor applied filters');
 assert(source.includes("request!==state.request"),'Financial KPIs must discard superseded async filter responses');
-assert(source.includes("id=\\"ledgerExport\\""),'Filtered Excel export action must be available to report-authorized users');
+assert(source.includes('id="ledgerExport"'),'Filtered Excel export action must be available to report-authorized users');
 assert(source.includes("'/api/v1/reports/ledger/export?'+query"),'Ledger export must use the dedicated financial report export');
 assert(source.includes("filterForm.querySelector('.ledger-filter-more .ledger-filter-grid')"),'Sort controls must remain in the advanced filters');
 for(const marker of ['#content .sy-ledger-kpis','#content .sy-ledger-kpi','#content .sy-ledger-filters-v3','#content .sy-ledger-results .sy-ledger-data-table','@media(max-width:650px)'])
