@@ -65,6 +65,8 @@ final class VehicleClassCatalog {
    // "پراید" and "تیبا" together must remain an ambiguity, not a guess.
    $regex='/(?<![\p{L}\p{N}])'.preg_quote($alias,'/').'(?![\p{L}\p{N}])/u';
    foreach($texts as $t)if(preg_match($regex,$t)){
+    // "پارس خودرو" is a manufacturer, NOT evidence of Peugeot Pars.
+    if($alias==='پارس' && preg_match('/^پارس خودرو$/u',$t))continue;
     $hits[(int)$model['class_number']][(string)$model['family_name']]=true;
     break;
    }
