@@ -448,6 +448,15 @@ try {
    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\TaxiOrganizationTariffs::save($s['id'],Request::json())]);
   }
  }
+ if($method==='POST'&&$path==='/api/v1/admin/sepand-registry/import'){
+   $auth->requireCsrf($s);
+   $apply=($_POST['mode']??'preview')==='apply';
+   $binding=json_decode((string)($_POST['companyMapping']??'{}'),true);
+   if(!is_array($binding))throw new AuthException(422,'تطبیق شرکت‌ها معتبر نیست.','SEPAND_MAPPING_INVALID');
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SepandRegistryImport::run(
+    $s['id'],['drivers'=>$_FILES['drivers']??[],'vehicles'=>$_FILES['vehicles']??[]],
+    $apply,$binding,(string)($_POST['digest']??''))]);
+ }
  if($path==='/api/v1/admin/platform-settings'){
    if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Settings\PlatformSettings::overview($s['id'])]);
    if($method==='PUT'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Settings\PlatformSettings::save($s['id'],Request::json())]);}
