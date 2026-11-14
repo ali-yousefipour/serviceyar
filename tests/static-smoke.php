@@ -143,7 +143,7 @@ if($posting===false || $domain===false)throw new RuntimeException('Cannot read f
 foreach(['===1146','financial_postings','throw $e;','FINANCIAL_SOURCE_LOCKED'] as $token){
     if(strpos($posting,$token)===false)throw new RuntimeException("Posting protection / legacy fallback missing: $token");
 }
-foreach(["FinancialPosting::assertEditable($aid,$resource,$id)","SET is_active=0 WHERE id=:id AND agency_id=:agency"] as $token){
+foreach(['FinancialPosting::assertEditable($aid,$resource,$id)','SET is_active=0 WHERE id=:id AND agency_id=:agency'] as $token){
     if(strpos($domain,$token)===false)throw new RuntimeException("Ledger soft delete or posting lock missing: $token");
 }
 
