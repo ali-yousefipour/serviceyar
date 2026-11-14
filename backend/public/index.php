@@ -332,6 +332,15 @@ try {
   $quote=\ServiceYar\Domain\ServicePricing::quote($pdo,$aid,$student,$source);
   Response::json(['ok'=>true,'data'=>$quote]);
  }
+ if($path==='/api/v1/admin/taxi-tariffs/reprice-legacy'){
+  if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\LegacyServiceTariffMigration::run($s['id'],$aid,false)]);
+  if($method==='POST'){
+   $auth->requireCsrf($s);
+   $body=Request::json();
+   if(($body['confirm']??null)!=='REPRICE_LEGACY_TAXI')throw new AuthException(422,'تأیید عملیات اصلاح گروهی لازم است.','CONFIRMATION_REQUIRED');
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\LegacyServiceTariffMigration::run($s['id'],$aid,true)]);
+  }
+ }
  if($method==='POST'&&$path==='/api/v1/operations/tariffs/seed-arta'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\AgencySchoolTariffs::seedArta($s['id'],$aid)]);}
  if($method==='POST'&&$path==='/api/v1/operations/tariffs/recalculate'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\AgencySchoolTariffs::recalculate($s['id'],$aid)]);}
  if($method==='GET'&&$path==='/api/v1/operations/daily-schedule')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\DailySchedule::report($s['id'],$aid,$_GET)]);
