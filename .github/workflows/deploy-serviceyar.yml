@@ -66,6 +66,7 @@ jobs:
           node --check frontend/assets/public-site.js
           node tests/public-landing.mjs
           node tests/auth-screen-isolation.cjs
+          node tests/sepand-schema-ui.cjs
           node tests/deploy-staging.cjs
           test -f frontend/assets/public-site-content.html
           test -f frontend/assets/public-site.css
