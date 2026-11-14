@@ -24,7 +24,7 @@ final class VehicleTariffClassRecovery {
   $vehicles=$pdo->query("SELECT v.id,v.agency_id,v.plate,v.vin,v.model,v.tariff_vehicle_class,
      GROUP_CONCAT(DISTINCT CONCAT_WS(' ',d.first_name,d.last_name) SEPARATOR '، ') AS drivers
      FROM vehicles v LEFT JOIN drivers d ON d.vehicle_id=v.id AND d.agency_id=v.agency_id
-     WHERE v.is_active=1 GROUP BY v.id,v.agency_id,v.plate,v.vin,v.model,v.tariff_vehicle_class
+     GROUP BY v.id,v.agency_id,v.plate,v.vin,v.model,v.tariff_vehicle_class
      ORDER BY v.agency_id,v.id")->fetchAll(PDO::FETCH_ASSOC);
   $byPlate=[];$byVin=[];$stats=[];
   foreach($vehicles as $v) {
