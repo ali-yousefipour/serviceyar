@@ -193,6 +193,22 @@ HTML;
   }
   return $out;
  }
+ private static function persian(string $text): string {
+  return strtr($text,['0'=>'۰','1'=>'۱','2'=>'۲','3'=>'۳','4'=>'۴','5'=>'۵','6'=>'۶','7'=>'۷','8'=>'۸','9'=>'۹']);
+ }
+ private static function jalali(string $isoDate): string {
+  if(!preg_match('/^(\d{4})-(\d{2})-(\d{2})/',$isoDate,$m))return self::persian($isoDate);
+  $gy=(int)$m[1];$gm=(int)$m[2];$gd=(int)$m[3];
+  $offsets=[0,31,59,90,120,151,181,212,243,273,304,334];
+  $gy2=$gm>2?$gy+1:$gy;
+  $days=355666+365*$gy+intdiv($gy2+3,4)-intdiv($gy2+99,100)+intdiv($gy2+399,400)+$gd+$offsets[$gm-1];
+  $jy=-1595+33*intdiv($days,12053);$days%=12053;
+  $jy+=4*intdiv($days,1461);$days%=1461;
+  if($days>365){$jy+=intdiv($days-1,365);$days=($days-1)%365;}
+  $jm=$days<186?1+intdiv($days,31):7+intdiv($days-186,30);
+  $jd=1+($days<186?$days%31:($days-186)%30);
+  return self::persian(sprintf('%04d/%02d/%02d',$jy,$jm,$jd));
+ }
  private static function document(string $html,array $values): string {
   $output=preg_replace_callback('/\{\{([a-zA-Z][a-zA-Z0-9]*)\}\}/',
    static fn(array $match)=>htmlspecialchars((string)($values[$match[1]]??'—'),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8'),$html);
@@ -220,9 +236,10 @@ HTML;
   return OperationsService::transaction(function(PDO $pdo)use($uid,$agencyId,$kind,$partyId,$start,$end,$amount,$values,$template) {
    $contractNo='SY-'.$agencyId.'-'.date('ymd').'-'.strtoupper(bin2hex(random_bytes(4)));
    $months=$kind==='parent'?(preg_match('/ابتدایی|دبستان|primary|elementary/u',(string)($values['schoolType']??'').(string)($values['grade']??''))?8.5:9):0;
-   $data=$values+['contractNo'=>$contractNo,'issueDate'=>date('Y/m/d'),'startDate'=>$start,'endDate'=>$end,
-    'durationMonths'=>$months,'totalAmount'=>number_format($amount,0,'.',','),'payment40'=>number_format((int)round($amount*.4),0,'.',','),
-    'payment20'=>number_format((int)round($amount*.2),0,'.',',')];
+   $data=$values+['contractNo'=>self::persian($contractNo),'issueDate'=>self::jalali(date('Y-m-d')),'startDate'=>self::jalali($start),'endDate'=>self::jalali($end),
+    'durationMonths'=>self::persian((string)$months),'totalAmount'=>self::persian(number_format($amount,0,'.',',')),
+    'payment40'=>self::persian(number_format((int)round($amount*.4),0,'.',',')),
+    'payment20'=>self::persian(number_format((int)round($amount*.2),0,'.',','))];
    $rendered=self::document((string)$template['body_html'],$data);
    $title=(string)$template['title'].' - '.($kind==='parent'?$values['studentName']:$values['driverName']);
    $pdo->prepare("INSERT INTO contracts(agency_id,title,contract_no,party_type,party_id,start_date,end_date,amount,status,template_id,rendered_html,snapshot_json,issued_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,NOW())")->execute([
