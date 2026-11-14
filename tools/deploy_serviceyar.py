@@ -79,7 +79,10 @@ def main():
         raise RuntimeError("Deployment payload is incomplete")
     digests = {name: sha256(source.read_bytes()).hexdigest() for name, source in files.items()}
 
-    with FTP(timeout=45) as ftp:
+    # Shared-hosting FTP can take longer than 45 seconds to return its release
+    # manifest when the server is under load. Give control/data transfers a
+    # realistic limit without bypassing checksum verification.
+    with FTP(timeout=120) as ftp:
         ftp.connect(os.environ["FTP_HOST"], 21)
         ftp.login(os.environ["FTP_USER"], os.environ["FTP_PASS"])
         old = previous_files(ftp)
