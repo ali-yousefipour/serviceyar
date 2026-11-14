@@ -302,6 +302,17 @@ try {
  if($method==='POST'&&$path==='/api/v1/accounting/journal'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>AccountingJournal::save($s['id'],$aid,Request::json())],201);}
  if($method==='POST'&&preg_match('#^/api/v1/accounting/post/(ledger|payments|driver-payments)/(\d+)$#',$path,$m)){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\FinancialPosting::post($s['id'],$aid,$m[1],(int)$m[2],Request::json())]);}
  if($method==='POST'&&$path==='/api/v1/operations/school-statement/preview'){$auth->requireCsrf($s);Authorization::requireAgencyAccess($s['id'],$aid);Authorization::requirePermission($s['id'],'finance.view');Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolStatement::calculate(Request::json())]);}
+ if($method==='GET'&&$path==='/api/v1/operations/taxi-tariffs'){
+  Authorization::requireAgencyAccess($s['id'],$aid);
+  Authorization::requirePermission($s['id'],'settings.view');
+  $district=filter_var($_GET['district']??null,FILTER_VALIDATE_INT);
+  $class=(string)($_GET['vehicleClass']??'');
+  if(!$district||$district<1||$district>8||!in_array($class,['1','2','3'],true))throw new AuthException(422,'ناحیه یا کلاس خودرو نامعتبر است.','INVALID_TAXI_TARIFF');
+  $rates=\\ServiceYar\\Domain\\TaxiOrganizationTariffs::rates(Connection::get(),$district,$class);
+  ksort($rates);
+  $rows=[];foreach($rates as $km=>$rate)$rows[]=['distanceKm'=>(int)$km,'driverMonthly'=>(int)$rate['driverMonthly'],'parentMonthly'=>(int)$rate['parentMonthly']];
+  Response::json(['ok'=>true,'data'=>['district'=>$district,'vehicleClass'=>$class,'rows'=>$rows]]);
+ }
  if($method==='POST'&&$path==='/api/v1/operations/tariffs/quote'){
   $auth->requireCsrf($s);
   Authorization::requirePermission($s['id'],'students.view');
