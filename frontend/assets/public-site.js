@@ -499,8 +499,12 @@
   try{await pendingMount;}finally{pendingMount=null;}
  }
  async function show(){
+  // Auth boot and public-site hydration are asynchronous. A stale public
+  // render must never re-open the landing page after a session is active.
+  if(window.serviceyarSessionActive)return hide();
   try{
    await mount();
+   if(window.serviceyarSessionActive)return hide();
    if(requestedPage()==='login'){
     root.hidden=true;login.hidden=false;return;
    }
@@ -509,15 +513,15 @@
    void loadStats();
    void setupPublicSchools();
   }catch(_){
-   // Preserve authentication access on static asset or API failure.
-   root.hidden=true;login.hidden=false;
+   // Preserve authentication access only for unauthenticated sessions.
+   root.hidden=true;login.hidden=!!window.serviceyarSessionActive;
   }
  }
  function hide(){
   root.hidden=true;login.hidden=true;observer?.disconnect();setMenu(false);
  }
  addEventListener('hashchange',()=>{
-  if(window.serviceyarSessionActive)return;
+  if(window.serviceyarSessionActive){hide();return;}
   if(requestedPage()==='login'){
    root.hidden=true;login.hidden=false;setMenu(false);document.getElementById('username')?.focus();
   }else void show();
