@@ -386,7 +386,7 @@ final class DomainService {
    // Always overwrite the student's former tariff class with the actual
    // registered vehicle's class before calculating new-service tuition.
    ServicePricing::synchronizeServiceVehicle($pdo,$aid,(int)$service['id'],
-      ServicePricing::source($b['feeSource']??'taxi'));
+      ServicePricing::source($b['feeSource']??'taxi'),true,array_key_exists('feeSource',$b));
    if ($students && !array_key_exists('monthlyFee', $b)) {
     $grossQuery=$pdo->prepare('SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
     $grossQuery->execute([$aid,$service['id']]);
@@ -638,7 +638,7 @@ final class DomainService {
    $sourceChanged=(string)($data['fee_source']??'taxi')!==(string)($existing['fee_source']??'taxi');
    ServicePricing::synchronizeServiceVehicle($pdo,$aid,(int)$id,
     (string)($data['fee_source']??$merged['fee_source']??'taxi'),
-    $driverChanged||$sourceChanged);
+    $driverChanged||$sourceChanged,$driverChanged||$sourceChanged);
   }
   if($resource==='services'&&isset($data['is_active']))self::syncStudentStatus($pdo,$aid,$id,(int)$data['is_active']===1);
   if($resource==='students'&&isset($data['is_active'])&&(int)$data['is_active']===0)self::releaseStudent($pdo,$uid,$aid,$id);
