@@ -115,6 +115,9 @@ final class SepandRegistryImport {
     $chosen=(int)$binding[$national];
     if(!in_array($chosen,array_column($options,'id'),true))
      throw new AuthException(422,'شناسه شرکت انتخاب‌شده معتبر نیست.','SEPAND_AGENCY_INVALID');
+    $already=array_search($chosen,$codes,true);
+    if($already!==false && (string)$already!==(string)$national)
+     throw new AuthException(409,'این شرکت قبلاً با شناسه ملی دیگری در سپند مرتبط شده است.','SEPAND_AGENCY_IDENTITY_CONFLICT');
     $id=$chosen;
    }
    if($id&&isset($used[$id])&&$used[$id]!==$national)
@@ -130,12 +133,12 @@ final class SepandRegistryImport {
   $driverIndex=[];$carIndex=[];
   foreach($drivers as $r){
    $c=$r['fields'];$key=self::identity($c['M']??'').':'.self::identity($c['D']??'');
-   if(isset($driverIndex[$key])){$driverIndex[$key]=null;$counts['driversSkipped']++;$addIssue('drivers',$r['line'],'کد ملی راننده در شرکت تکراری است؛ بررسی دستی لازم است.');}
+   if(array_key_exists($key,$driverIndex)){$driverIndex[$key]=null;$counts['driversSkipped']++;$addIssue('drivers',$r['line'],'کد ملی راننده در شرکت تکراری است؛ بررسی دستی لازم است.');}
    elseif(!str_ends_with($key,':'))$driverIndex[$key]=$r;
   }
   foreach($cars as $r){
    $c=$r['fields'];$key=self::identity($c['R']??'').':'.self::clean($c['F']??'');
-   if(isset($carIndex[$key])){$carIndex[$key]=null;$counts['vehiclesSkipped']++;$addIssue('vehicles',$r['line'],'VIN در گزارش خودروهای شرکت تکراری است؛ بررسی دستی لازم است.');}
+   if(array_key_exists($key,$carIndex)){$carIndex[$key]=null;$counts['vehiclesSkipped']++;$addIssue('vehicles',$r['line'],'VIN در گزارش خودروهای شرکت تکراری است؛ بررسی دستی لازم است.');}
    elseif(!str_ends_with($key,':'))$carIndex[$key]=$r;
   }
   if($apply&&$unmatched)throw new AuthException(422,'ابتدا شرکت‌های بدون تطبیق را در پیش‌نمایش به شرکت‌های سامانه مرتبط کنید.','SEPAND_AGENCIES_UNMATCHED');
@@ -169,7 +172,7 @@ final class SepandRegistryImport {
      if($apply)$updateVehicle->execute([...$common,$vid,$aid]);
     }else{
      $counts['vehiclesCreated']++;$vid=0;
-     if($apply){$insertVehicle->execute([$aid,$plate,$capacity,trim(($c['H']??'').' '.($c['I']??'')),...array_slice($common,0,9),...array_slice($common,9)]);$vid=(int)$pdo->lastInsertId();}
+     if($apply){$insertVehicle->execute([$aid,$plate,$capacity,trim(($c['H']??'').' '.($c['I']??'')),...$common]);$vid=(int)$pdo->lastInsertId();}
     }
     $vehicleIds[$company.':'.$vin]=$vid;
    }
