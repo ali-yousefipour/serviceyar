@@ -243,8 +243,8 @@ function render(){
  $('nav').querySelectorAll('a').forEach(a=>{const active=a.getAttribute('href')==='#'+(raw||'dashboard')+(action?'/'+action:'');a.classList.toggle('active',active);if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});$('nav').querySelectorAll('details').forEach(d=>{const active=!!d.querySelector('[aria-current=page]');d.classList.toggle('current-group',active);if(active)d.open=true;});
  if(key!=='companies'&&!currentAgency){if(key==='dashboard'&&session.roles?.includes('super_admin')){companiesPage();return;}$('content').innerHTML='<div class="empty">ابتدا شرکت فعال را انتخاب کنید.</div>';return;}
  if(key!=='companies'&&!can(key)){ $('content').innerHTML='<div class="error">برای مشاهده این بخش مجوز ندارید.</div>';return;}
- const task=key==='services'&&action==='new'?newServicePage(token,recordId):key==='installments'?installmentPage():key==='daily-schedule'?dailySchedulePage(token):key==='driver-assignment'?driverAssignmentPage(token):key==='accounting-documents'?(action==='statement'?accountStatementPage(token):action==='quick'?quickJournalPage(token):action==='defaults'?financialAccountsPage(token):action==='cheques'?chequePage(token):journalPage(token)):key==='dashboard'?dashboard(token):key==='companies'?companiesPage():key==='settings'?settingsPage():key==='reports'?reportsPage(token):key==='import'?importPage(token):key==='bale-payments'?balePaymentsPage(token):key==='school-statement'?schoolStatementPage(token):['payroll','finance-report','distances','monitoring','grouping','school-report'].includes(key)?operationPage(key,token):resourcePage(key==='previous-students'?'students':key==='agreements'?'services':key,token,{previous:key==='previous-students',agreements:key==='agreements'});
- Promise.resolve(task).then(()=>{if(token!==pageToken)return;if(action==='new'&&resources[key]&&!['accounting-documents','services','ledger'].includes(key))formResource(key,null);if(action==='fees')bulkFeeDialog();}).catch(e=>{if(token===pageToken)$('content').innerHTML='<div class="error">'+esc(e.message)+'</div>';});
+ const task=key==='services'&&action==='new'?newServicePage(token,recordId):key==='installments'?installmentPage():key==='daily-schedule'?dailySchedulePage(token):key==='driver-assignment'?driverAssignmentPage(token):key==='accounting-documents'?(action==='statement'?accountStatementPage(token):action==='quick'?quickJournalPage(token):action==='defaults'?financialAccountsPage(token):action==='cheques'?chequePage(token):journalPage(token)):key==='dashboard'?dashboard(token):key==='companies'?companiesPage():key==='contracts'?contractsPage(token):key==='settings'?settingsPage():key==='reports'?reportsPage(token):key==='import'?importPage(token):key==='bale-payments'?balePaymentsPage(token):key==='school-statement'?schoolStatementPage(token):['payroll','finance-report','distances','monitoring','grouping','school-report'].includes(key)?operationPage(key,token):resourcePage(key==='previous-students'?'students':key==='agreements'?'services':key,token,{previous:key==='previous-students',agreements:key==='agreements'});
+ Promise.resolve(task).then(()=>{if(token!==pageToken)return;if(action==='new'&&resources[key]&&!['accounting-documents','services','ledger','contracts'].includes(key))formResource(key,null);if(action==='fees')bulkFeeDialog();}).catch(e=>{if(token===pageToken)$('content').innerHTML='<div class="error">'+esc(e.message)+'</div>';});
 }
 function accountingTabs(active){const selected=active===true?'statement':active||'journal';return `<nav class="accounting-tabs" aria-label="حسابداری">${[['journal','ثبت سند',''],['statement','گزارش حساب','/statement'],['defaults','حساب‌های پیش‌فرض','/defaults'],['cheques','چک‌های دریافتی','/cheques'],...(can('accounting-documents','manage')?[['quick','سند سریع','/quick']]:[])].map(([key,title,path])=>`<a href="#accounting-documents${path}" ${selected===key?'aria-current="page"':''}>${title}</a>`).join('')}</nav>`;}
 const chequeStatuses={received:'دریافت‌شده',collected:'وصول‌شده',bounced:'برگشتی',cancelled:'ابطال‌شده',saved:'ثبت / ویرایش'};
@@ -687,6 +687,78 @@ const resourceSortFields={
  'parent-reports':[['id','جدیدترین ثبت'],['subject','موضوع'],['status','وضعیت']]
 };
 const sortDataField={fullName:'last_name',firstName:'first_name',lastName:'last_name',nationalCode:'national_code',monthlyFee:'monthly_fee',schoolId:'school_id',entryDate:'entry_date',paymentDate:'payment_date',workDate:'work_date',issueDate:'issue_date',documentDate:'document_date',totalAmount:'total_amount',dueDate:'due_date',contractNo:'contract_no',vehicleId:'vehicle_id'};
+async function contractsPage(token=pageToken){
+ const root=$('content');
+ root.innerHTML='<section class="panel sy-contract-workspace"><header class="sy-settings-section-head"><div><h2>مدیریت قراردادهای شرکت</h2><p>قرارداد جدید با اطلاعات ثبت‌شده در شرکت صادر می‌شود؛ نسخه چاپی قراردادهای صادرشده ثابت می‌ماند.</p></div></header>'+
+  '<div class="sy-contract-tabs" role="tablist" aria-label="نوع قرارداد"><button class="primary" type="button" data-contract-kind="parent" role="tab" aria-selected="true">قرارداد با ولی دانش‌آموز</button><button type="button" data-contract-kind="driver" role="tab" aria-selected="false">قرارداد با راننده</button></div>'+
+  '<div id="syContractBody" role="tabpanel"></div></section>';
+ const tabs=[...root.querySelectorAll('[data-contract-kind]')],body=$('syContractBody');
+ let kind='parent',serial=0;
+ const render=async()=>{
+  const request=++serial;
+  tabs.forEach(t=>{const active=t.dataset.contractKind===kind;t.classList.toggle('primary',active);t.setAttribute('aria-selected',active?'true':'false');});
+  body.innerHTML='<p class="loading">در حال دریافت قراردادها…</p>';
+  try{
+   const [docs,people]=await Promise.all([
+    api(scoped('/api/v1/contract-documents/'+kind)),
+    lookup(kind==='parent'?'students':'drivers')
+   ]);
+   if(request!==serial||token!==pageToken||!body.isConnected)return;
+   const fmtDate=v=>v?dateText(v):'—';
+   const available=(people||[]).filter(p=>Number(p.is_active??1)!==0);
+   const personLabel=p=>kind==='parent'
+     ?[p.first_name,p.last_name].filter(Boolean).join(' ')+(p.national_code?' · '+persianDigits(p.national_code):'')
+     :[p.first_name,p.last_name].filter(Boolean).join(' ')+(p.national_code?' · '+persianDigits(p.national_code):'');
+   body.innerHTML=(can('contracts','manage')?'<details class="sy-contract-create" open><summary>ثبت قرارداد جدید '+(kind==='parent'?'با ولی دانش‌آموز':'با راننده')+'</summary>'+
+    '<form id="syContractCreateForm" class="form-grid sy-contract-create-grid">'+
+    '<label>'+(kind==='parent'?'دانش‌آموز':'راننده')+'<input type="search" id="syContractPersonSearch" placeholder="جستجوی نام یا کد ملی" autocomplete="off"><select name="partyId" required><option value="">انتخاب کنید</option>'+available.map(p=>'<option value="'+Number(p.id)+'">'+esc(personLabel(p))+'</option>').join('')+'</select></label>'+
+    '<label>تاریخ شروع<input name="startDate" type="date" required></label><label>تاریخ پایان<input name="endDate" type="date" required></label>'+
+    '<label>مبلغ کل قرارداد (ریال)<input name="amount" type="text" inputmode="numeric" required placeholder="مبلغ صحیح بدون اعشار"></label>'+
+    '<div class="sy-contract-create-actions"><button class="primary" type="submit">صدور و ثبت قرارداد</button><span id="syContractCreateStatus" aria-live="polite"></span></div></form></details>':'')+
+    '<header class="sy-settings-section-head"><div><h3>قراردادهای صادرشده</h3><p>برای هر قرارداد نسخه چاپی ذخیره‌شده زمان صدور استفاده می‌شود.</p></div></header>'+
+    '<div class="table-wrap"><table><thead><tr><th>شماره</th><th>عنوان قرارداد</th><th>تاریخ شروع</th><th>تاریخ پایان</th><th>مبلغ (ریال)</th><th>عملیات</th></tr></thead><tbody>'+
+    (docs.length?docs.map(c=>'<tr><td>'+esc(persianDigits(c.contract_no||'—'))+'</td><td>'+esc(c.title||'—')+'</td><td>'+esc(fmtDate(c.start_date))+'</td><td>'+esc(fmtDate(c.end_date))+'</td><td>'+number(c.amount)+'</td><td><button type="button" data-contract-print="'+Number(c.id)+'" '+(!Number(c.printable)?'disabled title="فاقد نسخه چاپی زمان صدور"':'')+'>مشاهده و چاپ مجدد</button></td></tr>').join(''):'<tr><td colspan="6">قراردادی در این بخش ثبت نشده است.</td></tr>')+
+    '</tbody></table></div>';
+   const form=body.querySelector('#syContractCreateForm');
+   if(form){
+    const search=form.querySelector('#syContractPersonSearch'),select=form.elements.partyId;
+    search.addEventListener('input',()=>{
+     const term=String(ServiceYarDates.digits(search.value)).replace(/\s+/g,'').toLocaleLowerCase('fa');
+     [...select.options].forEach(option=>{
+      if(!option.value)return;
+      const norm=ServiceYarDates.digits(option.textContent).replace(/\s+/g,'').toLocaleLowerCase('fa');
+      option.hidden=term!==''&&!norm.includes(term);
+     });
+    });
+    const money=form.elements.amount;
+    money.addEventListener('input',()=>{const raw=ServiceYarDates.digits(money.value).replace(/\D/g,'').slice(0,15);money.value=persianDigits(raw.replace(/\B(?=(\d{3})+(?!\d))/g,'٬'));});
+    form.onsubmit=async e=>{
+     e.preventDefault();const submit=form.querySelector('[type=submit]'),status=form.querySelector('#syContractCreateStatus');
+     const amount=ServiceYarDates.digits(money.value).replace(/\D/g,'');
+     if(!form.reportValidity()||!amount)return;
+     submit.disabled=true;status.textContent='در حال صدور قرارداد…';
+     try{
+      const record=await write('/api/v1/contract-documents/'+kind,{partyId:Number(select.value),startDate:form.elements.startDate.value,endDate:form.elements.endDate.value,amount});
+      status.textContent='قرارداد '+persianDigits(record.contractNo)+' صادر شد.';
+      await render();
+     }catch(error){status.textContent=error.message;submit.disabled=false;}
+    };
+   }
+   body.querySelectorAll('[data-contract-print]').forEach(button=>button.onclick=async()=>{
+    const printWindow=window.open('','_blank');
+    if(!printWindow){notify('مرورگر پنجره چاپ را مسدود کرده است.',true);return;}
+    printWindow.document.write('<html lang="fa" dir="rtl"><meta charset="utf-8"><body>در حال دریافت نسخه ذخیره‌شده قرارداد…</body></html>');printWindow.document.close();
+    try{
+     const record=await api(scoped('/api/v1/contract-documents/'+encodeURIComponent(button.dataset.contractPrint)+'/print'));
+     printWindow.document.open();printWindow.document.write(record.html);printWindow.document.close();
+     printWindow.focus();
+    }catch(error){printWindow.close();notify('چاپ قرارداد: '+error.message,true);}
+   });
+  }catch(error){if(request===serial&&body.isConnected)body.innerHTML='<p role="alert" class="error">'+esc(error.message)+'</p>';}
+ };
+ tabs.forEach(t=>t.onclick=()=>{kind=t.dataset.contractKind;void render();});
+ await render();
+}
 async function resourcePage(key,token=pageToken,options={}){
  gridState={key,token,page:1,limit:25,rows:[],selected:new Set(),previous:options.previous};
  if(key==='ledger'){try{agencyMethodChoices=await api(scoped('/api/v1/finance/payment-methods'));}catch(e){notify(e.message,true);}if(token!==pageToken)return;}
