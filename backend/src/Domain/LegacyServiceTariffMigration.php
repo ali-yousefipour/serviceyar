@@ -25,6 +25,14 @@ final class LegacyServiceTariffMigration {
        WHERE st.agency_id=? ORDER BY st.id";
   $q=$pdo->prepare($sql);$q->execute([$aid]);
   $changes=[];$issues=[];$regions=[];
+  // Normalize every school in the agency, including schools without assigned students.
+  $schoolList=$pdo->prepare('SELECT id,region FROM schools WHERE agency_id=?');
+  $schoolList->execute([$aid]);
+  foreach($schoolList->fetchAll(PDO::FETCH_ASSOC) as $school){
+   $canonical=self::normalize($school['region']);
+   if($canonical===null){$issues[]=['schoolId'=>(int)$school['id'],'reason'=>'ناحیه مدرسه نامعتبر: '.(string)$school['region']];continue;}
+   $regions[(int)$school['id']]=$canonical;
+  }
   foreach($q->fetchAll(PDO::FETCH_ASSOC) as $row){
    $normalized=self::normalize($row['region']);
    if($normalized===null){$issues[]=['studentId'=>(int)$row['id'],'reason'=>'ناحیه مدرسه نامعتبر: '.$row['region']];continue;}
