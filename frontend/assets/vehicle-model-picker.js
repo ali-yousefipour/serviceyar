@@ -29,7 +29,7 @@
   const close=()=>{list.hidden=true;input.setAttribute('aria-expanded','false');};
   const pick=item=>{
    selected=item;
-   input.value=item.name;input.dataset.vehicleFamily=item.name;
+   input.value=item.name;input.dataset.vehicleFamily=item.name;delete input.dataset.vehicleTouched;
    if(modelMirror)modelMirror.value=item.name;
    classSelect.value=String(item.vehicleClass);
    hint.textContent='کلاس پیشنهادی: '+item.vehicleClass+' · در صورت نیاز می‌توانید کلاس را تغییر دهید.';
@@ -52,7 +52,7 @@
   };
   input.addEventListener('focus',render);
   input.addEventListener('input',()=>{
-   selected=null;delete input.dataset.vehicleFamily;
+   selected=null;delete input.dataset.vehicleFamily;input.dataset.vehicleTouched='1';
    hint.textContent='برای تأیید نام خودرو یکی از نتایج را انتخاب کنید.';
    render();onChange?.(null);
   });
@@ -77,7 +77,7 @@
     models.find(item=>norm(candidate).length>2&&
       item.aliases?.some(a=>norm(a).length>2&&norm(candidate).includes(norm(a))));
    if(match){
-    input.value=match.name;input.dataset.vehicleFamily=match.name;
+    input.value=match.name;input.dataset.vehicleFamily=match.name;delete input.dataset.vehicleTouched;
     if(modelMirror)modelMirror.value=match.name;
     // Never overwrite a valid, explicitly saved historical class merely
     // because the dictionary suggests a different one.
@@ -95,7 +95,7 @@
     item.aliases?.some(a=>norm(a)===norm(candidate)))||
     models.find(item=>norm(candidate).length>2&&item.aliases?.some(a=>norm(a).length>2&&norm(candidate).includes(norm(a))));
    if(match){
-    input.value=match.name;input.dataset.vehicleFamily=match.name;selected=match;
+    input.value=match.name;input.dataset.vehicleFamily=match.name;delete input.dataset.vehicleTouched;selected=match;
     if(modelMirror)modelMirror.value=match.name;
    }else{input.value=candidate;selected=null;delete input.dataset.vehicleFamily;}
    classSelect.value=['1','2','3'].includes(String(vehicle?.tariff_vehicle_class))?String(vehicle.tariff_vehicle_class):match?String(match.vehicleClass):'';
