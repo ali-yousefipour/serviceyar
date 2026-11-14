@@ -851,3 +851,195 @@ body{background:var(--canvas);color:var(--ink)}
  .sy-public-v3 #syPublicSchools .sy-quote-fields{grid-template-columns:minmax(0,1fr)!important}
  .sy-public-v3 #syPublicSchools .sy-quote-amounts{grid-template-columns:minmax(0,1fr)!important}
 }
+
+
+/* ServiceYar / دریافت و پرداخت — 2026 professional green-gold finance system.
+   Scoped to the ledger page; other directory/table screens are unchanged. */
+#content:has(.sy-ledger-page-header){--sy-ledger-green:#075941;--sy-ledger-dark:#054734;--sy-ledger-gold:#c89b3b;--sy-ledger-ink:#163c2f;--sy-ledger-muted:#607668;--sy-ledger-border:#dce8dc}
+#content .sy-ledger-page-header{
+ display:flex!important;flex-wrap:wrap;align-items:center!important;justify-content:space-between!important;
+ gap:14px!important;padding:18px 20px 13px!important;margin:0 0 11px!important;
+ background:#fffefa!important;border:1px solid #e1eade!important;border-radius:17px!important;
+ box-shadow:0 4px 20px rgba(6,58,40,.045)!important;
+}
+#content .sy-ledger-page-header .sy-directory-heading{display:grid!important;gap:4px!important}
+#content .sy-ledger-page-header .sy-directory-eyebrow{
+ display:inline-flex!important;max-width:max-content!important;
+ background:#f4edda!important;color:#86681f!important;border:1px solid #e7d5a0!important;
+ border-radius:100px!important;padding:3px 11px!important;font-size:11px!important;
+ font-weight:750!important;
+}
+#content .sy-ledger-page-header h2{
+ color:var(--sy-ledger-ink)!important;font:850 clamp(20px,2vw,27px)/1.5 Vazirmatn,Tahoma,sans-serif!important;
+ margin:0!important;
+}
+#content .sy-ledger-page-header p{
+ color:#536b5e!important;font:500 12.5px/1.9 Vazirmatn,Tahoma,sans-serif!important;
+ max-width:680px!important;margin:0!important;
+}
+#content .sy-ledger-page-header .toolbar-buttons{display:flex!important;gap:8px!important;align-items:center!important;flex-wrap:wrap!important}
+#content .sy-ledger-page-header .toolbar-buttons button{
+ min-height:42px!important;padding:8px 16px!important;font:750 12.5px/1.6 Vazirmatn,Tahoma,sans-serif!important;
+ border-radius:10px!important;box-shadow:none!important;
+}
+#content .sy-ledger-page-header #addBtn{
+ color:#1d3b27!important;border:1px solid #e3b95c!important;
+ background:linear-gradient(135deg,#f7dc94,#e5b954)!important;
+}
+#content .sy-ledger-page-header #addBtn:hover{background:linear-gradient(135deg,#ffe6a6,#edc575)!important}
+#content .sy-ledger-page-header #printGrid{
+ color:#09533c!important;background:#f6faf6!important;border:1px solid #cbded0!important;
+}
+#content .sy-ledger-kpis{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:12px!important;margin:0 0 13px!important}
+#content .sy-ledger-kpi{
+ display:flex!important;flex-direction:row!important;align-items:center!important;gap:12px!important;
+ min-width:0!important;min-height:102px!important;padding:16px!important;border-radius:15px!important;
+ border:1px solid #dbe8df!important;background:#f0f7f1!important;
+ box-shadow:0 3px 15px rgba(6,58,40,.04)!important;
+}
+#content .sy-ledger-kpi>div{display:grid!important;gap:2px!important;min-width:0!important;flex:1!important}
+#content .sy-ledger-kpi>div>span{font:750 12px/1.7 Vazirmatn,Tahoma,sans-serif!important;color:#2b4c3c!important}
+#content .sy-ledger-kpi strong{
+ min-width:0!important;overflow-wrap:anywhere!important;display:block!important;
+ font:850 clamp(17px,1.75vw,24px)/1.5 Vazirmatn,Tahoma,sans-serif!important;
+ color:#075c41!important;font-variant-numeric:tabular-nums!important;
+}
+#content .sy-ledger-kpi small{font:600 10.5px/1.7 Vazirmatn,Tahoma,sans-serif!important;color:#60786b!important}
+#content .sy-ledger-kpi-icon{display:grid!important;place-items:center!important;width:44px!important;height:44px!important;flex:0 0 44px!important;border-radius:13px!important;background:#ddf0e3!important;color:#087049!important}
+#content .sy-ledger-kpi-icon svg{width:25px!important;height:25px!important;display:block!important}
+#content .sy-ledger-kpi-receipts{background:#edf8f0!important;border-color:#cee7d5!important}
+#content .sy-ledger-kpi-payments{background:#fff2f1!important;border-color:#f0d8d6!important}
+#content .sy-ledger-kpi-payments .sy-ledger-kpi-icon{background:#fce2df!important;color:#b8443b!important}
+#content .sy-ledger-kpi-payments strong{color:#a33931!important}
+#content .sy-ledger-kpi-balance{background:#fcf7eb!important;border-color:#eedfbd!important}
+#content .sy-ledger-kpi-balance .sy-ledger-kpi-icon{background:#f5e7c8!important;color:#a17820!important}
+#content .sy-ledger-report-tabs,#content .ledger-report-tabs:has(+.sy-ledger-page-panel){margin:0 0 11px!important}
+#content .ledger-report-tabs:has(+.sy-ledger-page-panel) button{min-height:37px!important;font:750 12px Vazirmatn,Tahoma,sans-serif!important;border-radius:9px!important}
+#content .sy-ledger-page-panel{
+ background:#fffefa!important;border:1px solid #dce7dc!important;border-radius:17px!important;
+ box-shadow:0 7px 26px rgba(4,60,36,.065)!important;
+ padding:0!important;overflow:visible!important;
+}
+#content .sy-ledger-page-panel .sy-ledger-filters-v3{
+ padding:0!important;display:grid!important;gap:0!important;
+ border-radius:16px 16px 0 0!important;overflow:hidden!important;
+ background:#fffefa!important;
+}
+#content .sy-ledger-filters-v3 .sy-ledger-searchbar{
+ display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto!important;
+ gap:12px!important;align-items:end!important;padding:15px 17px!important;
+ background:linear-gradient(112deg,#06523c,#08744f)!important;color:#fff!important;
+}
+#content .sy-ledger-filters-v3 .sy-ledger-searchbar label{color:#f0f7f1!important;font-size:12px!important}
+#content .sy-ledger-filters-v3 label{
+ display:grid!important;min-width:0!important;gap:6px!important;
+ font:750 12px/1.6 Vazirmatn,Tahoma,sans-serif!important;color:#31533f!important;
+}
+#content .sy-ledger-filters-v3 :is(input,select){
+ box-sizing:border-box!important;display:block!important;min-width:0!important;width:100%!important;
+ min-height:44px!important;height:44px!important;padding:9px 12px!important;
+ border:1px solid #cfdfd4!important;border-radius:10px!important;background:#fffefa!important;
+ color:#214839!important;font:550 13px/1.65 Vazirmatn,Tahoma,sans-serif!important;
+ box-shadow:none!important;
+}
+#content .sy-ledger-filters-v3 :is(input,select):focus-visible{
+ outline:2px solid rgba(205,160,65,.6)!important;outline-offset:1px!important;border-color:#d0a455!important;
+}
+#content .sy-ledger-filters-v3 input::placeholder{font-size:12px!important;color:#84948c!important}
+#content .sy-ledger-filter-buttons{display:flex!important;gap:7px!important;align-items:center!important}
+#content .sy-ledger-filter-buttons button{
+ min-height:44px!important;white-space:nowrap!important;padding:8px 14px!important;
+ border-radius:10px!important;font:750 12px Vazirmatn,Tahoma,sans-serif!important;
+}
+#content .sy-ledger-filter-buttons .primary{
+ background:#f1cd79!important;border:1px solid #e0b85f!important;color:#243b28!important;
+ box-shadow:none!important;
+}
+#content .sy-ledger-filter-buttons .ledger-filter-clear{
+ background:rgba(255,255,255,.14)!important;border:1px solid rgba(255,255,255,.38)!important;color:#fff!important;
+}
+#content .sy-ledger-filters-v3 .sy-ledger-filter-fields{
+ display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+ gap:12px 14px!important;padding:16px 18px 12px!important;
+}
+#content .sy-ledger-filters-v3 .ledger-filter-more{margin:0 18px!important;border-top:1px solid #e4eae1!important;padding:9px 0!important}
+#content .sy-ledger-filters-v3 .ledger-filter-more summary{
+ font:750 12px/1.8 Vazirmatn,Tahoma,sans-serif!important;color:#25553e!important;cursor:pointer!important;
+}
+#content .sy-ledger-filters-v3 .ledger-filter-more summary span{font-size:11px!important;color:#76877b!important}
+#content .sy-ledger-filters-v3 .ledger-filter-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;padding-top:10px!important}
+#content .sy-ledger-filter-footer{padding:7px 18px 12px!important;display:flex!important;align-items:center!important;justify-content:space-between!important}
+#content .sy-ledger-filter-footer .ledger-filter-count{
+ color:#39644b!important;font:650 11.5px/1.8 Vazirmatn,Tahoma,sans-serif!important;
+}
+#content .sy-ledger-bulk-toolbar{padding:0 17px!important;min-height:0!important}
+#content .sy-ledger-results{padding:0 16px 16px!important}
+#content .sy-ledger-results .sy-finance-table-wrap{
+ width:100%!important;max-height:570px!important;overflow:auto!important;
+ border:1px solid #dae7dc!important;border-radius:12px!important;background:#fff!important;
+}
+#content .sy-ledger-results .sy-ledger-data-table{
+ border-collapse:separate!important;border-spacing:0!important;min-width:870px!important;width:100%!important;
+}
+#content .sy-ledger-results .sy-ledger-data-table thead th{
+ position:sticky!important;top:0!important;z-index:2!important;
+ background:#eaf3e8!important;color:#254b36!important;
+ border-bottom:1px solid #d1e3d4!important;padding:12px 13px!important;
+ white-space:nowrap!important;font:800 12px/1.6 Vazirmatn,Tahoma,sans-serif!important;
+}
+#content .sy-ledger-results .sy-ledger-data-table tbody td{
+ padding:11px 13px!important;border-bottom:1px solid #e9efea!important;
+ font:550 12.5px/1.75 Vazirmatn,Tahoma,sans-serif!important;color:#2a4a3c!important;
+}
+#content .sy-ledger-results .sy-ledger-data-table tbody tr:nth-child(even){background:#fafcf9!important}
+#content .sy-ledger-results .sy-ledger-data-table tbody tr:hover{background:#eff7ef!important}
+#content .sy-ledger-direction{display:inline-flex!important;gap:5px!important;align-items:center!important;white-space:nowrap!important;border-radius:999px!important;padding:4px 10px!important;font:750 11.5px/1.6 Vazirmatn,Tahoma,sans-serif!important}
+#content .sy-ledger-direction.is-receipt{background:#e0f2e5!important;color:#087047!important}
+#content .sy-ledger-direction.is-payment{background:#fdeae8!important;color:#ab433a!important}
+#content .sy-ledger-row-amount{font:800 12.5px/1.7 Vazirmatn,Tahoma,sans-serif!important;color:#123f2c!important;white-space:nowrap!important}
+#content .sy-ledger-row-amount small{font:550 10px Vazirmatn,Tahoma,sans-serif!important;color:#60796a!important}
+#content .sy-ledger-method{white-space:nowrap!important;color:#235640!important}
+#content .sy-ledger-results .row-actions{white-space:nowrap!important;min-width:205px!important}
+#content .sy-ledger-results .row-actions button{
+ min-height:33px!important;padding:5px 10px!important;margin:2px!important;
+ border-radius:8px!important;border:1px solid #cadfd2!important;
+ background:#f6faf7!important;color:#155139!important;font:750 11px/1.5 Vazirmatn,Tahoma,sans-serif!important;
+}
+#content .sy-ledger-results .row-actions button[data-view]{background:#e8f5ec!important;border-color:#c1dfca!important}
+#content .sy-ledger-results .row-actions button[data-edit]{background:#f3f6f9!important;border-color:#d7e2e9!important;color:#324d61!important}
+#content .sy-ledger-results .row-actions button.danger{background:#fff2f1!important;border-color:#f2cfc9!important;color:#af443b!important}
+#content .sy-ledger-results .pager{
+ display:flex!important;align-items:center!important;flex-wrap:wrap!important;justify-content:flex-start!important;
+ gap:9px!important;padding:12px 4px 0!important;
+ font:650 12px/1.7 Vazirmatn,Tahoma,sans-serif!important;color:#41604c!important;
+}
+#content .sy-ledger-results .pager button,#content .sy-ledger-results .pager select{
+ border:1px solid #d1dfd2!important;border-radius:9px!important;
+ background:#fffefa!important;color:#24523b!important;min-height:36px!important;
+ font:650 12px Vazirmatn,Tahoma,sans-serif!important;padding:6px 11px!important;
+}
+@media(max-width:1230px){
+ #content .sy-ledger-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ #content .sy-ledger-filters-v3 .sy-ledger-searchbar{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+ #content .sy-ledger-filter-buttons{grid-column:1/-1!important}
+}
+@media(max-width:800px){
+ #content .sy-ledger-filters-v3 .sy-ledger-filter-fields{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ #content .sy-ledger-page-header{padding:15px!important}
+}
+@media(max-width:650px){
+ #content .sy-ledger-kpis{grid-template-columns:minmax(0,1fr)!important;gap:9px!important}
+ #content .sy-ledger-kpi{min-height:78px!important;padding:13px!important}
+ #content .sy-ledger-filters-v3 .sy-ledger-searchbar{grid-template-columns:minmax(0,1fr)!important;padding:13px!important}
+ #content .sy-ledger-filter-buttons{grid-column:auto!important}
+ #content .sy-ledger-filters-v3 .sy-ledger-filter-fields{grid-template-columns:minmax(0,1fr)!important;padding:12px 13px!important}
+ #content .sy-ledger-filters-v3 .ledger-filter-more{margin:0 13px!important}
+ #content .sy-ledger-results{padding:0 10px 12px!important}
+ #content .sy-ledger-results .sy-finance-table-wrap{max-height:none!important;overflow:visible!important;background:transparent!important;border:0!important}
+ #content .sy-ledger-results .sy-ledger-data-table{min-width:0!important;display:block!important}
+ #content .sy-ledger-results .sy-ledger-data-table tbody{display:grid!important;gap:10px!important}
+ #content .sy-ledger-results .sy-ledger-data-table tbody tr{border:1px solid #dae7dd!important;border-radius:11px!important;background:#fff!important;padding:9px 13px!important}
+ #content .sy-ledger-results .sy-ledger-data-table tbody td{display:flex!important;gap:9px!important;justify-content:space-between!important;padding:8px 0!important;font-size:12px!important;white-space:normal!important}
+ #content .sy-ledger-results .sy-ledger-data-table tbody td::before{flex:0 0 35%!important}
+ #content .sy-ledger-results .row-actions{min-width:0!important;flex-wrap:wrap!important;white-space:normal!important}
+}
