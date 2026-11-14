@@ -214,7 +214,7 @@ HTML;
    static fn(array $match)=>htmlspecialchars((string)($values[$match[1]]??'—'),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8'),$html);
   return '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>قرارداد '.htmlspecialchars((string)($values['contractNo']??''),ENT_QUOTES,'UTF-8').'</title><style>'.
     '@page{size:A4;margin:8mm 11mm}*{box-sizing:border-box}body{font-family:Tahoma,"Vazirmatn",sans-serif;direction:rtl;font-size:8.6pt;line-height:1.3;color:#171717;max-width:190mm;margin:auto}h1{text-align:center;font-size:13pt;margin:0 0 7px}h2{font-size:9.3pt;margin:7px 0 2px;font-weight:700}p{margin:2px 0;text-align:justify}.contract-top{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #333;padding-top:5px;font-size:9.5pt}.center{text-align:center}.signatures{display:flex;justify-content:space-between;margin-top:20px;min-height:60px;page-break-inside:avoid}.reference-page-two{break-before:page;page-break-before:always}table{width:100%;border-collapse:collapse}td,th{border:1px solid #555;padding:3px}ul,ol{margin:3px 0}@media print{button{display:none}}'.
-    '</style></head><body>'.$output.'</body></html>';
+    '</style></head><body><button type="button" style="margin:8px 0;padding:9px 16px;cursor:pointer" onclick="window.print()">چاپ قرارداد / ذخیره PDF</button>'.$output.'</body></html>';
  }
  public static function issue(int $uid,int $agencyId,string $kind,array $input): array {
   self::scope($uid,$agencyId,true);$pdo=Connection::get();self::ensureSchema($pdo);
