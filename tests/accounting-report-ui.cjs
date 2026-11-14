@@ -120,4 +120,13 @@ assert(source.includes("if(['amountMin','amountMax'].some(k=>values.get(k)))"),'
 for(const marker of ['.sy-ledger-report-search-grid','.sy-ledger-report-main-grid','.sy-ledger-report-date-grid','.sy-ledger-report-submit-actions','.sy-ledger-report-count-badge']){
  assert(theme.includes(marker),'Report control hierarchy requires styled marker '+marker);
 }
+// Prevent the report form from expanding into three separate vertical sections.
+assert(reportFormSource.includes('sy-ledger-report-compact'),'Reporting form must opt into compact layout');
+assert(!reportFormSource.includes('sy-ledger-report-submit-hint'),'Extra helper text must not enlarge the report form');
+assert(theme.includes('.sy-ledger-report-compact>.sy-ledger-report-filter-section'),'Report group wrappers must not create separate vertical bands');
+assert(theme.includes('display:contents!important'),'Grouped fields must share the compact parent grid');
+assert(theme.includes('grid-template-columns:repeat(4,minmax(0,1fr))!important'),'Desktop report filters must fit four columns');
+assert(theme.includes('.sy-ledger-report-compact .sy-ledger-report-advanced[open]'),'Advanced financial filters must remain expandable');
+assert(theme.includes('.sy-ledger-report-compact .sy-ledger-report-submit-row'),'Report actions must align with the compact controls');
+assert(theme.includes('@media(max-width:1080px)')&&theme.includes('@media(max-width:560px)'),'Report layout must adapt to tablets and phones');
 console.log('Accounting account search and safe report filters passed');
