@@ -588,6 +588,16 @@ try {
  if($method==='POST'&&$path==='/api/v1/operations/mehr-assignments/drafts'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\MehrWorkbookAssignments::run($s['id'],$aid,true)]);}
  if($path==='/api/v1/school-catalog'&&$method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolCatalog::search($s['id'],$aid,$_GET)]);
  if($path==='/api/v1/school-catalog/select'&&$method==='POST'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolCatalog::select($s['id'],$aid,Request::json())]);}
+ if($path==='/api/v1/vehicles/owner-driver-exists'&&$method==='GET'){
+  $code=$_GET['nationalCode']??'';
+  if(!is_string($code))throw new AuthException(422,'کد ملی نامعتبر است.','INVALID_OWNER_NATIONAL_CODE');
+  header('Cache-Control: no-store, max-age=0');
+  Response::json(['ok'=>true,'data'=>DomainService::ownerDriverExists($s['id'],$aid,$code)]);
+ }
+ if($path==='/api/v1/vehicles/create-with-owner'&&$method==='POST'){
+  $auth->requireCsrf($s);
+  Response::json(['ok'=>true,'data'=>DomainService::createVehicleWithOwnerDriver($s['id'],$aid,Request::json())],201);
+ }
  if($path==='/api/v1/vehicles/lookup-by-plate'&&$method==='GET'){
   $value=$_GET['plate']??'';
   if(!is_string($value))throw new AuthException(422,'شماره پلاک نامعتبر است.','INVALID_PLATE');
