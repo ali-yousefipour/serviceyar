@@ -2316,12 +2316,50 @@ async function settingsPage(){
    '<div class="sy-contract-tabs"><button type="button" class="primary" data-template-kind="parent">قالب قرارداد با ولی</button><button type="button" data-template-kind="driver">قالب قرارداد با راننده</button></div>'+
    '<form id="syContractTemplateForm"><p id="syContractTemplateVersion" role="status"></p>'+
    '<label>عنوان قالب<input name="title" maxlength="200" required></label>'+
-   '<label>متن و ساختار HTML قالب (برچسب‌های مجاز: h1, h2, p, table و سایر عناصر متنی؛ بدون اسکریپت)<textarea name="html" rows="17" required spellcheck="false" dir="rtl"></textarea></label>'+
+   '<div class="sy-template-editor-toolbar"><button type="button" data-editor-mode="visual">ویرایش دیداری</button><button type="button" data-editor-mode="source" class="primary">کد قالب</button><button type="button" data-editor-action="bold">متن درشت</button><button type="button" data-editor-action="heading">عنوان</button><label>افزودن متغیر <select id="syTemplateVariable"><option value="">انتخاب کنید</option><option value="studentName">نام دانش‌آموز</option><option value="guardianName">نام ولی</option><option value="guardianNationalCode">کد ملی ولی</option><option value="driverName">نام راننده</option><option value="managerName">نام مدیر</option><option value="companyName">نام شرکت</option><option value="totalAmount">مبلغ قرارداد</option><option value="contractNo">شماره قرارداد</option></select></label></div>'+
+   '<label id="syTemplateSourceLabel">متن و ساختار HTML قالب (برچسب‌های مجاز: h1, h2, p, table و سایر عناصر متنی؛ بدون اسکریپت)<textarea name="html" rows="17" required spellcheck="false" dir="rtl"></textarea></label>'+
+   '<div id="syTemplateVisualEditor" class="sy-template-visual-editor" contenteditable="true" role="textbox" aria-label="ویرایش دیداری متن قرارداد" aria-multiline="true" hidden></div>'+
    '<p>فیلدهای پویا را با قالب <code>{{studentName}}</code>، <code>{{guardianName}}</code>، <code>{{managerName}}</code>، <code>{{companyName}}</code>، <code>{{totalAmount}}</code> وارد کنید.</p>'+
+   '<button type="button" id="syContractTemplatePreviewBtn">نمایش پیش‌نمایش صفحه A4</button><iframe id="syContractTemplatePreview" title="پیش‌نمایش ایزوله قالب قرارداد" sandbox hidden></iframe>'+
    '<button type="submit" class="primary">انتشار نسخه جدید قالب</button> <span id="syContractTemplateStatus" role="status"></span></form>';
   $('transportSettings').closest('section').after(editor);
   const form=editor.querySelector('form'),buttons=[...editor.querySelectorAll('[data-template-kind]')];
-  let kind='parent',serial=0;
+  let kind='parent',serial=0,visualMode=false;
+  const visual=editor.querySelector('#syTemplateVisualEditor'),sourceLabel=editor.querySelector('#syTemplateSourceLabel');
+  const source=form.elements.html;
+  const switchMode=mode=>{
+   const wantVisual=mode==='visual';
+   if(wantVisual===visualMode)return;
+   if(wantVisual){
+    const fragment=new DOMParser().parseFromString(source.value,'text/html');
+    fragment.querySelectorAll('script,style,iframe,object,embed,svg,link').forEach(n=>n.remove());
+    fragment.querySelectorAll('*').forEach(n=>[...n.attributes].forEach(a=>n.removeAttribute(a.name)));
+    visual.innerHTML=fragment.body.innerHTML;
+   }else source.value=visual.innerHTML;
+   visualMode=wantVisual;visual.hidden=!wantVisual;sourceLabel.hidden=wantVisual;
+   editor.querySelectorAll('[data-editor-mode]').forEach(button=>button.classList.toggle('primary',button.dataset.editorMode===mode));
+  };
+  editor.querySelectorAll('[data-editor-mode]').forEach(button=>button.onclick=()=>switchMode(button.dataset.editorMode));
+  editor.querySelectorAll('[data-editor-action]').forEach(button=>button.onclick=()=>{
+   if(!visualMode)switchMode('visual');
+   visual.focus();document.execCommand(button.dataset.editorAction==='bold'?'bold':'formatBlock',false,button.dataset.editorAction==='bold'?null:'h2');
+  });
+  const picker=editor.querySelector('#syTemplateVariable');
+  picker.onchange=()=>{
+   if(!picker.value)return;
+   const value='{{'+picker.value+'}}';
+   if(visualMode){visual.focus();document.execCommand('insertText',false,value);}
+   else {const begin=source.selectionStart||0,end=source.selectionEnd||0;source.setRangeText(value,begin,end,'end');source.focus();}
+   picker.value='';
+  };
+  editor.querySelector('#syContractTemplatePreviewBtn').onclick=()=>{
+   const html=visualMode?visual.innerHTML:source.value;
+   const preview=editor.querySelector('#syContractTemplatePreview');
+   const sample={studentName:'نام دانش‌آموز',guardianName:'نام ولی',driverName:'نام راننده',managerName:'مدیر شرکت',companyName:'نام شرکت',totalAmount:'۱۲٬۵۰۰٬۰۰۰',contractNo:'SY-۰۰۱'};
+   const filled=html.replace(/\{\{([a-zA-Z0-9]+)\}\}/g,(_,key)=>esc(sample[key]||'نمونه'));
+   preview.srcdoc='<!doctype html><html lang="fa" dir="rtl"><meta charset="utf-8"><style>body{font:9pt/1.45 Tahoma,sans-serif;max-width:190mm;margin:10mm auto;padding:10mm;background:white;color:#222}h1,h2{text-align:right}p{text-align:justify}table{border-collapse:collapse;width:100%}td,th{border:1px solid;padding:4px}</style>'+filled+'</html>';
+   preview.hidden=false;
+  };
   const load=async()=>{
    const current=++serial;buttons.forEach(b=>b.classList.toggle('primary',b.dataset.templateKind===kind));
    form.querySelector('#syContractTemplateStatus').textContent='در حال دریافت قالب…';
@@ -2330,6 +2368,8 @@ async function settingsPage(){
     if(current!==serial||!form.isConnected)return;
     form.elements.title.value=data.title||'';
     form.elements.html.value=data.html||'';
+    visualMode=true;switchMode('source');
+    editor.querySelector('#syContractTemplatePreview').hidden=true;
     form.querySelector('#syContractTemplateVersion').textContent='نسخه فعال: '+number(data.version)+' · انتشار نسخه جدید تنها برای قراردادهای بعدی اعمال می‌شود.';
     form.querySelector('#syContractTemplateStatus').textContent='';
    }catch(error){form.querySelector('#syContractTemplateStatus').textContent=error.message;}
@@ -2337,6 +2377,7 @@ async function settingsPage(){
   buttons.forEach(b=>b.onclick=()=>{kind=b.dataset.templateKind;void load();});
   form.onsubmit=async e=>{
    e.preventDefault();
+   if(visualMode)source.value=visual.innerHTML;
    if(!window.confirm('نسخه جدید قالب قرارداد منتشر شود؟ قراردادهای صادرشده قبلی بدون تغییر باقی می‌مانند.'))return;
    const button=form.querySelector('[type=submit]');button.disabled=true;
    try{
