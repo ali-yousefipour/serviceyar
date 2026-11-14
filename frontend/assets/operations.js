@@ -1468,7 +1468,7 @@ async function studentAccountPanel(panel,studentId){
    '<div class="sy-student-account-stats">'+
    [['کل فاکتورهای بدهی',summary.invoiced],['جمع دریافت‌ها',summary.received],['مانده بدهی',summary.balance],['بستانکاری',summary.credit]].map(([label,value])=>'<div><span>'+esc(label)+'</span><strong>'+esc(money(value))+'</strong></div>').join('')+
    '</div><section class="sy-student-account-section"><h4>فاکتورهای صادرشده</h4>'+
-   (data.invoices.length?simpleTable(['شماره فاکتور','شرح','تاریخ صدور','مبلغ · ریال','وضعیت'],data.invoices.map(i=>[number(i.id),i.title,dateText(i.issue_date),number(i.amount),statuses[i.status]||i.status])):'<p class="muted">فاکتور بدهی برای این دانش‌آموز ثبت نشده است.</p>')+
+   (data.invoices.length?simpleTable(['شماره فاکتور','شرح','تاریخ صدور','مبلغ · ریال','دریافتی','مانده','وضعیت'],data.invoices.map(i=>[number(i.id),i.title,dateText(i.issue_date),number(i.amount),number(i.paidAmount),number(i.remainingAmount),statuses[i.displayStatus]||i.displayStatus])):'<p class="muted">فاکتور بدهی برای این دانش‌آموز ثبت نشده است.</p>')+
    '</section><section class="sy-student-account-section"><h4>سوابق دریافت و تسویه</h4>'+
    (data.payments.length?simpleTable(['تاریخ','نوع ثبت','مبلغ · ریال','روش پرداخت','شماره پیگیری'],data.payments.map(p=>[dateText(p.payment_date),p.source==='ledger'?'دریافت و پرداخت':'پرداخت فاکتور',number(p.amount),methodLabel(p.method),p.reference_no||'—'])):'<p class="muted">دریافتی ثبت‌شده‌ای وجود ندارد.</p>')+'</section>';
  }catch(error){if(panel.isConnected)panel.innerHTML='<h3>حساب مالی دانش‌آموز</h3><p class="error" role="alert">'+esc(error.message)+'</p>';}
