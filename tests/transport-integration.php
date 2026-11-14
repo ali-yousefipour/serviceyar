@@ -50,7 +50,7 @@ try{
  rejected(fn()=>D::save($uid,$a,'students',['schoolId'=>$otherSchool['id'],'firstName'=>'x','lastName'=>'x','mobile'=>'09120000000']),'CROSS_SCOPE_REFERENCE');
  rejected(fn()=>D::save($viewer,$a,'students',['schoolId'=>$school['id'],'firstName'=>'x','lastName'=>'x','mobile'=>'09120000000']),'FORBIDDEN');
  rejected(fn()=>D::get($viewer,$b,'students',(int)$foreign['id']),'SCOPE_FORBIDDEN');
- $av=D::save($uid,$a,'vehicles',['plate'=>'QA-'.$tag,'capacity'=>4]);$ad=D::save($uid,$a,'drivers',['firstName'=>'تخصیص','lastName'=>'آزمون','status'=>'active','vehicleId'=>$av['id']]);$as=D::save($uid,$a,'services',['title'=>'بدون راننده','schoolId'=>$school['id'],'capacity'=>4,'agreedAmount'=>'1250000','shift'=>'صبح']);
+ $av=D::save($uid,$a,'vehicles',['plate'=>'QA-'.$tag,'capacity'=>4,'tariffVehicleClass'=>1]);$ad=D::save($uid,$a,'drivers',['firstName'=>'تخصیص','lastName'=>'آزمون','status'=>'active','vehicleId'=>$av['id']]);$as=D::save($uid,$a,'services',['title'=>'بدون راننده','schoolId'=>$school['id'],'capacity'=>4,'agreedAmount'=>'1250000','shift'=>'صبح']);
  check((int)$as['agreed_amount']===1250000,'Service agreed monthly driver amount persists');
  $contract=D::save($uid,$a,'contracts',['title'=>'قرارداد آزمایشی','partyType'=>'student','partyId'=>$s1['id'],'startDate'=>'2026-10-01','endDate'=>'2027-06-01','amount'=>'1200000']);
  check((int)$contract['amount']===1200000,'Contract integer rial amount stored');
