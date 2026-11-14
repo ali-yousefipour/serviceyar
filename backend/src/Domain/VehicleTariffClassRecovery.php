@@ -73,6 +73,17 @@ final class VehicleTariffClassRecovery {
    'recoverable'=>count($resolved),'needManualReview'=>count($unresolved),
    'candidates'=>$resolved,'unresolved'=>$unresolved];
  }
+ /** Used by the Sepand import inside its existing transaction. */
+ public static function recoverKnownClasses(PDO $pdo): int {
+  $data=self::candidates($pdo);
+  $stmt=$pdo->prepare('UPDATE vehicles SET tariff_vehicle_class=? WHERE id=? AND agency_id=? AND tariff_vehicle_class IS NULL');
+  $updated=0;
+  foreach($data['candidates'] as $item){
+   $stmt->execute([$item['vehicleClass'],$item['vehicleId'],$item['agencyId']]);
+   $updated+=$stmt->rowCount();
+  }
+  return $updated;
+ }
  public static function run(int $uid,bool $apply=false,string $confirm=''): array {
   if(!Authorization::isSuperAdmin($uid))throw new AuthException(403,'فقط ادمین کل مجاز است.','SUPER_ADMIN_REQUIRED');
   if($apply&&$confirm!=='RESTORE_VEHICLE_TARIFF_CLASSES')
