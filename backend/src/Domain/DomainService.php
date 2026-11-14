@@ -119,6 +119,17 @@ final class DomainService {
   unset($record['agency_id']);
   return ['found'=>true,'plate'=>$plate,'source'=>$sameAgency?'current_agency':'shared_registry','vehicle'=>$record];
  }
+ /** Enforce non-duplicate plates for manual API registration, not Sepand's historical import reconciliation. */
+ public static function createVehicleFromForm(int $uid,int $aid,array $body): array {
+  self::assertNewVehiclePlate($uid,$aid,(string)($body['plate']??''));
+  return self::save($uid,$aid,'vehicles',$body);
+ }
+ private static function assertNewVehiclePlate(int $uid,int $aid,string $plate): void {
+  try{$duplicate=self::lookupVehicleByPlate($uid,$aid,$plate);}
+  catch(AuthException $e){if($e->codeName!=='INVALID_PLATE')throw $e;return;}
+  if(($duplicate['found']??false)&&($duplicate['source']??'')==='current_agency')
+   throw new AuthException(409,'این پلاک قبلاً در شرکت شما ثبت شده است؛ خودروی موجود را ویرایش کنید.','DUPLICATE_VEHICLE_PLATE');
+ }
  /** Only report existence until the operator explicitly confirms import. */
  public static function ownerDriverExists(int $uid,int $aid,string $code): array {
   self::scope($uid,$aid,'drivers');
@@ -160,6 +171,7 @@ final class DomainService {
     $stmt->execute([$code,$aid]);$source=$stmt->fetch(\PDO::FETCH_ASSOC);
     if(!$source)throw new AuthException(409,'راننده‌ای با کد ملی واردشده پیدا نشد.','OWNER_DRIVER_NOT_FOUND');
    }
+   self::assertNewVehiclePlate($uid,$aid,(string)($body['plate']??''));
    $vehicle=self::saveRecord($uid,$aid,'vehicles',$body);
    if(!$import)return ['vehicle'=>$vehicle,'driver'=>null,'imported'=>false];
    $driverData=['vehicleId'=>(int)$vehicle['id']];
@@ -497,14 +509,7 @@ final class DomainService {
   if($id&&$resource==='payments'&&$existing['method']==='bale')throw new AuthException(409,'پرداخت استعلام‌شده بله قابل ویرایش نیست.','VERIFIED_PAYMENT_LOCKED');
   foreach($data as $f=>&$v){if($v==='')$v=null;}unset($v);
   if($resource==='vehicles'&&isset($data['owner_national_code'])&&$data['owner_national_code']!==null)$data['owner_national_code']=self::normalizeOwnerCode((string)$data['owner_national_code']);
-  if($resource==='vehicles'&&!$id&&isset($data['plate'])){
-   // Historical imports and integration fixtures can use legacy plate formats.
-   // Validate Iran plates for lookup, but do not forbid those legacy records.
-   try{$duplicate=self::lookupVehicleByPlate($uid,$aid,(string)$data['plate']);}
-   catch(AuthException $e){if($e->codeName!=='INVALID_PLATE')throw $e;$duplicate=['found'=>false];}
-   if(($duplicate['found']??false)&&($duplicate['source']??'')==='current_agency')
-    throw new AuthException(409,'این پلاک قبلاً در شرکت شما ثبت شده است؛ خودروی موجود را ویرایش کنید.','DUPLICATE_VEHICLE_PLATE');
-  }
+
   if($resource==='vehicles'){
    if(array_key_exists('owner_name',$data)&&$data['owner_name']===null){
     $driver=$pdo->prepare("SELECT NULLIF(TRIM(CONCAT_WS(' ',first_name,last_name)),'') FROM drivers WHERE vehicle_id=? AND agency_id=? AND is_active=1 ORDER BY id DESC LIMIT 1");
