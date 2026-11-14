@@ -152,7 +152,7 @@ HTML;
    $name=trim((string)($row['guardian_first_name']??'').' '.(string)($row['guardian_last_name']??''));
    $values+=['studentName'=>trim($row['first_name'].' '.$row['last_name']),'studentNationalCode'=>$row['national_code'],
     'schoolName'=>$row['school_name'],'schoolRegion'=>$row['region'],'guardianName'=>$name!==''?$name:($guardian['name']??''),
-    'guardianNationalCode'=>$row['guardian_national_code'],'guardianFatherName'=>$row['father_name'],
+    'guardianNationalCode'=>$row['guardian_national_code'],'guardianFatherName'=>'',
     'guardianMobile'=>$guardian['mobile']??$row['mobile'],'guardianAddress'=>$row['address'],
     'distanceKm'=>$row['tariff_distance_km'],'monthlyFee'=>$row['monthly_fee'],'grade'=>$row['grade'],
     'schoolType'=>$row['school_type']];
