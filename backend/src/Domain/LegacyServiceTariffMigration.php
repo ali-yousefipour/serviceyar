@@ -97,6 +97,7 @@ final class LegacyServiceTariffMigration {
    foreach($changes as $c){
     $audit->execute([$run,$aid,'student',$c['id'],json_encode(['monthlyFee'=>$c['oldFee'],'driverBaseMonthly'=>$c['oldDriverBase'],'feeSource'=>$c['oldSource']]),json_encode(['monthlyFee'=>$c['newFee'],'driverBaseMonthly'=>$c['newDriverBase'],'feeSource'=>'taxi']),$uid]);
     $updateStudent->execute([$c['newFee'],$c['newDriverBase'],$c['id'],$aid]);
+    StudentServiceBilling::sync($pdo,$aid,(int)$c['id']);
    }
    $services=$pdo->prepare('SELECT id,monthly_fee,fee_source FROM services WHERE agency_id=? ORDER BY id FOR UPDATE');
    $services->execute([$aid]);$rows=$services->fetchAll(PDO::FETCH_ASSOC);
