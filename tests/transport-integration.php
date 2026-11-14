@@ -431,6 +431,21 @@ try{
  $vehicleRecord=D::save($uid,$a,'vehicles',['plate'=>'12ب34567','model'=>'خودروی آزمایشی','capacity'=>4,'ownerName'=>'مالک خودروی تست']);
  $vehicleDriver=D::save($uid,$a,'drivers',['firstName'=>'یاسین','lastName'=>'خودرو','status'=>'active','vehicleId'=>$vehicleRecord['id']]);
  check($vehicleRecord['owner_name']==='مالک خودروی تست','Vehicle owner name persists independently from the driver');
+ // Sepand may have created a second vehicle record when old plate formatting
+ // differed; the pre-existing valid class must be restored, never guessed.
+ $knownClassVehicle=D::save($uid,$a,'vehicles',['plate'=>'۲۳ ب ۴۵۶ - ۷۸','capacity'=>4,'tariffVehicleClass'=>2]);
+ $newImportedVehicle=D::save($uid,$a,'vehicles',['plate'=>'23ب456-78','capacity'=>4]);
+ check(\ServiceYar\Domain\VehicleTariffClassRecovery::plateKey('۲۳ ب ۴۵۶ - ۷۸')===
+   \ServiceYar\Domain\VehicleTariffClassRecovery::plateKey('23ب456-78'),
+   'Iranian plate canonicalization handles Persian digits and separators');
+ $missingClasses=\ServiceYar\Domain\VehicleTariffClassRecovery::run($uid);
+ check($missingClasses['recoverable']>=1,'Missing vehicle classes with unique plate evidence are recoverable');
+ $recovered=\ServiceYar\Domain\VehicleTariffClassRecovery::recoverKnownClasses($p);
+ check($recovered>=1,'Class restoration backfills only empty values supported by historical evidence');
+ check((int)D::get($uid,$a,'vehicles',(int)$newImportedVehicle['id'])['tariff_vehicle_class']===2,
+  'New Sepand vehicle record inherits confirmed class of old same-company plate');
+ check((int)D::get($uid,$a,'vehicles',(int)$knownClassVehicle['id'])['tariff_vehicle_class']===2,
+  'Existing valid vehicle class is never overwritten');
  $unnamedVehicle=D::save($uid,$a,'vehicles',['plate'=>'77ی12345','capacity'=>4]);
  $fallbackDriver=D::save($uid,$a,'drivers',['firstName'=>'راننده','lastName'=>'مالک پیش‌فرض','status'=>'active','vehicleId'=>$unnamedVehicle['id']]);
  $fallbackRow=D::get($uid,$a,'vehicles',(int)$unnamedVehicle['id']);
