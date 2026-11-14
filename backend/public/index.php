@@ -356,7 +356,7 @@ try {
     if(($body['confirm']??null)!=='REPRICE_ALL_AGENCIES')throw new AuthException(422,'تأیید اصلاح گروهی کل سامانه الزامی است.','CONFIRMATION_REQUIRED');
    }
    $companies=Connection::get()->query('SELECT id,name FROM agencies ORDER BY name,id')->fetchAll(\PDO::FETCH_ASSOC);
-   $reports=[];$summary=['agencies'=>count($companies),'services'=>0,'missingCodes'=>0,'codesFilled'=>0,'recalculated'=>0,'studentsUpdated'=>0,'invoicesSynced'=>0,'skipped'=>0,'blocked'=>0];
+   $reports=[];$summary=['agencies'=>count($companies),'services'=>0,'missingCodes'=>0,'codesFilled'=>0,'recalculated'=>0,'servicesToChange'=>0,'servicesAlreadyCurrent'=>0,'servicesVerified'=>0,'studentsToChange'=>0,'studentsUpdated'=>0,'studentsUnchanged'=>0,'invoicesSynced'=>0,'skipped'=>0,'blocked'=>0];
    foreach($companies as $company){
     $companyId=(int)$company['id'];$companyName=trim((string)$company['name']);
     if($companyName==='')$companyName='شرکت بدون نام';
@@ -367,6 +367,11 @@ try {
      $summary['missingCodes']+=(int)($report['servicesWithoutCode']??0);
      $summary['codesFilled']+=(int)($report['codesFilled']??0);
      $summary['recalculated']+=(int)($report['servicesUpdated']??0);
+     $summary['servicesToChange']+=(int)($report['servicesToChange']??0);
+     $summary['servicesAlreadyCurrent']+=(int)($report['servicesAlreadyCurrent']??0);
+     $summary['servicesVerified']+=(int)($report['servicesVerified']??0);
+     $summary['studentsToChange']+=(int)($report['studentsToChange']??0);
+     $summary['studentsUnchanged']+=(int)($report['studentsUnchanged']??0);
      $summary['studentsUpdated']+=(int)($report['studentsUpdated']??0);
      $summary['invoicesSynced']+=(int)($report['invoicesSynced']??0);
      $summary['skipped']+=(int)($report['servicesSkipped']??0);
