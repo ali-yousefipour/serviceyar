@@ -448,6 +448,14 @@ try {
    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\TaxiOrganizationTariffs::save($s['id'],Request::json())]);
   }
  }
+ if($path==='/api/v1/admin/sepand-registry/vehicle-classes'){
+   if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\VehicleTariffClassRecovery::run($s['id'])]);
+   if($method==='POST'){
+    $auth->requireCsrf($s);
+    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\VehicleTariffClassRecovery::run(
+      $s['id'],true,(string)(Request::json()['confirm']??''))]);
+   }
+ }
  if($path==='/api/v1/admin/sepand-registry/schema'){
    if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SepandSchemaMaintenance::status($s['id'])]);
    if($method==='POST'){
