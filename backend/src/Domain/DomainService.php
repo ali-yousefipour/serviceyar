@@ -633,9 +633,13 @@ final class DomainService {
   if($resource==='services'&&!empty($data['school_id']))$pdo->prepare('INSERT IGNORE INTO service_schools(service_id,school_id) VALUES(?,?)')->execute([$id,$data['school_id']]);
   // Every service edit re-checks the driver's CURRENT registered vehicle,
   // including changing the driver without explicitly changing fee source.
-  if($resource==='services'&&!$wasCreate)
+  if($resource==='services'&&!$wasCreate){
+   $driverChanged=isset($data['driver_id'])&&(int)$data['driver_id']!==(int)($existing['driver_id']??0);
+   $sourceChanged=(string)($data['fee_source']??'taxi')!==(string)($existing['fee_source']??'taxi');
    ServicePricing::synchronizeServiceVehicle($pdo,$aid,(int)$id,
-    (string)($data['fee_source']??$merged['fee_source']??'taxi'));
+    (string)($data['fee_source']??$merged['fee_source']??'taxi'),
+    $driverChanged||$sourceChanged);
+  }
   if($resource==='services'&&isset($data['is_active']))self::syncStudentStatus($pdo,$aid,$id,(int)$data['is_active']===1);
   if($resource==='students'&&isset($data['is_active'])&&(int)$data['is_active']===0)self::releaseStudent($pdo,$uid,$aid,$id);
   $s=$pdo->prepare('SELECT * FROM '.$c['table'].' WHERE id=:id AND agency_id=:agency');$s->execute(['id'=>$id,'agency'=>$aid]);$row=$s->fetch();if(!$row)throw new AuthException(404,'رکورد پیدا نشد.','NOT_FOUND');self::activity($pdo,$aid,$uid,$wasCreate?'create':'update',$c['table'],$id);return $row;
