@@ -461,7 +461,7 @@ final class DomainService {
    if($source==='agreed'){
     $quote=ServicePricing::quote($pdo,$aid,$merged,$source);
     $data['monthly_fee']=$quote['monthlyFee'];$data['driver_base_monthly']=$quote['driverBaseMonthly'];
-   }elseif($changed && (!empty($merged['tariff_vehicle_class']) && !empty($merged['tariff_distance_km']) || array_key_exists('fee_source',$b) || array_key_exists('feeSource',$b))){
+   }elseif($changed && (array_key_exists('fee_source',$b) || array_key_exists('feeSource',$b))){
     $quote=ServicePricing::quote($pdo,$aid,$merged,$source);
     $data['monthly_fee']=$quote['monthlyFee'];$data['driver_base_monthly']=$quote['driverBaseMonthly'];
     $data['tariff_calculated_at']=date('Y-m-d H:i:s');
