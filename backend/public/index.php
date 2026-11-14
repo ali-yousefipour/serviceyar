@@ -651,7 +651,7 @@ try {
  foreach($domainMap as $resource){
   $base='/api/v1/'.$resource;
   if($path===$base&&$method==='GET')Response::json(['ok'=>true,'data'=>DomainService::list($s['id'],$aid,$resource,$_GET)]);
-  if($path===$base&&$method==='POST'){ $auth->requireCsrf($s);$body=Request::json();Response::json(['ok'=>true,'data'=>$resource==='vehicles'?DomainService::createVehicleFromForm($s['id'],$aid,$body):DomainService::save($s['id'],$aid,$resource,$body)],201); }
+  if($path===$base&&$method==='POST'){ $auth->requireCsrf($s);if($resource==='contracts')throw new AuthException(409,'صدور قرارداد جدید تنها از فرآیند نسخه‌دار قراردادها امکان‌پذیر است.','CONTRACT_ISSUANCE_REQUIRED');$body=Request::json();Response::json(['ok'=>true,'data'=>$resource==='vehicles'?DomainService::createVehicleFromForm($s['id'],$aid,$body):DomainService::save($s['id'],$aid,$resource,$body)],201); }
   if(preg_match('#^'.preg_quote($base,'#').'/(\d+)$#',$path,$m)){
    $id=(int)$m[1];if($method==='PUT'||$method==='PATCH'){ $auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>DomainService::save($s['id'],$aid,$resource,Request::json(),$id)]);}
    if($method==='GET')Response::json(['ok'=>true,'data'=>DomainService::get($s['id'],$aid,$resource,$id)]);
