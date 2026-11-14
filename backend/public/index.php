@@ -417,6 +417,10 @@ try {
  if($method==='POST'&&$path==='/api/v1/operations/import/preview'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>StudentImport::preview($s['id'],$aid,$_FILES['file']??[])]);}
  if($method==='POST'&&$path==='/api/v1/operations/import'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>StudentImport::commit($s['id'],$aid,Request::json())],201);}
  if($method==='POST'&&preg_match('#^/api/v1/operations/driver-changes/(\d+)/review$#',$path,$m)){$auth->requireCsrf($s);$b=Request::json();Response::json(['ok'=>true,'data'=>OperationsService::changeDriver($s['id'],$aid,(int)$m[1],(string)($b['status']??''))]);}
+ if($method==='GET'&&preg_match('#^/api/v1/students/(\d+)/account$#',$path,$m))
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\StudentServiceBilling::account($s['id'],$aid,(int)$m[1])]);
+ if($method==='GET'&&preg_match('#^/api/v1/drivers/(\d+)/account$#',$path,$m))
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\StudentServiceBilling::driverAccount($s['id'],$aid,(int)$m[1])]);
  if($method==='GET'&&$path==='/api/v1/operations/driver-deduction-rates'){Authorization::requirePermission($s['id'],'services.view');Authorization::requireAgencyAccess($s['id'],$aid);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\DriverDeductionPolicy::rates($aid)]);}
  if($method==='GET'&&$path==='/api/v1/finance/banks'){Authorization::requirePermission($s['id'],'finance.view');Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\IranBankDetails::banks()]);}
  if($method==='GET'&&$path==='/api/v1/finance/payment-methods')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\AgencyPaymentMethods::get($s['id'],$aid)]);
