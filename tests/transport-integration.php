@@ -80,7 +80,7 @@ try{
  check(str_contains($savedPrint,'۱۴۰۵/۰۷/۰۱'),'Contract start date printed in Jalali');
  rejected(fn()=>$docApi::printable($uid,$b,(int)$issued['id']),'NOT_FOUND');
  $firstTemplate=$docApi::publishTemplate($uid,'parent',['title'=>'قالب اصلاح‌شده آزمایشی',
-  'html'=>'<h1>نسخه جدید قرارداد {{contractNo}}</h1><p>متن نمونه جدید '+str_repeat('آزمون ',25)+'{{guardianName}}</p>']);
+  'html'=>'<h1>نسخه جدید قرارداد {{contractNo}}</h1><p>متن نمونه جدید '.str_repeat('آزمون ',25).'{{guardianName}}</p>']);
  check((int)$firstTemplate['version']===1,'Publishing first explicit parent template increments version from fallback');
  $afterPublish=$docApi::printable($uid,$a,(int)$issued['id'])['html'];
  check($savedPrint===$afterPublish,'Printing an issued contract stays byte-for-byte immutable after template publishing');
