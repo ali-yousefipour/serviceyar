@@ -45,10 +45,27 @@ final class LegacyServiceTariffMigration {
      'oldSource'=>(string)$row['fee_source']];
    }catch(\Throwable $e){$issues[]=['studentId'=>(int)$row['id'],'reason'=>$e->getMessage()];}
   }
+  // Cover ALL services, including drafts, cancelled and assignments without students.
+  // The legacy code is stable, derived from immutable database ids and checked against existing codes.
+  $sq=$pdo->prepare('SELECT id,code,monthly_fee,fee_source FROM services WHERE agency_id=? ORDER BY id');
+  $sq->execute([$aid]);$allServices=$sq->fetchAll(PDO::FETCH_ASSOC);
+  $usedCodes=[];
+  $globalCodes=$pdo->query("SELECT code FROM services WHERE code IS NOT NULL AND TRIM(code)<>''");
+  foreach($globalCodes->fetchAll(PDO::FETCH_COLUMN) as $code)$usedCodes[(string)$code]=true;
+  $codeUpdates=[];
+  foreach($allServices as $service){
+   if(trim((string)($service['code']??''))!=='')continue;
+   $candidate='SY-'.(int)$aid.'-'.(int)$service['id'];
+   if(isset($usedCodes[$candidate]))$candidate='SY-L-'.(int)$aid.'-'.(int)$service['id'].'-'.strtoupper(bin2hex(random_bytes(3)));
+   while(isset($usedCodes[$candidate]))$candidate='SY-L-'.(int)$aid.'-'.(int)$service['id'].'-'.strtoupper(bin2hex(random_bytes(3)));
+   $usedCodes[$candidate]=true;
+   $codeUpdates[(int)$service['id']]=$candidate;
+  }
   $response=['agencyId'=>$aid,'studentsChecked'=>count($changes)+count($issues),'studentsReady'=>count($changes),
+   'servicesChecked'=>count($allServices),'servicesWithoutCode'=>count($codeUpdates),
    'schoolsToNormalize'=>count($regions),'errors'=>$issues,'applied'=>false,
    'monthlyDifference'=>array_sum(array_column($changes,'newFee'))-array_sum(array_column($changes,'oldFee'))];
-  if(!$apply||$issues)return $response;
+  if(!$apply)return $response;
   $existing=$pdo->query("SHOW TABLES LIKE 'service_tariff_repricing_audit'")->fetchColumn();
   if(!$existing)throw new AuthException(503,'ابتدا مهاجرت پایگاه داده نرخ‌نامه را اجرا کنید.','TARIFF_AUDIT_MIGRATION_REQUIRED');
   $run=bin2hex(random_bytes(16));$pdo->beginTransaction();
@@ -62,12 +79,26 @@ final class LegacyServiceTariffMigration {
     $audit->execute([$run,$aid,'school',$sid,json_encode(['region'=>$old],JSON_UNESCAPED_UNICODE),json_encode(['region'=>$region],JSON_UNESCAPED_UNICODE),$uid]);
     $updateSchool->execute([$region,$sid,$aid]);
    }
+   $updateCode=$pdo->prepare("UPDATE services SET code=? WHERE id=? AND agency_id=? AND (code IS NULL OR TRIM(code)='')");
+   foreach($codeUpdates as $sid=>$newCode){
+    $audit->execute([$run,$aid,'service-code',$sid,json_encode(['code'=>null]),json_encode(['code'=>$newCode]),$uid]);
+    $updateCode->execute([$newCode,$sid,$aid]);
+   }
+   if($issues){
+    // Repair identifiers even when incomplete school/student data prevents fee repricing.
+    $pdo->commit();
+    $response['applied']=false;
+    $response['codesFilled']=count($codeUpdates);
+    $response['runId']=$run;
+    $response['pricingBlocked']=true;
+    return $response;
+   }
    $updateStudent=$pdo->prepare("UPDATE students SET fee_source='taxi',monthly_fee=?,driver_base_monthly=?,tariff_calculated_at=NOW() WHERE id=? AND agency_id=?");
    foreach($changes as $c){
     $audit->execute([$run,$aid,'student',$c['id'],json_encode(['monthlyFee'=>$c['oldFee'],'driverBaseMonthly'=>$c['oldDriverBase'],'feeSource'=>$c['oldSource']]),json_encode(['monthlyFee'=>$c['newFee'],'driverBaseMonthly'=>$c['newDriverBase'],'feeSource'=>'taxi']),$uid]);
     $updateStudent->execute([$c['newFee'],$c['newDriverBase'],$c['id'],$aid]);
    }
-   $services=$pdo->prepare('SELECT DISTINCT sv.id,sv.monthly_fee,sv.fee_source FROM services sv JOIN service_students ss ON ss.service_id=sv.id JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id WHERE sv.agency_id=? ORDER BY sv.id FOR UPDATE');
+   $services=$pdo->prepare('SELECT id,monthly_fee,fee_source FROM services WHERE agency_id=? ORDER BY id FOR UPDATE');
    $services->execute([$aid]);$rows=$services->fetchAll(PDO::FETCH_ASSOC);
    $gross=$pdo->prepare('SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
    $updateService=$pdo->prepare("UPDATE services SET fee_source='taxi',monthly_fee=? WHERE id=? AND agency_id=?");
@@ -76,7 +107,7 @@ final class LegacyServiceTariffMigration {
     $audit->execute([$run,$aid,'service',$s['id'],json_encode(['monthlyFee'=>$s['monthly_fee'],'feeSource'=>$s['fee_source']]),json_encode(['monthlyFee'=>$net,'feeSource'=>'taxi']),$uid]);
     $updateService->execute([$net,$s['id'],$aid]);
    }
-   $pdo->commit();$response['applied']=true;$response['runId']=$run;$response['servicesUpdated']=count($rows);
+   $pdo->commit();$response['applied']=true;$response['runId']=$run;$response['servicesUpdated']=count($rows);$response['codesFilled']=count($codeUpdates);
   }catch(\Throwable $e){$pdo->rollBack();throw $e;}
   return $response;
  }
