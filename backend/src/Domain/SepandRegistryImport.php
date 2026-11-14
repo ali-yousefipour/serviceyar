@@ -98,7 +98,7 @@ final class SepandRegistryImport {
   if($apply&&!hash_equals($digest,$expectedDigest))throw new AuthException(409,'فایل‌ها از زمان پیش‌نمایش تغییر کرده‌اند؛ پیش‌نمایش جدید بگیرید.','SEPAND_PREVIEW_STALE');
   $drivers=self::rows($driversPath,array_combine(range('A','N'),self::DRIVER_HEADERS));
   $cars=self::rows($carsPath,array_combine(range('A','R'),self::CAR_HEADERS));
-  $pdo=Connection::get();[$names,$codes,$options]=self::agency($pdo);
+  $pdo=Connection::get();SepandSchemaMaintenance::requireReady($pdo);[$names,$codes,$options]=self::agency($pdo);
   $companyNames=[];
   foreach($drivers as $record){
    $c=$record['fields'];$national=self::identity($c['M']??'');
