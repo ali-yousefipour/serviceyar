@@ -1778,13 +1778,60 @@ async function taxiOrganizationAdminPanel(container,token){
  panel.querySelector('.sy-settings-section-head')?.after(allPanel);
  allPanel.open=true;
  const allPreview=allPanel.querySelector('[data-global-preview]'),allApply=allPanel.querySelector('[data-global-apply]'),allStatus=allPanel.querySelector('[data-global-status]');
- allPreview.onclick=async()=>{allApply.disabled=true;allStatus.textContent='در حال بررسی شرکت‌ها…';try{const data=await api('/api/v1/admin/taxi-tariffs/reprice-all');if(!allStatus.isConnected)return;const summary=data.summary;allStatus.innerHTML='<p>شرکت‌ها: '+number(summary.agencies)+' | کل سرویس‌ها: '+number(summary.services)+' | قابل اصلاح: '+number(data.agencies.reduce((sum,a)=>sum+Number(a.servicesReady||0),0))+' | سرویس‌های نیازمند بررسی: '+number(summary.skipped||data.agencies.reduce((sum,a)=>sum+Number(a.servicesSkipped||0),0))+' | کدهای خالی: '+number(summary.missingCodes)+'</p>'+
-   '<details><summary>جزئیات مشکلات شرکت‌ها</summary>'+simpleTable(['شناسه شرکت','سرویس‌های قابل اصلاح','سرویس‌های ناقص','شرح خطا'],data.agencies.map(a=>[number(a.agencyId),number(a.servicesReady||0),number(a.servicesSkipped||0),(a.error||((a.errors||[]).slice(0,8).map(e=>(e.studentId?'دانش‌آموز '+number(e.studentId):e.schoolId?'مدرسه '+number(e.schoolId):e.serviceId?'سرویس '+number(e.serviceId):'')+': '+e.reason).join(' | ')||'بدون خطا'))]))+'</details>';allApply.disabled=summary.services===0;}catch(e){allStatus.textContent=e.message;}};
- allApply.onclick=async()=>{if(!window.confirm('اصلاح تعرفه سازمانی برای تمام شرکت‌های سامانه و تکمیل کد سرویس‌ها انجام شود؟ پیش از اجرا از دیتابیس نسخه پشتیبان تهیه کنید.'))return;allApply.disabled=true;allStatus.textContent='در حال اجرای اصلاح گروهی…';try{const data=await write('/api/v1/admin/taxi-tariffs/reprice-all',{confirm:'REPRICE_ALL_AGENCIES'});if(!allStatus.isConnected)return;const summary=data.summary;allStatus.innerHTML='<p>سرویس‌های اصلاح‌شده: '+number(summary.recalculated)+' | دانش‌آموزان اصلاح‌شده: '+number(summary.studentsUpdated)+' | فاکتورهای همگام‌شده: '+number(summary.invoicesSynced)+' | سرویس‌های نیازمند بررسی: '+number(summary.skipped)+' | کدهای تکمیل‌شده: '+number(summary.codesFilled)+' | شرکت‌های دارای خطا: '+number(summary.blocked)+'</p>'+
-   '<details open><summary>جزئیات شرکت‌ها و موارد اصلاح‌نشده</summary>'+simpleTable(['شناسه شرکت','سرویس اصلاح‌شده','دانش‌آموز اصلاح‌شده','علت موارد باقیمانده'],data.agencies.map(a=>[number(a.agencyId),number(a.servicesUpdated||0),number(a.studentsUpdated||0),a.error||((a.errors||[]).slice(0,15).map(e=>(e.studentId?'دانش‌آموز '+number(e.studentId):e.schoolId?'مدرسه '+number(e.schoolId):e.serviceId?'سرویس '+number(e.serviceId):'')+': '+e.reason).join(' | ')||'بدون خطا')]))+'</details>';}catch(e){allStatus.textContent=e.message;}};
+ const tariffIssueLabel=e=>{
+  if(e.studentId)return 'دانش‌آموز: '+(e.studentName||'نام ثبت نشده');
+  if(e.serviceId)return 'سرویس: '+(e.serviceTitle||'بدون عنوان')+(e.serviceCode?' · '+e.serviceCode:'');
+  if(e.schoolId)return 'مدرسه: '+(e.schoolName||'نام ثبت نشده');
+  return 'رکورد نامشخص';
+ };
+ const tariffIssueRows=errors=>(errors||[]).map(e=>[
+  tariffIssueLabel(e),
+  e.schoolName||'—',
+  (e.serviceNames?.length?e.serviceNames.join('، '):e.serviceTitle?(e.serviceTitle+(e.serviceCode?' · '+e.serviceCode:'')):'—'),
+  e.studentNames?.length?e.studentNames.join('، '):e.grade?'پایه: '+e.grade:'—',
+  e.studentId?'کلاس: '+(e.vehicleClass||'نامشخص')+' | مسافت: '+(e.distanceKm??'نامشخص')+' کیلومتر':e.driverName?'راننده: '+e.driverName:'—',
+  e.reason||'علت نامشخص'
+ ]);
+ const tariffIssueTable=errors=>(errors?.length?simpleTable(['رکورد دارای خطا','مدرسه','سرویس','دانش‌آموزان / پایه','مشخصات نرخ / راننده','شرح مشکل'],tariffIssueRows(errors)):'<p class="muted">خطایی برای این شرکت گزارش نشده است.</p>');
+ const tariffAgenciesReport=agencies=>agencies.map(a=>'<details class="sy-taxi-reprice-company" '+((a.errors?.length||a.error)?'open':'')+'><summary>شرکت '+number(a.agencyId)+' | سرویس قابل اصلاح: '+number(a.servicesReady||0)+' | سرویس نیازمند بررسی: '+number(a.servicesSkipped||0)+' | خطا: '+number(a.errors?.length||Number(Boolean(a.error)))+'</summary>'+(a.error?'<p role="alert">'+esc(a.error)+'</p>':'')+tariffIssueTable(a.errors||[])+'</details>').join('');
+ allPreview.onclick=async()=>{
+  allApply.disabled=true;allStatus.textContent='در حال بررسی شرکت‌ها…';
+  try{
+   const data=await api('/api/v1/admin/taxi-tariffs/reprice-all');
+   if(!allStatus.isConnected)return;
+   const summary=data.summary;
+   allStatus.innerHTML='<p>شرکت‌ها: '+number(summary.agencies)+' | کل سرویس‌ها: '+number(summary.services)+' | قابل اصلاح: '+number(data.agencies.reduce((sum,a)=>sum+Number(a.servicesReady||0),0))+' | سرویس‌های نیازمند بررسی: '+number(summary.skipped||data.agencies.reduce((sum,a)=>sum+Number(a.servicesSkipped||0),0))+' | کدهای خالی: '+number(summary.missingCodes)+'</p><div class="sy-taxi-reprice-diagnostics">'+tariffAgenciesReport(data.agencies)+'</div>';
+   allApply.disabled=summary.services===0;
+  }catch(e){allStatus.textContent=e.message;}
+ };
+ allApply.onclick=async()=>{
+  if(!window.confirm('اصلاح تعرفه سازمانی برای تمام شرکت‌های سامانه و تکمیل کد سرویس‌ها انجام شود؟ پیش از اجرا از دیتابیس نسخه پشتیبان تهیه کنید.'))return;
+  allApply.disabled=true;allStatus.textContent='در حال اجرای اصلاح گروهی…';
+  try{
+   const data=await write('/api/v1/admin/taxi-tariffs/reprice-all',{confirm:'REPRICE_ALL_AGENCIES'});
+   if(!allStatus.isConnected)return;
+   const summary=data.summary;
+   allStatus.innerHTML='<p>سرویس‌های اصلاح‌شده: '+number(summary.recalculated)+' | دانش‌آموزان اصلاح‌شده: '+number(summary.studentsUpdated)+' | فاکتورهای همگام‌شده: '+number(summary.invoicesSynced)+' | سرویس‌های نیازمند بررسی: '+number(summary.skipped)+' | کدهای تکمیل‌شده: '+number(summary.codesFilled)+' | شرکت‌های دارای خطا: '+number(summary.blocked)+'</p><div class="sy-taxi-reprice-diagnostics">'+tariffAgenciesReport(data.agencies)+'</div>';
+  }catch(e){allStatus.textContent=e.message;}
+ };
  const previewBtn=migrationPanel.querySelector('[data-reprice-preview]'),applyBtn=migrationPanel.querySelector('[data-reprice-apply]'),output=migrationPanel.querySelector('[data-reprice-output]');
- previewBtn.onclick=async()=>{applyBtn.disabled=true;output.textContent='در حال بررسی سوابق…';try{const data=await api(scoped('/api/v1/admin/taxi-tariffs/reprice-legacy'));if(!output.isConnected)return;output.innerHTML='<p>کل سرویس‌ها: '+number(data.servicesChecked)+' | سرویس‌های بدون کد: '+number(data.servicesWithoutCode)+' | دانش‌آموز قابل محاسبه: '+number(data.studentsReady)+' | خطای محاسبه: '+number(data.errors.length)+' | اختلاف جمع ماهانه: '+number(data.monthlyDifference)+' ریال</p>'+(data.errors.length?simpleTable(['شناسه دانش‌آموز','علت'],data.errors.slice(0,50).map(x=>[x.studentId,x.reason])):'<p>همه نرخ‌های لازم قابل محاسبه هستند.</p>');applyBtn.disabled=!data.servicesChecked;}catch(e){output.textContent=e.message;}};
- applyBtn.onclick=async()=>{if(!window.confirm('آیا اصلاح گروهی شهریه تمام سرویس‌های قدیمی شرکت انتخاب‌شده را تأیید می‌کنید؟ اسناد مالی گذشته بدون تغییر باقی می‌مانند.'))return;applyBtn.disabled=true;output.textContent='در حال ثبت اصلاحات همراه با سابقه ممیزی…';try{const data=await write('/api/v1/admin/taxi-tariffs/reprice-legacy',{confirm:'REPRICE_LEGACY_TAXI'});output.textContent=data.applied?'اصلاح انجام شد. سرویس‌های محاسبه‌شده: '+number(data.servicesUpdated)+' | کدهای تکمیل‌شده: '+number(data.codesFilled)+' | شناسه ممیزی: '+data.runId:'کدهای تکمیل‌شده: '+number(data.codesFilled||0)+'؛ محاسبه مبالغ به علت '+number(data.errors.length)+' اطلاعات ناقص متوقف شد. ابتدا خطاها را اصلاح کنید و مجدداً اجرا نمایید.';}catch(e){output.textContent='اصلاح اعمال نشد: '+e.message;}};
+ previewBtn.onclick=async()=>{
+  applyBtn.disabled=true;output.textContent='در حال بررسی سوابق…';
+  try{
+   const data=await api(scoped('/api/v1/admin/taxi-tariffs/reprice-legacy'));
+   if(!output.isConnected)return;
+   output.innerHTML='<p>کل سرویس‌ها: '+number(data.servicesChecked)+' | سرویس‌های بدون کد: '+number(data.servicesWithoutCode)+' | دانش‌آموز قابل محاسبه: '+number(data.studentsReady)+' | خطای محاسبه: '+number(data.errors.length)+' | اختلاف جمع ماهانه: '+number(data.monthlyDifference)+' ریال</p>'+tariffIssueTable(data.errors);
+   applyBtn.disabled=!data.servicesChecked;
+  }catch(e){output.textContent=e.message;}
+ };
+ applyBtn.onclick=async()=>{
+  if(!window.confirm('آیا اصلاح گروهی شهریه تمام سرویس‌های قدیمی شرکت انتخاب‌شده را تأیید می‌کنید؟ اسناد مالی گذشته بدون تغییر باقی می‌مانند.'))return;
+  applyBtn.disabled=true;output.textContent='در حال ثبت اصلاحات همراه با سابقه ممیزی…';
+  try{
+   const data=await write('/api/v1/admin/taxi-tariffs/reprice-legacy',{confirm:'REPRICE_LEGACY_TAXI'});
+   output.innerHTML='<p>'+esc(data.applied?'سرویس‌های اصلاح‌شده: '+number(data.servicesUpdated)+' | دانش‌آموزان اصلاح‌شده: '+number(data.studentsUpdated)+' | شناسه ممیزی: '+data.runId:'اعمال کامل انجام نشد؛ تعداد خطا: '+number(data.errors.length))+'</p>'+tariffIssueTable(data.errors);
+  }catch(e){output.textContent='اصلاح اعمال نشد: '+e.message;}
+ };
  const form=panel.querySelector('#syTaxiTariffSelector'),table=panel.querySelector('#syTaxiTariffTable'),status=panel.querySelector('#syTaxiTariffStatus'),save=panel.querySelector('#syTaxiTariffSave');
  let snapshot=null,revision=0;
  const load=async()=>{
