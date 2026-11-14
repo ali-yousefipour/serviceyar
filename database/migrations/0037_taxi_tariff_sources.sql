@@ -15,5 +15,5 @@ CREATE TABLE IF NOT EXISTS taxi_organization_tariffs (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Explicit source selection. Existing historical amounts are not recalculated by this migration.
-ALTER TABLE students ADD COLUMN fee_source VARCHAR(12) NOT NULL DEFAULT 'taxi';
+ALTER TABLE students ADD COLUMN fee_source VARCHAR(12) NOT NULL DEFAULT 'taxi', ADD COLUMN driver_base_monthly BIGINT UNSIGNED NULL;
 ALTER TABLE services ADD COLUMN fee_source VARCHAR(12) NOT NULL DEFAULT 'taxi';
