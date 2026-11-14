@@ -414,7 +414,7 @@ final class DomainService {
    $normalized=strtr(trim($region),['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','٨'=>'8','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7']);
    $persianWords=['یک'=>'1','دو'=>'2','سه'=>'3','چهار'=>'4','پنج'=>'5','شش'=>'6','هفت'=>'7'];
    $normalized=preg_replace('/^(?:ناحیه|منطقه)\s*/u','',$normalized);
-   $normalized=$persianWords[$normalized]??$normalized;
+   $normalized=$persianWords[$normalized]??$normalized;if($normalized==='8')$normalized='تبادکان';
    if(!in_array($normalized,['1','2','3','4','5','6','7','تبادکان'],true))
     throw new AuthException(422,'ناحیه مدرسه باید یکی از نواحی ۱ تا ۷ یا تبادکان باشد.','INVALID_SCHOOL_REGION');
    $data['region']=$normalized;
