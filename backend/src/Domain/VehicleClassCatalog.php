@@ -24,9 +24,34 @@ final class VehicleClassCatalog {
  private static function entries(PDO $pdo): array {
   return $pdo->query('SELECT id,class_number,family_name,alias,normalized_alias FROM vehicle_tariff_class_models ORDER BY class_number,family_name,id')->fetchAll(PDO::FETCH_ASSOC);
  }
+ private static function ready(PDO $pdo): bool {
+  $q=$pdo->query("SHOW TABLES LIKE 'vehicle_tariff_class_models'");
+  return (bool)$q->fetchColumn();
+ }
  public static function list(int $uid): array {
   self::requireAdmin($uid);
-  return ['models'=>self::entries(Connection::get())];
+  $pdo=Connection::get();
+  if(!self::ready($pdo))return ['ready'=>false,'models'=>[],'migration'=>'0104_vehicle_tariff_class_models.sql'];
+  return ['ready'=>true,'models'=>self::entries($pdo)];
+ }
+ public static function prepare(int $uid,string $confirmation): array {
+  self::requireAdmin($uid);
+  if($confirmation!=='INSTALL_VEHICLE_CLASS_CATALOG')
+   throw new AuthException(422,'تأیید آماده‌سازی فهرست کلاس‌ها لازم است.','CONFIRMATION_REQUIRED');
+  $pdo=Connection::get();
+  if(self::ready($pdo))return self::list($uid);
+  $file=dirname(__DIR__,3).'/database/migrations/0104_vehicle_tariff_class_models.sql';
+  $sql=@file_get_contents($file);
+  if(!$sql)throw new AuthException(503,'فایل ایجاد جدول کلاس‌های خودرو روی سرور پیدا نشد.','VEHICLE_CATALOG_MIGRATION_MISSING');
+  // CREATE TABLE is implicit-commit DDL, therefore only run with explicit approval.
+  $pdo->exec($sql);
+  $pdo->prepare('INSERT IGNORE INTO migrations(migration) VALUES(?)')->execute([basename($file)]);
+  return self::list($uid);
+ }
+ private static function ensureReady(PDO $pdo): void {
+  if(!self::ready($pdo))throw new AuthException(409,
+   'فهرست کلاس‌ها هنوز در دیتابیس آماده نشده است. از تنظیمات ادمین کل گزینه آماده‌سازی را اجرا کنید.',
+   'VEHICLE_CATALOG_NOT_READY');
  }
  public static function add(int $uid,array $body): array {
   self::requireAdmin($uid);
@@ -37,7 +62,7 @@ final class VehicleClassCatalog {
   if(!in_array($class,[1,2,3],true)||mb_strlen($family)>100||mb_strlen($normalized)<2||
    mb_strlen($normalized)>120||mb_strlen($alias)>120||$family==='')
     throw new AuthException(422,'کلاس، خانواده یا نام خودرو نامعتبر است.','INVALID_VEHICLE_MODEL');
-  $pdo=Connection::get();
+  $pdo=Connection::get();self::ensureReady($pdo);
   $test=$pdo->prepare('SELECT class_number FROM vehicle_tariff_class_models WHERE normalized_alias=?');
   $test->execute([$normalized]);$found=$test->fetchColumn();
   if($found!==false)throw new AuthException(409,'این نام قبلاً در کلاس '.(int)$found.' ثبت شده است.','VEHICLE_ALIAS_EXISTS');
@@ -47,6 +72,7 @@ final class VehicleClassCatalog {
  }
  public static function remove(int $uid,int $id): array {
   self::requireAdmin($uid);
+  self::ensureReady(Connection::get());
   $stmt=Connection::get()->prepare('DELETE FROM vehicle_tariff_class_models WHERE id=?');
   $stmt->execute([$id]);return ['deleted'=>$stmt->rowCount()===1];
  }
@@ -97,7 +123,7 @@ final class VehicleClassCatalog {
   self::requireAdmin($uid);
   if($apply&&$confirm!=='APPLY_APPROVED_VEHICLE_CLASSES')
    throw new AuthException(422,'تأیید اعمال کلاس خودرو لازم است.','CONFIRMATION_REQUIRED');
-  $pdo=Connection::get();
+  $pdo=Connection::get();self::ensureReady($pdo);
   if($apply)$pdo->beginTransaction();
   try{
    $data=self::scan($pdo);$data['updated']=0;
