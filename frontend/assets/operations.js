@@ -76,7 +76,14 @@ const serviceAcademicMonths=(student,school)=>{const grade=String(student.grade?
 const persianDigits=v=>String(v??'').replace(/[0-9]/g,d=>'۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
 const normalizePlate=v=>String(v??'').replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[\u200c\s]/g,'');
 function iranPlate(value){
- const raw=normalizePlate(value),match=raw.match(/^(\d{2})([آ-یA-Za-z])(\d{3})[-\/]?(\d{2})$/);
+ const raw=normalizePlate(value).replace(/ایران/gu,'').replace(/[-\/ـ_]/g,'');
+ let match=raw.match(/^(\d{2})([آ-یA-Za-z])(\d{3})(\d{2})$/u);
+ // Sepand sometimes exports plates as 42-647ط59 (three digits before
+ // the letter), while operator forms use 42ط647-59.
+ if(!match){
+  const old=raw.match(/^(\d{2})(\d{3})([آ-یA-Za-z])(\d{2})$/u);
+  if(old)match=[old[0],old[1],old[3],old[2],old[4]];
+ }
  if(!match)return '<span class="plate-raw" dir="ltr">'+esc(persianDigits(value||'—'))+'</span>';
  const [,first,letter,middle,region]=match,yellow=letter==='ت';
  return '<span class="iran-plate'+(yellow?' iran-plate-yellow':'')+'" role="img" aria-label="'+esc('پلاک '+persianDigits(first)+' '+letter+' '+persianDigits(middle)+' ایران '+persianDigits(region))+'"><span class="iran-plate-blue"><span class="iran-flag"><i></i><i></i><i></i></span><small>I.R.<br>IRAN</small></span><span class="iran-plate-main"><b>'+persianDigits(first)+'</b><b>'+esc(letter)+'</b><b>'+persianDigits(middle)+'</b></span><span class="iran-plate-region"><small>ایران</small><b>'+persianDigits(region)+'</b></span></span>';
@@ -1117,6 +1124,12 @@ async function formResource(key,id,onSaved){
    const input=form.elements[name];input?.closest('label')?.classList.add(css);
   }
   const tariffClass=form.elements.tariffVehicleClass;
+  // The approved type list is searchable; choosing a model suggests the
+  // class but the operator can override it before saving.
+  if(form.elements.vehicleTrim&&tariffClass&&window.ServiceYarVehicleModels)
+   void window.ServiceYarVehicleModels.attach(form.elements.vehicleTrim,tariffClass,{
+    modelMirror:form.elements.model,initialValue:row.vehicle_trim||row.model||''
+   });
   if(tariffClass){tariffClass.required=!id;tariffClass.closest('label')?.append(Object.assign(document.createElement('small'),{textContent:'کلاس خودرو مبنای محاسبه سرویس‌های مرتبط است. در خودروهای قدیمی فاقد کلاس، برای سایر ویرایش‌ها می‌توانید این فیلد را خالی بگذارید؛ در اولین فرصت کلاس معتبر را تعیین کنید.'}));}
   const owner=form.elements.ownerName;
   if(owner&&!owner.value.trim()&&row.effective_owner_name)owner.value=row.effective_owner_name;
