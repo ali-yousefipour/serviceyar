@@ -409,7 +409,20 @@ final class DomainService {
     if($id){$driver->execute([$id,$aid]);$name=$driver->fetchColumn();if($name)$data['owner_name']=$name;}
    }
   }
+  if($resource==='schools'&&array_key_exists('region',$data)){
+   $region=(string)($data['region']??'');
+   $normalized=strtr(trim($region),['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','٨'=>'8','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7']);
+   $persianWords=['یک'=>'1','دو'=>'2','سه'=>'3','چهار'=>'4','پنج'=>'5','شش'=>'6','هفت'=>'7'];
+   $normalized=preg_replace('/^(?:ناحیه|منطقه)\s*/u','',$normalized);
+   $normalized=$persianWords[$normalized]??$normalized;
+   if(!in_array($normalized,['1','2','3','4','5','6','7','تبادکان'],true))
+    throw new AuthException(422,'ناحیه مدرسه باید یکی از نواحی ۱ تا ۷ یا تبادکان باشد.','INVALID_SCHOOL_REGION');
+   $data['region']=$normalized;
+  }
   if($resource==='services'){
+   // Never trust a user-supplied service code. Existing codes stay immutable.
+   unset($data['code']);
+   if(!$id)$data['code']='SY-'.$aid.'-'.date('ymd').'-'.strtoupper(bin2hex(random_bytes(5)));
    foreach(['agreed_amount','monthly_fee'] as $moneyField){
     if(!array_key_exists($moneyField,$data)||$data[$moneyField]===null)continue;
     $value=(string)$data[$moneyField];
