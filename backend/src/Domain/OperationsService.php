@@ -58,8 +58,8 @@ final class OperationsService
             $p->prepare('INSERT INTO service_students(service_id,student_id,pickup_address,pickup_order) VALUES(:s,:st,:p,:o) ON DUPLICATE KEY UPDATE pickup_address=VALUES(pickup_address),pickup_order=VALUES(pickup_order)')->execute(['s'=>$serviceId,'st'=>$studentId,'p'=>$address,'o'=>$order]);
             // A newly assigned student inherits the selected service pricing method.
             // Existing assignments retain their explicitly confirmed amounts.
-            if(!$assigned && $canSetTariff){
-                ServicePricing::updateStudent($p,$aid,$studentId,ServicePricing::source($service['fee_source']??'taxi'));
+            if(!$assigned && $canSetTariff && !empty($student['tariff_vehicle_class']) && !empty($student['tariff_distance_km'])){
+                ServicePricing::updateStudent($p,$aid,$studentId,ServicePricing::source($service['fee_source']??$student['fee_source']??'taxi'));
             }
             $p->prepare("UPDATE students SET service_status='assigned' WHERE id=:id AND agency_id=:a")->execute(['id'=>$studentId,'a'=>$aid]);
         });
