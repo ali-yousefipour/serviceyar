@@ -56,12 +56,10 @@ final class OperationsService
             foreach($assigned as $id)if((int)$id!==$serviceId)throw new AuthException(409,'دانش‌آموز سرویس فعال دیگری دارد. ابتدا تخصیص قبلی را حذف کنید.','ALREADY_ASSIGNED');
             if(!$assigned){$q=$p->prepare('SELECT COUNT(*) FROM service_students WHERE service_id=:s');$q->execute(['s'=>$serviceId]);if((int)$q->fetchColumn()>=(int)$service['capacity'])throw new AuthException(409,'ظرفیت سرویس تکمیل است.','CAPACITY_EXCEEDED');}
             $p->prepare('INSERT INTO service_students(service_id,student_id,pickup_address,pickup_order) VALUES(:s,:st,:p,:o) ON DUPLICATE KEY UPDATE pickup_address=VALUES(pickup_address),pickup_order=VALUES(pickup_order)')->execute(['s'=>$serviceId,'st'=>$studentId,'p'=>$address,'o'=>$order]);
-            if($canSetTariff&&(float)$student['monthly_fee']===0.0){
-                $fee=AgencySchoolTariffs::quote($p,$aid,(int)$student['school_id'],
-                    (string)($student['academic_year']?:AgencySchoolTariffs::YEAR),
-                    $student['tariff_distance_km'],$student['tariff_vehicle_class']);
-                if($fee!==null)$p->prepare('UPDATE students SET monthly_fee=?,tariff_calculated_at=NOW() WHERE id=? AND agency_id=?')
-                    ->execute([$fee,$studentId,$aid]);
+            // A newly assigned student inherits the selected service pricing method.
+            // Existing assignments retain their explicitly confirmed amounts.
+            if(!$assigned && $canSetTariff){
+                ServicePricing::updateStudent($p,$aid,$studentId,ServicePricing::source($service['fee_source']??'taxi'));
             }
             $p->prepare("UPDATE students SET service_status='assigned' WHERE id=:id AND agency_id=:a")->execute(['id'=>$studentId,'a'=>$aid]);
         });
