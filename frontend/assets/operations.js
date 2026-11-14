@@ -1098,7 +1098,10 @@ async function formResource(key,id,onSaved){
   let serviceModelPicker;
   const refreshVehicle=async()=>{
    try{
-    const drivers=await lookup('drivers'),driver=drivers.find(d=>String(d.id)===String(driverField?.value||row.driver_id));
+    const driverId=String(driverField?.value||row.driver_id||'');
+    const drivers=await lookup('drivers');
+    const driver=drivers.find(d=>String(d.id)===driverId)||
+      (driverId?await api(scoped('/api/v1/drivers/'+encodeURIComponent(driverId))):null);
     if(!driver)return;
     let vehicles=await lookup('vehicles'),vehicle=vehicles.find(v=>String(v.id)===String(driver.vehicle_id));
     if(!vehicle&&driver.vehicle_id)vehicle=await api(scoped('/api/v1/vehicles/'+driver.vehicle_id));
