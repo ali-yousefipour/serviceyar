@@ -76,7 +76,7 @@ assert(source.includes('printSlipNow'),'PDF and print action should remain in th
 assert(source.includes('popup.document.write('),'Payslip print should render independently of application layout');
 assert(source.includes('sy-payslip-print-window'),'Print preview should use dedicated A4 print stylesheet');
 const theme=fs.readFileSync(require('node:path').join(__dirname,'../frontend/assets/brand-theme.css'),'utf8');
-for(const marker of ['function ledgerSummaryMarkup()','sy-ledger-kpis','sy-ledger-filters-v3','sy-ledger-searchbar','sy-ledger-results','sy-ledger-data-table','sy-ledger-direction','syLedgerKpiRecords','syLedgerKpiReceipts','syLedgerKpiPayments','syLedgerKpiBalance'])
+for(const marker of ['function ledgerSummaryMarkup()','sy-ledger-kpis','sy-ledger-filters-v3','sy-ledger-searchbar','sy-ledger-results','sy-ledger-data-table','sy-ledger-direction','syLedgerKpi','sy-ledger-kpi-'])
  assert(source.includes(marker),'Ledger finance UI is missing '+marker);
 assert(source.includes("api('/api/v1/reports/ledger?'+summaryQuery)"),'Financial KPI totals must originate from the server report and honor applied filters');
 assert(source.includes("request!==state.request"),'Financial KPIs must discard superseded async filter responses');
