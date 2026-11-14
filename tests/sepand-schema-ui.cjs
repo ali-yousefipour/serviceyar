@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const ui=fs.readFileSync(path.join(__dirname,'../frontend/assets/sepand-admin.js'),'utf8');
+const schema=fs.readFileSync(path.join(__dirname,'../backend/src/Domain/SepandSchemaMaintenance.php'),'utf8');
+assert(schema.includes("'SHOW TABLES'"),'Schema inspection must work with shared-host MySQL grants');
+assert(schema.includes("'SHOW COLUMNS FROM"),'Schema inspection should inspect columns without information_schema privileges');
+assert(schema.includes("'SHOW INDEX FROM"),'Schema index inspection should be portable');
+assert(!schema.includes('information_schema.'),'Schema introspection must not depend on information_schema access');
+const section=ui.slice(ui.indexOf('const checkSchema=async()=>{'),ui.indexOf('dbRepair.onclick=async()=>'));
+assert(section.includes('dbRepair.hidden=false'),'A failed health request must leave database repair accessible');
+assert(section.includes('preview.disabled=false'),'A failed health request must not permanently disable preview');
+assert(!section.includes('preview.disabled=true'),'Read-only preview must not be locked by optional database health check');
+assert(ui.includes('apply.disabled=!digest'),'Apply must still require a successful preview digest');
+console.log('Sepand schema health fallback and safe import controls: OK');
