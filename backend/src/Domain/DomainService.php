@@ -94,6 +94,31 @@ final class DomainService {
   if($serviceId!==null){$sql.=' AND sv.id=:service';$params['service']=$serviceId;}
   $pdo->prepare($sql)->execute($params);
  }
+ /**
+  * Resolve a plate against the shared vehicle registry without exposing tenant
+  * ownership, drivers, or any other agency's private records.
+  */
+ public static function lookupVehicleByPlate(int $uid,int $aid,string $plate): array {
+  self::scope($uid,$aid,'drivers');
+  $plate=strtr(trim($plate),['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9','ي'=>'ی','ك'=>'ک']);
+  $plate=preg_replace('/[\s\-\/ـ]+/u','',$plate)??'';
+  $plate=str_replace('ایران','',$plate);
+  if(!preg_match('/^[0-9]{2}[آ-یA-Za-z][0-9]{5}$/u',$plate))
+   throw new AuthException(422,'پلاک ایران را با تمام بخش‌ها وارد کنید.','INVALID_PLATE');
+  $pdo=Connection::get();
+  $expr='plate';
+  foreach([' ','-','/','ـ','ایران',"\t"] as $separator)$expr='REPLACE('.$expr.','.$pdo->quote($separator).", '')";
+  foreach(['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹','٠','١','٢','٣','٤','٥','٦','٧','٨','٩'] as $i=>$digit)
+   $expr='REPLACE('.$expr.','.$pdo->quote($digit).','.$pdo->quote((string)($i%10)).')';
+  $expr="REPLACE(REPLACE($expr,'ي','ی'),'ك','ک')";
+  $stmt=$pdo->prepare("SELECT agency_id,plate,model,tariff_vehicle_class,capacity,vin,vehicle_type,vehicle_system,vehicle_trim,make_year,fuel_type,color,engine_number,chassis_number,insurance_number,sepand_status FROM vehicles WHERE $expr=:plate ORDER BY (agency_id=:agency) DESC, (sepand_status='approved') DESC, id DESC LIMIT 1");
+  $stmt->execute(['plate'=>$plate,'agency'=>$aid]);
+  $record=$stmt->fetch(\PDO::FETCH_ASSOC);
+  if(!$record)return ['found'=>false,'plate'=>$plate];
+  $sameAgency=(int)$record['agency_id']===$aid;
+  unset($record['agency_id']);
+  return ['found'=>true,'plate'=>$plate,'source'=>$sameAgency?'current_agency':'shared_registry','vehicle'=>$record];
+ }
  public static function list(int $uid,int $aid,string $resource,array $q): array {
   $c=self::cfg($resource); self::scope($uid,$aid,$c['permission']);
   if($resource==='services')self::refreshServiceCapacity(Connection::get(),$aid);
