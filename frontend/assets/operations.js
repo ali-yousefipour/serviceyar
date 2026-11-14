@@ -714,6 +714,7 @@ async function contractsPage(token=pageToken){
     '<label>'+(kind==='parent'?'دانش‌آموز':'راننده')+'<input type="search" id="syContractPersonSearch" placeholder="جستجوی نام یا کد ملی" autocomplete="off"><select name="partyId" required><option value="">انتخاب کنید</option>'+available.map(p=>'<option value="'+Number(p.id)+'">'+esc(personLabel(p))+'</option>').join('')+'</select></label>'+
     '<label>تاریخ شروع<input name="startDate" type="date" required></label><label>تاریخ پایان<input name="endDate" type="date" required></label>'+
     '<label>مبلغ کل قرارداد (ریال)<input name="amount" type="text" inputmode="numeric" required placeholder="مبلغ صحیح بدون اعشار"></label>'+
+    '<section class="sy-contract-draft-data" id="syContractDraftData" aria-live="polite">برای مشاهده و تکمیل اطلاعات طرفین، ابتدا شخص را انتخاب کنید.</section>'+
     '<div class="sy-contract-create-actions"><button class="primary" type="submit">صدور و ثبت قرارداد</button><span id="syContractCreateStatus" aria-live="polite"></span></div></form></details>':'')+
     '<header class="sy-settings-section-head"><div><h3>قراردادهای صادرشده</h3><p>برای هر قرارداد نسخه چاپی ذخیره‌شده زمان صدور استفاده می‌شود.</p></div></header>'+
     '<div class="table-wrap"><table><thead><tr><th>شماره</th><th>عنوان قرارداد</th><th>تاریخ شروع</th><th>تاریخ پایان</th><th>مبلغ (ریال)</th><th>عملیات</th></tr></thead><tbody>'+
@@ -732,13 +733,62 @@ async function contractsPage(token=pageToken){
     });
     const money=form.elements.amount;
     money.addEventListener('input',()=>{const raw=ServiceYarDates.digits(money.value).replace(/\D/g,'').slice(0,15);money.value=persianDigits(raw.replace(/\B(?=(\d{3})+(?!\d))/g,'٬'));});
+    const draftBox=form.querySelector('#syContractDraftData');
+    const detailFields=kind==='parent'?[
+     ['guardianName','نام و نام خانوادگی ولی'],['guardianNationalCode','کد ملی ولی'],
+     ['guardianFatherName','نام پدر ولی'],['guardianMobile','شماره همراه ولی'],
+     ['guardianAddress','نشانی ولی'],['managerName','نام مدیر شرکت'],
+     ['managerNationalCode','کد ملی مدیر شرکت'],['companyRegistration','شماره ثبت شرکت'],
+     ['companyNationalId','شناسه ملی شرکت'],['companyAddress','نشانی شرکت'],
+     ['companyPhone','تلفن شرکت'],['bankName','نام بانک شرکت'],['bankAccount','شماره حساب شرکت'],
+     ['academicYear','سال تحصیلی']
+    ]:[
+     ['managerName','نام مدیر شرکت'],['managerNationalCode','کد ملی مدیر'],
+     ['companyAddress','نشانی شرکت'],['companyPhone','تلفن شرکت']
+    ];
+    let draftRequest=0;
+    const loadDraft=async()=>{
+     const partyId=Number(select.value),current=++draftRequest;
+     draftBox.replaceChildren();
+     if(!partyId){draftBox.textContent='ابتدا شخص را انتخاب کنید.';return;}
+     draftBox.textContent='در حال تطبیق اطلاعات پرونده…';
+     try{
+      const result=await api(scoped('/api/v1/contract-documents/'+kind+'/draft?partyId='+partyId));
+      if(current!==draftRequest||!form.isConnected||Number(select.value)!==partyId)return;
+      const title=document.createElement('h4');title.textContent='بررسی و تکمیل اطلاعات طرفین قرارداد';
+      const description=document.createElement('p');
+      description.textContent=result.missing?.length?'برخی اطلاعات اصلی تکمیل نشده‌اند؛ پیش از صدور آن‌ها را بررسی و وارد کنید.':'اطلاعات از پرونده‌ها فراخوانی شد؛ قبل از صدور صحت آن‌ها را بررسی کنید.';
+      const grid=document.createElement('div');grid.className='sy-contract-draft-grid';
+      for(const [key,label] of detailFields){
+       const field=document.createElement('label');field.textContent=label;
+       const input=document.createElement('input');input.name='override_'+key;input.maxLength=500;
+       input.value=String(result.values?.[key]??'');
+       input.placeholder=String(result.missing?.includes(key)?'تکمیل این مورد ضروری است':'در صورت نیاز ویرایش کنید');
+       if(result.missing?.includes(key))field.classList.add('is-missing');
+       field.append(input);grid.append(field);
+      }
+      draftBox.replaceChildren(title,description,grid);
+      if(kind==='parent'&&!money.value.trim()&&Number(result.suggestedTotal)>0)
+       money.value=persianDigits(String(result.suggestedTotal).replace(/\B(?=(\d{3})+(?!\d))/g,'٬'));
+      if(kind==='parent'){
+       const hint=document.createElement('p');hint.className='muted';
+       hint.textContent='ضریب محاسبه پیشنهادی: '+persianDigits(result.academicMonths)+' ماه. مبلغ قرارداد را پیش از صدور بررسی کنید.';
+       draftBox.append(hint);
+      }
+     }catch(error){if(current===draftRequest&&draftBox.isConnected)draftBox.textContent='دریافت اطلاعات قرارداد ناموفق بود: '+error.message;}
+    };
+    select.addEventListener('change',()=>{money.value='';void loadDraft();});
+
     form.onsubmit=async e=>{
      e.preventDefault();const submit=form.querySelector('[type=submit]'),status=form.querySelector('#syContractCreateStatus');
      const amount=ServiceYarDates.digits(money.value).replace(/\D/g,'');
      if(!form.reportValidity()||!amount)return;
      submit.disabled=true;status.textContent='در حال صدور قرارداد…';
      try{
-      const record=await write('/api/v1/contract-documents/'+kind,{partyId:Number(select.value),startDate:form.elements.startDate.value,endDate:form.elements.endDate.value,amount});
+      const overrides={};
+      form.querySelectorAll('[name^="override_"]').forEach(input=>{overrides[input.name.slice(9)]=input.value.trim();});
+      if(!Object.keys(overrides).length)throw Error('ابتدا اطلاعات طرفین قرارداد را دریافت و بررسی کنید.');
+      const record=await write('/api/v1/contract-documents/'+kind,{partyId:Number(select.value),startDate:form.elements.startDate.value,endDate:form.elements.endDate.value,amount,overrides});
       status.textContent='قرارداد '+persianDigits(record.contractNo)+' صادر شد.';
       await render();
      }catch(error){status.textContent=error.message;submit.disabled=false;}
