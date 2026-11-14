@@ -109,7 +109,13 @@ final class StudentServiceBilling {
   $l=$pdo->prepare("SELECT id,amount,entry_date,direction FROM ledger_entries WHERE agency_id=? AND party_type='driver' AND party_id=? AND is_active=1");
   $l->execute([$agencyId,$driverId]);$ledger=$l->fetchAll(PDO::FETCH_ASSOC);
   $paidTotal=(float)array_sum(array_column($paid,'amount'));
-  foreach($ledger as $entry)$paidTotal+=($entry['direction']==='payment'?1:-1)*(float)$entry['amount'];
+  foreach($ledger as $entry){
+   $value=($entry['direction']==='payment'?1:-1)*(float)$entry['amount'];
+   $paidTotal+=$value;
+   $paid[]=['id'=>$entry['id'],'amount'=>$value,'payment_date'=>$entry['entry_date'],
+    'reference_no'=>null,'source'=>'ledger'];
+  }
+  usort($paid,static fn($a,$b)=>strcmp((string)$b['payment_date'],(string)$a['payment_date']) ?: (int)$b['id']<=>(int)$a['id']);
   return ['services'=>$services,'payments'=>$paid,'monthlyEntitlement'=>$monthly,
    'estimatedAnnualEntitlement'=>$annualNet,'grossAnnualEntitlement'=>$annualGross,'paidTotal'=>$paidTotal,
    'remaining'=>max(0,$annualNet-$paidTotal),'overpaid'=>max(0,$paidTotal-$annualNet),
