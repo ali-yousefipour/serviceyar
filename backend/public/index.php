@@ -328,6 +328,13 @@ try {
     if(!in_array((string)$class,['1','2','3'],true))throw new AuthException(422,'ابتدا کلاس تعرفه خودرو را در قسمت خودروها ثبت کنید.','VEHICLE_TARIFF_CLASS_REQUIRED');
     $student['tariff_vehicle_class']=$class;
    }
+   // Preview the explicitly selected vehicle class (which the operator
+   // may override) without writing changes to vehicle/student records.
+   if(isset($b['vehicleClass'])&&$b['vehicleClass']!==''){
+    if(!in_array((string)$b['vehicleClass'],['1','2','3'],true))
+     throw new AuthException(422,'کلاس خودرو باید ۱، ۲ یا ۳ باشد.','INVALID_VEHICLE_TARIFF_CLASS');
+    $student['tariff_vehicle_class']=(int)$b['vehicleClass'];
+   }
    $source=\ServiceYar\Domain\ServicePricing::source($b['feeSource']??$student['fee_source']??'taxi');
    $quote=\ServiceYar\Domain\ServicePricing::quote($pdo,$aid,$student,$source);
    $quote['saved']=(float)$student['monthly_fee']>0&&$source===($student['fee_source']??'taxi');
