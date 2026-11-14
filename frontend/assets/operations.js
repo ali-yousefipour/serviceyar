@@ -1706,6 +1706,55 @@ function userEditor(row,global){
  if(!row&&$('userEditor').elements.role)$('userEditor').elements.role.value='operator';
  $('userEditor').onsubmit=async e=>{e.preventDefault();const button=e.target.querySelector('button');button.disabled=true;try{const body=Object.fromEntries(new FormData(e.target));if(!body.role)delete body.role;await write((global?'/api/v1/admin/users':'/api/v1/users')+(row?'/'+row.id:''),body,row?'PUT':'POST');closeDialog();notify('کاربر ذخیره شد.');if(global)await companiesPage();else await settingsPage();}catch(err){$('formError').textContent=err.message;$('formError').hidden=false;button.disabled=false;}};
 }
+async function taxiOrganizationAdminPanel(container,token){
+ const panel=document.createElement('section');
+ panel.id='syAdminTaxiTariffs';panel.className='panel sy-super-admin-card sy-taxi-settings';
+ panel.innerHTML=`<header class="sy-settings-section-head"><div><span class="sy-operation-kicker">مدیریت نرخ‌نامه سازمانی</span><h2>محاسبه سرویس بر اساس سازمان تاکسیرانی</h2><p>تعرفه سال تحصیلی ۱۴۰۵–۱۴۰۶ از فایل نرخ‌نامه سازمان بارگذاری شده است. مقادیر هر ناحیه و کلاس خودرو مستقل و قابل ویرایش‌اند.</p></div></header>
+ <form id="syTaxiTariffSelector" class="sy-taxi-tariff-selector">
+  <label>ناحیه آموزش‌وپرورش<select name="district">${[1,2,3,4,5,6,7,8].map(n=>`<option value="${n}">${n===8?'تبادکان':'ناحیه '+number(n)}</option>`).join('')}</select></label>
+  <label>کلاس خودرو<select name="vehicleClass"><option value="economy">پراید، آردی و روآ</option><option value="standard">سمند، اطلس، کوئیک، تیبا و مشابه</option><option value="van">ون و مینی‌بوس</option></select></label>
+  <button type="submit" class="primary">نمایش تعرفه‌ها</button>
+ </form>
+ <p class="sy-taxi-tariff-hint">مبالغ به ریال هستند. مبلغ اولیا و مبلغ پایه راننده هرکدام جداگانه ذخیره می‌شوند؛ تغییر نرخ‌نامه، اسناد مالی گذشته را بازنویسی نمی‌کند.</p>
+ <div id="syTaxiTariffTable" aria-live="polite">در حال دریافت نرخ‌های مصوب…</div>
+ <div class="sy-taxi-tariff-actions"><button type="button" class="primary" id="syTaxiTariffSave" disabled>ذخیره نرخ‌های این ناحیه و کلاس</button><span id="syTaxiTariffStatus" role="status" aria-live="polite"></span></div>`;
+ container.after(panel);
+ const form=panel.querySelector('#syTaxiTariffSelector'),table=panel.querySelector('#syTaxiTariffTable'),status=panel.querySelector('#syTaxiTariffStatus'),save=panel.querySelector('#syTaxiTariffSave');
+ let snapshot=null,revision=0;
+ const load=async()=>{
+  const version=++revision;snapshot=null;save.disabled=true;status.textContent='';
+  table.textContent='در حال بارگذاری جدول تعرفه…';
+  const district=Number(form.elements.district.value),vehicleClass=form.elements.vehicleClass.value;
+  try{
+   const data=await api('/api/v1/admin/taxi-tariffs?district='+district+'&vehicleClass='+encodeURIComponent(vehicleClass));
+   if(token!==pageToken||version!==revision||!panel.isConnected)return;
+   snapshot=data;table.innerHTML=`<div class="table-wrap sy-taxi-rates-table-wrap" tabindex="0"><table class="sy-taxi-rates-table">
+    <thead><tr><th>مسافت رفت‌وبرگشت (کیلومتر)</th><th>مبنای ماهانه راننده (ریال)</th><th>مبلغ ماهانه اولیا (ریال)</th><th>وضعیت نرخ</th></tr></thead>
+    <tbody>${data.rows.map(r=>`<tr data-distance="${Number(r.distanceKm)}"><td>${number(r.distanceKm)}</td>
+      <td><input type="number" name="driverMonthly" min="0" max="999999999999" step="1" inputmode="numeric" aria-label="مبلغ راننده در ${number(r.distanceKm)} کیلومتر" value="${Number(r.driverMonthly)}"></td>
+      <td><input type="number" name="parentMonthly" min="0" max="999999999999" step="1" inputmode="numeric" aria-label="مبلغ اولیا در ${number(r.distanceKm)} کیلومتر" value="${Number(r.parentMonthly)}"></td>
+      <td>${r.overridden?'ویرایش‌شده':'نرخ پیش‌فرض'}</td></tr>`).join('')}</tbody></table></div>`;
+   status.textContent='ضریب ترافیک این ناحیه در نرخ‌های پیش‌فرض: '+number(data.trafficPercent)+'٪';
+   save.disabled=false;
+  }catch(error){if(version===revision&&panel.isConnected){table.textContent='امکان نمایش نرخ‌ها وجود ندارد.';status.textContent=error.message;}}
+ };
+ form.onsubmit=e=>{e.preventDefault();load();};
+ save.onclick=async()=>{
+  if(!snapshot)return;
+  const rows=[...table.querySelectorAll('tbody tr')].map(tr=>{
+   const driver=tr.querySelector('[name=driverMonthly]'),parent=tr.querySelector('[name=parentMonthly]');
+   for(const input of [driver,parent])if(!input.reportValidity()||!/^\d+$/.test(input.value))throw new Error('مبلغ هر ردیف باید عدد صحیح ریالی معتبر باشد.');
+   return {distanceKm:Number(tr.dataset.distance),driverMonthly:Number(driver.value),parentMonthly:Number(parent.value)};
+  });
+  save.disabled=true;status.textContent='در حال ذخیره نرخ‌های جدید…';
+  try{
+   await write('/api/v1/admin/taxi-tariffs',{district:Number(form.elements.district.value),vehicleClass:form.elements.vehicleClass.value,rows},'PUT');
+   status.textContent='تعرفه‌ها ذخیره شدند. تغییرات برای محاسبات بعدی اعمال خواهند شد.';
+   await load();
+  }catch(error){status.textContent=error.message;save.disabled=false;}
+ };
+ await load();
+}
 const originalCompaniesPage=companiesPage;
 companiesPage=async function(){
  await originalCompaniesPage();if(!session.roles?.includes('super_admin'))return;
@@ -1746,13 +1795,14 @@ companiesPage=async function(){
   if(userSection){userSection.id='syAdminUsers';userSection.classList.add('sy-admin-users-panel');}
   adminPanel.id='syAdminIntegrations';
   const nav=document.createElement('nav');nav.className='sy-admin-section-nav';nav.setAttribute('aria-label','دسترسی سریع به تنظیمات ادمین کل');
-  nav.innerHTML='<a href="#syAdminIntegrations" data-admin-jump="syAdminIntegrations">ارتباطات و سرویس‌ها</a><a href="#syAdminAgencies" data-admin-jump="syAdminAgencies">مدیریت شرکت‌ها</a><a href="#syAdminUsers" data-admin-jump="syAdminUsers">کاربران سامانه</a>';
+  nav.innerHTML='<a href="#syAdminIntegrations" data-admin-jump="syAdminIntegrations">ارتباطات و سرویس‌ها</a><a href="#syAdminTaxiTariffs" data-admin-jump="syAdminTaxiTariffs">محاسبه سرویس بر اساس سازمان تاکسیرانی</a><a href="#syAdminAgencies" data-admin-jump="syAdminAgencies">مدیریت شرکت‌ها</a><a href="#syAdminUsers" data-admin-jump="syAdminUsers">کاربران سامانه</a>';
   nav.querySelectorAll('[data-admin-jump]').forEach(link=>link.addEventListener('click',event=>{
    const target=workspace.querySelector('#'+link.dataset.adminJump);if(!target)return;
    event.preventDefault();target.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
    target.setAttribute('tabindex','-1');target.focus({preventScroll:true});
   }));
   workspace.prepend(nav);
+   void taxiOrganizationAdminPanel(adminPanel,token);
 
   const form=$('platformSettingsForm');
   form.onsubmit=async e=>{
