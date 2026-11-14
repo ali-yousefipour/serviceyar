@@ -2,10 +2,42 @@
 async function sepandAdminPanel(anchor){
  const panel=document.createElement('section');panel.id='syAdminSepand';panel.className='panel sy-super-admin-card sy-sepand-admin';
  panel.innerHTML='<header class="sy-settings-section-head"><div><h2>به‌روزرسانی رانندگان و خودروها از سپند</h2><p>ابتدا فایل رانندگان و خودروها را انتخاب کنید؛ پیش‌نمایش هیچ داده‌ای را تغییر نمی‌دهد. پس از بررسی شرکت‌های دارای اختلاف نام، عملیات را تأیید کنید.</p></div></header>'+
+ '<section class="sy-sepand-class-recovery"><h3>بازیابی کلاس تعرفه خودروهای قبلی</h3><p>کلاس خودروهایی که پس از ایمپورت خالی مانده‌اند، فقط با شواهد قطعی پلاک، VIN و دانش‌آموزان همان سرویس بازیابی می‌شود. کلاس‌های معتبر فعلی و سوابق مالی تغییر نمی‌کنند.</p><div class="member-actions"><button type="button" id="sySepandClassPreview">بررسی کلاس‌های خالی</button><button type="button" id="sySepandClassRestore" disabled>بازیابی کلاس‌های تأییدشده</button></div><div id="sySepandClassResult" aria-live="polite"></div></section>'+
  '<section class="sy-sepand-db-health" aria-label="وضعیت ساختار پایگاه داده"><div id="sySepandDbStatus" role="status">در حال بررسی آماده‌بودن دیتابیس سپند…</div><button type="button" id="sySepandDbRepair" hidden>آماده‌سازی دیتابیس سپند</button><p class="muted">قبل از تغییر ساختار دیتابیس، از اطلاعات هاست نسخه پشتیبان تهیه کنید. آماده‌سازی صرفاً ستون‌ها و جدول‌های لازم را اضافه می‌کند.</p></section>'+ 
  '<form id="sySepandImport"><div class="form-grid"><label>فایل رانندگان سپند (XLSX)<input type="file" name="drivers" accept=".xlsx" required></label><label>فایل خودروهای سپند (XLSX)<input type="file" name="vehicles" accept=".xlsx" required></label></div><div id="sySepandMapping" class="sy-sepand-mappings"></div><div class="member-actions"><button type="button" id="sySepandPreview" class="primary">پیش‌نمایش و تطبیق شرکت‌ها</button><button type="button" id="sySepandApply" disabled>تأیید و اعمال به‌روزرسانی</button></div></form><div id="sySepandResult" aria-live="polite" role="status"></div>';
  anchor.after(panel);
  const form=panel.querySelector('form'),preview=panel.querySelector('#sySepandPreview'),apply=panel.querySelector('#sySepandApply'),mapping=panel.querySelector('#sySepandMapping'),result=panel.querySelector('#sySepandResult');
+ const classPreview=panel.querySelector('#sySepandClassPreview'),classRestore=panel.querySelector('#sySepandClassRestore'),classResult=panel.querySelector('#sySepandClassResult');
+ const classTable=data=>{
+  const summary='<div class="sy-sepand-stats">'+[
+   ['خودروهای بررسی‌شده',data.vehiclesChecked],['دارای کلاس معتبر',data.classesAlreadyPresent],
+   ['قابل بازیابی',data.recoverable],['نیازمند بررسی دستی',data.needManualReview]
+  ].map(([label,count])=>'<div><span>'+esc(label)+'</span><b>'+number(count||0)+'</b></div>').join('')+'</div>';
+  const recoverable=(data.candidates||[]).length?
+   '<details><summary>نمونه خودروهای قابل بازیابی</summary>'+simpleTable(['شناسه شرکت','پلاک','VIN','راننده','کلاس قابل بازیابی'],data.candidates.map(v=>[number(v.agencyId),v.plate||'—',v.vin||'—',v.driverNames||'—',number(v.vehicleClass)]))+'</details>':'';
+  const unresolved=(data.unresolved||[]).length?
+   '<details><summary>موارد نیازمند بررسی دستی (تا ۱۵۰ مورد)</summary>'+simpleTable(['شناسه شرکت','پلاک','VIN','راننده','علت'],data.unresolved.map(v=>[number(v.agencyId),v.plate||'—',v.vin||'—',v.driverNames||'—',v.reason]))+'</details>':'';
+  return summary+recoverable+unresolved;
+ };
+ classPreview.onclick=async()=>{
+  classPreview.disabled=true;classRestore.disabled=true;classResult.textContent='در حال بررسی شواهد کلاس خودروها…';
+  try{
+   const data=await api('/api/v1/admin/sepand-registry/vehicle-classes');
+   if(!panel.isConnected)return;
+   classResult.innerHTML=classTable(data);
+   classRestore.disabled=Number(data.recoverable||0)===0;
+  }catch(e){classResult.textContent='بررسی کلاس خودروها انجام نشد: '+e.message;}
+  finally{classPreview.disabled=false;}
+ };
+ classRestore.onclick=async()=>{
+  if(!confirm('پس از تهیه پشتیبان، کلاس‌های خالی خودروها فقط در موارد دارای شواهد معتبر بازیابی شوند؟ سایر فیلدها و مبالغ مالی تغییر نمی‌کنند.'))return;
+  classRestore.disabled=true;classResult.textContent='در حال بازیابی کلاس‌های دارای مدرک معتبر…';
+  try{
+   const data=await api('/api/v1/admin/sepand-registry/vehicle-classes',{method:'POST',headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify({confirm:'RESTORE_VEHICLE_TARIFF_CLASSES'})});
+   if(!panel.isConnected)return;
+   classResult.innerHTML='<p>تعداد کلاس‌های بازیابی‌شده: <strong>'+number(data.updated||0)+'</strong></p>'+classTable(data);
+  }catch(e){classResult.textContent='بازیابی انجام نشد: '+e.message;}
+ };
  const dbStatus=panel.querySelector('#sySepandDbStatus'),dbRepair=panel.querySelector('#sySepandDbRepair');
  const checkSchema=async()=>{
   dbStatus.textContent='در حال بررسی ساختار دیتابیس سپند…';
@@ -52,6 +84,9 @@ async function sepandAdminPanel(anchor){
    const response=await fetch('/api/v1/admin/sepand-registry/import',{method:'POST',credentials:'same-origin',headers:{'X-CSRF-Token':session.csrfToken,'Accept':'application/json'},body});
    const packet=await response.json().catch(()=>({}));if(!response.ok||!packet.ok)throw new Error(packet?.error?.message||'خطا در تحلیل اطلاعات سپند');
    const data=packet.data;summary(data);
+   if(mode==='apply'&&Number(data.counts?.vehicleClassesRecovered||0)>0){
+    result.insertAdjacentHTML('beforeend','<p>کلاس تعرفه '+number(data.counts.vehicleClassesRecovered)+' خودرو نیز از سوابق معتبر بازیابی شد.</p>');
+   }
    if(mode==='preview'){
     digest=data.digest;report=data;
     const opts=(data.companies||[]).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+(c.nationalId?' ('+esc(c.nationalId)+')':'')+'</option>').join('');
