@@ -68,6 +68,16 @@ final class StudentServiceBilling {
   foreach($ledger as $row){$received+=($row['direction']==='receipt'?1:-1)*(float)$row['amount'];$payments[]=[
    'id'=>$row['id'],'invoice_id'=>null,'amount'=>($row['direction']==='receipt'?1:-1)*(float)$row['amount'],
    'payment_date'=>$row['payment_date'],'method'=>$row['method'],'reference_no'=>$row['reference_no'],'source'=>'ledger'];}
+  // Apply payments to the oldest invoice first for an accurate per-invoice
+  // remaining amount. No source receipt is changed or counted twice.
+  $available=max(0,$received);
+  for($index=count($invoices)-1;$index>=0;$index--){
+   $amount=(float)$invoices[$index]['amount'];$allocated=min($amount,$available);
+   $available-=$allocated;
+   $invoices[$index]['paidAmount']=$allocated;
+   $invoices[$index]['remainingAmount']=max(0,$amount-$allocated);
+   $invoices[$index]['displayStatus']=$allocated >= $amount?'paid':'open';
+  }
   return ['invoices'=>$invoices,'payments'=>$payments,'totals'=>[
    'invoiced'=>$total,'received'=>$received,'balance'=>max(0,$total-$received),'credit'=>max(0,$received-$total)]];
  }
