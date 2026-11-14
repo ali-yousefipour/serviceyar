@@ -300,16 +300,23 @@ try {
  if($method==='POST'&&preg_match('#^/api/v1/accounting/post/(ledger|payments|driver-payments)/(\d+)$#',$path,$m)){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\FinancialPosting::post($s['id'],$aid,$m[1],(int)$m[2],Request::json())]);}
  if($method==='POST'&&$path==='/api/v1/operations/school-statement/preview'){$auth->requireCsrf($s);Authorization::requireAgencyAccess($s['id'],$aid);Authorization::requirePermission($s['id'],'finance.view');Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolStatement::calculate(Request::json())]);}
  if($method==='POST'&&$path==='/api/v1/operations/tariffs/quote'){
-  $auth->requireCsrf($s);Authorization::requirePermission($s['id'],'students.view');$b=Request::json();
+  $auth->requireCsrf($s);
+  Authorization::requirePermission($s['id'],'students.view');
+  Authorization::requireAgencyAccess($s['id'],$aid);
+  $b=Request::json();$pdo=Connection::get();
   if(isset($b['studentId'])){
    $student=DomainService::get($s['id'],$aid,'students',(int)$b['studentId']);
-   $saved=(float)$student['monthly_fee'];
-   $fee=$saved>0?$saved:\ServiceYar\Domain\AgencySchoolTariffs::quote(Connection::get(),$aid,(int)$student['school_id'],
-    (string)($student['academic_year']?:\ServiceYar\Domain\AgencySchoolTariffs::YEAR),$student['tariff_distance_km'],$student['tariff_vehicle_class']);
-   Response::json(['ok'=>true,'data'=>['monthlyFee'=>$fee,'saved'=>$saved>0,'currency'=>'IRR']]);
+   $source=\ServiceYar\Domain\ServicePricing::source($b['feeSource']??$student['fee_source']??'taxi');
+   $quote=\ServiceYar\Domain\ServicePricing::quote($pdo,$aid,$student,$source);
+   $quote['saved']=(float)$student['monthly_fee']>0&&$source===($student['fee_source']??'taxi');
+   Response::json(['ok'=>true,'data'=>$quote]);
   }
-  $fee=\ServiceYar\Domain\AgencySchoolTariffs::quote(Connection::get(),$aid,(int)($b['schoolId']??0),(string)($b['academicYear']??''),$b['distanceKm']??null,$b['vehicleClass']??null);
-  Response::json(['ok'=>true,'data'=>['monthlyFee'=>$fee,'currency'=>'IRR']]);
+  $source=\ServiceYar\Domain\ServicePricing::source($b['feeSource']??'taxi');
+  $student=['school_id'=>$b['schoolId']??0,'academic_year'=>$b['academicYear']??\ServiceYar\Domain\AgencySchoolTariffs::YEAR,
+   'tariff_distance_km'=>$b['distanceKm']??null,'tariff_vehicle_class'=>$b['vehicleClass']??null,
+   'monthly_fee'=>$b['monthlyFee']??null];
+  $quote=\ServiceYar\Domain\ServicePricing::quote($pdo,$aid,$student,$source);
+  Response::json(['ok'=>true,'data'=>$quote]);
  }
  if($method==='POST'&&$path==='/api/v1/operations/tariffs/seed-arta'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\AgencySchoolTariffs::seedArta($s['id'],$aid)]);}
  if($method==='POST'&&$path==='/api/v1/operations/tariffs/recalculate'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\AgencySchoolTariffs::recalculate($s['id'],$aid)]);}
