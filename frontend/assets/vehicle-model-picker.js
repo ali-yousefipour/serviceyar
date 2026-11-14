@@ -10,7 +10,7 @@
   .replace(/[‌\s]+/g,' ').trim().toLocaleLowerCase('fa');
  let optionsPromise=null;
  async function load(){
-  if(!optionsPromise)optionsPromise=api('/api/v1/vehicle-model-options')
+  if(!optionsPromise)optionsPromise=api(typeof scoped==='function'?scoped('/api/v1/vehicle-model-options'):'/api/v1/vehicle-model-options')
    .then(data=>data.items||[]).catch(error=>{optionsPromise=null;throw error;});
   return optionsPromise;
  }
