@@ -629,6 +629,12 @@ try {
    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::publishTemplate($s['id'],$kind,Request::json())],201);
   }
  }
+ if($method==='GET'&&preg_match('#^/api/v1/contract-documents/(parent|driver)/draft$#',$path,$match)){
+  $partyId=filter_var($_GET['partyId']??null,FILTER_VALIDATE_INT);
+  if($partyId===false||$partyId<1)throw new AuthException(422,'طرف قرارداد نامعتبر است.','INVALID_CONTRACT_PARTY');
+  header('Cache-Control: no-store');
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::draftData($s['id'],$aid,$match[1],$partyId)]);
+ }
  if(preg_match('#^/api/v1/contract-documents/(parent|driver)$#',$path,$match)){
   $kind=$match[1];
   if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::listing($s['id'],$aid,$kind)]);
