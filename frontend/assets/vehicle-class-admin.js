@@ -2,6 +2,7 @@
 async function vehicleClassAdminPanel(anchor){
  const section=document.createElement('section');section.className='panel sy-super-admin-card sy-vehicle-class-catalog';section.id='syVehicleClassCatalog';
  section.innerHTML='<header class="sy-settings-section-head"><div><h2>مدیریت کلاس‌های تعرفه خودرو</h2><p>خودروهای هر کلاس را مدیریت کنید. نام‌های مشابه مانند انواع پراید زیر یک خانواده قرار می‌گیرند؛ نام‌های مبهم بدون تأیید خودکار طبقه‌بندی نمی‌شوند.</p></div></header>'+
+ '<div id="syVehicleClassSetup" hidden><p>جدول کلاس‌های خودرو هنوز در دیتابیس فعال نیست. پس از تهیه نسخه پشتیبان، فهرست رسمی کلاس‌ها را آماده کنید.</p><button type="button" id="syVehicleClassPrepare">آماده‌سازی فهرست کلاس‌ها در دیتابیس</button></div>'+
  '<div id="syVehicleClassCards" class="sy-vehicle-class-cards">در حال دریافت فهرست کلاس‌ها…</div>'+
  '<form id="syVehicleClassAdd"><div class="form-grid"><label>کلاس خودرو<select name="vehicleClass" required><option value="1">کلاس ۱</option><option value="2">کلاس ۲</option><option value="3">کلاس ۳</option></select></label>'+
  '<label>خانواده خودرو<input name="familyName" maxlength="100" placeholder="مثلاً پراید" required></label>'+
@@ -12,6 +13,15 @@ async function vehicleClassAdminPanel(anchor){
  anchor.after(section);
  const cards=section.querySelector('#syVehicleClassCards'),form=section.querySelector('#syVehicleClassAdd'),
  preview=section.querySelector('#syModelDetectPreview'),apply=section.querySelector('#syModelDetectApply'),report=section.querySelector('#syModelDetectReport');
+ const setup=section.querySelector('#syVehicleClassSetup'),prepare=section.querySelector('#syVehicleClassPrepare');
+ prepare.onclick=async()=>{
+  if(!confirm('پس از تهیه بکاپ، جدول کلاس‌ها و نام‌های تأییدشده در دیتابیس ساخته شوند؟'))return;
+  prepare.disabled=true;
+  try{
+   await api('/api/v1/admin/vehicle-class-catalog/prepare',{method:'POST',headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify({confirm:'INSTALL_VEHICLE_CLASS_CATALOG'})});
+   await reload();
+  }catch(e){notify('آماده‌سازی فهرست کلاس خودرو ناموفق بود: '+e.message,true);}finally{prepare.disabled=false;}
+ };
  const familySummary=items=>{
   const groups=new Map();
   items.forEach(item=>{const key=String(item.family_name);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(item);});
@@ -21,6 +31,10 @@ async function vehicleClassAdminPanel(anchor){
  const reload=async()=>{
   const data=await api('/api/v1/admin/vehicle-class-catalog');
   if(!section.isConnected)return;
+  setup.hidden=!!data.ready;
+  form.hidden=!data.ready;
+  section.querySelector('.sy-vehicle-class-detect').hidden=!data.ready;
+  if(!data.ready){cards.textContent='برای نمایش و ویرایش فهرست کلاس‌ها ابتدا دیتابیس را آماده کنید.';return;}
   cards.innerHTML=[1,2,3].map(c=>'<article class="sy-vehicle-class-card"><h3>کلاس '+number(c)+'</h3>'+familySummary(data.models.filter(i=>Number(i.class_number)===c))+'</article>').join('');
   cards.querySelectorAll('[data-remove-vehicle-alias]').forEach(button=>button.onclick=async()=>{
    if(!confirm('این نام از فهرست تشخیص کلاس حذف شود؟ کلاس خودروهای قبلاً تعیین‌شده تغییر نمی‌کند.'))return;
