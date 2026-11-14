@@ -1644,3 +1644,33 @@ body{background:var(--canvas);color:var(--ink)}
 @media print{
  #content .sy-ledger-report-page-panel .sy-ledger-report-filter-form.sy-ledger-report-compact{display:none!important}
 }
+
+
+/* Organization tariff administration and source-aware tuition editors. */
+#content .sy-taxi-settings{border:1px solid #d9e7dc!important;background:#fffefa!important;border-radius:16px!important;padding:18px!important}
+#content .sy-taxi-settings .sy-settings-section-head h2{font:850 19px/1.7 Vazirmatn,Tahoma,sans-serif!important;color:#134a35!important}
+#content .sy-taxi-settings .sy-settings-section-head p{font:500 12px/1.9 Vazirmatn,Tahoma,sans-serif!important;color:#617768!important}
+#content .sy-taxi-tariff-selector{display:flex!important;align-items:end!important;flex-wrap:wrap!important;gap:10px!important;padding:13px!important;border:1px solid #dce8dd!important;border-radius:12px!important;background:#f4f8f4!important}
+#content .sy-taxi-tariff-selector label{display:grid!important;flex:1 1 205px!important;gap:5px!important;font:750 12px Vazirmatn,Tahoma,sans-serif!important;color:#275741!important}
+#content .sy-taxi-tariff-selector select{width:100%!important;min-height:41px!important;padding:7px 11px!important;border:1px solid #cadccd!important;border-radius:9px!important;background:#fffefa!important;color:#214737!important;font:600 12px Vazirmatn,Tahoma,sans-serif!important}
+#content .sy-taxi-tariff-selector button,#content .sy-taxi-tariff-actions button{min-height:41px!important;padding:8px 16px!important;border:1px solid #bfa054!important;border-radius:9px!important;background:#efcf7d!important;color:#285135!important;font:750 12px Vazirmatn,Tahoma,sans-serif!important}
+#content .sy-taxi-tariff-hint{font:500 11px/1.9 Vazirmatn,Tahoma,sans-serif!important;color:#557363!important;margin:10px 3px!important}
+#content .sy-taxi-rates-table-wrap{border:1px solid #dbe8dc!important;border-radius:11px!important;overflow:auto!important;max-height:490px!important}
+#content .sy-taxi-rates-table{width:100%!important;min-width:640px!important;border-collapse:separate!important;border-spacing:0!important}
+#content .sy-taxi-rates-table th{position:sticky!important;top:0!important;z-index:2!important;padding:10px 12px!important;background:#e9f3e9!important;color:#21533b!important;border-bottom:1px solid #cbded0!important;font:800 11.5px Vazirmatn,Tahoma,sans-serif!important}
+#content .sy-taxi-rates-table td{padding:7px 11px!important;border-bottom:1px solid #e6eee6!important;font:550 12px Vazirmatn,Tahoma,sans-serif!important;color:#315642!important}
+#content .sy-taxi-rates-table tbody tr:nth-child(even){background:#f8fbf8!important}
+#content .sy-taxi-rates-table td input{box-sizing:border-box!important;max-width:210px!important;min-height:35px!important;padding:6px 9px!important;border:1px solid #cdddcc!important;border-radius:8px!important;background:#fff!important;font:600 12px Vazirmatn,Tahoma,sans-serif!important}
+#content .sy-taxi-tariff-actions{display:flex!important;align-items:center!important;flex-wrap:wrap!important;gap:12px!important;padding-top:12px!important}
+#content .sy-taxi-tariff-actions span{color:#4d715a!important;font:600 11.5px/1.7 Vazirmatn,Tahoma,sans-serif!important}
+#content .sy-taxi-tariff-actions button:disabled{opacity:.5!important}
+#modal .sy-fee-source-preview{padding:11px 13px!important;margin-top:9px!important;background:#eff7f1!important;border:1px solid #d0e4d5!important;border-radius:11px!important}
+#modal .sy-fee-preview-header{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important}
+#modal .sy-fee-preview-header strong{font:800 12px Vazirmatn,Tahoma,sans-serif!important;color:#12533a!important}
+#modal .sy-fee-preview-header button{padding:7px 12px!important;font:700 11.5px Vazirmatn,Tahoma,sans-serif!important;border:1px solid #b9d7c0!important;border-radius:8px!important;background:#fff!important;color:#176344!important}
+#modal .sy-fee-source-preview p{font:550 11.5px/1.8 Vazirmatn,Tahoma,sans-serif!important;color:#39654c!important;margin:7px 0 0!important}
+#modal .sy-pricing-agreed input{background:#fff9e9!important;border-color:#dec584!important}
+#content .sy-service-pricing-source{grid-column:1/-1!important;padding:12px!important;border:1px solid #d8e9dc!important;border-radius:11px!important;background:#eef8f0!important}
+#content .sy-service-pricing-source select{width:100%!important;max-width:480px!important;min-height:42px!important;background:#fffefa!important;border:1px solid #cadfce!important;border-radius:9px!important;color:#1b5038!important}
+#content .sy-service-pricing-source small{display:block!important;margin-top:5px!important;color:#527362!important;font-size:11px!important}
+@media(max-width:640px){#content .sy-taxi-settings{padding:12px!important}#content .sy-taxi-tariff-selector{padding:10px!important}}
