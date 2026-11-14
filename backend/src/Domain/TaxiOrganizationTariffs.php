@@ -24,7 +24,7 @@ final class TaxiOrganizationTariffs
     }
     public static function district(mixed $region): int {
         $raw=trim(strtr((string)$region,['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']));
-        if($raw==='تبادکان'||str_contains($raw,'تبادکان'))return 8;
+        if($raw==='8'||$raw==='تبادکان'||str_contains($raw,'تبادکان'))return 8;
         if(preg_match('/(?:ناحیه|منطقه)?\s*([1-7])$/u',$raw,$m))return (int)$m[1];
         throw new AuthException(422,'ناحیه مدرسه در بازه ۱ تا ۷ یا تبادکان مشخص نیست.','TAXI_DISTRICT_REQUIRED');
     }
