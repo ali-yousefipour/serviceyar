@@ -2903,3 +2903,18 @@ body.sy-menu-palette-open{overflow:hidden}
 .sy-detailed-profile .sy-detail-section{border-radius:12px;border:1px solid #e4ebe5;background:#fff;padding:12px;margin:10px 0}
 @media(max-width:900px){.sy-student-account-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:500px){.sy-student-account-stats{grid-template-columns:1fr}.sy-taxi-legacy-reprice .member-actions>*{width:100%}}
+
+/* Administrator-managed tariff vehicle families */
+.sy-vehicle-class-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:18px 0}
+.sy-vehicle-class-card{border:1px solid #dce9e1;border-radius:16px;padding:16px;background:#f9fcfa;min-width:0}
+.sy-vehicle-class-card h3{margin:0 0 12px;color:#155f47}
+.sy-vehicle-class-card details{border-top:1px solid #e4ebe6;padding:10px 0}
+.sy-vehicle-class-card details summary{cursor:pointer;font-weight:650;line-height:1.9}
+.sy-model-aliases{display:grid;gap:6px;margin:8px 0}
+.sy-model-alias{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#fff;border-radius:9px;padding:7px 10px;font-size:.86rem}
+.sy-model-alias button{font-size:.78rem;padding:4px 9px;background:#fff4f2;color:#9d3d38;border:1px solid #f0c8c3;border-radius:8px}
+.sy-vehicle-class-catalog #syVehicleClassAdd{border:1px solid #e1e9e3;border-radius:14px;padding:15px;background:#fff}
+.sy-vehicle-class-detect{margin-top:18px;padding:17px;border-radius:15px;border:1px solid #c7dfd2;background:linear-gradient(145deg,#eff8f2,#fff)}
+.sy-vehicle-class-detect details{margin-top:12px;overflow-x:auto}
+.sy-vehicle-class-detect h3{margin:0 0 9px}
+@media(max-width:1100px){.sy-vehicle-class-cards{grid-template-columns:1fr}}
