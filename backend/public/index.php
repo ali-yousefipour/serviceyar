@@ -194,11 +194,14 @@ try {
   $driver=(float)$entry['driver_1405_riyal']+$extra;
   $parentBase=(float)$entry['parent_monthly_riyal']+($extra*1.19658);
   $factor=(float)($reference['traffic_by_district'][(string)$district]??0);
-  $total=(int)round($parentBase+($driver*$factor*1.19658));
+  // The anonymous calculator uses the same globally editable tariff source as registered services.
+  // Bundled spreadsheet defaults remain available before migration 0037 is applied.
+  $rate=\ServiceYar\Domain\TaxiOrganizationTariffs::quote(Connection::get(),$district,$class,$distanceRaw);
+  $total=(int)$rate['parentMonthly'];
   header('Cache-Control: public, max-age=3600');
   Response::json(['ok'=>true,'data'=>[
    'monthlyFee'=>$total,'baseMonthlyFee'=>(int)round($parentBase),'trafficPercent'=>(int)round($factor*100),
-   'driverBase'=>(int)round($driver),'distanceAppliedKm'=>$km,
+   'driverBase'=>(int)$rate['driverMonthly'],'distanceAppliedKm'=>$rate['distanceKm'],
    'currency'=>'IRR','academicYear'=>$reference['year'],'reference'=>'Madares 1405-1406'
   ]]);
  }
