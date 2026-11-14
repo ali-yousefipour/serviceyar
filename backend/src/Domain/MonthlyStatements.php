@@ -108,7 +108,7 @@ final class MonthlyStatements
         $academic=$month>=7?$year.'-'.($year+1):($year-1).'-'.$year;
         $pdo=Connection::get();
         $q=$pdo->prepare("SELECT st.id AS student_id,CONCAT_WS(' ',st.first_name,st.last_name) student_name,
-          st.national_code student_national_code,st.grade,st.monthly_fee,st.tariff_distance_km,st.tariff_vehicle_class,
+          st.national_code student_national_code,st.grade,st.monthly_fee,st.driver_base_monthly,st.fee_source,st.tariff_distance_km,st.tariff_vehicle_class,
           st.guardian_first_name,st.guardian_last_name,st.mobile,st.address,
           sc.name school_name,sc.region,sc.school_type,
           sv.id service_id,sv.title service_name,sv.code service_code,
@@ -148,7 +148,7 @@ final class MonthlyStatements
                     'message'=>'راننده برای سرویس تعیین نشده است.'
                 ];
             }
-            $gross=max(0,(float)$row['monthly_fee']);
+            $gross=max(0,(float)($row['driver_base_monthly']??$row['monthly_fee']));
             $calc=DriverDeductionPolicy::calculate($gross,$rates);
             // SchoolServiceStatement follows the original 1405 reference file:
             // service fee + 3% oversight + 1% coordination + 7% company
@@ -173,7 +173,7 @@ final class MonthlyStatements
                     $reconciliationWarnings[]=[
                         'student_id'=>(int)$row['student_id'],
                         'student_name'=>$row['student_name'],
-                        'recorded_monthly_fee'=>$gross,
+                        'recorded_monthly_fee'=>(float)$row['monthly_fee'],
                         'reference_parent_fee'=>$reference['parent_total'],
                         'message'=>'مبلغ ماهانه ذخیره‌شده با بهای خدمات محاسبه‌شده از نرخ‌نامه مرجع برابر نیست.'
                     ];
