@@ -8,12 +8,22 @@ async function sepandAdminPanel(anchor){
  const form=panel.querySelector('form'),preview=panel.querySelector('#sySepandPreview'),apply=panel.querySelector('#sySepandApply'),mapping=panel.querySelector('#sySepandMapping'),result=panel.querySelector('#sySepandResult');
  const dbStatus=panel.querySelector('#sySepandDbStatus'),dbRepair=panel.querySelector('#sySepandDbRepair');
  const checkSchema=async()=>{
+  dbStatus.textContent='در حال بررسی ساختار دیتابیس سپند…';
   try{
    const state=await api('/api/v1/admin/sepand-registry/schema');
    if(!panel.isConnected)return;
-   dbStatus.textContent=state.ready?'ساختار دیتابیس سپند آماده است. امکان پیش‌نمایش فایل‌ها وجود دارد.':'ساختار دیتابیس سپند ناقص است؛ '+number(state.missingColumns.length)+' ستون و '+number(state.missingIndexes.length)+' ایندکس و '+(state.missingAuditTable?'جدول سوابق ایمپورت':'بدون جدول مفقود')+' باید آماده شود.';
-   dbRepair.hidden=state.ready;preview.disabled=!state.ready;
-  }catch(e){dbStatus.textContent='بررسی دیتابیس سپند ممکن نشد: '+e.message;preview.disabled=true;dbRepair.hidden=true;}
+   dbStatus.textContent=state.ready?'ساختار دیتابیس سپند آماده است. می‌توانید پیش‌نمایش تهیه کنید.':'ساختار دیتابیس سپند ناقص است؛ '+number(state.missingColumns?.length||0)+' ستون، '+number(state.missingIndexes?.length||0)+' ایندکس'+(state.missingAuditTable?' و جدول سوابق':'')+' باید آماده شود.';
+   dbRepair.hidden=!!state.ready;
+  }catch(e){
+   if(!panel.isConnected)return;
+   dbStatus.textContent='بررسی وضعیت دیتابیس پاسخ معتبر نداد: '+e.message+'؛ می‌توانید بررسی فایل را اجرا کنید تا خطای دقیق مشخص شود یا پس از پشتیبان‌گیری، آماده‌سازی ساختار را امتحان کنید.';
+   // A broken health endpoint must never lock both the repair operation
+   // and the read-only file preview. The server independently validates
+   // database readiness before any write.
+   dbRepair.hidden=false;
+  }finally{
+   preview.disabled=false;
+  }
  };
  dbRepair.onclick=async()=>{
   if(!confirm('پس از تهیه نسخه پشتیبان، ستون‌ها و جدول‌های سپند در دیتابیس ساخته شوند؟ هیچ داده راننده یا خودرویی حذف نمی‌شود.'))return;
@@ -21,8 +31,8 @@ async function sepandAdminPanel(anchor){
   try{
    await api('/api/v1/admin/sepand-registry/schema',{method:'POST',headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify({confirm:'REPAIR_SEPAND_SCHEMA'})});
    await checkSchema();
-  }catch(e){dbStatus.textContent='آماده‌سازی دیتابیس انجام نشد: '+e.message;}
-  finally{dbRepair.disabled=false;}
+  }catch(e){dbStatus.textContent='آماده‌سازی دیتابیس انجام نشد: '+e.message+'؛ ابتدا مجوز ALTER/CREATE پایگاه داده و وجود مهاجرت 0103 را بررسی کنید.';dbRepair.hidden=false;}
+  finally{dbRepair.disabled=false;preview.disabled=false;}
  };
  void checkSchema();
  let digest='',report=null;
