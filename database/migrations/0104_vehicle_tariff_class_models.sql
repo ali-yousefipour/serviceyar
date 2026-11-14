@@ -42,3 +42,18 @@ INSERT IGNORE INTO vehicle_tariff_class_models (class_number,family_name,alias,n
 (2,'تندر ۹۰ / ال ۹۰','تندر90','تندر90'),
 (2,'تندر ۹۰ / ال ۹۰','تندر 90','تندر 90'),
 (2,'تندر ۹۰ / ال ۹۰','ال نود','ال نود');
+
+-- Approved 2026-11-14: additional passenger vehicle families are class 2.
+INSERT IGNORE INTO vehicle_tariff_class_models(class_number,family_name,alias,normalized_alias) VALUES
+(2,'دانگ فنگ H30','دانگ فنگ','دانگ فنگ'),
+(2,'دانگ فنگ H30','دانگ‌فنگ','دانگ فنگ'),
+(2,'دانگ فنگ H30','dongfeng','dongfeng'),
+(2,'دانگ فنگ H30','h30','h30'),
+(2,'دوو سی یلو','دوو','دوو'),
+(2,'دوو سی یلو','سی یلو','سی یلو'),
+(2,'دوو سی یلو','سی‌یلو','سی یلو'),
+(2,'دوو سی یلو','cielo','cielo'),
+(2,'پروتون ویرا','پروتون','پروتون'),
+(2,'پروتون ویرا','ویرا','ویرا'),
+(2,'پروتون ویرا','proton','proton'),
+(2,'پروتون ویرا','wira','wira');
