@@ -1519,3 +1519,128 @@ body{background:var(--canvas);color:var(--ink)}
   border:0!important;overflow:visible!important;
  }
 }
+
+
+/* Finance report compact layout v6: 8 frequently used controls in two rows.
+   Flatten semantic group wrappers visually while preserving field labels/ARIA headings. */
+#content .sy-ledger-report-page-panel .sy-ledger-report-filter-form.sy-ledger-report-compact{
+ display:grid!important;
+ grid-template-columns:repeat(4,minmax(0,1fr))!important;
+ column-gap:10px!important;row-gap:9px!important;
+ align-items:end!important;
+ margin:0 12px!important;padding:12px!important;
+ border:1px solid #dce8dc!important;border-radius:12px!important;
+ background:#fffefa!important;overflow:visible!important;
+}
+#content .sy-ledger-report-page-panel .sy-ledger-report-compact>.sy-ledger-report-filter-section,
+#content .sy-ledger-report-page-panel .sy-ledger-report-compact .sy-ledger-report-search-grid,
+#content .sy-ledger-report-page-panel .sy-ledger-report-compact .sy-ledger-report-main-grid,
+#content .sy-ledger-report-page-panel .sy-ledger-report-compact .sy-ledger-report-date-grid{
+ display:contents!important;
+}
+#content .sy-ledger-report-page-panel .sy-ledger-report-compact .sy-ledger-report-filter-title{
+ position:absolute!important;width:1px!important;height:1px!important;
+ padding:0!important;margin:-1px!important;overflow:hidden!important;
+ clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important;
+}
+#content .sy-ledger-report-page-panel .sy-ledger-report-compact label{
+ display:flex!important;flex-direction:column!important;align-items:stretch!important;
+ justify-content:flex-end!important;min-width:0!important;gap:3px!important;
+ margin:0!important;padding:0!important;
+ font:700 11px/1.6 Vazirmatn,Tahoma,sans-serif!important;
+ color:#315741!important;
+}
+#content .sy-ledger-report-page-panel .sy-ledger-report-compact label :is(input,select){
+ min-height:37px!important;height:37px!important;width:100%!important;
+ padding:5px 9px!important;margin:0!important;border-radius:8px!important;
+ font:550 12px/1.55 Vazirmatn,Tahoma,sans-serif!important;
+ background:#fffefa!important;
+}
+#content .sy-ledger-report-page-panel .sy-ledger-report-compact label input::placeholder{
+ font-size:11px!important;color:#85988b!important;
+}
+#content .sy-ledger-report-page-panel .sy-ledger-report-compact .sy-ledger-report-advanced{
+ grid-column:1 / span 2!important;grid-row:auto!important;align-self:center!important;
+ min-height:36px!important;margin:0!important;padding:5px 10px!important;
+ border:1px solid #e3ebe2!important;border-radius:8px!important;
+ background:#f7faf6!important;
+}
+#content .sy-ledger-report-page-panel .sy-ledger-report-compact .sy-ledger-report-advanced summary{
+ gap:5px!important;line-height:1.5!important;font-size:11px!important;
+}
+#content .sy-ledger-report-page-panel .sy-ledger-report-compact .sy-ledger-report-advanced summary span{
+ font-size:10px!important;
+}
+#content .sy-ledger-report-page-panel .sy-ledger-report-compact .sy-ledger-report-advanced[open]{
+ grid-column:1/-1!important;
+}
+#content .sy-ledger-report-page-panel .sy-ledger-report-compact .sy-ledger-report-advanced .ledger-filter-grid{
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ gap:10px!important;padding:8px 0 2px!important;
+}
+#content .sy-ledger-report-page-panel .sy-ledger-report-compact .sy-ledger-report-submit-row{
+ grid-column:3 / span 2!important;min-width:0!important;
+ display:flex!important;justify-content:flex-end!important;align-items:center!important;
+ flex-wrap:nowrap!important;gap:6px!important;padding:0!important;
+ border:0!important;margin:0!important;
+}
+#content .sy-ledger-report-page-panel .sy-ledger-report-compact .sy-ledger-report-submit-actions{
+ display:flex!important;flex-wrap:nowrap!important;justify-content:flex-end!important;
+ gap:7px!important;width:100%!important;
+}
+#content .sy-ledger-report-page-panel .sy-ledger-report-compact .sy-ledger-report-submit-actions button{
+ display:inline-flex!important;align-items:center!important;justify-content:center!important;
+ width:auto!important;min-width:92px!important;max-width:none!important;
+ min-height:37px!important;height:37px!important;padding:6px 12px!important;
+ font:750 11.5px/1.5 Vazirmatn,Tahoma,sans-serif!important;
+}
+#content .sy-ledger-report-page-panel .sy-ledger-report-output-head{
+ margin:8px 12px 8px!important;padding:8px 2px!important;
+ border-top:0!important;border-bottom:1px solid #e3ede3!important;
+}
+#content .sy-ledger-report-page-panel .sy-ledger-report-output-meta{
+ gap:2px!important;
+}
+#content .sy-ledger-report-page-panel .sy-ledger-report-output-meta h3{margin:0!important;font-size:14px!important}
+#content .sy-ledger-report-page-panel .sy-ledger-report-freshness{margin:0!important;font-size:10.5px!important}
+#content .sy-ledger-report-page-panel .sy-ledger-report-count-badge{
+ margin-top:2px!important;padding:2px 8px!important;font-size:10.5px!important;
+}
+#content .sy-ledger-report-page-panel #ledgerReportBody{margin-inline:12px!important}
+#content .sy-ledger-report-page-panel .sy-ledger-report-state{
+ min-height:80px!important;padding:14px!important;
+}
+#content .sy-ledger-report-page-panel .sy-ledger-report-output-head .ledger-report-actions button{
+ min-height:35px!important;padding:6px 11px!important;
+}
+#content .sy-ledger-report-page-header{
+ padding:9px 13px!important;margin:0 0 6px!important;
+}
+#content .sy-ledger-report-nav{margin:0 0 6px!important;padding:3px!important}
+#content .sy-ledger-report-nav button{min-height:33px!important;padding:6px 12px!important}
+#content .sy-ledger-report-page-panel{padding:9px 0 12px!important}
+@media(max-width:1080px){
+ #content .sy-ledger-report-page-panel .sy-ledger-report-filter-form.sy-ledger-report-compact{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ }
+ #content .sy-ledger-report-page-panel .sy-ledger-report-compact .sy-ledger-report-advanced{grid-column:1/2!important}
+ #content .sy-ledger-report-page-panel .sy-ledger-report-compact .sy-ledger-report-submit-row{grid-column:2/3!important}
+}
+@media(max-width:560px){
+ #content .sy-ledger-report-page-panel .sy-ledger-report-filter-form.sy-ledger-report-compact{
+  grid-template-columns:minmax(0,1fr)!important;
+  gap:8px!important;margin:0 9px!important;padding:10px!important;
+ }
+ #content .sy-ledger-report-page-panel .sy-ledger-report-compact .sy-ledger-report-advanced,
+ #content .sy-ledger-report-page-panel .sy-ledger-report-compact .sy-ledger-report-submit-row{
+  grid-column:1/-1!important;
+ }
+ #content .sy-ledger-report-page-panel .sy-ledger-report-compact .sy-ledger-report-submit-actions{width:100%!important}
+ #content .sy-ledger-report-page-panel .sy-ledger-report-compact .sy-ledger-report-submit-actions button{flex:1!important}
+ #content .sy-ledger-report-page-panel .sy-ledger-report-compact .sy-ledger-report-advanced .ledger-filter-grid{
+  grid-template-columns:1fr!important;
+ }
+}
+@media print{
+ #content .sy-ledger-report-page-panel .sy-ledger-report-filter-form.sy-ledger-report-compact{display:none!important}
+}
