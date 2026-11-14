@@ -511,7 +511,7 @@ function resourceName(key){return titles[key]||key;}
 async function lookup(key,includeInactive=false){const agencyId=currentAgency.id,cacheKey=agencyId+':'+key+(includeInactive?':all':'');if(lookupCache[cacheKey])return lookupCache[cacheKey];const rows=[];let page=1;while(true){const d=await api('/api/v1/'+key+'?limit=200&active='+(includeInactive?'':'1')+'&page='+page+'&agencyId='+encodeURIComponent(agencyId));if(String(currentAgency?.id)!==String(agencyId))throw new Error('شرکت فعال تغییر کرده است؛ دوباره تلاش کنید.');rows.push(...d.items);if(page>=d.pagination.pages)break;page++;}return lookupCache[cacheKey]=rows;}
 function ledgerFilterForm(mode='records'){
  const methods=agencyMethodChoices||Object.entries(ledgerMethods).map(([code,name])=>({code,name,active:true}));
- if(mode==='report')return `<form id="gridFilters" class="ledger-filters sy-ledger-filters-v3 sy-ledger-report-filter-form" aria-label="فیلترهای گزارش دریافت و پرداخت">
+ if(mode==='report')return `<form id="gridFilters" class="ledger-filters sy-ledger-filters-v3 sy-ledger-report-filter-form sy-ledger-report-compact" aria-label="فیلترهای گزارش دریافت و پرداخت">
   <section class="sy-ledger-report-filter-section" aria-labelledby="syReportSearchTitle">
    <h3 id="syReportSearchTitle" class="sy-ledger-report-filter-title">جست‌وجوی سریع</h3>
    <div class="sy-ledger-report-search-grid">
@@ -542,8 +542,7 @@ function ledgerFilterForm(mode='records'){
    </div>
   </details>
   <div class="sy-ledger-report-submit-row">
-   <div class="sy-ledger-report-submit-actions"><button type="submit" class="primary" id="ledgerReportApply">تهیه گزارش</button><button type="reset" class="ledger-filter-clear">پاک‌کردن فیلترها</button></div>
-   <span class="sy-ledger-report-submit-hint">ابتدا فیلترها را انتخاب کنید، سپس گزارش را تهیه کنید.</span>
+   <div class="sy-ledger-report-submit-actions"><button type="submit" class="primary" id="ledgerReportApply">تهیه گزارش</button><button type="reset" class="ledger-filter-clear">پاک‌کردن</button></div>
   </div>
  </form>`;
 
