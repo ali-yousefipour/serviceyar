@@ -603,7 +603,7 @@ final class DomainService {
     $pdo->prepare('UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?')->execute([$net,$serviceId,$aid]);
    }
   }
-  if($resource==='students'&&array_intersect(['monthly_fee','driver_base_monthly','fee_source','tariff_distance_km','tariff_vehicle_class'],array_keys($data))) {
+  if($resource==='students'&&array_intersect(['monthly_fee','driver_base_monthly','fee_source','tariff_distance_km','tariff_vehicle_class','grade','school_id','academic_year'],array_keys($data))) {
    StudentServiceBilling::sync($pdo,$aid,(int)$id);
   }
   if($resource==='services'&&!empty($data['school_id']))$pdo->prepare('INSERT IGNORE INTO service_schools(service_id,school_id) VALUES(?,?)')->execute([$id,$data['school_id']]);
