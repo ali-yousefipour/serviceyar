@@ -156,11 +156,12 @@ final class SepandRegistryImport {
    // Old vehicle plates often use spacing, Persian digits or a different
    // separator. Keep a scoped canonical index so importing Sepand cannot
    // create a blank-class duplicate and reassign the existing driver.
-   $registered=$pdo->query('SELECT id,agency_id,plate FROM vehicles')->fetchAll(PDO::FETCH_ASSOC);
-   $normalizedPlates=[];
+   $registered=$pdo->query('SELECT id,agency_id,plate,vin FROM vehicles')->fetchAll(PDO::FETCH_ASSOC);
+   $normalizedPlates=[];$registeredVins=[];
    foreach($registered as $registeredVehicle){
     $key=(int)$registeredVehicle['agency_id'].':'.VehicleTariffClassRecovery::plateKey($registeredVehicle['plate']);
     $normalizedPlates[$key][]=(int)$registeredVehicle['id'];
+    $registeredVins[(int)$registeredVehicle['id']]=strtoupper(trim((string)($registeredVehicle['vin']??'')));
    }
    $insertVehicle=$pdo->prepare('INSERT INTO vehicles(agency_id,plate,capacity,model,vin,plate_part_1,plate_letter,plate_part_3,plate_iran,vehicle_type,vehicle_system,vehicle_trim,make_year,fuel_type,color,engine_number,chassis_number,insurance_number) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
    $updateVehicle=$pdo->prepare('UPDATE vehicles SET vin=?,plate_part_1=?,plate_letter=?,plate_part_3=?,plate_iran=?,vehicle_type=?,vehicle_system=?,vehicle_trim=?,make_year=?,fuel_type=?,color=?,engine_number=?,chassis_number=?,insurance_number=? WHERE id=? AND agency_id=?');
@@ -176,6 +177,14 @@ final class SepandRegistryImport {
     if(!$matches){$findPlate->execute([$aid,$plate]);$matches=$findPlate->fetchAll(PDO::FETCH_COLUMN);}
     if(!$matches)$matches=$normalizedPlates[$aid.':'.VehicleTariffClassRecovery::plateKey($plate)]??[];
     if(count($matches)>1){$counts['vehiclesSkipped']++;$addIssue('vehicles',$r['line'],'چند خودروی همسان در شرکت ثبت شده‌اند.');continue;}
+    if($matches){
+     $oldVin=$registeredVins[(int)$matches[0]]??'';
+     if($oldVin!==''&&$oldVin!==strtoupper($vin)){
+      $counts['vehiclesSkipped']++;
+      $addIssue('vehicles',$r['line'],'VIN خودرو با پلاک یکسان در دیتابیس مغایرت دارد؛ برای جلوگیری از انتساب اشتباه، خودرو بروزرسانی نشد.');
+      continue;
+     }
+    }
     $capacity=(int)($c['K']??4);if($capacity<1||$capacity>200)$capacity=4;
     $year=(int)($c['J']??0);if($year<1300||$year>1600)$year=null;
     $common=[$vin,$p1,$letter,$p3,$p4,$c['G']??null,$c['H']??null,$c['I']??null,$year,$c['L']??null,$c['M']??null,$c['N']??null,$c['O']??null,$c['P']??null];
