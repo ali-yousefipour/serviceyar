@@ -56,9 +56,28 @@ final class OperationsService
             foreach($assigned as $id)if((int)$id!==$serviceId)throw new AuthException(409,'دانش‌آموز سرویس فعال دیگری دارد. ابتدا تخصیص قبلی را حذف کنید.','ALREADY_ASSIGNED');
             if(!$assigned){$q=$p->prepare('SELECT COUNT(*) FROM service_students WHERE service_id=:s');$q->execute(['s'=>$serviceId]);if((int)$q->fetchColumn()>=(int)$service['capacity'])throw new AuthException(409,'ظرفیت سرویس تکمیل است.','CAPACITY_EXCEEDED');}
             $p->prepare('INSERT INTO service_students(service_id,student_id,pickup_address,pickup_order) VALUES(:s,:st,:p,:o) ON DUPLICATE KEY UPDATE pickup_address=VALUES(pickup_address),pickup_order=VALUES(pickup_order)')->execute(['s'=>$serviceId,'st'=>$studentId,'p'=>$address,'o'=>$order]);
-            // Never silently reprice a previously registered student during an
-            // ordinary assignment. Explicit service-creation and editor choices
-            // perform the authorized repricing in DomainService instead.
+            // Only empty legacy fees are filled during ordinary assignment.
+            // Legacy schools without a recorded district retain their existing
+            // agency tariff, while explicit taxi selection is enforced by the
+            // new service and student editors.
+            if(!$assigned && $canSetTariff && (float)$student['monthly_fee']===0.0
+                && !empty($student['tariff_distance_km']) && !empty($student['tariff_vehicle_class'])){
+                $fee=null;
+                try {
+                    $quote=ServicePricing::quote($p,$aid,$student,ServicePricing::source($student['fee_source']??'taxi'));
+                    $fee=(int)$quote['monthlyFee'];
+                    $base=(int)$quote['driverBaseMonthly'];
+                    $source=(string)$quote['feeSource'];
+                } catch(AuthException $e) {
+                    if($e->codeName!=='TAXI_DISTRICT_REQUIRED')throw $e;
+                    $fee=AgencySchoolTariffs::quote($p,$aid,(int)$student['school_id'],
+                        (string)(($student['academic_year']??null)?:AgencySchoolTariffs::YEAR),
+                        $student['tariff_distance_km'],$student['tariff_vehicle_class']);
+                    $base=$fee;$source='agency';
+                }
+                if($fee!==null)$p->prepare('UPDATE students SET monthly_fee=?,driver_base_monthly=?,fee_source=?,tariff_calculated_at=NOW() WHERE id=? AND agency_id=?')
+                    ->execute([$fee,$base,$source,$studentId,$aid]);
+            }
             $p->prepare("UPDATE students SET service_status='assigned' WHERE id=:id AND agency_id=:a")->execute(['id'=>$studentId,'a'=>$aid]);
         });
         self::audit($uid,$aid,'assign_student','services',$serviceId);
