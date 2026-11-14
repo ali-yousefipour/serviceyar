@@ -320,6 +320,14 @@ try {
   $b=Request::json();$pdo=Connection::get();
   if(isset($b['studentId'])){
    $student=DomainService::get($s['id'],$aid,'students',(int)$b['studentId']);
+   if(isset($b['driverId'])){
+    $driverId=filter_var($b['driverId'],FILTER_VALIDATE_INT);
+    if(!$driverId||$driverId<1)throw new AuthException(422,'راننده انتخاب‌شده نامعتبر است.','INVALID_DRIVER');
+    $v=$pdo->prepare("SELECT v.tariff_vehicle_class FROM drivers d JOIN vehicles v ON v.id=d.vehicle_id AND v.agency_id=d.agency_id AND v.is_active=1 WHERE d.id=? AND d.agency_id=? AND d.is_active=1");
+    $v->execute([$driverId,$aid]);$class=$v->fetchColumn();
+    if(!in_array((string)$class,['1','2','3'],true))throw new AuthException(422,'ابتدا کلاس تعرفه خودرو را در قسمت خودروها ثبت کنید.','VEHICLE_TARIFF_CLASS_REQUIRED');
+    $student['tariff_vehicle_class']=$class;
+   }
    $source=\ServiceYar\Domain\ServicePricing::source($b['feeSource']??$student['fee_source']??'taxi');
    $quote=\ServiceYar\Domain\ServicePricing::quote($pdo,$aid,$student,$source);
    $quote['saved']=(float)$student['monthly_fee']>0&&$source===($student['fee_source']??'taxi');
