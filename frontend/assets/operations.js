@@ -1332,6 +1332,11 @@ if(form.elements.mobile){const mobile=form.elements.mobile;mobile.pattern='09[0-
  if(form.elements.latitude&&form.elements.longitude)await locationPicker(form,key);if(typeKey){const type=form.elements.partyType||form.elements.ownerType||form.elements.recipientType;type.onchange=()=>{const select=form.elements[typeKey],search=form.querySelector(`[data-lookup-search="${typeKey}"]`);select.value='';if(search)search.value='';populate(select);};}
  resourceWizard(form,key);
  form.onsubmit=async e=>{e.preventDefault();const button=$('saveRecord');button.disabled=true;$('formError').hidden=true;try{const body=Object.fromEntries(new FormData(form));for(const input of rialInputs){if(!formatRialInput(input)){input.reportValidity();button.disabled=false;return;}body[input.name]=normalizeRialInput(input.value);}if(key==='students'&&body.tariffDistanceKm!==undefined&&body.tariffDistanceKm!=='')body.tariffDistanceKm=Math.round(Number(body.tariffDistanceKm));if(key==='ledger')delete body.amountDisplay;
+  if(key==='vehicles'){
+   const typeField=form.elements.vehicleTrim;
+   if((!id||typeField?.dataset.vehicleTouched)&&!typeField?.dataset.vehicleFamily)
+    throw Error('نوع خودرو را از فهرست جستجوی مدل‌های تأییدشده انتخاب کنید.');
+  }
   if(key==='vehicles'&&id&&body.tariffVehicleClass==='')delete body.tariffVehicleClass;
   if(key==='services'){
    if(!form.elements.vehicleModel?.dataset.vehicleFamily){
