@@ -65,11 +65,21 @@ final class LegacyServiceTariffMigration {
   $membership=$pdo->prepare('SELECT ss.service_id,ss.student_id FROM service_students ss JOIN services sv ON sv.id=ss.service_id WHERE sv.agency_id=?');
   $membership->execute([$aid]);$serviceMembers=[];
   foreach($membership->fetchAll(PDO::FETCH_ASSOC) as $m)$serviceMembers[(int)$m['service_id']][]=(int)$m['student_id'];
-  $eligibleServices=0;$skippedServices=0;
+  $eligibleServices=0;$skippedServices=0;$servicesToChange=0;$servicesAlreadyCurrent=0;$previewServiceChanges=[];
+  $changeByStudent=[];foreach($changes as $change)$changeByStudent[$change['id']]=$change;
   foreach($allServices as $service){
    $memberIds=$serviceMembers[(int)$service['id']]??[];
-   if($memberIds&&count(array_filter($memberIds,static fn($id)=>isset($studentCandidates[$id])))===count($memberIds))$eligibleServices++;
-   else $skippedServices++;
+   if(!$memberIds||count(array_filter($memberIds,static fn($id)=>isset($studentCandidates[$id])))!==count($memberIds)){
+    $skippedServices++;continue;
+   }
+   $eligibleServices++;
+   $gross=0;foreach($memberIds as $studentId)$gross+=$changeByStudent[$studentId]['newDriverBase'];
+   $net=(int)round(OperationsService::driverDeductions((float)$gross,$aid)['net_earned']);
+   $old=(int)round((float)$service['monthly_fee']);
+   if($old!==$net||(string)$service['fee_source']!=='taxi'){
+    $servicesToChange++;
+    $previewServiceChanges[]=['serviceId'=>(int)$service['id'],'oldFee'=>$old,'newFee'=>$net,'oldSource'=>(string)$service['fee_source']];
+   }else $servicesAlreadyCurrent++;
   }
   $differentStudents=array_values(array_filter($changes,static fn($c)=>
    $c['oldFee']!==$c['newFee']||$c['oldDriverBase']!==$c['newDriverBase']||$c['oldSource']!=='taxi'));
@@ -78,6 +88,8 @@ final class LegacyServiceTariffMigration {
    'studentChanges'=>$differentStudents,
    'servicesChecked'=>count($allServices),'servicesWithoutCode'=>count($codeUpdates),
    'servicesReady'=>$eligibleServices,'servicesSkipped'=>$skippedServices,
+   'servicesToChange'=>$servicesToChange,'servicesAlreadyCurrent'=>$servicesAlreadyCurrent,
+   'serviceChanges'=>$previewServiceChanges,
    'schoolsToNormalize'=>count($regions),'errors'=>$issues,'applied'=>false,
    'monthlyDifference'=>array_sum(array_column($changes,'newFee'))-array_sum(array_column($changes,'oldFee'))];
   if(!$apply){$response['errors']=self::describeErrors($pdo,$aid,$issues);return $response;}
