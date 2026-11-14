@@ -507,6 +507,8 @@ final class DomainService {
    throw new AuthException(503,'برای فراخوانی راننده با کد ملی، ابتدا مهاجرت دیتابیس 0106_vehicle_owner_national_code.sql را اجرا کنید.','VEHICLE_OWNER_SCHEMA_UPDATE_REQUIRED');
   if($id)FinancialPosting::assertEditable($aid,$resource,$id);
   $existing=$id?self::get($uid,$aid,$resource,$id):[];
+  if($resource==='contracts'&&$id&&!empty($existing['rendered_html']))
+   throw new AuthException(409,'قرارداد صادرشده دارای نسخه چاپی ثابت است و امکان تغییر آن وجود ندارد. برای تغییر مفاد، قرارداد جدید صادر کنید.','ISSUED_CONTRACT_IMMUTABLE');
   if($id&&$resource==='messages'&&$existing['status']!=='queued')throw new AuthException(409,'پیام پردازش‌شده قابل ویرایش یا ارسال مجدد از این فرم نیست.','MESSAGE_LOCKED');
   if($id&&$resource==='payments'&&$existing['method']==='bale')throw new AuthException(409,'پرداخت استعلام‌شده بله قابل ویرایش نیست.','VERIFIED_PAYMENT_LOCKED');
   foreach($data as $f=>&$v){if($v==='')$v=null;}unset($v);
