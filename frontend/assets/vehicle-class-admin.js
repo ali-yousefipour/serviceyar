@@ -31,7 +31,9 @@ async function vehicleClassAdminPanel(anchor){
  const reload=async()=>{
   const data=await api('/api/v1/admin/vehicle-class-catalog');
   if(!section.isConnected)return;
-  setup.hidden=!!data.ready;
+  setup.hidden=false;
+  setup.querySelector('p').textContent=data.ready?'فهرست کلاس‌ها آماده است؛ برای افزودن مدل‌های مصوب جدید، همگام‌سازی را اجرا کنید.':'فهرست کلاس‌ها هنوز در دیتابیس ایجاد نشده است. پیش از آماده‌سازی پشتیبان تهیه کنید.';
+  prepare.textContent=data.ready?'همگام‌سازی مدل‌های تأییدشده جدید':'آماده‌سازی فهرست کلاس‌ها در دیتابیس';
   form.hidden=!data.ready;
   section.querySelector('.sy-vehicle-class-detect').hidden=!data.ready;
   if(!data.ready){cards.textContent='برای نمایش و ویرایش فهرست کلاس‌ها ابتدا دیتابیس را آماده کنید.';return;}
