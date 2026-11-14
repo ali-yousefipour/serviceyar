@@ -11,7 +11,7 @@ final class DomainService {
   'students'=>['table'=>'students','permission'=>'students','fields'=>['school_id','first_name','last_name','national_code','grade','mobile','address','latitude','longitude','is_active'],'search'=>['first_name','last_name','national_code']],
   'drivers'=>['table'=>'drivers','permission'=>'drivers','fields'=>['first_name','last_name','national_code','mobile','status','rating','vehicle_id','address','is_active'],'search'=>['first_name','last_name','national_code','mobile']],
   'vehicles'=>['table'=>'vehicles','permission'=>'drivers','fields'=>['plate','model','capacity','owner_name','is_active'],'search'=>['plate','model','owner_name']],
-  'services'=>['table'=>'services','permission'=>'services','fields'=>['title','code','school_id','driver_id','capacity','status','start_address','end_address','pack_id','shift','monthly_fee','agreed_amount','is_active'],'search'=>['title','code']],
+  'services'=>['table'=>'services','permission'=>'services','fields'=>['title','code','school_id','driver_id','capacity','status','start_address','end_address','pack_id','shift','monthly_fee','agreed_amount','fee_source','is_active'],'search'=>['title','code']],
   'packs'=>['table'=>'packs','permission'=>'services','fields'=>['title','status','capacity'],'search'=>['title']],
   'contracts'=>['table'=>'contracts','permission'=>'services','fields'=>['title','contract_no','party_type','party_id','start_date','end_date','amount','status'],'search'=>['title','contract_no']],
   'driver-work'=>['table'=>'driver_work','permission'=>'finance','fields'=>['driver_id','work_date','service_id','amount','status','note'],'search'=>['note']],
@@ -36,7 +36,7 @@ final class DomainService {
   if(!$c)throw new AuthException(404,'ماژول مورد نظر پیدا نشد.','RESOURCE_NOT_FOUND');
   $fields=[
    'schools'=>['gender','shift','education_levels'],
-   'students'=>['guardian_first_name','guardian_last_name','guardian_national_code','guardian_relation','father_name','gender','nationality','health_status','emergency_phone','return_address','academic_year','shift','service_status','monthly_fee','tariff_distance_km','tariff_vehicle_class'],
+   'students'=>['guardian_first_name','guardian_last_name','guardian_national_code','guardian_relation','father_name','gender','nationality','health_status','emergency_phone','return_address','academic_year','shift','service_status','monthly_fee','tariff_distance_km','tariff_vehicle_class','fee_source'],
    'drivers'=>['is_representative','bank_name','bank_account','iban'],
    'services'=>['pack_id','shift','monthly_fee','agreed_amount']
   ];
@@ -363,9 +363,12 @@ final class DomainService {
    $b['schoolId']=$schools[0];$b['status']='active';
    $service=self::saveRecord($uid,$aid,$resource,$b,null);
    OperationsService::setServiceSchools($uid,$aid,(int)$service['id'],['schoolIds'=>$schools]);
-   sort($students);foreach($students as $student)self::assignStudent($uid,$aid,(int)$service['id'],$student);
+   sort($students);foreach($students as $student){
+    self::assignStudent($uid,$aid,(int)$service['id'],$student);
+    ServicePricing::updateStudent($pdo,$aid,$student,ServicePricing::source($b['feeSource']??'taxi'));
+   }
    if ($students && !array_key_exists('monthlyFee', $b)) {
-    $grossQuery=$pdo->prepare('SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
+    $grossQuery=$pdo->prepare('SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
     $grossQuery->execute([$aid,$service['id']]);
     $net=OperationsService::driverDeductions((float)$grossQuery->fetchColumn(),$aid)['net_earned'];
     $pdo->prepare('UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?')->execute([$net,$service['id'],$aid]);
@@ -433,13 +436,23 @@ final class DomainService {
     $data['amount']=str_contains($amount,'.')?substr($amount,0,strpos($amount,'.')):$amount;
    }
   }
-  if($resource==='students' && (array_key_exists('tariff_distance_km',$data)||array_key_exists('tariff_vehicle_class',$data)||array_key_exists('school_id',$data)||array_key_exists('academic_year',$data))){
-   $distance=$merged['tariff_distance_km']??null;$class=$merged['tariff_vehicle_class']??null;
-   if($distance!==null&&(!is_numeric($distance)||(float)$distance<=0||(float)$distance>1000))throw new AuthException(422,'مسافت تعرفه نامعتبر است.','VALIDATION_ERROR');
-   if($class!==null&&!in_array((string)$class,['1','2','3'],true))throw new AuthException(422,'کلاس تعرفه نامعتبر است.','VALIDATION_ERROR');
-   $fee=AgencySchoolTariffs::quote($pdo,$aid,(int)($merged['school_id']??0),(string)(($merged['academic_year']??null) ?: AgencySchoolTariffs::YEAR),$distance,$class);
-   if($fee!==null){$data['monthly_fee']=$fee;$data['tariff_calculated_at']=date('Y-m-d H:i:s');}
+  // Honor an explicit pricing source; preserve existing import amounts when
+  // editing unrelated fields, and always keep the driver base separately.
+  if($resource==='students'){
+   $source=ServicePricing::source($merged['fee_source']??'taxi');
+   $data['fee_source']=$source;
+   $fields=['tariff_distance_km','tariff_vehicle_class','school_id','academic_year','fee_source'];
+   $changed=false;foreach($fields as $field)if(array_key_exists($field,$data)&&(!$id||(string)($existing[$field]??'')!==(string)($data[$field]??''))){$changed=true;break;}
+   if($source==='agreed'){
+    $quote=ServicePricing::quote($pdo,$aid,$merged,$source);
+    $data['monthly_fee']=$quote['monthlyFee'];$data['driver_base_monthly']=$quote['driverBaseMonthly'];
+   }elseif($changed){
+    $quote=ServicePricing::quote($pdo,$aid,$merged,$source);
+    $data['monthly_fee']=$quote['monthlyFee'];$data['driver_base_monthly']=$quote['driverBaseMonthly'];
+    $data['tariff_calculated_at']=date('Y-m-d H:i:s');
+   }
   }
+  if($resource==='services')$data['fee_source']=ServicePricing::source($merged['fee_source']??'taxi');
   if($resource==='payments'&&($data['method']??'')==='bale')throw new AuthException(422,'پرداخت بله فقط پس از استعلام سرویس ثبت می‌شود.','WORKFLOW_REQUIRED');
   if($resource==='services'&&($data['status']??'')==='cancelled')$data['is_active']=0;
   if($resource==='services'&&($data['is_active']??null)==1&&($existing['status']??'')==='cancelled'&&!isset($data['status']))$data['status']='draft';
