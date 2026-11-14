@@ -30,6 +30,11 @@ try{
  $viewer=insertFixture('users',['uuid'=>Uuid::v4(),'username'=>'viewer_'.$tag,'password_hash'=>'unused']);
  $role=(int)$p->query("SELECT id FROM roles WHERE name='super_admin'")->fetchColumn();$p->prepare('INSERT INTO user_roles(user_id,role_id) VALUES(?,?)')->execute([$uid,$role]);
  $a=insertFixture('agencies',['uuid'=>Uuid::v4(),'name'=>'شرکت آزمایشی الف']);$b=insertFixture('agencies',['uuid'=>Uuid::v4(),'name'=>'شرکت آزمایشی ب']);
+ $sepandSchema=\ServiceYar\Domain\SepandSchemaMaintenance::status($uid);
+ check($sepandSchema['ready']===true&&$sepandSchema['missingColumns']===[],
+  'Sepand preview database requirements are verified after migration');
+ $sepandReady=\ServiceYar\Domain\SepandSchemaMaintenance::repair($uid,'REPAIR_SEPAND_SCHEMA');
+ check(($sepandReady['alreadyReady']??false)===true,'Sepand schema preparation is safely idempotent');
  $operator=(int)$p->query("SELECT id FROM roles WHERE name='operator'")->fetchColumn();$p->prepare('INSERT INTO user_roles(user_id,role_id) VALUES(?,?)')->execute([$viewer,$operator]);$p->prepare('INSERT INTO agency_users(agency_id,user_id) VALUES(?,?)')->execute([$a,$viewer]);
  $school=D::save($uid,$a,'schools',['name'=>'مدرسه الف']);$otherSchool=D::save($uid,$b,'schools',['name'=>'مدرسه ب']);
  $plan=[['name'=>'شیفت یک','pattern'=>'odd_weeks','start'=>'07:10','end'=>'12:30','holidays'=>[6]]];
