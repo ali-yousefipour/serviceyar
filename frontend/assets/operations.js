@@ -2,7 +2,7 @@
 'use strict';
 const labels={creatorName:'ثبت‌کننده',partyName:'شخص / طرف حساب',fullName:'نام و نام خانوادگی',driverName:'راننده تخصیص‌یافته',ownerName:'نام مالک خودرو',paymentStatus:'وضعیت پرداخت',providerStatus:'وضعیت سرویس‌دهنده',attempts:'تعداد تلاش',name:'نام مدرسه',code:'کد',schoolType:'نوع مدرسه',managerName:'نام مدیر',phone:'تلفن',region:'ناحیه',gender:'جنسیت',shift:'شیفت',educationLevels:'مقاطع تحصیلی',firstName:'نام',lastName:'نام خانوادگی',nationalCode:'کد ملی',grade:'پایه تحصیلی',mobile:'شماره همراه',schoolId:'مدرسه',driverId:'راننده',vehicleId:'خودرو',packId:'پک سرویس',plate:'پلاک',model:'مدل خودرو',capacity:'ظرفیت',status:'وضعیت',rating:'امتیاز',title:'عنوان',contractNo:'شماره قرارداد',partyType:'نوع طرف حساب',partyId:'طرف حساب',startDate:'تاریخ شروع',endDate:'تاریخ پایان',amount:'مبلغ (ریال)',workDate:'تاریخ کارکرد',paymentDate:'تاریخ پرداخت',entryDate:'تاریخ',referenceNo:'شماره پیگیری',dueDate:'سررسید',invoiceId:'فاکتور',method:'روش پرداخت',parentId:'حساب بالادست',isActive:'فعال',documentNo:'شماره سند',documentDate:'تاریخ سند',description:'شرح',totalAmount:'مبلغ کل',ownerType:'نوع مالک',ownerId:'مالک',balance:'موجودی',bankName:'نام بانک',bankAccount:'شماره حساب بانکی',iban:'شماره شبا',companyAccountId:'حساب شرکت (مبدأ یا مقصد)',channel:'کانال',recipientType:'نوع گیرنده',recipientId:'گیرنده',subject:'موضوع',body:'متن',serviceId:'سرویس',oldDriverId:'راننده قبلی',newDriverId:'راننده جدید',reason:'دلیل',address:'نشانی',latitude:'عرض جغرافیایی',longitude:'طول جغرافیایی',returnAddress:'نشانی برگشت',startAddress:'نشانی مبدا',endAddress:'نشانی مقصد',guardianFirstName:'نام ولی',guardianLastName:'نام خانوادگی ولی',guardianNationalCode:'کد ملی ولی',guardianRelation:'نسبت ولی',fatherName:'نام پدر',nationality:'ملیت',healthStatus:'وضعیت جسمانی',emergencyPhone:'شماره‌های اضطراری',academicYear:'سال تحصیلی',serviceStatus:'وضعیت سرویس',monthlyFee:'ماهیانه (ریال)',annualFee:'مبلغ سالانه (ریال)',annualMonths:'ماه‌های سال تحصیلی',agreedAmount:'مبلغ توافقی راننده (ریال)',isRepresentative:'نماینده',bankName:'نام بانک',bankAccount:'شماره حساب',iban:'شماره شبا',direction:'نوع عملیات',note:'توضیحات',score:'امتیاز',studentId:'دانش‌آموز',response:'پاسخ',issueDate:'تاریخ صدور',pickupAddress:'نشانی سوار شدن',pickupOrder:'ترتیب توقف'};
 const statuses={no_request:'بدون درخواست',pending:'در انتظار تأیید',prepayment:'در انتظار پیش‌پرداخت',waiting:'در انتظار سرویس',assigned:'دارای سرویس',cancelled:'انصراف',active:'فعال',inactive:'غیرفعال',draft:'پیش‌نویس',open:'باز',paid:'پرداخت شده',overdue:'سررسید گذشته',approved:'تأیید شده',rejected:'رد شده',queued:'در صف ارسال',sent:'پذیرفته شده توسط سرویس',uncertain:'نیازمند بررسی',failed:'ناموفق',closed:'بسته شده'};
-Object.assign(labels,{sepandStatus:'وضعیت تأیید در سپند',sepandRequestId:'شناسه درخواست سپند',gender:'جنسیت',vin:'شماره VIN',vehicleType:'نوع خودرو',vehicleSystem:'شرکت سازنده',vehicleTrim:'تیپ خودرو',makeYear:'سال ساخت',fuelType:'نوع سوخت',color:'رنگ',engineNumber:'شماره موتور',chassisNumber:'شماره شاسی',insuranceNumber:'شماره بیمه',platePart1:'۲ رقم پلاک',plateLetter:'حرف پلاک',platePart3:'۳ رقم پلاک',plateIran:'کد ایران',invoiceTotal:'جمع فاکتور بدهی (ریال)',tariffDistanceKm:'مسافت تعرفه (کیلومتر)',tariffVehicleClass:'کلاس خودرو در تعرفه',feeSource:'مبنای محاسبه هزینه سرویس',paidTotal:'جمع دریافتی ثبت‌شده (ریال)',outstandingFee:'مانده بدهی دانش‌آموز (ریال)'});
+Object.assign(labels,{sepandStatus:'وضعیت تأیید در سپند',sepandRequestId:'شناسه درخواست سپند',gender:'جنسیت',vin:'شماره VIN',vehicleType:'نوع کاربری خودرو (سواری / ون)',vehicleSystem:'شرکت سازنده',vehicleTrim:'نوع / مدل خودرو (جستجوی لحظه‌ای)',makeYear:'سال ساخت',fuelType:'نوع سوخت',color:'رنگ',engineNumber:'شماره موتور',chassisNumber:'شماره شاسی',insuranceNumber:'شماره بیمه',platePart1:'۲ رقم پلاک',plateLetter:'حرف پلاک',platePart3:'۳ رقم پلاک',plateIran:'کد ایران',invoiceTotal:'جمع فاکتور بدهی (ریال)',tariffDistanceKm:'مسافت تعرفه (کیلومتر)',tariffVehicleClass:'کلاس خودرو در تعرفه',feeSource:'مبنای محاسبه هزینه سرویس',paidTotal:'جمع دریافتی ثبت‌شده (ریال)',outstandingFee:'مانده بدهی دانش‌آموز (ریال)'});
 const transportFields={
  vehicles:['plate','ownerName','vin','model','vehicleType','vehicleSystem','vehicleTrim','makeYear','fuelType','color','engineNumber','chassisNumber','insuranceNumber','tariffVehicleClass','capacity','sepandStatus','isActive'],
  schools:['name','code','schoolType','gender','region','managerName','phone','shift','educationLevels','address','latitude','longitude'],
@@ -1106,8 +1106,9 @@ async function formResource(key,id,onSaved){
    }catch(e){if(form.isConnected)notify('مشخصات خودروی راننده دریافت نشد: '+e.message,true);}
   };
   if(window.ServiceYarVehicleModels)
-   void window.ServiceYarVehicleModels.attach(form.elements.vehicleModel,form.elements.vehicleClass)
-    .then(picker=>{serviceModelPicker=picker;void refreshVehicle();});
+   void window.ServiceYarVehicleModels.attach(form.elements.vehicleModel,form.elements.vehicleClass,{
+    onChange:()=>{if(typeof refresh==='function')void refresh();}
+   }).then(picker=>{serviceModelPicker=picker;void refreshVehicle();});
   driverField?.addEventListener('change',()=>{void refreshVehicle();});
   const code=form.elements.code;
   if(code){code.readOnly=true;code.placeholder='توسط سامانه تولید می‌شود';code.closest('label')?.append(Object.assign(document.createElement('small'),{textContent:'کد سرویس پس از ثبت توسط سامانه ساخته می‌شود و قابل ویرایش نیست.'}));}
@@ -1166,6 +1167,10 @@ async function formResource(key,id,onSaved){
   const tariffClass=form.elements.tariffVehicleClass;
   // The approved type list is searchable; choosing a model suggests the
   // class but the operator can override it before saving.
+  if(form.elements.model){
+   form.elements.model.readOnly=true;
+   form.elements.model.closest('label').hidden=true;
+  }
   if(form.elements.vehicleTrim&&tariffClass&&window.ServiceYarVehicleModels)
    void window.ServiceYarVehicleModels.attach(form.elements.vehicleTrim,tariffClass,{
     modelMirror:form.elements.model,initialValue:row.vehicle_trim||row.model||''
