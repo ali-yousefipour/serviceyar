@@ -9,7 +9,18 @@ final class FinancialPosting {
  public static function assertEditable(int $aid,string $resource,int $id): void {
   if(!isset(self::TABLES[$resource]))return;
   $q=Connection::get()->prepare('SELECT id FROM '.self::TABLES[$resource].' WHERE id=? AND agency_id=? FOR UPDATE');$q->execute([$id,$aid]);
-  $q=Connection::get()->prepare('SELECT document_id FROM financial_postings WHERE agency_id=? AND resource=? AND source_id=? FOR UPDATE');$q->execute([$aid,$resource,$id]);if($q->fetchColumn())throw new AuthException(409,'این سابقه سند حسابداری دارد و قابل تغییر نیست.','FINANCIAL_SOURCE_LOCKED');
+  // Some older production databases predate migration 0019. Without its
+  // mapping table, the posting workflow cannot create linked accounting
+  // documents, so deletion must not fail with an opaque database error.
+  // Never ignore other SQL errors or an existing mapping/locked source.
+  try{
+   $q=Connection::get()->prepare('SELECT document_id FROM financial_postings WHERE agency_id=? AND resource=? AND source_id=? FOR UPDATE');
+   $q->execute([$aid,$resource,$id]);
+  }catch(\PDOException $e){
+   if((int)($e->errorInfo[1]??0)===1146 && str_contains($e->getMessage(), 'financial_postings'))return;
+   throw $e;
+  }
+  if($q->fetchColumn())throw new AuthException(409,'این سابقه سند حسابداری دارد و قابل حذف یا ویرایش نیست.','FINANCIAL_SOURCE_LOCKED');
  }
  public static function post(int $uid,int $aid,string $resource,int $id,array $body): array {
   Authorization::requirePermission($uid,'finance.manage');Authorization::requireAgencyAccess($uid,$aid);
