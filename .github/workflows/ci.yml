@@ -32,6 +32,7 @@ jobs:
           node tests/auth-screen-isolation.cjs
           node tests/sepand-schema-ui.cjs
           node --check frontend/assets/operations.js
+          node --check frontend/assets/vehicle-class-admin.js
           node tests/wizard-lookup.cjs
           node tests/finance-form-inputs.cjs
           node tests/new-service-wizard.cjs
