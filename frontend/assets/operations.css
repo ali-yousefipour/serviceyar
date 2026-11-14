@@ -2948,3 +2948,22 @@ body.sy-menu-palette-open{overflow:hidden}
  .sy-vehicle-mobile-card footer{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
  .sy-service-vehicle-selection>.form-grid{grid-template-columns:1fr}
 }
+
+
+/* Two independent, tenant-scoped contract workflows */
+.sy-contract-workspace,.sy-contract-template-admin{direction:rtl}
+.sy-contract-tabs{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 18px;padding:5px;border-radius:14px;background:var(--surface-secondary,#eff5f3)}
+.sy-contract-tabs button{flex:1 1 220px;min-height:44px;border-radius:10px;font:inherit}
+.sy-contract-create{border:1px solid #bfd7cc;border-radius:16px;padding:15px 18px;margin-bottom:22px;background:rgba(240,250,246,.6)}
+.sy-contract-create>summary{cursor:pointer;font-weight:700;color:#11583c;font-size:1rem}
+.sy-contract-create-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:end;gap:14px;margin-top:15px}
+.sy-contract-create-grid label,.sy-contract-template-admin label{display:grid;gap:6px;min-width:0;font-weight:600}
+.sy-contract-create-grid input,.sy-contract-create-grid select,.sy-contract-template-admin input,.sy-contract-template-admin textarea{width:100%;min-height:42px;padding:9px 12px;box-sizing:border-box;border:1px solid #bdcdc6;border-radius:10px;font:inherit;background:#fff;color:#18362b}
+.sy-contract-create-actions{grid-column:1/-1;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.sy-contract-workspace .table-wrap{max-height:500px;overflow:auto}
+.sy-contract-workspace table{min-width:700px}
+.sy-contract-workspace thead{position:sticky;top:0;z-index:1}
+.sy-contract-template-admin form{display:grid;gap:14px}
+.sy-contract-template-admin textarea{min-height:380px;resize:vertical;line-height:1.8;direction:rtl}
+@media(max-width:900px){.sy-contract-create-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.sy-contract-create-grid{grid-template-columns:minmax(0,1fr)}.sy-contract-workspace,.sy-contract-template-admin{padding:14px}.sy-contract-create{padding:12px}.sy-contract-tabs button{flex-basis:100%}.sy-contract-workspace table{font-size:.87rem}}
