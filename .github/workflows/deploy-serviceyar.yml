@@ -164,6 +164,20 @@ jobs:
           test -f deploy-payload/assets/app.js
           test -f deploy-payload/backend/public/index.php
           test -f deploy-payload/database/migrations/0001_create_migrations_table.sql
+          # Release completeness: the latest dashboard AND the official fare
+          # engine must be present in the final upload payload together.
+          test -s deploy-payload/assets/operations.js
+          test -s deploy-payload/assets/app.css
+          test -s deploy-payload/assets/operations.css
+          test -s deploy-payload/backend/src/Domain/OperationsService.php
+          test -s deploy-payload/backend/src/Domain/TaxiOrganizationTariffs.php
+          test -s deploy-payload/backend/src/Domain/TaxiFareComponents.php
+          test -s deploy-payload/backend/src/Domain/DriverDeductionPolicy.php
+          grep -q 'sy-mgmt-dashboard' deploy-payload/assets/operations.js
+          grep -q 'statusMismatch' deploy-payload/backend/src/Domain/OperationsService.php
+          grep -q 'previewCoordinationAllocation' deploy-payload/backend/src/Domain/TaxiFareComponents.php
+          grep -q "${GITHUB_SHA}" deploy-payload/index.html
+          echo "Verified bundled dashboard and financial engine for release ${GITHUB_SHA}"
 
       - name: Stage, publish and verify hosting payload
         env:
