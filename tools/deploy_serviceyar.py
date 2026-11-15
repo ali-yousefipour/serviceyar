@@ -106,7 +106,8 @@ def verify_live(base_url, build_id, expected_digests):
                     diagnostic = Request(candidate + "?deploy_diagnostic=" + build_id, headers={"Cache-Control": "no-cache", "User-Agent": "ServiceYar-Deploy-Diagnostic/1.0"})
                     with urlopen(diagnostic, timeout=12, context=ssl._create_unverified_context()) as response:
                         body = response.read(400000).decode("utf-8", "replace")
-                        print(f"DIAGNOSTIC ONLY {candidate}: HTTP {response.status}; build={build_id in body}; final={response.url}", flush=True)
+                        title = body.split("<title>", 1)[1].split("</title>", 1)[0][:140] if "<title>" in body and "</title>" in body else "no-title"
+                        print(f"DIAGNOSTIC ONLY {candidate}: HTTP {response.status}; build={build_id in body}; title={title!r}; final={response.url}", flush=True)
                 except Exception as diagnostic_error:
                     print(f"DIAGNOSTIC ONLY {candidate}: {diagnostic_error}", flush=True)
             raise RuntimeError(
@@ -157,6 +158,10 @@ def main():
         except error_perm as error:
             print(f"FTP directory listing unavailable: {error}", flush=True)
         print(f"Deployment target directory: {ROOT}", flush=True)
+        try:
+            print("Deployment target entries: " + ", ".join(sorted(ftp.nlst(ROOT))[:100]), flush=True)
+        except error_perm as error:
+            print(f"Cannot list deployment target: {error}", flush=True)
         old = previous_files(ftp)
         changed = [name for name in files if old.get(name) != digests[name]]
         print(f"Release: {len(changed)} changed, {len(files) - len(changed)} unchanged, {len(files)} total", flush=True)
