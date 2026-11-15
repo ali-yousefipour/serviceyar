@@ -107,6 +107,8 @@ final class AuthService
         $row=$stmt->fetch();
 
         if (!$row || !(bool)$row['is_active']) {
+            if(\ServiceYar\Auth\AdminImpersonation::restoreAfterInvalidTarget($hash))
+                return $this->current();
             throw new AuthException(401, 'نشست منقضی یا لغو شده است.', 'UNAUTHENTICATED');
         }
 
@@ -114,7 +116,8 @@ final class AuthService
 
         return [
             'id'=>(int)$row['user_id'], 'uuid'=>$row['uuid'], 'username'=>$row['username'],
-            'firstName'=>$row['first_name'], 'lastName'=>$row['last_name'], 'csrfToken'=>$row['csrf_token']
+            'firstName'=>$row['first_name'], 'lastName'=>$row['last_name'], 'csrfToken'=>$row['csrf_token'],
+            'impersonation'=>\ServiceYar\Auth\AdminImpersonation::context($hash)
         ];
     }
 
