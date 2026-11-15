@@ -46,7 +46,7 @@
   if(!target||target.querySelector('#syBaleAdminForm'))return;
   const block=el('section','sy-bale-admin-panel');
   block.innerHTML='<h3>ربات پیام‌رسان بله سرویس‌یار</h3><p>توکن به‌صورت رمزگذاری‌شده در سرور ذخیره می‌شود و در پاسخ API نمایش داده نمی‌شود. پس از ذخیره، وب‌هوک HTTPS به‌صورت خودکار ثبت می‌شود.</p>'+
-   '<form id="syBaleAdminForm"><div class="form-grid"><label>توکن ربات بله<input name="token" type="password" autocomplete="new-password" placeholder="برای حفظ توکن فعلی خالی بگذارید"></label><label class="sy-bale-checkbox"><input name="enabled" type="checkbox" value="1"> فعال‌سازی ربات و ورود با بله</label></div>'+
+   '<form id="syBaleAdminForm"><div class="form-grid"><label>توکن ربات بله<input name="token" type="password" autocomplete="new-password" placeholder="برای حفظ توکن فعلی خالی بگذارید"></label><label>توکن ارائه‌دهنده کیف پول بله<input name="walletToken" type="password" autocomplete="new-password" placeholder="برای حفظ توکن پرداخت فعلی خالی بگذارید"></label><label class="sy-bale-checkbox"><input name="enabled" type="checkbox" value="1"> فعال‌سازی ربات و ورود با بله</label><label class="sy-bale-checkbox"><input name="walletEnabled" type="checkbox" value="1"> فعال‌سازی درگاه پرداخت کیف پول بله</label></div>'+
    '<button class="primary" type="submit">ذخیره و اتصال ربات بله</button><button type="button" data-bale-refresh>بررسی وضعیت</button><p data-bale-settings-message role="status"></p><div data-bale-overview></div></form>';
   target.append(block);
   const form=block.querySelector('form'),status=block.querySelector('[data-bale-settings-message]'),overview=block.querySelector('[data-bale-overview]');
@@ -54,14 +54,15 @@
    const info=await api('/api/v1/admin/bale-bot');
    if(!form.isConnected)return;
    form.elements.enabled.checked=Boolean(info.configured);
-   overview.textContent='توکن: '+(info.tokenStored?'ثبت شده':'ثبت نشده')+' | ربات: '+(info.botUsername?'@'+info.botUsername:'نامشخص')+' | وب‌هوک: '+(info.webhookRegistered?'ثبت شده':'ثبت نشده');
+   form.elements.walletEnabled.checked=Boolean(info.walletEnabled);
+   overview.textContent='توکن ربات: '+(info.tokenStored?'ثبت شده':'ثبت نشده')+' | توکن پرداخت: '+(info.walletTokenStored?'ثبت شده':'ثبت نشده')+' | کیف پول: '+(info.walletConfigured?'آماده':'آماده نیست')+' | ربات: '+(info.botUsername?'@'+info.botUsername:'نامشخص')+' | وب‌هوک: '+(info.webhookRegistered?'ثبت شده':'ثبت نشده');
   };
   form.querySelector('[data-bale-refresh]').onclick=async()=>{try{await refresh();const health=await api('/api/v1/admin/bale-bot/check');message(status,health.connected?'اتصال به بله برقرار است. وب‌هوک: '+(health.webhookCorrect?'صحیح':'نیازمند اصلاح')+'؛ پیام‌های در انتظار: '+Number(health.pendingUpdates||0)+(health.lastError?'؛ آخرین خطا: '+health.lastError:''):'ربات هنوز فعال نشده است.',!health.webhookCorrect);}catch(e){message(status,e.message,true);}};
   form.onsubmit=async e=>{
    e.preventDefault();const button=form.querySelector('[type=submit]');button.disabled=true;
    try{
-    await api('/api/v1/admin/bale-bot',{method:'PUT',headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify({token:form.elements.token.value.trim(),enabled:form.elements.enabled.checked})});
-    form.elements.token.value='';await refresh();message(status,'تنظیمات ربات ذخیره و درخواست ثبت وب‌هوک ارسال شد.');
+    await api('/api/v1/admin/bale-bot',{method:'PUT',headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify({token:form.elements.token.value.trim(),walletToken:form.elements.walletToken.value.trim(),enabled:form.elements.enabled.checked,walletEnabled:form.elements.walletEnabled.checked})});
+    form.elements.token.value='';form.elements.walletToken.value='';await refresh();message(status,'تنظیمات ربات ذخیره و درخواست ثبت وب‌هوک ارسال شد.');
    }catch(e){message(status,e.message,true);}
    finally{button.disabled=false;}
   };
