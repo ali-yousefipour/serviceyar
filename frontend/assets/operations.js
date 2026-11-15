@@ -299,7 +299,7 @@ function render(){
    history.replaceState(history.state,'',location.pathname+location.search+'#admin-dashboard');
   }
   document.querySelectorAll('.nav-group').forEach(d=>{const active=!!d.querySelector('a[href="#'+key+'"]');d.classList.toggle('current-group',active);if(active)d.open=true;else if(!$('syNavSearch')?.value.trim())d.open=false;});
-  $('nav').querySelectorAll('a.nav').forEach(link=>{const active=link.getAttribute('href')==='#'+key;link.classList.toggle('active',active);if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');});
+  $('nav').querySelectorAll('a[href^="#"]').forEach(link=>{const active=link.getAttribute('href')==='#'+key;link.classList.toggle('active',active);if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');});
   $('pageTitle').textContent=adminTitles[key];$('app').classList.toggle('dashboard-active',key==='admin-dashboard');$('content').classList.toggle('dashboard-content',key==='admin-dashboard');
   $('content').innerHTML='<div class="loading">در حال آماده‌سازی پنل مدیریت کل…</div>';
   document.querySelector('.sidebar').classList.remove('nav-open');if($('navigationShade'))$('navigationShade').hidden=true;if($('navigationToggle'))$('navigationToggle').setAttribute('aria-expanded','false');
