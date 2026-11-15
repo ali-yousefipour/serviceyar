@@ -261,6 +261,20 @@ try{
  rejected(fn()=>PayrollDocuments::update($uid,$a,$doc['id'],['lines'=>[['driverId'=>$driver['id'],'amount'=>750.25]]]),'INVALID_PAYROLL_SALARY');
  PayrollDocuments::update($uid,$a,$doc['id'],['lines'=>[['driverId'=>$driver['id'],'amount'=>750]]]);check((float)PayrollDocuments::get($uid,$a,$doc['id'])['total_amount']===750.0,'Draft payroll amounts can be corrected');
  rejected(fn()=>PayrollDocuments::get($uid,$b,$doc['id']),'NOT_FOUND');PayrollDocuments::approve($uid,$a,$doc['id']);rejected(fn()=>PayrollDocuments::update($uid,$a,$doc['id'],['lines'=>[['driverId'=>$driver['id'],'amount'=>800]]]),'PAYROLL_LOCKED');
+ // A current-year official tariff preview must not reprice an approved
+ // historical payroll document or alter its stored financial snapshot.
+ $approvedBefore=PayrollDocuments::get($uid,$a,$doc['id']);
+ $officialQuote=\ServiceYar\Domain\TaxiOrganizationTariffs::quote($p,6,'1',3);
+ check((int)$officialQuote['driverMonthly']===12500000,'Taxi rate uses district 6 traffic in driver remuneration');
+ check((int)$officialQuote['parentMonthly']===15082019,'Taxi rate retains official parent charge');
+ check(($officialQuote['parentComponents']['coordinationAllocationStatus']??'')==='pending_traffic_council_decision',
+    'Official coordination share has no invented beneficiary distribution');
+ $approvedAfter=PayrollDocuments::get($uid,$a,$doc['id']);
+ check($approvedBefore['status']==='approved'
+   && $approvedAfter['status']==='approved'
+   && $approvedAfter['total_amount']===$approvedBefore['total_amount']
+   && $approvedAfter['lines']===$approvedBefore['lines'],
+   'New tariff calculations cannot mutate approved historical payroll snapshots');
  check(PayrollDocuments::validIban('IR490000000000000000000000')&&!PayrollDocuments::validIban('IR480000000000000000000000'),'Bank export enforces IBAN checksum');
  rejected(fn()=>D::save($uid,$a,'payments',['amount'=>1],(int)$settled['paymentId']),'VERIFIED_PAYMENT_LOCKED');
  rejected(fn()=>D::save($uid,$a,'payments',['amount'=>1,'paymentDate'=>$date,'method'=>'bale','invoiceId'=>$invoice['id']]),'WORKFLOW_REQUIRED');
