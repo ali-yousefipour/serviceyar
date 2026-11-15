@@ -581,31 +581,40 @@ try{
  $repriced=D::save($uid,$a,'students',['feeSource'=>'taxi'],(int)$taxiStudent['id']);
  check((int)$repriced['monthly_fee']===14000000&&(int)$repriced['driver_base_monthly']===11000000,'Explicit fee selection recomputes parent and driver pricing');
 
- // Agency tariff recalculation must not alter taxi/agreed prices and must
- // synchronize the student's driver base, tuition invoice and service net.
- $feeBefore=$p->prepare("SELECT fee_source FROM students WHERE id=? AND agency_id=?");
- $feeBefore->execute([$feeStudent['id'],$feeAgency]);
- check($feeBefore->fetchColumn()==='agency','Legacy agency tariff student is marked with the agency pricing source');
+ // Create a fresh company-priced active service; older report fixtures may
+ // already have been unassigned by other test scenarios.
+ $repriceSchool=D::save($uid,$feeAgency,'schools',['name'=>'مدرسه بازحساب','schoolType'=>'متوسطه اول']);
+ $repriceStudent=D::save($uid,$feeAgency,'students',[
+   'schoolId'=>$repriceSchool['id'],'firstName'=>'بازحساب','lastName'=>'شرکت',
+   'mobile'=>'09120000994','academicYear'=>'1405/1406','tariffDistanceKm'=>5,
+   'tariffVehicleClass'=>1,'feeSource'=>'agency','grade'=>'متوسطه']);
+ $repriceService=D::save($uid,$feeAgency,'services',[
+   'title'=>'سرویس بازحساب شرکت','schoolId'=>$repriceSchool['id'],
+   'capacity'=>1,'status'=>'active','feeSource'=>'agency']);
+ D::assignStudent($uid,$feeAgency,(int)$repriceService['id'],(int)$repriceStudent['id']);
+ check((int)D::get($uid,$feeAgency,'students',(int)$repriceStudent['id'])['monthly_fee']===1500000,
+   'Initial agency rate is quoted from the company price schedule');
  $p->prepare("UPDATE agency_school_tariffs SET amount_irr=? WHERE agency_id=? AND vehicle_class=1 AND distance_km=5")
    ->execute([1800000,$feeAgency]);
  $agencyReprice=\ServiceYar\Domain\AgencySchoolTariffs::recalculate($uid,$feeAgency);
- check(($agencyReprice['updated']??0)>=1&&($agencyReprice['invoicesSynced']??0)>=1,
-   'Agency tariff recalculation reports changed students and synchronized tuition invoices: '.json_encode($agencyReprice));
- $recalculatedStudent=D::get($uid,$feeAgency,'students',(int)$feeStudent['id']);
+ check(($agencyReprice['updated']??0)>=1&&($agencyReprice['invoicesSynced']??0)>=1
+   &&($agencyReprice['servicesUpdated']??0)>=1,
+   'Agency reprice synchronizes students, invoices and driver services: '.json_encode($agencyReprice));
+ $recalculatedStudent=D::get($uid,$feeAgency,'students',(int)$repriceStudent['id']);
  check((int)$recalculatedStudent['monthly_fee']===1800000
    &&(int)$recalculatedStudent['driver_base_monthly']===1800000,
    'Agency rate update synchronizes both tuition and driver basis');
- $recalculatedService=D::get($uid,$feeAgency,'services',(int)$feeService['id']);
+ $recalculatedService=D::get($uid,$feeAgency,'services',(int)$repriceService['id']);
  check((int)$recalculatedService['monthly_fee']===1461600,
-   'Agency rate update synchronizes net monthly driver payable after configured deductions');
+   'Agency rate update synchronizes net monthly driver payable after deductions');
  $recalculatedInvoice=$p->prepare("SELECT i.amount FROM student_service_debt_invoices m JOIN invoices i ON i.id=m.invoice_id WHERE m.agency_id=? AND m.student_id=?");
- $recalculatedInvoice->execute([$feeAgency,$feeStudent['id']]);
+ $recalculatedInvoice->execute([$feeAgency,$repriceStudent['id']]);
  check((int)$recalculatedInvoice->fetchColumn()===16200000,
-   'Agency rate update recalculates the academic-year student debt invoice');
+   'Agency rate update recalculates the nine-month student debt invoice');
  check((int)D::get($uid,$a,'students',(int)$taxiStudent['id'])['monthly_fee']===14000000,
-   'Repricing one company never modifies an official taxi rate in another company');
+   'Repricing one company never modifies official taxi tuition in another company');
  $repeat=\ServiceYar\Domain\AgencySchoolTariffs::recalculate($uid,$feeAgency);
- check(($repeat['updated']??-1)===0,'Repeated agency tariff recalculation is idempotent');
+ check(($repeat['updated']??-1)===0,'Repeated company tariff recalculation is idempotent');
 
  $classVehicle=D::save($uid,$a,'vehicles',['plate'=>'VT-'.$tag,'capacity'=>4,'tariffVehicleClass'=>2]);
  $classDriver=D::save($uid,$a,'drivers',['firstName'=>'راننده','lastName'=>'کلاس تست','status'=>'active','vehicleId'=>$classVehicle['id']]);
