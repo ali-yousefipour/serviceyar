@@ -48,8 +48,22 @@ final class PortalVehicleRequests {
             if($action==='approve') {
                 $plate=trim((string)($row['requested_plate']??''));
                 $model=trim((string)($row['requested_model']??''));
-                if($model!==''&&!VehicleClassCatalog::validSelection($pdo,$model))
-                    throw new AuthException(422,'مدل در فهرست خودروهای تأییدشده وجود ندارد.','MODEL_NOT_APPROVED');
+                if($model!==''){
+                    if(!VehicleClassCatalog::validSelection($pdo,$model))
+                        throw new AuthException(422,'مدل در فهرست خودروهای تأییدشده وجود ندارد.','MODEL_NOT_APPROVED');
+                    $classes=$pdo->prepare("SELECT DISTINCT class_number FROM vehicle_tariff_class_models
+                       WHERE family_name=? OR alias=?");
+                    $classes->execute([$model,$model]);
+                    $matches=array_unique(array_map('intval',$classes->fetchAll(PDO::FETCH_COLUMN)));
+                    $vehicle=$pdo->prepare("SELECT tariff_vehicle_class FROM vehicles
+                       WHERE id=? AND agency_id=? AND is_active=1 FOR UPDATE");
+                    $vehicle->execute([(int)$row['vehicle_id'],$agencyId]);
+                    $currentClass=(int)$vehicle->fetchColumn();
+                    if(count($matches)!==1||$currentClass<1||$matches[0]!==$currentClass)
+                        throw new AuthException(409,
+                         'مدل جدید کلاس تعرفه خودرو را تغییر می‌دهد یا کلاس فعلی مشخص نیست. برای جلوگیری از تغییر ناخواسته شهریه، از بخش مدیریت خودرو و فرایند محاسبه مجدد شرکت استفاده کنید.',
+                         'VEHICLE_CLASS_REVIEW_REQUIRED');
+                }
                 if($plate!==''&&(mb_strlen($plate)<5||mb_strlen($plate)>50))
                     throw new AuthException(422,'پلاک درخواست‌شده معتبر نیست.','INVALID_PLATE');
                 $update=$pdo->prepare('UPDATE vehicles SET model=COALESCE(?,model),plate=COALESCE(?,plate)
