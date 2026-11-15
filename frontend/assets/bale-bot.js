@@ -16,7 +16,7 @@
   const toggle=el('button','sy-bale-login-toggle','ورود با پیام‌رسان بله');
   toggle.type='button';toggle.setAttribute('aria-expanded','false');
   const form=el('form','sy-bale-login-form');form.hidden=true;
-  form.innerHTML='<p>نام کاربری سامانه را وارد کنید؛ کد ورود به گفتگوی بله متصل به حساب ارسال می‌شود.</p><p class="muted">برای اولین استفاده، باید یک‌بار با رمز عبور وارد سامانه شوید و از پروفایل، کد اتصال بله را دریافت و برای ربات ارسال کنید. ثبت شماره همراه یا زدن Start به‌تنهایی اتصال را برقرار نمی‌کند.</p>'+
+  form.innerHTML='<p>نام کاربری سامانه را وارد کنید؛ کد ورود به گفتگوی بله متصل به حساب ارسال می‌شود.</p><p class="muted">برای اولین استفاده، در گفتگوی ربات بله Start را بزنید و با دکمه «اشتراک شماره همراه من»، شماره ثبت‌شده در پروفایل را تأیید کنید. فقط ادمین کل باید کد اتصال اختصاصی را از پروفایل ارسال کند.</p>'+
    '<label>نام کاربری<input name="username" maxlength="100" autocomplete="username" required></label>'+
    '<button type="button" data-request-otp class="primary">ارسال کد ورود به بله</button>'+
    '<label>کد یک‌بارمصرف<input name="code" maxlength="6" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9۰-۹]{6}" required></label>'+
@@ -87,14 +87,16 @@
   await previousProfileDialog();
   const form=document.getElementById('syOwnProfileForm');if(!form)return;
   const block=el('section','sy-bale-profile-panel');
-  block.innerHTML='<h4>اتصال حساب به پیام‌رسان بله</h4><p>برای ورود با بله، فقط ثبت شماره موبایل در پروفایل یا زدن Start کافی نیست. یک‌بار روی «دریافت کد اتصال» بزنید و دستور نمایش‌داده‌شده را در گفتگوی خصوصی ربات ارسال کنید.</p>'+
+  block.innerHTML='<h4>اتصال حساب به پیام‌رسان بله</h4><p data-bale-instructions></p>'+
    '<div class="sy-bale-actions"><button type="button" data-link-bale>دریافت کد اتصال</button><button type="button" data-link-refresh>بررسی مجدد اتصال</button><button type="button" data-unlink-bale>قطع اتصال</button></div><p data-link-message role="status"></p>';
   form.querySelector('button[type=submit]')?.before(block);
   const feedback=block.querySelector('[data-link-message]');
   const refresh=async()=>{
    const info=await api('/api/v1/bale/link');
    if(!block.isConnected)return;
-   message(feedback,info.linked?'حساب بله شما با موفقیت متصل است و می‌توانید از صفحه ورود کد بگیرید.':info.enabled?'حساب بله هنوز متصل نشده است؛ کد اتصال را دریافت کرده و دستور /start به‌همراه کد را در ربات ارسال کنید.':'ربات بله توسط مدیر سامانه فعال نشده است.');
+   block.querySelector('[data-bale-instructions]').textContent=info.requiresCode?'برای ادمین کل اتصال فقط با کد اختصاصی مجاز است. روی دریافت کد اتصال بزنید و دستور را به ربات ارسال کنید.':'برای کاربران عادی کد اتصال لازم نیست؛ در گفتگوی ربات بله Start را بزنید و از دکمه اشتراک شماره همراه من استفاده کنید. شماره باید در پروفایل شما ثبت شده باشد.';
+   message(feedback,info.linked?'حساب بله شما متصل است و می‌توانید از صفحه ورود کد بگیرید.':!info.enabled?'ربات بله توسط مدیر سامانه فعال نشده است.':info.requiresCode?'حساب هنوز متصل نیست؛ کد اختصاصی را دریافت و ارسال کنید.':'حساب هنوز متصل نیست؛ در گفتگوی ربات Start بزنید و شماره همراه خودتان را با دکمه ربات به اشتراک بگذارید.');
+   block.querySelector('[data-link-bale]').hidden=!info.requiresCode;
    block.querySelector('[data-link-bale]').disabled=!info.enabled;
    block.querySelector('[data-unlink-bale]').disabled=!info.linked;
   };
