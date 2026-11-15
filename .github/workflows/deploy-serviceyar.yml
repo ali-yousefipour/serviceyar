@@ -9,6 +9,7 @@ on:
       - 'database/**'
       - '.github/workflows/deploy-serviceyar.yml'
       - 'tools/deploy_serviceyar.py'
+      - 'tests/**'
   workflow_dispatch:
 
 permissions:
