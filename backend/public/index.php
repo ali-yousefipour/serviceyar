@@ -615,6 +615,12 @@ try {
   $auth->requireCsrf($s);
   Response::json(['ok'=>true,'data'=>DomainService::createVehicleWithOwnerDriver($s['id'],$aid,Request::json())],201);
  }
+ if($path==='/api/v1/vehicles/registry-search'&&$method==='GET'){
+  $term=$_GET['search']??'';
+  if(!is_string($term))throw new AuthException(422,'عبارت جستجوی پلاک نامعتبر است.','INVALID_PLATE_QUERY');
+  header('Cache-Control: no-store, max-age=0');
+  Response::json(['ok'=>true,'data'=>DomainService::searchVehicleRegistry($s['id'],$aid,$term)]);
+ }
  if($path==='/api/v1/vehicles/lookup-by-plate'&&$method==='GET'){
   $value=$_GET['plate']??'';
   if(!is_string($value))throw new AuthException(422,'شماره پلاک نامعتبر است.','INVALID_PLATE');
