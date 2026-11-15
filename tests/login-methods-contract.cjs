@@ -31,6 +31,8 @@ assert.ok(policy.includes("'mobile'=>'login_method_mobile'"),'mobile OTP has ind
 assert.ok(policy.includes("'mobile'=>$configured['mobile']&&$available['mobile']"),'mobile tab is policy and provider gated');
 assert.ok(recovery.includes("public static function request(string $username,string $channel)"),'password recovery request implemented');
 assert.ok(recovery.includes("public static function confirm(string $username,string $channel,string $code,string $password,string $confirmation)"),'password recovery confirmation implemented');
+assert.ok(recovery.includes('self::requireChannel($channel,true)'),'provider readiness is required to issue recovery codes');
+assert.ok(recovery.includes('self::requireChannel($channel);'),'already-issued recovery codes remain verifiable during provider outages');
 assert.ok(recovery.includes("purpose='password_reset'"),'recovery challenges have a separate purpose');
 assert.ok(sms.includes('public static function recoveryReady()'),'SMS recovery stays hidden until migration is applied');
 assert.ok(recovery.includes('baleRecoveryReady()'),'Bale recovery stays hidden until migration is applied');
@@ -75,4 +77,4 @@ assert.ok(html.includes('/assets/login-methods.js?v=__BUILD_ID__'),'versioned lo
 assert.ok(!baleUi.includes('void initializeLogin();'),'old Bale-only login hidden');
 assert.ok(css.includes('#login .login-card form[hidden]'),'forms remain hidden when their tab is inactive');
 assert.ok(migration.includes('sms_login_challenges')&&migration.includes('sms_login_requests'),'migration included');
-console.log('Three-way login policy, SMS OTP and responsive login UI: OK');
+console.log('Four-method login policy, mobile OTP, SMS/Bale recovery and responsive login UI: OK');
