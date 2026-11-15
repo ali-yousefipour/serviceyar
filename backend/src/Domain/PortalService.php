@@ -258,6 +258,15 @@ final class PortalService {
                'monthlyServicesTotal'=>array_sum(array_map(static fn($x)=>(float)$x['monthlyFee'], $monthlyServices)),
                'note'=>'جمع کارکرد فقط ردیف‌های ثبت‌شده را نشان می‌دهد؛ فیش نهایی و مبالغ قطعی شرکت ملاک تسویه هستند.']];
     }
+    private static function persianDigits(string $text): string {
+        return strtr($text,['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9',
+            '٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']);
+    }
+    private static function validNationalCode(string $code): bool {
+        if(!preg_match('/^[0-9]{10}$/D',$code)||preg_match('/^(.)\\1{9}$/D',$code))return false;
+        $sum=0;for($i=0;$i<9;$i++)$sum+=(int)$code[$i]*(10-$i);
+        $rem=$sum%11;return (int)$code[9]===($rem<2?$rem:11-$rem);
+    }
     private static function driverNet(int $agencyId,float $gross): float {
         return (float)OperationsService::driverDeductions($gross,$agencyId)['net_earned'];
     }
@@ -266,7 +275,7 @@ final class PortalService {
         $pdo=Connection::get();
         $allowed=$type==='parent'
             ?['address','returnAddress','guardianName','guardianRelation','email']
-            :['address','bankName','bankAccount','iban','email'];
+            :['firstName','lastName','nationalCode','address','bankName','bankAccount','iban','email'];
         foreach($input as $key=>$value){
             if(!in_array((string)$key,$allowed,true)||!is_string($value)||mb_strlen($value)>700)
                 throw new AuthException(422,'فیلد نامعتبر یا طول اطلاعات بیش از حد مجاز است.','PORTAL_PROFILE_INVALID');
@@ -287,14 +296,33 @@ final class PortalService {
                         $mobile,'98'.substr($mobile,1),'+98'.substr($mobile,1)]);
                 }
             }else{
-                $q=$pdo->prepare("UPDATE drivers SET address=COALESCE(?,address),bank_name=COALESCE(?,bank_name),
+                foreach(['firstName'=>'نام','lastName'=>'نام خانوادگی'] as $key=>$label){
+                    if(array_key_exists($key,$input) &&
+                       (trim($input[$key])===''||mb_strlen(trim($input[$key]))>100))
+                        throw new AuthException(422,$label.' معتبر الزامی است.','INVALID_DRIVER_NAME');
+                }
+                $national=isset($input['nationalCode'])?self::persianDigits(trim($input['nationalCode'])):null;
+                if($national!==null&&$national!==''&&!self::validNationalCode($national))
+                    throw new AuthException(422,'کد ملی راننده معتبر نیست.','INVALID_NATIONAL_CODE');
+                if($national!==null&&$national!==''){
+                    $test=$pdo->prepare("SELECT id FROM drivers WHERE agency_id=? AND national_code=? AND id<>? AND is_active=1 LIMIT 1");
+                    $test->execute([$agencyId,$national,$partyId]);
+                    if($test->fetchColumn())throw new AuthException(409,'این کد ملی برای راننده دیگری ثبت شده است.','NATIONAL_CODE_IN_USE');
+                }
+                $iban=isset($input['iban'])?strtoupper(str_replace(' ','',trim($input['iban']))):null;
+                if($iban!==null&&$iban!==''&&!PayrollDocuments::validIban($iban))
+                    throw new AuthException(422,'شماره شبای معتبر بانکی وارد کنید.','INVALID_IBAN');
+                $q=$pdo->prepare("UPDATE drivers SET
+                  first_name=COALESCE(?,first_name),last_name=COALESCE(?,last_name),
+                  national_code=COALESCE(?,national_code),
+                  address=COALESCE(?,address),bank_name=COALESCE(?,bank_name),
                   bank_account=COALESCE(?,bank_account),iban=COALESCE(?,iban)
                   WHERE id=? AND agency_id=? AND is_active=1");
-                if(isset($input['iban'])&&$input['iban']!==''&&!preg_match('/^IR[0-9]{24}$/D',strtoupper($input['iban'])))
-                    throw new AuthException(422,'شماره شبا باید با IR شروع شده و ۲۴ رقم داشته باشد.','INVALID_IBAN');
-                $q->execute([$input['address']??null,$input['bankName']??null,
-                    $input['bankAccount']??null,isset($input['iban'])?strtoupper($input['iban']):null,
-                    $partyId,$agencyId]);
+                $q->execute([
+                    isset($input['firstName'])?trim($input['firstName']):null,
+                    isset($input['lastName'])?trim($input['lastName']):null,
+                    $national,$input['address']??null,$input['bankName']??null,
+                    $input['bankAccount']??null,$iban,$partyId,$agencyId]);
             }
             if(array_key_exists('email',$input)){
                 $email=trim($input['email']);
