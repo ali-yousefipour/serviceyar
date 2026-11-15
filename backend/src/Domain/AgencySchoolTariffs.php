@@ -43,6 +43,8 @@ final class AgencySchoolTariffs {
  }
  public static function recalculate(int $uid,int $aid): array {
   Authorization::requirePermission($uid,'students.manage');
+  // Repricing also changes tuition invoices and driver payable amounts.
+  Authorization::requirePermission($uid,'finance.manage');
   Authorization::requireAgencyAccess($uid,$aid);
   // Reprice only agency-rate students. Official Taxi Organization and agreed
   // prices are independent contracts and must never be overwritten here.
