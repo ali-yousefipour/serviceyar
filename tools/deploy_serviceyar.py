@@ -100,6 +100,7 @@ def verify_live(base_url, build_id, expected_digests):
         raise RuntimeError(f"Live verification must use https://{CANONICAL_HOST}; received {base!r}")
     checks = [
         ("/", None),
+        ("/assets/app.js", "assets/app.js"),
         ("/assets/operations.js", "assets/operations.js"),
         ("/assets/brand-theme.css", "assets/brand-theme.css"),
     ]
@@ -138,12 +139,12 @@ def verify_live(base_url, build_id, expected_digests):
                         title = body.split("<title>", 1)[1].split("</title>", 1)[0][:140] if "<title>" in body and "</title>" in body else "no-title"
                         print(f"DIAGNOSTIC ONLY {candidate}: HTTP {response.status}; build={build_id in body}; title={title!r}; final={response.url}; server={response.headers.get('Server')}; x-cache={response.headers.get('X-LiteSpeed-Cache')}", flush=True)
                         if candidate.startswith("https://www."):
-                            for asset in ("/assets/operations.js", "/assets/brand-theme.css"):
+                            for asset in ("/assets/app.js", "/assets/operations.js", "/assets/brand-theme.css"):
                                 asset_url = candidate.rstrip("/") + asset + "?v=" + build_id
                                 asset_request = Request(asset_url, headers={"Cache-Control":"no-cache","User-Agent":"ServiceYar-Deploy-Diagnostic/1.0"})
                                 with urlopen(asset_request, timeout=12, context=ssl._create_unverified_context()) as asset_response:
                                     asset_body = asset_response.read()
-                                    asset_expected = "assets/operations.js" if asset.endswith(".js") else "assets/brand-theme.css"
+                                    asset_expected = "assets/" + asset.rsplit("/", 1)[-1]
                                     print(f"DIAGNOSTIC ASSET {asset_url}: HTTP {asset_response.status}; sha_match={sha256(asset_body).hexdigest() == expected_digests[asset_expected]}; bytes={len(asset_body)}", flush=True)
                 except Exception as diagnostic_error:
                     print(f"DIAGNOSTIC ONLY {candidate}: {diagnostic_error}", flush=True)
