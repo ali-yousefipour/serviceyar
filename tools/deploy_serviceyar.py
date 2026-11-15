@@ -106,6 +106,8 @@ def verify_live(base_url, build_id, expected_digests):
         ("/", None),
         ("/assets/app.js", "assets/app.js"),
         ("/assets/operations.js", "assets/operations.js"),
+        ("/assets/app.css", "assets/app.css"),
+        ("/assets/operations.css", "assets/operations.css"),
         ("/assets/brand-theme.css", "assets/brand-theme.css"),
     ]
     for route, relative in checks:
