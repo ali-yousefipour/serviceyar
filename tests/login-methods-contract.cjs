@@ -26,7 +26,15 @@ assert.ok(sms.includes('DATE_ADD(UTC_TIMESTAMP(),INTERVAL 5 MINUTE)'),'OTP expir
 assert.ok(sms.includes('NeginSms())->send'),'SMS uses provider');
 assert.ok(js.includes("setAttribute('role','tablist')"),'accessible tab list');
 assert.ok(js.includes("setAttribute('aria-selected'"),'accessible active tab');
-assert.ok(js.includes('Object.keys(labels).filter(x=>Boolean(enabled[x]))'),'only enabled methods shown');
+assert.ok(js.includes("const panelsHost=make('div','sy-login-method-panels')"),'all login methods share one content container');
+assert.ok(js.includes('panelsHost.append(passwordForm)'), 'password login is inside shared tab panel container');
+assert.ok(js.includes('panelsHost.append(panels.sms,panels.bale)'), 'SMS and Bale are inside same tab panel container');
+assert.ok(js.includes("button.setAttribute('aria-controls',panels[method].id)"),'each tab controls its dedicated panel');
+assert.ok(js.includes('tabs.hidden=false'),'enabled method tabs remain visible, including a single enabled method');
+assert.ok(html.includes('id="loginForm" method="post" action="/api/v1/auth/login" novalidate hidden'),'password form is hidden until login policy is loaded');
+assert.ok(css.includes('#login .sy-login-method-panels'),'shared login card panel has dedicated responsive styling');
+assert.ok(css.includes('#login .sy-login-method-tab[aria-selected="true"]'),'active login tab has clear selected state');
+assert.ok(js.includes('enabled[key]===true'),'only explicitly enabled and ready methods are rendered');
 assert.ok(js.includes('session.csrfToken'),'policy editor uses CSRF');
 assert.ok(js.includes('https://ble.ir/syarbot'),'login links to syarbot');
 assert.ok(js.includes('دکمه «شروع» (Start) را بزنید'),'Bale onboarding explains Start');
@@ -35,6 +43,6 @@ assert.ok(css.includes('#login .password-toggle[aria-pressed="true"]'),'password
 assert.ok(css.includes('.sy-login-bot-link:hover'),'Bale bot button has hover styling');
 assert.ok(html.includes('/assets/login-methods.js?v=__BUILD_ID__'),'versioned login script deployed');
 assert.ok(!baleUi.includes('void initializeLogin();'),'old Bale-only login hidden');
-assert.ok(css.includes('#loginForm[hidden]'),'legacy form can be hidden');
+assert.ok(css.includes('#login .login-card form[hidden]'),'forms remain hidden when their tab is inactive');
 assert.ok(migration.includes('sms_login_challenges')&&migration.includes('sms_login_requests'),'migration included');
 console.log('Three-way login policy, SMS OTP and responsive login UI: OK');
