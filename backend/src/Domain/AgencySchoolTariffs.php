@@ -47,7 +47,7 @@ final class AgencySchoolTariffs {
   // Reprice only agency-rate students. Official Taxi Organization and agreed
   // prices are independent contracts and must never be overwritten here.
   return OperationsService::transaction(function(PDO $pdo)use($aid): array {
-   $query=$pdo->prepare("SELECT id,school_id,academic_year,tariff_distance_km,tariff_vehicle_class
+   $query=$pdo->prepare("SELECT id,school_id,academic_year,tariff_distance_km,tariff_vehicle_class,monthly_fee,driver_base_monthly
      FROM students
      WHERE agency_id=? AND is_active=1 AND fee_source='agency'
      ORDER BY id FOR UPDATE");
@@ -67,10 +67,7 @@ final class AgencySchoolTariffs {
        (string)($student['academic_year']?:self::YEAR),
        $student['tariff_distance_km'],$student['tariff_vehicle_class']);
     if($fee===null){$skipped++;continue;}
-    $current=$pdo->prepare('SELECT monthly_fee,driver_base_monthly FROM students WHERE id=? AND agency_id=?');
-    $current->execute([$id,$aid]);
-    $before=$current->fetch(PDO::FETCH_ASSOC);
-    if($before && (int)$before['monthly_fee']===$fee && (int)$before['driver_base_monthly']===$fee){
+    if((int)$student['monthly_fee']===$fee && (int)$student['driver_base_monthly']===$fee){
      $unchanged++;
      continue;
     }
