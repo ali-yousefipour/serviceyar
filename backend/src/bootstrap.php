@@ -58,6 +58,12 @@ if (is_dir($appLogDirectory) && is_writable($appLogDirectory)) {
 
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 $allowedOrigins = array_values(array_filter(array_map('trim', explode(',', (string)config('CORS_ALLOWED_ORIGINS','')))));
+// The canonical production origin remains explicitly trusted even if an old
+// hosting .env still contains a previous allow-list during the domain cutover.
+if (config('APP_ENV','local') === 'production') {
+    $allowedOrigins[] = 'https://service-yar.ir';
+}
+$allowedOrigins = array_values(array_unique($allowedOrigins));
 if ($origin !== '' && in_array($origin, $allowedOrigins, true)) {
     header('Access-Control-Allow-Origin: '.$origin);
     header('Access-Control-Allow-Credentials: true');
