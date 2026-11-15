@@ -8,11 +8,32 @@ use ServiceYar\Support\Uuid;
 use ServiceYar\Domain\OperationsService as O;
 final class UserService {
  private static function scope(int $u,int $a,string $op): void {A::requirePermission($u,'users.'.$op);if($a)A::requireAgencyAccess($u,$a);elseif(!A::isSuperAdmin($u))throw new AuthException(403,'فقط مدیر کل مجاز است.','FORBIDDEN');}
- public static function list(int $u,int $a): array {self::scope($u,$a,'view');$pdo=Connection::get();$column=$pdo->query("SHOW COLUMNS FROM users LIKE 'deleted_at'")->fetch();$notDeleted=$column?'u.deleted_at IS NULL AND ':'';$q=$pdo->prepare('SELECT u.id,u.username,u.first_name,u.last_name,u.is_active,u.mobile,u.national_code,u.email,u.address,u.postal_code,u.emergency_phone,u.photo_version,GROUP_CONCAT(DISTINCT r.title) roles,GROUP_CONCAT(DISTINCT r.name) role_names FROM users u LEFT JOIN user_roles ur ON ur.user_id=u.id LEFT JOIN roles r ON r.id=ur.role_id WHERE '.$notDeleted.($a?'EXISTS(SELECT 1 FROM agency_users au WHERE au.user_id=u.id AND au.agency_id=?)':'1=1').' GROUP BY u.id ORDER BY u.id DESC');$q->execute($a?[$a]:[]);return $q->fetchAll();}
+ private static function profileColumns(\PDO $pdo): array {
+  return $pdo->query('SHOW COLUMNS FROM users')->fetchAll(\PDO::FETCH_COLUMN);
+ }
+ private static function requireProfileColumns(\PDO $pdo): void {
+  if(!in_array('photo_version',self::profileColumns($pdo),true))
+   throw new AuthException(503,'ابتدا مهاجرت دیتابیس 0109_user_profiles_photos.sql را اجرا کنید.','USER_PROFILE_SCHEMA_REQUIRED');
+ }
+ public static function list(int $u,int $a): array {
+  self::scope($u,$a,'view');
+  $pdo=Connection::get();$cols=self::profileColumns($pdo);
+  $select=['mobile','national_code','email','address','postal_code','emergency_phone','photo_version'];
+  $extras=[];
+  foreach($select as $col)$extras[]=in_array($col,$cols,true)?'u.'.$col:$pdo->quote(''). ' AS '.$col;
+  $notDeleted=in_array('deleted_at',$cols,true)?'u.deleted_at IS NULL AND ':'';
+  $where=$a?'EXISTS(SELECT 1 FROM agency_users au WHERE au.user_id=u.id AND au.agency_id=?)':'1=1';
+  $sql='SELECT u.id,u.username,u.first_name,u.last_name,u.is_active,'.implode(',',$extras).',
+    GROUP_CONCAT(DISTINCT r.title) roles,GROUP_CONCAT(DISTINCT r.name) role_names
+    FROM users u LEFT JOIN user_roles ur ON ur.user_id=u.id LEFT JOIN roles r ON r.id=ur.role_id
+    WHERE '.$notDeleted.$where.' GROUP BY u.id ORDER BY u.id DESC';
+  $q=$pdo->prepare($sql);$q->execute($a?[$a]:[]);
+  return $q->fetchAll();
+ }
  public static function find(int $u,int $a,int $id): array {self::scope($u,$a,'view');foreach(self::list($u,$a) as $r)if((int)$r['id']===$id)return $r;throw new AuthException(404,'کاربر پیدا نشد.','NOT_FOUND');}
  private static function editable(int $u,int $a,int $id): array {$r=self::find($u,$a,$id);$q=Connection::get()->prepare('SELECT COUNT(*) FROM agency_users WHERE user_id=?');$q->execute([$id]);if(!A::isSuperAdmin($u)&&((bool)array_intersect(['super_admin','agency_admin'],explode(',',(string)$r['role_names']))||(int)$q->fetchColumn()>1))throw new AuthException(403,'ویرایش حساب مشترک یا مدیر کل فقط توسط مدیر کل مجاز است.','PROTECTED_USER');return $r;}
  public static function profile(int $userId): array {
-  $p=Connection::get();
+  $p=Connection::get();self::requireProfileColumns($p);
   $q=$p->prepare('SELECT id,username,first_name,last_name,mobile,national_code,email,address,postal_code,emergency_phone,photo_version FROM users WHERE id=? AND is_active=1');
   $q->execute([$userId]);$row=$q->fetch(\PDO::FETCH_ASSOC);
   if(!$row)throw new AuthException(404,'حساب کاربری پیدا نشد.','NOT_FOUND');
@@ -55,6 +76,7 @@ final class UserService {
    if(!is_string($name)||!preg_match('/^[\p{L}\p{N}_.@-]{3,100}$/u',$name)||!is_string($fn)||!is_string($ln)||strlen($fn)>200||strlen($ln)>240||!in_array($active,[0,1,'0','1'],true))throw new AuthException(422,'نام کاربری یا مشخصات نامعتبر است.','VALIDATION_ERROR');
    if($id&&isset($b['password']))throw new AuthException(422,'از فرم تغییر رمز استفاده کنید.','WORKFLOW_REQUIRED');
    $profile=self::profileFields($b);
+   if($profile)self::requireProfileColumns($p);
    $role=$b['role']??($id?null:'operator');$rid=null;if(!A::isSuperAdmin($u)&&$role!==null&&$role!=='operator')throw new AuthException(403,'مدیر شرکت فقط می‌تواند کاربر با نقش اپراتور ایجاد یا تعیین کند.','ROLE_ASSIGNMENT_FORBIDDEN');if($role!==null){if(!is_string($role))throw new AuthException(422,'نقش نامعتبر است.','VALIDATION_ERROR');$q=$p->prepare('SELECT id FROM roles WHERE name=?');$q->execute([$role]);$rid=$q->fetchColumn();if(!$rid)throw new AuthException(422,'نقش نامعتبر است.','VALIDATION_ERROR');if($role==='super_admin'&&!A::isSuperAdmin($u))throw new AuthException(403,'تخصیص مدیر کل مجاز نیست.','FORBIDDEN');}
    if($id===$u&&((int)$active!==1||$role!==null))throw new AuthException(409,'نقش و وضعیت حساب خود را تغییر ندهید.','SELF_PROTECTION');
    $q=$p->prepare('SELECT id FROM users WHERE username=? AND id<>?');$q->execute([$name,$id??0]);if($q->fetchColumn())throw new AuthException(409,'نام کاربری تکراری است.','USERNAME_EXISTS');
