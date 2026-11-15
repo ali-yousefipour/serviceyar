@@ -15,6 +15,7 @@ const css=read('frontend/assets/brand-theme.css');
 for(const column of ['admin_user_id','target_user_id','agency_id','admin_session_hash','target_session_hash','started_at','ended_at'])
  assert.ok(migration.includes(column),'audit session column '+column);
 assert.ok(service.includes('Authorization::isSuperAdmin($userId)'),'impersonation is restricted to super admins');
+assert.ok(service.includes('ensureSchema(PDO $pdo)')&&service.includes('CREATE TABLE IF NOT EXISTS admin_impersonation_sessions'),'schema can be prepared on first use when host migrations are not yet applied');
 assert.ok(service.includes('au.agency_id=?'),'target account must belong to selected agency');
 assert.ok(service.includes("sr.name='super_admin'"),'super-admin accounts cannot be impersonated');
 assert.ok(service.includes('random_bytes(32)'),'target session token is cryptographically random');
