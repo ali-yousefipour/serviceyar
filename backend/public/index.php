@@ -221,6 +221,23 @@ try {
  if($method==='GET'&&$path==='/api/v1/auth/csrf'){ $s=$auth->current();Response::json(['ok'=>true,'data'=>['csrfToken'=>$s['csrfToken']]]); }
  $s=$auth->current(); $aid=null;
 
+ // Private profile portraits; self-service and scoped manager access share the same storage.
+ if(preg_match('#^/api/v1/(?:auth/profile/photo|users/([0-9]+)/photo|admin/users/([0-9]+)/photo)$#',$path,$photo)){
+  $target=isset($photo[2])&&$photo[2]!==''?(int)$photo[2]:(isset($photo[1])&&$photo[1]!==''?(int)$photo[1]:(int)$s['id']);
+  $agency=$target===(int)$s['id']||Authorization::isSuperAdmin((int)$s['id'])?0:agencyId($s);
+  if($method==='GET')\ServiceYar\Users\UserPhotos::stream((int)$s['id'],$agency,$target);
+  if($method==='POST'){
+   $auth->requireCsrf($s);
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Users\UserPhotos::upload((int)$s['id'],$agency,$target,$_FILES['photo']??[])]);
+  }
+  if($method==='DELETE'){
+   $auth->requireCsrf($s);
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Users\UserPhotos::remove((int)$s['id'],$agency,$target)]);
+  }
+ }
+ if($method==='GET'&&$path==='/api/v1/auth/profile'){
+  Response::json(['ok'=>true,'data'=>UserService::profile((int)$s['id'])]);
+ }
  // Agency-scoped school photo endpoint: no public listing or direct object-store URL.
  if(preg_match('#^/api/v1/schools/(\\d+)/photo$#',$path,$photoMatch)){
   $s=$auth->current();$photoAgency=agencyId($s);$schoolId=(int)$photoMatch[1];
