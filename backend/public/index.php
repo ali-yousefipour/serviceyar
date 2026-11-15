@@ -262,6 +262,7 @@ try {
   if($method==='GET')Response::json(['ok'=>true,'data'=>empty($m[1])?UserService::list($s['id'],0):UserService::find($s['id'],0,(int)$m[1])]);
   $auth->requireCsrf($s);if(($m[2]??'')==='password'&&$method==='POST')Response::json(['ok'=>true,'data'=>UserService::changePassword($s['id'],0,(int)$m[1],Request::json())]);
   if($method==='PUT'&&!empty($m[1]))Response::json(['ok'=>true,'data'=>UserService::save($s['id'],0,Request::json(),(int)$m[1])]);
+  if($method==='DELETE'&&!empty($m[1])&&empty($m[2]))Response::json(['ok'=>true,'data'=>UserService::delete($s['id'],(int)$m[1])]);
  }
  $aid=agencyId($s);
  if(preg_match('#^/api/v1/users/(\d+)/(password)$#',$path,$m)&&$method==='POST'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>UserService::changePassword($s['id'],$aid,(int)$m[1],Request::json())]);}
