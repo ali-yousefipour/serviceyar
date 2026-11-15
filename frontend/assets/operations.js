@@ -3768,7 +3768,7 @@ async function adminSectionPage(key,token){
  content.classList.add('sy-super-admin-workspace');
 }
 
-function openAdminImpersonationDialog(){
+async function openAdminImpersonationDialog(){
  if(!session?.roles?.includes('super_admin')||session?.impersonation)return;
  document.getElementById('syAdminImpersonationModal')?.remove();
  const overlay=document.createElement('div');overlay.id='syAdminImpersonationModal';overlay.className='sy-admin-impersonation-overlay';
