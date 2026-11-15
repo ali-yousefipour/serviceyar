@@ -261,7 +261,7 @@ function renderNav(){
   const avatar=document.getElementById('syAccountAvatar');
   if(avatar)void syRefreshSidebarAvatar();
   const role=document.getElementById('syAccountRole');
-  if(role)role.textContent=session?.impersonation?'ورود نیابتی · از طرف مدیر کل':(session?.roles||[]).includes('super_admin')?'مدیر کل سامانه':(session?.roles||[]).includes('agency_admin')?'مدیر شرکت':'حساب کاربری';
+  if(role)role.textContent=session?.impersonation?'ورود نیابتی · از طرف مدیر کل':(session?.roles||[]).includes('super_admin')?'مدیر کل سامانه':(session?.roles||[]).some(role=>role==='agency_admin'||role==='school_company_manager')?'مدیر شرکت':'حساب کاربری';
   const returnButton=$('syAdminReturn');if(returnButton){returnButton.hidden=!session?.impersonation;returnButton.title=session?.impersonation?'بازگشت به پنل ادمین کل':'';}
   const logoutButton=$('logout');if(logoutButton)logoutButton.textContent=session?.impersonation?'بازگشت به پنل ادمین':'خروج از حساب';
   if(sideName)sideName.textContent=[session?.user?.firstName,session?.user?.lastName].filter(Boolean).join(' ')||session?.user?.username||'کاربر سامانه';
