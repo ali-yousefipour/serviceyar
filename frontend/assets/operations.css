@@ -2988,3 +2988,38 @@ body.sy-menu-palette-open{overflow:hidden}
 .sy-driver-contract-breakdown p{margin:5px 0;line-height:1.8}
 .sy-driver-contract-breakdown p:first-child{font-weight:700}
 .sy-contract-create-grid input[readonly]{background:#eaf3ee;border-color:#80b399;color:#0d5c3f;font-weight:700;cursor:not-allowed}
+
+
+/* Driver vehicle replacement: locked Iranian license plate and nested picker */
+.sy-driver-plate-control{display:grid;gap:8px;min-width:0}
+.sy-driver-plate-caption{font-weight:700;color:#294c3b}
+.sy-driver-plate-inline{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid #c4d7ca;border-radius:14px;padding:12px;background:#f5faf7}
+.sy-driver-plate-current{flex:1;display:flex;align-items:center;min-height:52px;min-width:185px}
+.sy-driver-plate-current .iran-plate{max-width:360px}
+.sy-no-driver-vehicle{color:#758678}
+.sy-driver-plate-edit{display:grid;place-items:center;flex:0 0 44px;min-height:44px;width:44px;border:1px solid #99bba8;border-radius:12px;background:#e2f2e9;color:#0e6947;cursor:pointer}
+.sy-driver-plate-edit:hover,.sy-driver-plate-edit:focus-visible{background:#c8e5d4;outline:2px solid #0c7957}
+.sy-driver-plate-control>small{font-size:.78rem;color:#64756a}
+.sy-driver-vehicle-overlay{position:fixed;inset:0;z-index:10050;display:flex;align-items:center;justify-content:center;padding:14px;background:rgba(6,25,17,.68);backdrop-filter:blur(5px)}
+.sy-driver-vehicle-dialog{width:min(750px,100%);max-height:min(90dvh,900px);display:flex;flex-direction:column;overflow:hidden;background:#fff;border:1px solid #b5d1c1;border-radius:18px;box-shadow:0 24px 80px #0b291f55}
+.sy-driver-vehicle-dialog>header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:17px 20px;background:#edf6f0;border-bottom:1px solid #d5e5dc}
+.sy-driver-vehicle-dialog>header h3{margin:2px 0;font-size:1.15rem;color:#174b36}
+.sy-driver-vehicle-dialog>header span{font-size:.75rem;color:#4b6f59}
+.sy-driver-vehicle-dialog>header button{border-radius:10px;min-width:40px;min-height:40px;font-size:24px}
+.sy-driver-vehicle-content{overflow:auto;padding:18px 20px}
+.sy-driver-vehicle-actions{display:grid;grid-template-columns:1fr auto;align-items:end;gap:12px;margin-bottom:15px}
+.sy-driver-vehicle-actions label{display:grid;gap:5px;font-weight:600}
+.sy-driver-vehicle-actions input{width:100%;min-height:45px;padding:9px 12px;border:1px solid #b9cbc0;border-radius:10px}
+.sy-driver-vehicle-actions button{min-height:45px}
+.sy-driver-vehicle-list{display:grid;gap:10px;margin-top:12px}
+.sy-driver-vehicle-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;background:#f6faf8;border:1px solid #d7e7dd;border-radius:12px}
+.sy-driver-vehicle-item>div{display:grid;gap:7px;min-width:0}
+.sy-driver-vehicle-item p{font-size:.84rem;color:#596f62;margin:0}
+.sy-driver-vehicle-item button{min-height:41px;border-radius:10px}
+.sy-driver-vehicle-new{display:grid;gap:14px;margin-top:12px}
+.sy-driver-vehicle-new h4{margin:0;color:#1b563b}
+.sy-driver-vehicle-new .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.sy-driver-vehicle-new .form-grid label{display:grid;gap:6px}
+.sy-driver-vehicle-new input,.sy-driver-vehicle-new select{width:100%;min-height:42px;box-sizing:border-box}
+.sy-driver-vehicle-new footer{display:flex;justify-content:flex-end;gap:10px}
+@media(max-width:640px){.sy-driver-vehicle-content{padding:12px}.sy-driver-vehicle-actions{grid-template-columns:1fr}.sy-driver-vehicle-actions button{width:100%}.sy-driver-vehicle-item{flex-direction:column;align-items:stretch}.sy-driver-vehicle-item .iran-plate{max-width:100%}.sy-driver-vehicle-new .form-grid{grid-template-columns:1fr}.sy-driver-vehicle-dialog>header{padding:12px}}
