@@ -104,6 +104,9 @@ def verify_live(base_url, build_id, expected_digests):
     print('WARNING: deploy verification skips TLS certificate validation; check SSL separately.', flush=True)
     checks = [
         ("/", None),
+        ("/portal.html", "portal.html"),
+        ("/assets/portal.js", "assets/portal.js"),
+        ("/assets/portal.css", "assets/portal.css"),
         ("/assets/app.js", "assets/app.js"),
         ("/assets/operations.js", "assets/operations.js"),
         ("/assets/app.css", "assets/app.css"),
