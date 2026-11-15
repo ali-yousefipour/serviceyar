@@ -84,12 +84,14 @@ final class TaxiOrganizationTariffs
             $vehicle=null;foreach(self::data()['classes'] as $c)if($c['key']===$class){$vehicle=$c;break;}
             $extra=($km-20)*(int)$vehicle['extra_driver_riyal_per_km'];
             $traffic=self::TRAFFIC[$district];
-            $rate=['distanceKm'=>$km,'driverMonthly'=>$last['driverMonthly']+$extra,
-                // An extra kilometre raises driver pay including district traffic;
-                // the parent's 1.19658 factor covers the 11% parent-side shares
-                // and 7.8% insurance, not the district traffic itself.
+            // An overridden 20km row contains final approved amounts already.
+            // Extrapolate only the additional distance; never add its district
+            // traffic on the entire overridden 20km driver amount again.
+            $inheritedOverride=!empty($last['overridden']);
+            $additionalDriver=$inheritedOverride?(int)round($extra*(1+$traffic)):$extra;
+            $rate=['distanceKm'=>$km,'driverMonthly'=>$last['driverMonthly']+$additionalDriver,
                 'parentMonthly'=>(int)round($last['parentMonthly']+$extra*(1+$traffic)*1.19658),
-                'overridden'=>false];
+                'overridden'=>$inheritedOverride];
         }
         // The published footnote adds the district traffic coefficient to
         // DRIVER remuneration, not only to the parents' invoice. Default
