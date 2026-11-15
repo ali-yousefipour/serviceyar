@@ -9,7 +9,22 @@ use PDO;
 
 /** Independent Bale messaging/auth bot; wallet payments remain separately configured. */
 final class BaleBotService {
+ private static bool $schemaChecked=false;
+ private static function ensureSchema(): void {
+  if(self::$schemaChecked)return;
+  $pdo=Connection::get();
+  try {
+   $pdo->exec("CREATE TABLE IF NOT EXISTS platform_settings (setting_key VARCHAR(150) NOT NULL PRIMARY KEY,setting_value TEXT NOT NULL,updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+   $pdo->exec("CREATE TABLE IF NOT EXISTS bale_user_links (user_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,chat_id VARCHAR(80) NOT NULL UNIQUE,linked_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+   $pdo->exec("CREATE TABLE IF NOT EXISTS bale_auth_challenges (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,user_id BIGINT UNSIGNED NOT NULL,purpose ENUM('link','login') NOT NULL,code_hash CHAR(64) NOT NULL UNIQUE,expires_at DATETIME NOT NULL,consumed_at DATETIME NULL,attempt_count INT NOT NULL DEFAULT 0,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,INDEX idx_bale_auth_user (user_id,purpose,expires_at),FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+   $pdo->exec("CREATE TABLE IF NOT EXISTS bale_webhook_updates (update_id VARCHAR(80) NOT NULL PRIMARY KEY,received_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+   self::$schemaChecked=true;
+  }catch(\PDOException $e) {
+   throw new AuthException(503,'جدول‌های ربات بله آماده نیستند؛ مهاجرت 0110_bale_bot_auth.sql را اجرا کنید.','BALE_SCHEMA_REQUIRED');
+  }
+ }
  private static function setting(string $key): string {
+  self::ensureSchema();
   $q=Connection::get()->prepare('SELECT setting_value FROM platform_settings WHERE setting_key=?');
   $q->execute([$key]);return (string)($q->fetchColumn()?:'');
  }
