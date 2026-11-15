@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#133b48">
+<meta name="robots" content="noindex,nofollow">
+<title>پنل والدین و رانندگان | سرویس‌یار</title>
+<link rel="icon" href="/assets/logo.png?v=__BUILD_ID__">
+<link rel="stylesheet" href="/assets/portal.css?v=__BUILD_ID__">
+</head>
+<body>
+<div class="portal-shell">
+ <header class="portal-top">
+  <a class="portal-brand" href="/"><img src="/assets/logo.png" width="43" height="43" alt=""><span><b>سرویس‌یار</b><small>پنل والدین و رانندگان</small></span></a>
+  <div class="portal-top-actions"><span id="portalIdentity"></span><button id="portalLogout" hidden type="button" class="ghost">خروج</button><a href="/" class="ghost">سایت اصلی</a></div>
+ </header>
+ <div id="portalToast" role="status" aria-live="polite"></div>
+ <main id="portalRoot">
+  <section class="portal-auth">
+   <div class="portal-intro"><span class="portal-eyebrow">دسترسی امن و شخصی</span><h1>همه اطلاعات سرویس مدارس، در دسترس شما</h1>
+    <p>والدین می‌توانند اطلاعات فرزند و وضعیت شهریه خود را ببینند؛ رانندگان نیز مشخصات سرویس، دانش‌آموزان و دریافت‌های مالی را مدیریت می‌کنند.</p>
+    <div class="portal-intro-features"><span>✓ اطلاعات اختصاصی و محرمانه</span><span>✓ اتصال امن به ربات بله</span><span>✓ گزارش‌های مالی و جزئیات سرویس</span></div>
+   </div>
+   <section class="portal-login-card">
+    <h2>ورود به پنل شخصی</h2>
+    <p class="muted">بار نخست، ربات <b>syarbot</b> را در بله آغاز کنید و دکمه «اشتراک شماره همراه من» را بزنید. شماره باید قبلاً برای ولی دانش‌آموز یا راننده در سرویس‌یار ثبت شده باشد.</p>
+    <a href="https://ble.ir/syarbot" target="_blank" rel="noopener noreferrer" class="bot-link">باز کردن ربات بله · syarbot</a>
+    <div class="portal-methods" role="tablist"><button type="button" id="methodBale" class="active">کد ورود بله</button><button id="methodPassword" type="button">رمز عبور</button></div>
+    <form id="portalLoginForm" autocomplete="on">
+     <label>شماره تلفن همراه ثبت‌شده<input id="portalMobile" dir="ltr" type="tel" inputmode="tel" autocomplete="username" placeholder="09123456789" required maxlength="15"></label>
+     <label id="portalCodeLabel">کد ۶ رقمی ارسال‌شده در بله<input id="portalCode" dir="ltr" inputmode="numeric" autocomplete="one-time-code" placeholder="------" maxlength="6" disabled></label>
+     <label id="portalPasswordLabel" hidden>رمز عبور<input id="portalPasswordInput" type="password" autocomplete="current-password" minlength="10" placeholder="رمز عبور شما"></label>
+     <div class="portal-form-buttons"><button id="portalSend" type="button" class="primary">دریافت کد ورود</button><button id="portalVerify" type="submit" class="primary" disabled>تأیید کد و ورود</button></div>
+    </form>
+    <p class="muted">در صورت فراموشی رمز، دوباره با کد ورود بله وارد شوید و پس از ورود رمز خود را تغییر دهید.</p>
+   </section>
+  </section>
+ </main>
+ <footer class="portal-footer">سرویس‌یار · اطلاعات مالی، محرمانه و مخصوص مالک حساب است.</footer>
+</div>
+<script src="/assets/portal.js?v=__BUILD_ID__" defer></script>
+</body></html>
