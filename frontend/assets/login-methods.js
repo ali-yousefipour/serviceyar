@@ -81,14 +81,14 @@
    const value=normalize(identifier.value);
    if(!value){note(info,mobile?'شماره همراه را وارد کنید.':'ابتدا نام کاربری را وارد کنید.',true);identifier.focus();return;}
    if(mobile&&!/^09[0-9]{9}$/.test(value)){note(info,'شماره همراه باید ۱۱ رقم و با ۰۹ آغاز شود.',true);identifier.focus();return;}
-   send.disabled=true;note(info,'در حال ارسال درخواست…');
+   send.disabled=true;verify.disabled=true;code.value='';note(info,'در حال ارسال درخواست…');
    try{
     const body=mobile?{mobile:value}:{username:value};
     await api('/api/v1/auth/'+method+'/request',{method:'POST',body:JSON.stringify(body)});
     code.value='';codeLabel.hidden=false;verify.hidden=false;timer.start(300);
     note(info,'اگر حساب فعال و اطلاعات تماس معتبر باشد، کد ارسال شده است. کد تا ۵ دقیقه اعتبار دارد.');
     code.focus();
-   }catch(e){send.disabled=false;note(info,e.message||'ارسال کد انجام نشد.',true);}
+   }catch(e){send.disabled=false;verify.disabled=codeLabel.hidden;note(info,e.message||'ارسال کد انجام نشد.',true);}
   };
   form.onsubmit=async e=>{
    e.preventDefault();const value=normalize(identifier.value),otp=normalize(code.value);
@@ -159,13 +159,13 @@
   const username=normalize(recoveryUsername.value);
   if(!username){note(recoveryInfo,'نام کاربری را وارد کنید.',true);recoveryUsername.focus();return;}
   if(!recoveryChannel){note(recoveryInfo,'روش دریافت کد را انتخاب کنید.',true);return;}
-  recoverySend.disabled=true;note(recoveryInfo,'در حال ارسال کد بازیابی…');
+  recoverySend.disabled=true;recoveryConfirm.disabled=true;recoveryCode.value='';note(recoveryInfo,'در حال ارسال کد بازیابی…');
   try{
    await api('/api/v1/auth/password-reset/request',{method:'POST',body:JSON.stringify({username,channel:recoveryChannel})});
    recoveryCodeLabel.hidden=false;newPasswordLabel.hidden=false;confirmPasswordLabel.hidden=false;recoveryConfirm.hidden=false;
    recoveryTimer.start(300);note(recoveryInfo,'در صورت وجود حساب فعال و اتصال معتبر، کد بازیابی ارسال شده است. کد تا ۵ دقیقه اعتبار دارد.');
    recoveryCode.focus();
-  }catch(e){recoverySend.disabled=false;note(recoveryInfo,e.message||'ارسال کد بازیابی انجام نشد.',true);}
+  }catch(e){recoverySend.disabled=false;recoveryConfirm.disabled=recoveryCodeLabel.hidden;note(recoveryInfo,e.message||'ارسال کد بازیابی انجام نشد.',true);}
  };
  recoveryConfirm.onclick=async()=>{
   const username=normalize(recoveryUsername.value),code=normalize(recoveryCode.value);
@@ -179,7 +179,7 @@
    togglePasswordForm(true);passwordSuccess.textContent='رمز عبور با موفقیت تغییر کرد. اکنون با رمز جدید وارد شوید.';passwordSuccess.hidden=false;
   }catch(e){note(recoveryInfo,e.message||'تغییر رمز عبور انجام نشد.',true);recoveryConfirm.disabled=false;}
  };
- recoveryBack.onclick=()=>{recoveryTimer.stop();togglePasswordForm(true);};
+ recoveryBack.onclick=()=>{recoveryTimer.stop();togglePasswordForm(true);const error=document.getElementById('loginError');if(error){note(error,'');error.hidden=true;}};
  [document.getElementById('username'),document.getElementById('password')].forEach(input=>input?.addEventListener('input',()=>{passwordSuccess.hidden=true;}));
  [recoveryUsername,recoveryCode,newPassword,confirmPassword].forEach(input=>input.addEventListener('keydown',event=>{
   if(event.key!=='Enter')return;
