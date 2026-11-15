@@ -17,13 +17,13 @@ from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 from urllib.parse import urlsplit
 
-ROOT = os.environ.get("FTP_REMOTE_ROOT", "/public_html").rstrip("/") or "/"
+ROOT = os.environ.get("FTP_REMOTE_ROOT", "/").rstrip("/") or "/"
 PAYLOAD = Path("deploy-payload")
 # Use an isolated FTP staging directory per Actions run. Concurrent or
 # cancelled releases must never delete/move one another's staged files.
 RUN_ID = "".join(c for c in os.environ.get("GITHUB_RUN_ID", "local") if c.isascii() and c.isalnum())
-STAGING = ROOT + "/.serviceyar-staging-" + (RUN_ID or "local")
-MANIFEST = ROOT + "/.serviceyar-manifest.json"
+STAGING = posixpath.join(ROOT, ".serviceyar-staging-" + (RUN_ID or "local"))
+MANIFEST = posixpath.join(ROOT, ".serviceyar-manifest.json")
 SCHEMA = 1
 CANONICAL_HOST = "service-yar.ir"
 
@@ -247,6 +247,15 @@ def main():
         except error_perm as error:
             print(f"FTP directory listing unavailable: {error}", flush=True)
         print(f"Deployment target directory: {ROOT}", flush=True)
+        # The FTP login is now chrooted to the actual public_html directory.
+        # Guard against accidentally publishing into a parent account directory.
+        if ROOT == "/":
+            entries = set(name.rsplit("/",1)[-1] for name in ftp.nlst("/"))
+            if not {"index.html", "assets", "backend"} <= entries:
+                raise RuntimeError(
+                    "FTP root does not look like the ServiceYar document root; "
+                    "expected index.html, assets and backend. Refusing to publish."
+                )
         try:
             print("Deployment target entries: " + ", ".join(sorted(ftp.nlst(ROOT))[:100]), flush=True)
         except error_perm as error:
@@ -277,7 +286,7 @@ def main():
             1 if name.startswith("assets/") else 0, name))
         for name in ordered:
             remote = STAGING + "/" + (".htaccess.new" if name == ".htaccess" else name)
-            live = ROOT + "/" + name
+            live = posixpath.join(ROOT, name)
             ensure_dir(ftp, posixpath.dirname(live), dirs)
             ftp.rename(remote, live)
             verify(ftp, digests[name], live)
