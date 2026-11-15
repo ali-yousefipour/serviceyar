@@ -36,6 +36,7 @@ jobs:
           node tests/admin-impersonation-contract.cjs
           node tests/api-route-guard-contract.cjs
           node tests/payroll-reconciliation-contract.cjs
+          node tests/taxi-tariff-footnotes-contract.cjs
           node tests/admin-production-schema-contract.cjs
           node --check frontend/assets/bale-bot.js
           node --check frontend/assets/login-methods.js
