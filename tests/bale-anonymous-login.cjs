@@ -12,4 +12,8 @@ assert.ok(idxLink>idxSession,'Account linking must require authenticated session
 assert.ok(bot.includes("strtr(trim($username)"),'Bale username normalization must be server-side');
 assert.ok(ui.includes('normalizeUsername(form.elements.username.value)'), 'Bale login should normalize Persian digits');
 assert.ok(ui.includes('showLinkError(feedback,e)'), 'Expired account-linking session must provide specific feedback');
+assert.ok(api.includes('/api/v1/admin/bale-bot/user-link'),'Admin link diagnostic endpoint must be registered');
+assert.ok(bot.includes('Authorization::isSuperAdmin($actor)'),'Linked-account diagnostics must be super admin only');
+assert.ok(ui.includes('data-bale-user-check'),'Admin UI should inspect account linkage');
+assert.ok(api.includes('X-ServiceYar-Auth-Flow: bale-otp-request'),'Anonymous OTP responses should be identifiable in Network');
 console.log('Bale public OTP route and protected account linking: OK');
