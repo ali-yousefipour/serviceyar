@@ -18,6 +18,7 @@ final class BaleBotService {
    $pdo->exec("CREATE TABLE IF NOT EXISTS bale_user_links (user_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,chat_id VARCHAR(80) NOT NULL UNIQUE,linked_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
    $pdo->exec("CREATE TABLE IF NOT EXISTS bale_auth_challenges (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,user_id BIGINT UNSIGNED NOT NULL,purpose ENUM('link','login') NOT NULL,code_hash CHAR(64) NOT NULL UNIQUE,expires_at DATETIME NOT NULL,consumed_at DATETIME NULL,attempt_count INT NOT NULL DEFAULT 0,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,INDEX idx_bale_auth_user (user_id,purpose,expires_at),FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
    $pdo->exec("CREATE TABLE IF NOT EXISTS bale_webhook_updates (update_id VARCHAR(80) NOT NULL PRIMARY KEY,received_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+   $pdo->exec("CREATE TABLE IF NOT EXISTS bale_otp_requests (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,ip_address VARCHAR(45) NOT NULL,requested_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,INDEX idx_bale_otp_ip (ip_address,requested_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
    self::$schemaChecked=true;
   }catch(\PDOException $e) {
    throw new AuthException(503,'جدول‌های ربات بله آماده نیستند؛ مهاجرت 0110_bale_bot_auth.sql را اجرا کنید.','BALE_SCHEMA_REQUIRED');
@@ -84,6 +85,7 @@ final class BaleBotService {
   self::ensureSchema();
   $token=trim((string)($data['token']??''));
   if($token!==''&&!preg_match('/^[A-Za-z0-9:_-]{25,200}$/D',$token))throw new AuthException(422,'قالب توکن بله نامعتبر است.','VALIDATION_ERROR');
+  if($token!==''&&hash_equals((string)config('BALE_BOT_TOKEN',''),$token))throw new AuthException(422,'توکن ربات پیام‌رسانی باید با ربات پرداخت کیف پول بله متفاوت باشد تا وب‌هوک پرداخت مختل نشود.','BALE_PAYMENT_TOKEN_CONFLICT');
   if($token!==''){
    $me=self::call('getMe',[],$token);
    $username=(string)($me['result']['username']??'');
@@ -182,16 +184,27 @@ final class BaleBotService {
   if(!self::ready())throw new AuthException(503,'ورود با بله فعال نیست.','BALE_DISABLED');
   $username=trim($username);
   if($username===''||strlen($username)>100)throw new AuthException(422,'نام کاربری معتبر نیست.','VALIDATION_ERROR');
-  $pdo=Connection::get();$q=$pdo->prepare('SELECT u.id,l.chat_id FROM users u JOIN bale_user_links l ON l.user_id=u.id WHERE u.username=? AND u.is_active=1 LIMIT 1');
+  $pdo=Connection::get();
+  $ip=substr((string)($_SERVER['REMOTE_ADDR']??''),0,45);
+  $limit=$pdo->prepare('SELECT COUNT(*) FROM bale_otp_requests WHERE ip_address=? AND requested_at>DATE_SUB(UTC_TIMESTAMP(),INTERVAL 15 MINUTE)');
+  $limit->execute([$ip]);if((int)$limit->fetchColumn()>=10)throw new AuthException(429,'تعداد درخواست‌های کد ورود بیش از حد مجاز است.','BALE_RATE_LIMITED');
+  $pdo->prepare('INSERT INTO bale_otp_requests(ip_address) VALUES(?)')->execute([$ip]);
+  if(random_int(1,100)===1)$pdo->exec('DELETE FROM bale_otp_requests WHERE requested_at<DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 DAY)');
+  $q=$pdo->prepare('SELECT u.id,l.chat_id FROM users u JOIN bale_user_links l ON l.user_id=u.id WHERE u.username=? AND u.is_active=1 LIMIT 1');
   $q->execute([$username]);$row=$q->fetch(PDO::FETCH_ASSOC);
   // Do not disclose whether a username is linked.
   if(!$row)return ['requested'=>true,'expiresIn'=>300];
   $uid=(int)$row['id'];
   $rate=$pdo->prepare("SELECT COUNT(*) FROM bale_auth_challenges WHERE user_id=? AND purpose='login' AND created_at>DATE_SUB(UTC_TIMESTAMP(),INTERVAL 15 MINUTE)");
   $rate->execute([$uid]);if((int)$rate->fetchColumn()>=5)throw new AuthException(429,'تعداد درخواست‌های ورود بیش از حد مجاز است.','BALE_RATE_LIMITED');
-  $code=(string)random_int(100000,999999);
+  do{
+   $code=(string)random_int(100000,999999);
+   $hash=hash_hmac('sha256',$uid.':'.$code,self::cipherKey());
+   $exists=$pdo->prepare('SELECT 1 FROM bale_auth_challenges WHERE code_hash=? LIMIT 1');
+   $exists->execute([$hash]);
+  }while($exists->fetchColumn());
   $pdo->prepare("UPDATE bale_auth_challenges SET consumed_at=UTC_TIMESTAMP() WHERE user_id=? AND purpose='login' AND consumed_at IS NULL")->execute([$uid]);
-  $pdo->prepare("INSERT INTO bale_auth_challenges(user_id,purpose,code_hash,expires_at) VALUES(?,'login',?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 5 MINUTE))")->execute([$uid,hash('sha256',$uid.':'.$code)]);
+  $pdo->prepare("INSERT INTO bale_auth_challenges(user_id,purpose,code_hash,expires_at) VALUES(?,'login',?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 5 MINUTE))")->execute([$uid,$hash]);
   self::send((string)$row['chat_id'],'کد ورود یک‌بارمصرف سرویس‌یار: '.$code."\nاعتبار: ۵ دقیقه. این کد را به هیچ‌کس ندهید.");
   return ['requested'=>true,'expiresIn'=>300];
  }
@@ -207,7 +220,7 @@ final class BaleBotService {
    $q->execute([$uid]);$challenge=$q->fetch(PDO::FETCH_ASSOC);
    if(!$challenge||$challenge['attempt_count']>=5)throw new AuthException(401,'کد ورود نامعتبر یا منقضی شده است.','BALE_OTP_INVALID');
    $pdo->prepare('UPDATE bale_auth_challenges SET attempt_count=attempt_count+1 WHERE id=?')->execute([$challenge['id']]);
-   if(!hash_equals($challenge['code_hash'],hash('sha256',$uid.':'.$code))) {$pdo->commit();throw new AuthException(401,'کد ورود معتبر نیست.','BALE_OTP_INVALID');}
+   if(!hash_equals($challenge['code_hash'],hash_hmac('sha256',$uid.':'.$code,self::cipherKey()))) {$pdo->commit();throw new AuthException(401,'کد ورود معتبر نیست.','BALE_OTP_INVALID');}
    $pdo->prepare('UPDATE bale_auth_challenges SET consumed_at=UTC_TIMESTAMP() WHERE id=?')->execute([$challenge['id']]);
    $pdo->commit();return $uid;
   }catch(\Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
