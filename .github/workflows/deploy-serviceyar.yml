@@ -151,7 +151,7 @@ jobs:
 
       - name: Stage, publish and verify hosting payload
         env:
-          FTP_HOST: 764087177.cloudylink.com
-          FTP_USER: ${{ secrets.FTP }}
+          FTP_HOST: ${{ secrets.SERVICEYAR_FTP_HOST }}
+          FTP_USER: ${{ secrets.SERVICEYAR_FTP_USERNAME }}
           FTP_PASS: ${{ secrets.SERVICEYAR_FTP_PASSWORD }}
         run: python3 tools/deploy_serviceyar.py
