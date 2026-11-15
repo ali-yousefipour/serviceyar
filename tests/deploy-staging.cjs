@@ -27,6 +27,7 @@ assert.match(source,/final\.hostname != CANONICAL_HOST/,'Live verification must 
 assert.match(source,/https:\/\/www\.service-yar\.ir\//,'TLS diagnostics must inspect the production www alias');
 assert.doesNotMatch(source,/challi\.ir/,'The legacy host must not remain a production verification target');
 assert.match(workflow,/PUBLIC_BASE_URL: https:\/\/service-yar\.ir/,'Production deployment must explicitly verify service-yar.ir');
+assert.match(workflow,/FTP_REMOTE_ROOT: \\$\{\{ vars\.SERVICEYAR_FTP_REMOTE_ROOT \|\| '\/public_html' \}\}/,'Production document root must be configurable without changing credentials');
 assert.doesNotMatch(workflow,/challi\.ir/,'The deployment workflow must not publish or verify the legacy host');
 assert.match(workflow,/RewriteCond %\{HTTP_HOST\} \^www\\\.service-yar\\\.ir\$/,'The www alias must redirect to the canonical apex');
 assert.match(workflow,/RewriteCond %\{HTTPS\} !=on/,'HTTP requests must be upgraded to HTTPS');
@@ -35,6 +36,7 @@ assert.match(html,/<link rel="canonical" href="https:\/\/service-yar\.ir\/">/,'T
 assert.match(html,/<meta property="og:url" content="https:\/\/service-yar\.ir\/">/,'Open Graph metadata must use the production URL');
 assert.match(productionDocs,/APP_URL=https:\/\/service-yar\.ir/,'Production environment docs must use the canonical URL');
 assert.match(productionDocs,/CORS_ALLOWED_ORIGINS=https:\/\/service-yar\.ir/,'Production CORS docs must use the canonical origin');
+assert.match(productionDocs,/SERVICEYAR_FTP_REMOTE_ROOT/,'Production docs must explain how to set the actual hosting document root');
 assert.match(bootstrap,/\$allowedOrigins\[\]\s*=\s*'https:\/\/service-yar\.ir'/,'Production API must trust the canonical origin during the domain cutover');
 assert.match(baleBot,/config\('APP_URL','https:\/\/service-yar\.ir'\)/,'Bale webhook generation must default to the canonical host');
 assert.match(baleBot,/\$base='https:\/\/service-yar\.ir'/,'Bale webhook fallback must use the canonical host');
