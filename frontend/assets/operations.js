@@ -273,13 +273,49 @@ function renderNav(){
 
 }
 function render(){
- if(!session)return;if(!document.getElementById('syMenuPalette')?.hidden)document.querySelector('#syMenuPalette [data-menu-close]')?.click();if($('modal')?.firstElementChild)closeDialog();disposeMaps();$('dashboardBackdrop')?.remove();const token=++pageToken;const [raw,action,recordId]=location.hash.slice(1).split('/');let key=raw||'dashboard';if(key==='admin')key='companies';if(!titles[key])key='dashboard';
- document.querySelectorAll('.nav-group').forEach(d=>{if(!$('syNavSearch')?.value.trim())d.open=false;});$('pageTitle').textContent=titles[key];$('app').classList.toggle('dashboard-active',key==='dashboard');$('content').classList.toggle('dashboard-content',key==='dashboard');
+ if(!session)return;
+ if(!document.getElementById('syMenuPalette')?.hidden)document.querySelector('#syMenuPalette [data-menu-close]')?.click();
+ if($('modal')?.firstElementChild)closeDialog();
+ disposeMaps();$('dashboardBackdrop')?.remove();
+ const token=++pageToken,[raw,action,recordId]=location.hash.slice(1).split('/');
+ const isAdmin=session.roles?.includes('super_admin')&&!session.impersonation;
+ const adminTitles={
+  'admin-dashboard':'داشبورد مدیریتی',
+  'admin-agencies':'مدیریت شرکت‌ها',
+  'admin-users':'مدیریت کاربران',
+  'admin-platform':'کلیدهای سامانه و نقشه',
+  'admin-sms':'تنظیمات پیامک نگین',
+  'admin-bale':'تنظیمات ربات بله',
+  'admin-login':'روش‌های ورود کاربران',
+  'admin-taxi-tariffs':'نرخ‌نامه سازمان تاکسیرانی',
+  'admin-vehicle-classes':'مدیریت کلاس‌های تعرفه خودرو',
+  'admin-sepand':'ورود اطلاعات سپند'
+ };
+ Object.assign(titles,adminTitles);
+ if(isAdmin){
+  let key=raw||'admin-dashboard';
+  if(!Object.prototype.hasOwnProperty.call(adminTitles,key)){
+   key='admin-dashboard';
+   history.replaceState(history.state,'',location.pathname+location.search+'#admin-dashboard');
+  }
+  document.querySelectorAll('.nav-group').forEach(d=>{const active=!!d.querySelector('a[href="#'+key+'"]');d.classList.toggle('current-group',active);if(active)d.open=true;else if(!$('syNavSearch')?.value.trim())d.open=false;});
+  $('nav').querySelectorAll('a.nav').forEach(link=>{const active=link.getAttribute('href')==='#'+key;link.classList.toggle('active',active);if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');});
+  $('pageTitle').textContent=adminTitles[key];$('app').classList.toggle('dashboard-active',key==='admin-dashboard');$('content').classList.toggle('dashboard-content',key==='admin-dashboard');
+  $('content').innerHTML='<div class="loading">در حال آماده‌سازی پنل مدیریت کل…</div>';
+  document.querySelector('.sidebar').classList.remove('nav-open');if($('navigationShade'))$('navigationShade').hidden=true;if($('navigationToggle'))$('navigationToggle').setAttribute('aria-expanded','false');
+  const task=key==='admin-dashboard'?adminDashboardPage(token):adminSectionPage(key,token);
+  Promise.resolve(task).catch(error=>{if(token===pageToken)$('content').innerHTML='<div class="error">'+esc(error.message||'بارگذاری بخش مدیریت ناموفق بود.')+'</div>';});
+  return;
+ }
+ let key=raw||'dashboard';if(key==='admin')key='dashboard';if(!titles[key])key='dashboard';
+ document.querySelectorAll('.nav-group').forEach(d=>{if(!$('syNavSearch')?.value.trim())d.open=false;});
+ $('pageTitle').textContent=titles[key];$('app').classList.toggle('dashboard-active',key==='dashboard');$('content').classList.toggle('dashboard-content',key==='dashboard');
  $('content').innerHTML='<div class="loading">در حال دریافت اطلاعات…</div>';
  document.querySelector('.sidebar').classList.remove('nav-open');if($('navigationShade'))$('navigationShade').hidden=true;if($('navigationToggle'))$('navigationToggle').setAttribute('aria-expanded','false');
- $('nav').querySelectorAll('a').forEach(a=>{const active=a.getAttribute('href')==='#'+(raw||'dashboard')+(action?'/'+action:'');a.classList.toggle('active',active);if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});$('nav').querySelectorAll('details').forEach(d=>{const active=!!d.querySelector('[aria-current=page]');d.classList.toggle('current-group',active);if(active)d.open=true;});
- if(key!=='companies'&&!currentAgency){if(key==='dashboard'&&session.roles?.includes('super_admin')){companiesPage();return;}$('content').innerHTML='<div class="empty">ابتدا شرکت فعال را انتخاب کنید.</div>';return;}
- if(key!=='companies'&&!can(key)){ $('content').innerHTML='<div class="error">برای مشاهده این بخش مجوز ندارید.</div>';return;}
+ $('nav').querySelectorAll('a').forEach(a=>{const active=a.getAttribute('href')==='#'+(raw||'dashboard')+(action?'/'+action:'');a.classList.toggle('active',active);if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
+ $('nav').querySelectorAll('details').forEach(d=>{const active=!!d.querySelector('[aria-current=page]');d.classList.toggle('current-group',active);if(active)d.open=true;});
+ if(key!=='companies'&&!currentAgency){$('content').innerHTML='<div class="empty">ابتدا شرکت فعال را انتخاب کنید.</div>';return;}
+ if(key!=='companies'&&!can(key)){$('content').innerHTML='<div class="error">برای مشاهده این بخش مجوز ندارید.</div>';return;}
  const task=key==='services'&&action==='new'?newServicePage(token,recordId):key==='installments'?installmentPage():key==='daily-schedule'?dailySchedulePage(token):key==='driver-assignment'?driverAssignmentPage(token):key==='accounting-documents'?(action==='statement'?accountStatementPage(token):action==='quick'?quickJournalPage(token):action==='defaults'?financialAccountsPage(token):action==='cheques'?chequePage(token):journalPage(token)):key==='dashboard'?dashboard(token):key==='companies'?companiesPage():key==='contracts'?contractsPage(token):key==='settings'?settingsPage():key==='reports'?reportsPage(token):key==='import'?importPage(token):key==='bale-payments'?balePaymentsPage(token):key==='school-statement'?schoolStatementPage(token):['payroll','finance-report','distances','monitoring','grouping','school-report'].includes(key)?operationPage(key,token):resourcePage(key==='previous-students'?'students':key==='agreements'?'services':key,token,{previous:key==='previous-students',agreements:key==='agreements'});
  Promise.resolve(task).then(()=>{if(token!==pageToken)return;if(action==='new'&&resources[key]&&!['accounting-documents','services','ledger','contracts'].includes(key))formResource(key,null);if(action==='fees')bulkFeeDialog();}).catch(e=>{if(token===pageToken)$('content').innerHTML='<div class="error">'+esc(e.message)+'</div>';});
 }
@@ -3670,3 +3706,140 @@ window.addEventListener('beforeprint',()=>{
  target.prepend(header);companyPrintHeader=header;
 });
 window.addEventListener('afterprint',()=>{companyPrintHeader?.remove();companyPrintHeader=null;});
+
+
+async function adminDashboardPage(token){
+ $('content').innerHTML='<div class="loading">در حال دریافت آمار کل سامانه…</div>';
+ try{
+  const data=await api('/api/v1/admin/overview');if(token!==pageToken)return;
+  const counts=data.counts||{},companies=data.agencies||[],active=companies.filter(a=>Number(a.is_active)===1);
+  const metrics=[
+   ['شرکت‌های فعال',active.length,'شرکت'],['کل کاربران',counts.users||0,'حساب کاربری'],
+   ['مدارس',counts.schools||0,'مدرسه'],['دانش‌آموزان',counts.students||0,'دانش‌آموز'],
+   ['رانندگان',counts.drivers||0,'راننده'],['خودروها',counts.vehicles||0,'خودرو'],
+   ['سرویس‌ها',counts.services||0,'سرویس']
+  ];
+  const quick=[
+   ['admin-agencies','مدیریت شرکت‌ها','ثبت، ویرایش و مشاهده وضعیت شرکت‌ها',samarMenuIcon('company')],
+   ['admin-users','مدیریت کاربران','جستجو، ویرایش، تخصیص نقش و مدیریت حساب‌ها',samarMenuIcon('students')],
+   ['admin-platform','تنظیمات سامانه','کلیدهای نقشه و سرویس‌دهنده‌ها',navIcon('settings')],
+   ['admin-sms','سرویس پیامک نگین','تنظیم اتصال و وضعیت ارسال پیامک',navIcon('messages')]
+  ];
+  const recent=active.slice(0,6);
+  $('content').innerHTML=
+   '<section class="sy-admin-hero"><div><span class="sy-admin-eyebrow">مرکز فرماندهی سرویس‌یار</span><h2>داشبورد مدیریت کل</h2><p>نمای کلی وضعیت سامانه و دسترسی مستقیم به مدیریت شرکت‌ها، کاربران و تنظیمات مرکزی.</p></div><button type="button" class="sy-admin-hero-action" id="syDashboardImpersonate">'+navIcon('drivers')+'<span>ورود نیابت به پنل شرکت</span><b>←</b></button></section>'+
+   '<section class="sy-admin-metric-grid">'+metrics.map(([label,value,unit],index)=>'<article class="sy-admin-metric sy-admin-metric-'+index+'"><span class="sy-admin-metric-icon" aria-hidden="true">'+['▦','♙','⌂','◉','♧','▣','⇄'][index]+'</span><span class="sy-admin-metric-label">'+label+'</span><strong>'+number(value)+'</strong><small>'+unit+' ثبت‌شده در سامانه</small></article>').join('')+'</section>'+
+   '<section class="sy-admin-dashboard-grid"><div class="sy-admin-quick-panel"><header><div><span class="sy-admin-eyebrow">دسترسی سریع</span><h3>مدیریت بخش‌های اصلی</h3></div></header><div class="sy-admin-quick-grid">'+quick.map(([key,label,desc,icon])=>'<a class="sy-admin-quick-card" href="#'+key+'"><span class="sy-admin-quick-icon">'+icon+'</span><span><b>'+label+'</b><small>'+desc+'</small></span><i aria-hidden="true">←</i></a>').join('')+'</div></div>'+
+   '<div class="sy-admin-companies-panel"><header><div><span class="sy-admin-eyebrow">وضعیت سازمان‌ها</span><h3>شرکت‌های فعال</h3></div><a href="#admin-agencies">مشاهده همه</a></header>'+
+   (recent.length?'<div class="sy-admin-recent-companies">'+recent.map(a=>'<div><span class="sy-admin-company-mark">'+esc((a.name||'ش').trim().slice(0,1))+'</span><span><b>'+esc(a.name)+'</b><small>'+(a.code?'کد '+esc(a.code):'شناسه '+number(a.id))+'</small></span><em>فعال</em></div>').join('')+'</div>':'<div class="empty">هنوز شرکت فعالی ثبت نشده است.</div>')+
+   '<div class="sy-admin-company-summary"><span>کل شرکت‌ها</span><b>'+number(companies.length)+'</b><span>غیرفعال</span><b>'+number(companies.length-active.length)+'</b></div></div></section>';
+  $('syDashboardImpersonate').onclick=openAdminImpersonationDialog;
+ }catch(error){if(token===pageToken)$('content').innerHTML='<div class="error">'+esc(error.message)+'</div>';}
+}
+
+async function adminSectionPage(key,token){
+ const meta={
+  'admin-agencies':['مدیریت شرکت‌ها','تعریف، ویرایش، فعال‌سازی و مدیریت ارتباط شرکت‌ها با کاربران.','syAdminAgencies'],
+  'admin-users':['مدیریت کاربران','جستجو و مدیریت حساب‌های کاربری، نقش‌ها و دسترسی‌های سراسری.','syAdminUsers'],
+  'admin-platform':['کلیدهای سامانه و نقشه','مدیریت کلیدهای محرمانه و سرویس‌های نقشه در سطح کل سامانه.','syAdminIntegrations'],
+  'admin-sms':['تنظیمات سرویس پیامک نگین','تنظیم اطلاعات پنل پیامک و بررسی آمادگی سرویس ارسال کدها.','syAdminNeginSms'],
+  'admin-bale':['تنظیمات ربات پیام‌رسان بله','مدیریت توکن ربات، وب‌هوک، ورود کاربران و درگاه کیف پول.','syAdminBale'],
+  'admin-login':['مدیریت روش‌های ورود کاربران','تعیین روش‌های مجاز ورود و بازیابی حساب‌های کاربران.','syAdminLoginMethods'],
+  'admin-taxi-tariffs':['محاسبه سرویس بر اساس سازمان تاکسیرانی','مدیریت نرخ‌نامه ناحیه‌ها و کلاس‌های خودرو و بازبینی محاسبات.','syAdminTaxiTariffs'],
+  'admin-vehicle-classes':['مدیریت کلاس‌های تعرفه خودرو','مدیریت خانواده‌ها و نام‌های جایگزین خودرو برای تشخیص کلاس تعرفه.','syVehicleClassCatalog'],
+  'admin-sepand':['ورود اطلاعات رانندگان و خودروهای سپند','به‌روزرسانی اطلاعات سپند، تطبیق شرکت‌ها و بازیابی کلاس خودروها.','syAdminSepand']
+ };
+ const item=meta[key];if(!item)throw new Error('بخش مدیریتی موردنظر تعریف نشده است.');
+ $('content').innerHTML='<div class="loading">در حال بارگذاری تنظیمات و اطلاعات مدیریتی…</div>';
+ await companiesPage();if(token!==pageToken)return;
+ const content=$('content');
+ content.querySelector('.sy-admin-section-nav')?.remove();
+ const bale=content.querySelector('#syAdminIntegrations .sy-bale-admin-panel');
+ if(bale){bale.id='syAdminBale';content.append(bale);}
+ const target=content.querySelector('#'+item[2]);
+ if(!target)throw new Error('محتوای این بخش بارگذاری نشد؛ صفحه را تازه‌سازی کنید.');
+ [...content.children].forEach(child=>{child.hidden=true;});
+ if(target.parentElement!==content)content.append(target);
+ target.hidden=false;
+ target.classList.add('sy-admin-page-card');
+ const heading=document.createElement('header');heading.className='sy-admin-page-heading';
+ heading.innerHTML='<div><span class="sy-admin-eyebrow">تنظیمات و مدیریت مرکزی</span><h2>'+esc(item[0])+'</h2><p>'+esc(item[1])+'</p></div><a href="#admin-dashboard" class="sy-admin-back-dashboard">بازگشت به داشبورد ←</a>';
+ content.prepend(heading);
+ content.classList.add('sy-super-admin-workspace');
+}
+
+function openAdminImpersonationDialog(){
+ if(!session?.roles?.includes('super_admin')||session?.impersonation)return;
+ document.getElementById('syAdminImpersonationModal')?.remove();
+ const overlay=document.createElement('div');overlay.id='syAdminImpersonationModal';overlay.className='sy-admin-impersonation-overlay';
+ overlay.innerHTML='<section class="sy-admin-impersonation-dialog" role="dialog" aria-modal="true" aria-labelledby="syImpersonationTitle" aria-describedby="syImpersonationDescription"><header><div><span class="sy-admin-eyebrow">دسترسی مدیریتی امن</span><h2 id="syImpersonationTitle">ورود نیابت به پنل شرکت</h2><p id="syImpersonationDescription">ابتدا شرکت و سپس کاربر موردنظر را انتخاب کنید. پنل دقیقاً با نقش و سطح دسترسی همان کاربر باز می‌شود.</p></div><button type="button" class="sy-admin-modal-close" aria-label="بستن پنجره">×</button></header><div class="sy-impersonation-steps"><span class="active" data-step-indicator="company">۱. انتخاب شرکت</span><i></i><span data-step-indicator="user">۲. انتخاب کاربر</span></div><div class="sy-impersonation-body"><div data-company-step><label class="sy-impersonation-search"><span>جستجوی شرکت</span><input type="search" id="syImpersonationCompanySearch" placeholder="نام شرکت، کد یا شناسه را وارد کنید…" autocomplete="off"></label><div id="syImpersonationCompanies" class="sy-impersonation-results" aria-live="polite">در حال دریافت فهرست شرکت‌ها…</div></div><div data-user-step hidden><button type="button" id="syImpersonationBack" class="sy-impersonation-back">→ انتخاب شرکت دیگر</button><div class="sy-impersonation-selected-company" id="syImpersonationSelectedCompany"></div><label class="sy-impersonation-search"><span>جستجوی کاربر</span><input type="search" id="syImpersonationUserSearch" placeholder="نام، نام خانوادگی یا نام کاربری…" autocomplete="off"></label><div id="syImpersonationUsers" class="sy-impersonation-results" aria-live="polite"></div><div id="syImpersonationConfirm" class="sy-impersonation-confirm" hidden><div><b id="syImpersonationChosenName"></b><p id="syImpersonationChosenDetails"></p><small>تمام عملیات بعدی با مجوزهای این کاربر و در محدوده همین شرکت انجام می‌شود. ورود نیابتی در سوابق مدیریتی ثبت خواهد شد.</small></div><button type="button" class="primary" id="syImpersonationStart">ورود به پنل کاربر</button></div></div><p class="sy-impersonation-error" id="syImpersonationError" role="alert" hidden></p></div><footer><span>نشست اصلی ادمین کل حفظ می‌شود و هر زمان می‌توانید بازگردید.</span><button type="button" class="secondary" data-close>انصراف</button></footer></section>';
+ document.body.append(overlay);document.body.classList.add('sy-admin-modal-open');
+ const close=()=>{overlay.remove();document.body.classList.remove('sy-admin-modal-open');};
+ overlay.querySelector('.sy-admin-modal-close').onclick=close;overlay.querySelector('[data-close]').onclick=close;
+ overlay.addEventListener('click',event=>{if(event.target===overlay)close();});
+ const escape=e=>{if(e.key==='Escape'&&overlay.isConnected){close();document.removeEventListener('keydown',escape);}};
+ document.addEventListener('keydown',escape);
+ const companyStep=overlay.querySelector('[data-company-step]'),userStep=overlay.querySelector('[data-user-step]'),
+  companySearch=overlay.querySelector('#syImpersonationCompanySearch'),companiesBox=overlay.querySelector('#syImpersonationCompanies'),
+  userSearch=overlay.querySelector('#syImpersonationUserSearch'),usersBox=overlay.querySelector('#syImpersonationUsers'),
+  errorBox=overlay.querySelector('#syImpersonationError'),confirmBox=overlay.querySelector('#syImpersonationConfirm'),
+  startButton=overlay.querySelector('#syImpersonationStart');
+ const normalize=value=>String(value||'').replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').replace(/[\u200c\s]+/g,' ').trim().toLocaleLowerCase('fa');
+ const fa=value=>Number(value||0).toLocaleString('fa-IR');
+ let companies=[],selectedCompany=null,users=[],selectedUser=null;
+ const showError=message=>{errorBox.textContent=message||'';errorBox.hidden=!message;};
+ const renderCompanies=()=>{
+  const term=normalize(companySearch.value);
+  const list=companies.filter(a=>normalize([a.name,a.code,a.manager_name,a.office_phone,a.id].join(' ')).includes(term));
+  companiesBox.innerHTML=list.length?list.map(a=>'<button type="button" class="sy-impersonation-result" data-company="'+Number(a.id)+'"><span class="sy-impersonation-result-avatar">'+esc((a.name||'ش').trim().slice(0,1))+'</span><span><b>'+esc(a.name)+'</b><small>'+(a.code?'کد شرکت '+esc(a.code):'شناسه '+fa(a.id))+' · '+esc(a.manager_name||'بدون نام مدیر')+'</small></span><em>فعال</em><i aria-hidden="true">←</i></button>').join(''):'<div class="sy-impersonation-empty">شرکتی با این مشخصات پیدا نشد.</div>';
+  companiesBox.querySelectorAll('[data-company]').forEach(button=>button.onclick=()=>selectCompany(Number(button.dataset.company)));
+ };
+ const renderUsers=()=>{
+  const term=normalize(userSearch.value);
+  const list=users.filter(u=>normalize([u.username,u.first_name,u.last_name,u.roles].join(' ')).includes(term));
+  usersBox.innerHTML=list.length?list.map(u=>'<button type="button" class="sy-impersonation-result" data-user="'+Number(u.id)+'"><span class="sy-impersonation-result-avatar sy-user-avatar">'+esc((u.first_name||u.username||'ک').trim().slice(0,1))+'</span><span><b>'+esc(((u.first_name||'')+' '+(u.last_name||'')).trim()||u.username)+'</b><small>'+esc(u.username)+' · '+esc(u.roles||'بدون نقش')+'</small></span><em>فعال</em><i aria-hidden="true">←</i></button>').join(''):'<div class="sy-impersonation-empty">کاربر فعالی برای این شرکت یا جستجوی شما پیدا نشد.</div>';
+  usersBox.querySelectorAll('[data-user]').forEach(button=>button.onclick=()=>chooseUser(Number(button.dataset.user)));
+ };
+ const selectCompany=async id=>{
+  selectedCompany=companies.find(a=>Number(a.id)===id);if(!selectedCompany)return;
+  showError('');companyStep.hidden=true;userStep.hidden=false;
+  overlay.querySelector('[data-step-indicator="company"]').classList.remove('active');
+  overlay.querySelector('[data-step-indicator="user"]').classList.add('active');
+  overlay.querySelector('#syImpersonationSelectedCompany').textContent='شرکت انتخاب‌شده: '+selectedCompany.name;
+  usersBox.textContent='در حال دریافت کاربران تخصیص‌یافته به شرکت…';userSearch.value='';confirmBox.hidden=true;selectedUser=null;
+  try{
+   const data=await api('/api/v1/admin/impersonation/users?agencyId='+encodeURIComponent(id));
+   if(!overlay.isConnected)return;
+   users=data.users||[];renderUsers();userSearch.focus();
+  }catch(error){usersBox.textContent='دریافت کاربران ناموفق بود.';showError(error.message);}
+ };
+ const chooseUser=id=>{
+  selectedUser=users.find(u=>Number(u.id)===id);if(!selectedUser)return;
+  overlay.querySelector('#syImpersonationChosenName').textContent=((selectedUser.first_name||'')+' '+(selectedUser.last_name||'')).trim()||selectedUser.username;
+  overlay.querySelector('#syImpersonationChosenDetails').textContent='نام کاربری: '+selectedUser.username+' · نقش: '+(selectedUser.roles||'بدون نقش')+' · شرکت: '+selectedCompany.name;
+  confirmBox.hidden=false;showError('');
+  confirmBox.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'nearest'});
+ };
+ overlay.querySelector('#syImpersonationBack').onclick=()=>{
+  selectedCompany=null;selectedUser=null;users=[];userStep.hidden=true;companyStep.hidden=false;
+  overlay.querySelector('[data-step-indicator="company"]').classList.add('active');
+  overlay.querySelector('[data-step-indicator="user"]').classList.remove('active');
+  confirmBox.hidden=true;showError('');renderCompanies();companySearch.focus();
+ };
+ companySearch.addEventListener('input',renderCompanies);userSearch.addEventListener('input',()=>{confirmBox.hidden=true;selectedUser=null;renderUsers();});
+ startButton.onclick=async()=>{
+  if(!selectedCompany||!selectedUser)return;
+  startButton.disabled=true;startButton.textContent='در حال ورود امن به پنل کاربر…';showError('');
+  try{
+   await api('/api/v1/admin/impersonation/start',{method:'POST',headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify({agencyId:Number(selectedCompany.id),userId:Number(selectedUser.id)})});
+   close();history.replaceState(history.state,'',location.pathname+location.search+'#dashboard');await boot();
+  }catch(error){showError(error.message||'ورود نیابتی ناموفق بود.');startButton.disabled=false;startButton.textContent='ورود به پنل کاربر';}
+ };
+ try{
+  const data=await api('/api/v1/admin/overview');
+  if(!overlay.isConnected)return;
+  companies=(data.agencies||[]).filter(a=>Number(a.is_active)===1);renderCompanies();
+  if(!companies.length)companiesBox.textContent='هیچ شرکت فعالی برای ورود نیابتی وجود ندارد.';
+  companySearch.focus();
+ }catch(error){companiesBox.textContent='دریافت فهرست شرکت‌ها ناموفق بود.';showError(error.message);}
+}
