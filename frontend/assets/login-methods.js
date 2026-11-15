@@ -6,7 +6,8 @@
  const normalize=value=>String(value||'').trim().replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-1776)).replace(/[٠-٩]/g,c=>String(c.charCodeAt(0)-1632));
  const make=(name,cls,text)=>{const el=document.createElement(name);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el;};
  const note=(node,text,error=false)=>{node.textContent=text||'';node.classList.toggle('error',error);};
- const timerText=seconds=>String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
+ const faDigits=value=>String(value).replace(/[0-9]/g,d=>'۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
+ const timerText=seconds=>faDigits(String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0'));
  const root=document.querySelector('.login-card'),passwordForm=document.getElementById('loginForm');
  if(!root||!passwordForm)return;
 
