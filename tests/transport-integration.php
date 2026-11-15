@@ -670,6 +670,23 @@ try{
  check($docApi::printable($uid,$a,(int)$driverDoc['id'])['html']===$driverPrint,
   'Existing contract document remains unchanged after deduction policy updates');
 
+ // Global administrator deletion must revoke sessions and preserve audit ownership.
+ $userToDelete=insertFixture('users',['uuid'=>Uuid::v4(),'username'=>'delete_'.$tag,
+  'password_hash'=>'unused','first_name'=>'آزمایشی','last_name'=>'حذف']);
+ $p->prepare('INSERT INTO user_roles(user_id,role_id) VALUES(?,?)')->execute([$userToDelete,$operator]);
+ $p->prepare('INSERT INTO agency_users(agency_id,user_id) VALUES(?,?)')->execute([$a,$userToDelete]);
+ rejected(fn()=>\ServiceYar\Users\UserService::delete($uid,$uid),'SELF_PROTECTION');
+ rejected(fn()=>\ServiceYar\Users\UserService::delete($viewer,$userToDelete),'FORBIDDEN');
+ $deleted=\ServiceYar\Users\UserService::delete($uid,$userToDelete);
+ check($deleted['deleted']===true,'Super-admin can archive another user');
+ $deletedRow=$p->prepare('SELECT is_active,deleted_at FROM users WHERE id=?');
+ $deletedRow->execute([$userToDelete]);$state=$deletedRow->fetch(PDO::FETCH_ASSOC);
+ check((int)$state['is_active']===0&&$state['deleted_at']!==null,
+  'Removed user is disabled and soft-deleted without breaking historical links');
+ check(!in_array($userToDelete,array_map('intval',array_column(
+   \ServiceYar\Users\UserService::list($uid,0),'id')),true),
+  'Deleted users disappear from the global management list');
+ rejected(fn()=>\ServiceYar\Users\UserService::delete($uid,$userToDelete),'NOT_FOUND');
  echo "Transport integration: $checks checks passed. All fixtures rolled back.\n";
 }finally{if($p->inTransaction())$p->rollBack();}
 
