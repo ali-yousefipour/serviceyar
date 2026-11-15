@@ -2237,7 +2237,8 @@ function syUserPhotoUrl(id,global=false){
  return global?'/api/v1/admin/users/'+encodeURIComponent(id)+'/photo':scoped('/api/v1/users/'+encodeURIComponent(id)+'/photo');
 }
 function syPhotoFields(data={}){
- const value=(snake,camel)=>esc(data[snake]??data[camel]??'');
+ const profile=data&&typeof data==='object'?data:{};
+ const value=(snake,camel)=>esc(profile[snake]??profile[camel]??'');
  return '<div class="sy-user-personal-fields">'+
  '<label>شماره همراه<input name="mobile" inputmode="tel" maxlength="11" autocomplete="tel" placeholder="۰۹xxxxxxxxx" value="'+value('mobile','mobile')+'"></label>'+
  '<label>کد ملی<input name="nationalCode" inputmode="numeric" maxlength="10" value="'+value('national_code','nationalCode')+'"></label>'+
