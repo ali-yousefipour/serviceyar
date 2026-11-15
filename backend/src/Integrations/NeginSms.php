@@ -27,6 +27,7 @@ final class NeginSms
 
     private static function cipherKey(): string
     {
+        // The root .htaccess denies HTTP access to storage; keep the AES key in its private subdirectory.
         $directory=dirname(__DIR__,3).'/storage/private';
         if(!is_dir($directory)&&!@mkdir($directory,0700,true)&&!is_dir($directory))
             throw new AuthException(503,'پوشه امن ذخیره‌سازی تنظیمات پیامک قابل ایجاد نیست؛ دسترسی نوشتن پوشه storage را بررسی کنید.','SMS_SECRET_STORAGE_UNAVAILABLE');
