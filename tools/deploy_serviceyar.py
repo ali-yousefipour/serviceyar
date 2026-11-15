@@ -11,8 +11,10 @@ import io
 import json
 import os
 import posixpath
+from urllib.request import Request, urlopen
+from urllib.error import URLError, HTTPError
 
-ROOT = "/public_html"
+ROOT = os.environ.get("FTP_REMOTE_ROOT", "/public_html").rstrip("/") or "/"
 PAYLOAD = Path("deploy-payload")
 # Use an isolated FTP staging directory per Actions run. Concurrent or
 # cancelled releases must never delete/move one another's staged files.
@@ -68,6 +70,51 @@ def previous_files(ftp):
     return data if isinstance(data, dict) else {}
 
 
+
+def verify_live(base_url, build_id, expected_digests):
+    """Verify the public domain serves the exact release, not just the FTP copy."""
+    base = base_url.rstrip("/")
+    checks = [
+        ("/", None),
+        ("/assets/operations.js", "assets/operations.js"),
+        ("/assets/brand-theme.css", "assets/brand-theme.css"),
+    ]
+    for route, relative in checks:
+        url = base + route + "?deploy_verify=" + build_id
+        request = Request(url, headers={
+            "Cache-Control": "no-cache, no-store, max-age=0",
+            "Pragma": "no-cache",
+            "User-Agent": "ServiceYar-Deploy-Verification/1.0",
+        })
+        try:
+            with urlopen(request, timeout=35) as response:
+                body = response.read()
+                status = response.status
+        except (URLError, HTTPError, TimeoutError) as error:
+            raise RuntimeError(
+                f"Public-host verification failed for {url}: {error}. "
+                "FTP upload alone does not prove that this is the domain document root."
+            ) from error
+        if status != 200:
+            raise RuntimeError(f"Public-host verification returned HTTP {status} for {route}")
+        if route == "/":
+            html = body.decode("utf-8", "replace")
+            if build_id not in html:
+                raise RuntimeError(
+                    f"{base}/ is not serving uploaded index.html build {build_id[:12]}; "
+                    "check FTP_REMOTE_ROOT and the domain document root."
+                )
+            print(f"Public homepage verified: {base}/ serves build {build_id[:12]}", flush=True)
+        else:
+            actual = sha256(body).hexdigest()
+            expected = expected_digests[relative]
+            if actual != expected:
+                raise RuntimeError(
+                    f"Public asset mismatch at {url}: expected {expected}, received {actual}. "
+                    "The domain may point to another document root or a stale cache."
+                )
+            print(f"Public asset verified: {route}", flush=True)
+
 def main():
     files = {
         path.relative_to(PAYLOAD).as_posix(): path
@@ -85,11 +132,18 @@ def main():
     with FTP(timeout=120) as ftp:
         ftp.connect(os.environ["FTP_HOST"], 21)
         ftp.login(os.environ["FTP_USER"], os.environ["FTP_PASS"])
+        print(f"FTP login directory: {ftp.pwd()}", flush=True)
+        try:
+            print("FTP login directory entries: " + ", ".join(sorted(ftp.nlst())[:40]), flush=True)
+        except error_perm as error:
+            print(f"FTP directory listing unavailable: {error}", flush=True)
+        print(f"Deployment target directory: {ROOT}", flush=True)
         old = previous_files(ftp)
         changed = [name for name in files if old.get(name) != digests[name]]
         print(f"Release: {len(changed)} changed, {len(files) - len(changed)} unchanged, {len(files)} total", flush=True)
         if not changed:
-            print("All release files already match the published manifest", flush=True)
+            print("FTP manifest matches this release; public HTTP verification is still required", flush=True)
+            verify_live(os.environ.get("PUBLIC_BASE_URL", "https://service-yar.ir"), os.environ.get("GITHUB_SHA", "local"), digests)
             return
 
         dirs = set()
@@ -115,7 +169,10 @@ def main():
             ftp.rename(remote, live)
             verify(ftp, digests[name], live)
 
-        # Commit metadata only after all live files have been checksum-verified.
+        # Verify the actual domain/document-root before declaring the release successful.
+        verify_live(os.environ.get("PUBLIC_BASE_URL", "https://service-yar.ir"), os.environ.get("GITHUB_SHA", "local"), digests)
+
+        # Commit metadata only after FTP and public HTTP checks have passed.
         manifest = json.dumps({
             "schema": SCHEMA,
             "commit": os.environ.get("GITHUB_SHA", ""),
