@@ -30,7 +30,7 @@ final class PlatformSettings
             'neshanWebConfigured'=>self::value('neshan_web_key')!==''||config('NESHAN_WEB_KEY','')!=='',
             'smsConfigured'=>\ServiceYar\Integrations\NeginSms::configured(),
             'baleConfigured'=>\ServiceYar\Integrations\BaleClient::configured(),
-            'smsManagedByEnvironment'=>true];
+            'smsManagedByEnvironment'=>false,'smsManagedBySuperAdmin'=>true];
     }
     public static function save(int $uid,array $payload): array
     {
