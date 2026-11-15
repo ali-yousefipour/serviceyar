@@ -244,6 +244,49 @@ try{
  check($foreignDashboard['counts']['students']===1
    &&$foreignDashboard['metrics']['assignedStudents']===0,
    'Dashboard must not include students or service assignments from other agencies');
+ // Portal enrollment must come only from a verified Bale contact; the helper
+ // deliberately has no public HTTP route and cannot grant access by ID.
+ $parentMobile='09129990001';
+ $p->prepare('INSERT INTO guardians(student_id,name,mobile,is_primary) VALUES(?,?,?,1)')
+    ->execute([$s1['id'],'ولی تست',$parentMobile]);
+ $parentUid=\ServiceYar\Domain\PortalService::provisionVerifiedMobile($parentMobile);
+ check(is_int($parentUid)&&$parentUid>0,'Verified parent contact creates a portal-only account');
+ $parentLinks=\ServiceYar\Domain\PortalService::memberships($parentUid);
+ check(count($parentLinks)===1&&$parentLinks[0]['portalType']==='parent'
+   &&(int)$parentLinks[0]['partyId']===(int)$s1['id'],
+   'Parent portal has only its verified student membership');
+ $parentView=\ServiceYar\Domain\PortalService::dashboard($parentUid,'parent',$a,(int)$s1['id']);
+ check((int)$parentView['student']['id']===(int)$s1['id']
+    &&$parentView['hasPassword']===false,'Parent sees own student and first-password prompt');
+ rejected(fn()=>\ServiceYar\Domain\PortalService::dashboard(
+   $parentUid,'parent',$b,(int)$foreign['id']),'PORTAL_FORBIDDEN');
+ rejected(fn()=>\ServiceYar\Domain\PortalService::dashboard(
+   $parentUid,'driver',$a,(int)$driver['id']),'PORTAL_FORBIDDEN');
+ $updated=\ServiceYar\Domain\PortalService::updateProfile($parentUid,'parent',$a,
+   (int)$s1['id'],['address'=>'نشانی معتبر آزمایشی']);
+ check($updated['student']['address']==='نشانی معتبر آزمایشی','Parent can edit own student address');
+ rejected(fn()=>\ServiceYar\Domain\PortalService::updateProfile($parentUid,'parent',$a,
+   (int)$s1['id'],['monthly_fee'=>'1']),'PORTAL_PROFILE_INVALID');
+ \ServiceYar\Domain\PortalService::setPassword($parentUid,'ValidPassword-ForTest#123',
+    'ValidPassword-ForTest#123');
+ $q=$p->prepare('SELECT password_hash FROM users WHERE id=?');$q->execute([$parentUid]);
+ check(password_verify('ValidPassword-ForTest#123',$q->fetchColumn()),'Parent password is stored as strong hash');
+ rejected(fn()=>\ServiceYar\Domain\PortalService::setPassword($parentUid,
+   'ReplacementPassword#123','ReplacementPassword#123'),'CURRENT_PASSWORD_REQUIRED');
+ $p->prepare('UPDATE drivers SET mobile=? WHERE id=? AND agency_id=?')
+   ->execute(['09129990002',$driver['id'],$a]);
+ $driverUid=\ServiceYar\Domain\PortalService::provisionVerifiedMobile('09129990002');
+ check(is_int($driverUid)&&$driverUid>0,'Verified driver contact creates portal');
+ $driverView=\ServiceYar\Domain\PortalService::dashboard($driverUid,'driver',$a,(int)$driver['id']);
+ check((int)$driverView['driver']['id']===(int)$driver['id']
+   &&!empty($driverView['students']),'Driver sees only assigned students and services');
+ rejected(fn()=>\ServiceYar\Domain\PortalService::dashboard(
+   $driverUid,'parent',$a,(int)$s1['id']),'PORTAL_FORBIDDEN');
+ rejected(fn()=>\ServiceYar\Domain\PortalService::updateProfile(
+   $driverUid,'driver',$a,(int)$driver['id'],['plate'=>'123']),'PORTAL_PROFILE_INVALID');
+ check(\ServiceYar\Domain\PortalService::provisionVerifiedMobile('09120009999')===null,
+   'Unknown phone cannot create a portal user');
+
  $docs=O::saveDocument($uid,$a,(int)$driver['id'],['documentType'=>'گواهینامه','documentNo'=>'demo','expiresAt'=>'2027-01-01']);check(count(O::documents($uid,$a,(int)$driver['id']))===1,'Driver document persists');
  rejected(fn()=>O::saveDocument($uid,$b,(int)$driver['id'],['documentType'=>'x']),'CROSS_SCOPE_REFERENCE');
  D::delete($uid,$a,'services',(int)$group['service']['id']);check(D::get($uid,$a,'students',(int)$s1['id'])['service_status']==='waiting','Deactivating service synchronizes student status');
