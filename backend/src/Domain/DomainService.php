@@ -756,6 +756,17 @@ final class DomainService {
   if($resource==='drivers'&&$id&&array_key_exists('vehicle_id',$data)
      &&(int)($existing['vehicle_id']??0)!==(int)($data['vehicle_id']??0)
      &&(int)($data['vehicle_id']??0)>0){
+   $vehicleCheck=$pdo->prepare('SELECT capacity,is_active FROM vehicles WHERE id=? AND agency_id=? FOR UPDATE');
+   $vehicleCheck->execute([(int)$data['vehicle_id'],$aid]);$targetVehicle=$vehicleCheck->fetch(\PDO::FETCH_ASSOC);
+   if(!$targetVehicle||(int)$targetVehicle['is_active']!==1)
+    throw new AuthException(422,'خودروی انتخابی باید در شرکت جاری ثبت و فعال باشد.','VEHICLE_NOT_AVAILABLE');
+   $occupancy=$pdo->prepare('SELECT sv.id,COUNT(ss.student_id) assigned FROM services sv
+     LEFT JOIN service_students ss ON ss.service_id=sv.id
+     WHERE sv.agency_id=? AND sv.driver_id=? AND sv.is_active=1 GROUP BY sv.id');
+   $occupancy->execute([$aid,$id]);
+   foreach($occupancy->fetchAll(\PDO::FETCH_ASSOC) as $currentService)
+    if((int)$currentService['assigned']>(int)$targetVehicle['capacity'])
+     throw new AuthException(409,'ظرفیت خودروی انتخابی کمتر از تعداد دانش‌آموزان سرویس فعال است؛ ابتدا ظرفیت یا تخصیص را اصلاح کنید.','VEHICLE_CAPACITY_TOO_SMALL');
    $linked=$pdo->prepare('SELECT id,fee_source FROM services WHERE agency_id=? AND driver_id=? AND is_active=1');
    $linked->execute([$aid,$id]);
    foreach($linked->fetchAll(\PDO::FETCH_ASSOC) as $service)
