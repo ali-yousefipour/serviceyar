@@ -277,5 +277,51 @@
    }catch(e){note(result,e.message,true);}finally{submit.disabled=false;}
   };
   try{await refresh();}catch(e){note(result,e.message,true);}
+
+  const smsBlock=make('section','sy-login-policy-panel');smsBlock.id='syAdminNeginSms';
+  const smsTitle=make('h3','','تنظیمات سرویس پیامک نگین');
+  const smsDescription=make('p','','اطلاعات پنل پیامک فقط در سرور ذخیره می‌شود و با رمزگذاری نگهداری خواهد شد. این تنظیمات برای ورود پیامکی، ورود با موبایل و بازیابی رمز استفاده می‌شوند.');
+  const smsForm=make('form','sy-sms-provider-form');
+  const smsEnabledRow=make('label','sy-login-policy-option');
+  const smsEnabled=make('input');smsEnabled.type='checkbox';smsEnabled.name='enabled';
+  smsEnabledRow.append(smsEnabled,make('span','','فعال‌سازی سرویس پیامک نگین'));
+  const smsGrid=make('div','sy-sms-provider-grid');
+  const usernameLabel=make('label','sy-sms-provider-field');usernameLabel.append(make('span','','نام کاربری پنل نگین'));
+  const smsUsername=make('input');smsUsername.type='text';smsUsername.name='username';smsUsername.autocomplete='off';smsUsername.maxLength=150;smsUsername.placeholder='نام کاربری پنل پیامک';usernameLabel.append(smsUsername);
+  const passwordLabel=make('label','sy-sms-provider-field');passwordLabel.append(make('span','','رمز عبور پنل نگین'));
+  const smsPassword=make('input');smsPassword.type='password';smsPassword.name='password';smsPassword.autocomplete='new-password';smsPassword.maxLength=500;smsPassword.placeholder='رمز عبور پنل پیامک';passwordLabel.append(smsPassword);
+  smsGrid.append(usernameLabel,passwordLabel);
+  const smsHint=make('p','sy-sms-provider-hint','اگر اطلاعات پنل قبلاً ثبت شده است، برای حفظ آن‌ها دو کادر نام کاربری و رمز عبور را خالی بگذارید. برای تغییر اطلاعات، هر دو کادر را تکمیل کنید.');
+  const smsReadiness=make('p','sy-login-policy-readiness');smsReadiness.setAttribute('role','status');smsReadiness.setAttribute('aria-live','polite');
+  const smsResult=make('p','sy-login-policy-status');smsResult.setAttribute('role','status');smsResult.setAttribute('aria-live','polite');
+  const smsSave=make('button','primary','ذخیره تنظیمات پیامک');smsSave.type='submit';
+  smsForm.append(smsEnabledRow,smsGrid,smsHint,smsReadiness,smsSave,smsResult);
+  smsBlock.append(smsTitle,smsDescription,smsForm);parent.append(smsBlock);
+
+  const refreshSms=async()=>{
+   const status=await api('/api/v1/admin/sms-provider');if(!smsBlock.isConnected)return;
+   smsEnabled.checked=Boolean(status.enabled);
+   smsUsername.placeholder=status.usernameHint?'نام کاربری ثبت‌شده: '+status.usernameHint:'نام کاربری پنل پیامک';
+   smsPassword.placeholder=status.credentialsConfigured?'برای حفظ رمز فعلی خالی بگذارید':'رمز عبور پنل پیامک';
+   const parts=[
+    status.enabled?'سرویس فعال است':'سرویس غیرفعال است',
+    status.credentialsConfigured?'اطلاعات پنل ثبت شده':'اطلاعات پنل ثبت نشده',
+    status.soapAvailable?'افزونه SOAP فعال است':'افزونه SOAP روی هاست فعال نیست',
+    status.ready?'آماده استفاده':'آماده ارسال پیامک نیست'
+   ];
+   smsReadiness.textContent=parts.join(' · ');
+   smsReadiness.classList.toggle('error',!status.ready);
+  };
+  smsForm.onsubmit=async e=>{
+   e.preventDefault();smsSave.disabled=true;note(smsResult,'در حال ذخیره امن تنظیمات پیامک…');
+   try{
+    await api('/api/v1/admin/sms-provider',{method:'PUT',headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify({enabled:smsEnabled.checked,username:smsUsername.value,password:smsPassword.value})});
+    smsUsername.value='';smsPassword.value='';
+    note(smsResult,'تنظیمات سرویس پیامک با موفقیت ذخیره شد.');
+    await refreshSms();await refresh();
+   }catch(error){note(smsResult,error.message||'ذخیره تنظیمات پیامک ناموفق بود.',true);}
+   finally{smsSave.disabled=false;}
+  };
+  try{await refreshSms();}catch(error){note(smsResult,error.message||'دریافت تنظیمات پیامک ناموفق بود.',true);}
  };
 })();
