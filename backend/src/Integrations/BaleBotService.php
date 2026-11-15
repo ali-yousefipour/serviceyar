@@ -14,14 +14,17 @@ final class BaleBotService {
   if(self::$schemaChecked)return;
   $pdo=Connection::get();
   try {
-   $pdo->exec("CREATE TABLE IF NOT EXISTS platform_settings (setting_key VARCHAR(150) NOT NULL PRIMARY KEY,setting_value TEXT NOT NULL,updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-   $pdo->exec("CREATE TABLE IF NOT EXISTS bale_user_links (user_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,chat_id VARCHAR(80) NOT NULL UNIQUE,linked_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-   $pdo->exec("CREATE TABLE IF NOT EXISTS bale_auth_challenges (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,user_id BIGINT UNSIGNED NOT NULL,purpose ENUM('link','login') NOT NULL,code_hash CHAR(64) NOT NULL UNIQUE,expires_at DATETIME NOT NULL,consumed_at DATETIME NULL,attempt_count INT NOT NULL DEFAULT 0,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,INDEX idx_bale_auth_user (user_id,purpose,expires_at),FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-   $pdo->exec("CREATE TABLE IF NOT EXISTS bale_webhook_updates (update_id VARCHAR(80) NOT NULL PRIMARY KEY,received_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-   $pdo->exec("CREATE TABLE IF NOT EXISTS bale_otp_requests (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,ip_address VARCHAR(45) NOT NULL,requested_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,INDEX idx_bale_otp_ip (ip_address,requested_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+   $existing=$pdo->query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('platform_settings','bale_user_links','bale_auth_challenges','bale_webhook_updates','bale_otp_requests')")->fetchAll(PDO::FETCH_COLUMN);
+   $existing=array_fill_keys($existing,true);
+   if(!isset($existing['platform_settings']))$pdo->exec("CREATE TABLE IF NOT EXISTS platform_settings (setting_key VARCHAR(150) NOT NULL PRIMARY KEY,setting_value TEXT NOT NULL,updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+   if(!isset($existing['bale_user_links']))$pdo->exec("CREATE TABLE IF NOT EXISTS bale_user_links (user_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,chat_id VARCHAR(80) NOT NULL UNIQUE,linked_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+   if(!isset($existing['bale_auth_challenges']))$pdo->exec("CREATE TABLE IF NOT EXISTS bale_auth_challenges (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,user_id BIGINT UNSIGNED NOT NULL,purpose ENUM('link','login') NOT NULL,code_hash CHAR(64) NOT NULL UNIQUE,expires_at DATETIME NOT NULL,consumed_at DATETIME NULL,attempt_count INT NOT NULL DEFAULT 0,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,INDEX idx_bale_auth_user (user_id,purpose,expires_at),FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+   if(!isset($existing['bale_webhook_updates']))$pdo->exec("CREATE TABLE IF NOT EXISTS bale_webhook_updates (update_id VARCHAR(80) NOT NULL PRIMARY KEY,received_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+   if(!isset($existing['bale_otp_requests']))$pdo->exec("CREATE TABLE IF NOT EXISTS bale_otp_requests (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,ip_address VARCHAR(45) NOT NULL,requested_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,INDEX idx_bale_otp_ip (ip_address,requested_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
    self::$schemaChecked=true;
   }catch(\PDOException $e) {
-   throw new AuthException(503,'جدول‌های ربات بله آماده نیستند؛ مهاجرت 0110_bale_bot_auth.sql را اجرا کنید.','BALE_SCHEMA_REQUIRED');
+   error_log('[ServiceYar][Bale] Schema setup failed SQLSTATE '.$e->getCode().': '.$e->getMessage());
+   throw new AuthException(503,'جدول‌های ربات بله آماده نیستند؛ مهاجرت 0110_bale_bot_auth.sql یا مجوز CREATE دیتابیس را بررسی کنید.','BALE_SCHEMA_REQUIRED');
   }
  }
  private static function setting(string $key): string {
