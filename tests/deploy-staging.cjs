@@ -18,7 +18,10 @@ for(const asset of ['public-site.js','public-site.css','public-site-content.html
  assert.ok(existsSync('frontend/assets/'+asset),'Missing public asset: '+asset);
 }
 assert.match(workflow,/cancel-in-progress: true/,'Supersede stuck old release runs');
-assert.match(workflow,/if: \$\{\{ vars\.SERVICEYAR_FTP_REMOTE_ROOT != '' && vars\.SERVICEYAR_PRODUCTION_SSL_READY == 'true' \}\}/,'Production deployment must wait for a verified document root and valid SSL certificate');
+assert.match(workflow,/production-preflight:/,'Deployment must explicitly validate the production prerequisite configuration');
+assert.match(workflow,/::error title=Missing production document root/,'Missing document-root must be an actionable failure, not a green skipped deploy');
+assert.match(workflow,/::error title=Production TLS not verified/,'Missing TLS confirmation must fail visibly');
+assert.match(workflow,/needs: production-preflight/,'Publishing must depend on the production safety check');
 const legacyHost=['challi','.ir'].join('');
 const legacyDomainSearch=spawnSync('git',['grep','-n',legacyHost],{encoding:'utf8'});
 assert.equal(legacyDomainSearch.status,1,'No tracked source, configuration, test or documentation file may retain the old operational domain: '+legacyDomainSearch.stdout);
