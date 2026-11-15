@@ -33,6 +33,12 @@ assert.ok(routes.includes('/api/v1/admin/impersonation/stop'),'stop API exists')
 assert.ok(routes.includes("'impersonation'=>$s['impersonation']??null"),'auth/me returns the active impersonation context');
 assert.ok(routes.includes('$contextAgency>0?$contextAgency'),'agency scope defaults to the selected impersonated company');
 assert.ok(app.includes('#admin-dashboard'),'super admin lands on the management dashboard');
+assert.ok(app.includes('function isPlatformAdminSession()')&&app.includes('if(isPlatformAdminSession()){currentAgency=null;return;}'),'platform admin has no default company context');
+assert.ok(app.includes('const locked=Boolean(session?.impersonation)||isPlatformAdminSession()'),'platform admin and impersonated sessions cannot switch companies through the company picker');
+assert.ok(app.includes("if(isPlatformAdminSession())history.replaceState(history.state,'',location.pathname+location.search+'#admin-dashboard')"),'fresh platform-admin login always opens the management dashboard');
+assert.ok(app.includes("document.addEventListener('DOMContentLoaded',()=>void boot(),{once:true})"),'auth boot waits until the dedicated admin scripts have loaded');
+assert.ok(!app.includes('||agencies[0]||null'),'impersonation never silently falls back to the first company');
+assert.ok(operations.includes('if(adminMode)currentAgency=null')&&operations.includes('if(isAdmin)currentAgency=null'),'admin navigation and routing clear any stale company context');
 assert.ok(app.includes('returnFromImpersonation'),'header and logout controls can return to the original admin session');
 assert.ok(app.includes('session.impersonation.agencyId'),'impersonated user opens in the selected company context');
 assert.ok(operations.includes('syOpenImpersonation'),'super admin navigation has a dedicated impersonation action');
