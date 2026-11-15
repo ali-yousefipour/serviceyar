@@ -179,6 +179,7 @@ function renderNav(){
   },true);
  }
  const adminMode=session?.roles?.includes('super_admin')&&!session?.impersonation;
+ if(adminMode)currentAgency=null;
  $('app').classList.toggle('sy-admin-mode',adminMode);
  renderAgencySelector();
  if(adminMode){
@@ -280,6 +281,7 @@ function render(){
  disposeMaps();$('dashboardBackdrop')?.remove();$('content').classList.remove('sy-super-admin-workspace');
  const token=++pageToken,[raw,action,recordId]=location.hash.slice(1).split('/');
  const isAdmin=session.roles?.includes('super_admin')&&!session.impersonation;
+ if(isAdmin)currentAgency=null;
  const adminTitles={
   'admin-dashboard':'داشبورد مدیریتی',
   'admin-agencies':'مدیریت شرکت‌ها',
