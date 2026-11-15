@@ -176,6 +176,25 @@ def verify_live(base_url, build_id, expected_digests):
                     print(f"LIVE DNS {CANONICAL_HOST}: {host_ips}", flush=True)
                 except OSError as error:
                     print(f"LIVE DNS lookup failed: {error}", flush=True)
+                for check_path, expected_file in (
+                    ("/index.html", None),
+                    ("/assets/app.js", "assets/app.js"),
+                    ("/assets/operations.js", "assets/operations.js"),
+                ):
+                    try:
+                        check_url = base + check_path + "?deploy_verify=" + build_id
+                        check_request = Request(check_url, headers={"Cache-Control": "no-store, max-age=0"})
+                        with urlopen(check_request, timeout=18, context=ssl._create_unverified_context()) as check_response:
+                            check_body = check_response.read()
+                            check_headers = check_response.headers
+                            check_status = check_response.status
+                        if expected_file is None:
+                            detail = "new_build_in_html=" + str(build_id in check_body.decode("utf-8", "replace"))
+                        else:
+                            detail = "sha256_matches_uploaded=" + str(sha256(check_body).hexdigest() == expected_digests[expected_file])
+                        print(f"PUBLIC PATH {check_path}: HTTP {check_status}; {detail}; cache={check_headers.get('X-LiteSpeed-Cache','')}; bytes={len(check_body)}", flush=True)
+                    except Exception as check_error:
+                        print(f"PUBLIC PATH {check_path}: {check_error}", flush=True)
                 origin_ip = os.environ.get("SERVICEYAR_FTP_PEER_IP","").strip()
                 if origin_ip and ":" not in origin_ip:
                     # Use the FTP server's actual peer IP as an origin diagnostic;
