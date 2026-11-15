@@ -1,4 +1,4 @@
-name: Deploy ServiceYar to Challi Hosting
+name: Upload to service-yar
 
 on:
   push:
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: serviceyar-production-deploy-current
+  group: serviceyar-production-deploy
   # Supersede stalled/obsolete deploy runs so the newest main revision reaches production.
   cancel-in-progress: true
 
@@ -95,7 +95,7 @@ jobs:
           test -s frontend/assets/favicon.svg
 
   deploy:
-    name: Upload website into public_html
+    name: Upload ServiceYar to service-yar.ir
     needs: validate
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -152,6 +152,6 @@ jobs:
       - name: Stage, publish and verify hosting payload
         env:
           FTP_HOST: ${{ secrets.SERVICEYAR_FTP_HOST }}
-          FTP_USER: ${{ secrets.SERVICEYAR_FTP_USERNAME }}
+          FTP_USER: ali@service-yar.ir
           FTP_PASS: ${{ secrets.SERVICEYAR_FTP_PASSWORD }}
         run: python3 tools/deploy_serviceyar.py
