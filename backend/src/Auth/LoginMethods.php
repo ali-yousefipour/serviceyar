@@ -52,7 +52,7 @@ final class LoginMethods
     public static function overview(int $actor): array
     {
         if(!Authorization::isSuperAdmin($actor))throw new AuthException(403,'فقط ادمین کل به تنظیمات روش‌های ورود دسترسی دارد.','FORBIDDEN');
-        return self::publicStatus();
+        return self::publicStatus()+['recoveryMethods'=>PasswordRecovery::methods()];
     }
 
     public static function save(int $actor,array $input): array
