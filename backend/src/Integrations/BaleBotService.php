@@ -216,6 +216,10 @@ final class BaleBotService {
   $pdo=Connection::get();
   $exists=$pdo->query("SHOW COLUMNS FROM users LIKE 'mobile'");
   if(!$exists->fetch(PDO::FETCH_ASSOC)){self::send($chat,'ساختار شماره همراه پروفایل روی سرور آماده نیست.');return;}
+  // A Bale contact is accepted only when its sender ID was verified above.
+  // Provision parent/driver credentials from exact active records, never from
+  // an untrusted form submission or arbitrary typed telephone number.
+  \ServiceYar\Domain\PortalService::provisionVerifiedMobile($mobile);
   // Compare all active accounts to prevent ambiguous shared phone numbers.
   $query=$pdo->query("SELECT id,mobile FROM users WHERE is_active=1 AND mobile IS NOT NULL AND mobile<>''");
   $matches=[];
