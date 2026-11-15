@@ -3,6 +3,9 @@
 (function(){
  const el=(tag,cls,text)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(text!==undefined)node.textContent=text;return node;};
  const message=(node,text,invalid=false)=>{node.textContent=text;node.classList.toggle('error',invalid);};
+ const normalizeUsername=value=>String(value||'').trim().replace(/[۰-۹]/g,ch=>String(ch.charCodeAt(0)-1776)).replace(/[٠-٩]/g,ch=>String(ch.charCodeAt(0)-1632));
+ const sessionError=error=>/نشست معتبر نیست|نشست منقضی|ورود انجام نشده|UNAUTHENTICATED/i.test(String(error?.message||''));
+ const showLinkError=(node,error)=>message(node,sessionError(error)?'نشست شما منقضی شده است. برای دریافت کد اتصال بله، دوباره با نام کاربری و رمز عبور وارد سامانه شوید.':error.message,true);
  async function initializeLogin(){
   const card=document.querySelector('.login-card'),credentials=document.getElementById('loginForm');
   if(!card||!credentials)return;
@@ -23,7 +26,7 @@
   const feedback=form.querySelector('[data-bale-login-message]');
   form.querySelector('[data-request-otp]').onclick=async e=>{
    const button=e.currentTarget;button.disabled=true;
-   try{await api('/api/v1/auth/bale/request',{method:'POST',body:JSON.stringify({username:form.elements.username.value.trim()})});message(feedback,'اگر حساب به بله متصل باشد، کد ورود ارسال شده است. اعتبار کد ۵ دقیقه است.');}
+   try{await api('/api/v1/auth/bale/request',{method:'POST',body:JSON.stringify({username:normalizeUsername(form.elements.username.value)})});message(feedback,'اگر حساب به بله متصل باشد، کد ورود ارسال شده است. اعتبار کد ۵ دقیقه است.');}
    catch(err){message(feedback,err.message,true);}
    finally{button.disabled=false;}
   };
@@ -31,7 +34,7 @@
    e.preventDefault();const button=form.querySelector('[type=submit]');button.disabled=true;
    try{
     const code=String(form.elements.code.value).replace(/[۰-۹]/g,ch=>String(ch.charCodeAt(0)-1776));
-    await api('/api/v1/auth/bale/verify',{method:'POST',body:JSON.stringify({username:form.elements.username.value.trim(),code})});
+    await api('/api/v1/auth/bale/verify',{method:'POST',body:JSON.stringify({username:normalizeUsername(form.elements.username.value),code})});
     message(feedback,'ورود تأیید شد.');
     await boot();
    }catch(err){message(feedback,err.message,true);}
@@ -91,14 +94,14 @@
     feedback.replaceChildren(document.createTextNode('در ربات '+(data.botUsername?'@'+data.botUsername:'سرویس‌یار')+' دستور زیر را ارسال کنید (اعتبار ۱۰ دقیقه): '));
     const code=el('code','',command);feedback.append(code);
     const copy=el('button','','کپی دستور');copy.type='button';copy.onclick=()=>navigator.clipboard?.writeText(command);feedback.append(copy);
-   }catch(e){message(feedback,e.message,true);}
+   }catch(e){showLinkError(feedback,e);}
   };
   block.querySelector('[data-unlink-bale]').onclick=async()=>{
    if(!confirm('اتصال حساب به بله قطع شود؟'))return;
    try{await api('/api/v1/bale/link',{method:'DELETE',headers:{'X-CSRF-Token':session.csrfToken}});await refresh();}
    catch(e){message(feedback,e.message,true);}
   };
-  try{await refresh();}catch(e){message(feedback,e.message,true);}
+  try{await refresh();}catch(e){showLinkError(feedback,e);}
  };
  const previousSettingsPage=settingsPage;
  settingsPage=async function(){
