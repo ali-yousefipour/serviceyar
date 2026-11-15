@@ -751,6 +751,17 @@ final class DomainService {
   $wasCreate=!$id;
   if(!$id){$data['agency_id']=$aid;if(in_array('uuid',thisColumns($c['table'],$pdo),true))$data['uuid']=Uuid::v4();$cols=array_keys($data);$sql='INSERT INTO '.$c['table'].' ('.implode(',',$cols).') VALUES ('.implode(',',array_map(fn($x)=>':'.$x,$cols)).')';$st=$pdo->prepare($sql);$st->execute($data);$id=(int)$pdo->lastInsertId();}
   else{$sets=[];$params=['id'=>$id,'agency'=>$aid];foreach($data as $f=>$v){if($f==='agency_id'||$f==='uuid')continue;$sets[]="$f=:$f";$params[$f]=$v;}if(!$sets)throw new AuthException(422,'تغییری ارسال نشده است.','VALIDATION_ERROR');$pdo->prepare('UPDATE '.$c['table'].' SET '.implode(',',$sets).' WHERE id=:id AND agency_id=:agency')->execute($params);}
+  // Reassigning a driver's vehicle must immediately synchronize all active
+  // services with its class and capacity, rather than waiting for a service edit.
+  if($resource==='drivers'&&$id&&array_key_exists('vehicle_id',$data)
+     &&(int)($existing['vehicle_id']??0)!==(int)($data['vehicle_id']??0)
+     &&(int)($data['vehicle_id']??0)>0){
+   $linked=$pdo->prepare('SELECT id,fee_source FROM services WHERE agency_id=? AND driver_id=? AND is_active=1');
+   $linked->execute([$aid,$id]);
+   foreach($linked->fetchAll(\PDO::FETCH_ASSOC) as $service)
+    ServicePricing::synchronizeServiceVehicle($pdo,$aid,(int)$service['id'],(string)($service['fee_source']??'taxi'),true,true);
+   self::syncServiceCapacityFromVehicle($pdo,$aid);
+  }
   // Vehicle seating capacity must be reflected by assigned services, including older unsynchronized records.
   // Both writes share the current transaction; existing assignments are untouched.
   // Changing a vehicle's official class reprices all linked service
