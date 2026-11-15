@@ -2,12 +2,12 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const routes=read('backend/public/index.php'),policy=read('backend/src/Auth/LoginMethods.php');
-const sms=read('backend/src/Auth/SmsLogin.php'),bot=read('backend/src/Integrations/BaleBotService.php');
+const sms=read('backend/src/Auth/SmsLogin.php'),bot=read('backend/src/Integrations/BaleBotService.php'),recovery=read('backend/src/Auth/PasswordRecovery.php');
 const js=read('frontend/assets/login-methods.js'),baleUi=read('frontend/assets/bale-bot.js');
 const html=read('frontend/index.html'),css=read('frontend/assets/brand-theme.css');
-const migration=read('database/migrations/0111_sms_login.sql');
+const migration=read('database/migrations/0111_sms_login.sql'),recoveryMigration=read('database/migrations/0112_login_recovery_and_mobile_otp.sql');
 const posSession=routes.indexOf('$s=$auth->current(); $aid=null;');
-for(const suffix of ['methods','sms/request','sms/verify']){
+for(const suffix of ['methods','sms/request','sms/verify','mobile/request','mobile/verify','password-reset/request','password-reset/confirm','bale/request','bale/verify']){
  const p=routes.indexOf("'/api/v1/auth/"+suffix+"'");
  assert.ok(p>0&&p<posSession,suffix+' is available before authentication');
 }
@@ -24,6 +24,19 @@ assert.ok(sms.includes("password_verify($code,$row['code_hash'])"),'OTP verified
 assert.ok(sms.includes('attempt_count>=5')||sms.includes("['attempt_count']>=5"),'OTP attempts limited');
 assert.ok(sms.includes('DATE_ADD(UTC_TIMESTAMP(),INTERVAL 5 MINUTE)'),'OTP expires');
 assert.ok(sms.includes('NeginSms())->send'),'SMS uses provider');
+assert.ok(sms.includes("public static function requestMobile(string $mobile)"),'mobile OTP request supported');
+assert.ok(sms.includes("public static function verifyMobile(string $mobile,string $code)"),'mobile OTP verification supported');
+assert.ok(sms.includes("purpose='login'"),'login OTP is isolated from password reset challenges');
+assert.ok(policy.includes("'mobile'=>'login_method_mobile'"),'mobile OTP has independent admin policy');
+assert.ok(policy.includes("'mobile'=>$configured['mobile']&&$available['mobile']"),'mobile tab is policy and provider gated');
+assert.ok(recovery.includes("public static function request(string $username,string $channel)"),'password recovery request implemented');
+assert.ok(recovery.includes("public static function confirm(string $username,string $channel,string $code,string $password,string $confirmation)"),'password recovery confirmation implemented');
+assert.ok(recovery.includes("purpose='password_reset'"),'recovery challenges have a separate purpose');
+assert.ok(recovery.includes("UPDATE user_sessions SET revoked_at=UTC_TIMESTAMP()"),'password reset revokes existing sessions');
+assert.ok(bot.includes('sendAuthCodeToUser'),'Bale recovery code is sent only to linked user');
+assert.ok(recoveryMigration.includes("ENUM('login','password_reset')"),'SMS recovery purpose migration included');
+assert.ok(recoveryMigration.includes("'password_reset'"),'Bale recovery purpose migration included');
+
 assert.ok(js.includes("setAttribute('role','tablist')"),'accessible tab list');
 assert.ok(js.includes("setAttribute('aria-selected'"),'accessible active tab');
 assert.ok(js.includes("const panelsHost=make('div','sy-login-method-panels')"),'all login methods share one content container');
@@ -35,6 +48,15 @@ assert.ok(html.includes('id="loginForm" method="post" action="/api/v1/auth/login
 assert.ok(css.includes('#login .sy-login-method-panels'),'shared login card panel has dedicated responsive styling');
 assert.ok(css.includes('#login .sy-login-method-tab[aria-selected="true"]'),'active login tab has clear selected state');
 assert.ok(js.includes('enabled[key]===true'),'only explicitly enabled and ready methods are rendered');
+assert.ok(js.includes("mobile:'ورود با موبایل و کد'"),'dedicated phone and code tab is present');
+assert.ok(js.includes("panels.mobile=createOtp('mobile')"),'mobile OTP panel is created');
+assert.ok(js.includes('/api/v1/auth/password-reset/request'),'forgot password requests a reset code');
+assert.ok(js.includes('/api/v1/auth/password-reset/confirm'),'forgot password confirms a reset code');
+assert.ok(js.includes('recoveryTimer.start(300)'),'recovery code validity countdown is displayed');
+assert.ok(js.includes('timer.start(300)'),'login OTP validity countdown is displayed');
+assert.ok(js.indexOf("form.append(user);")<js.indexOf("if(method==='bale')"),'Bale username field precedes explanatory instructions');
+assert.ok(js.includes('recoveryMethodsFromServer'),'recovery options follow active admin login policy');
+
 assert.ok(js.includes('session.csrfToken'),'policy editor uses CSRF');
 assert.ok(js.includes('https://ble.ir/syarbot'),'login links to syarbot');
 assert.ok(js.includes('دکمه «شروع» (Start) را بزنید'),'Bale onboarding explains Start');
