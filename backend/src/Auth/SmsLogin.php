@@ -15,7 +15,7 @@ final class SmsLogin
         try {
             $pdo->exec("CREATE TABLE IF NOT EXISTS sms_login_challenges (
                 id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                user_id BIGINT UNSIGNED NOT NULL,code_hash VARCHAR(255) NOT NULL,
+                user_id BIGINT UNSIGNED NOT NULL,purpose ENUM('login','password_reset') NOT NULL DEFAULT 'login',code_hash VARCHAR(255) NOT NULL,
                 expires_at DATETIME NOT NULL,consumed_at DATETIME NULL,
                 attempt_count INT NOT NULL DEFAULT 0,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -113,7 +113,7 @@ final class SmsLogin
         if(!$user)throw new AuthException(401,'کد ورود نامعتبر است.','SMS_OTP_INVALID');
         $pdo=Connection::get();$pdo->beginTransaction();
         try {
-            $q=$pdo->prepare('SELECT id,code_hash,attempt_count FROM sms_login_challenges WHERE user_id=? AND consumed_at IS NULL AND expires_at>UTC_TIMESTAMP() ORDER BY id DESC LIMIT 1 FOR UPDATE');
+            $q=$pdo->prepare('SELECT id,code_hash,attempt_count FROM sms_login_challenges WHERE user_id=? AND purpose='login' AND consumed_at IS NULL AND expires_at>UTC_TIMESTAMP() ORDER BY id DESC LIMIT 1 FOR UPDATE');
             $q->execute([$user['id']]);$row=$q->fetch(PDO::FETCH_ASSOC);
             if(!$row||(int)$row['attempt_count']>=5)throw new AuthException(401,'کد ورود نامعتبر یا منقضی است.','SMS_OTP_INVALID');
             $pdo->prepare('UPDATE sms_login_challenges SET attempt_count=attempt_count+1 WHERE id=?')->execute([$row['id']]);
@@ -122,4 +122,64 @@ final class SmsLogin
             $pdo->commit();return $user['id'];
         }catch(\Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
     }
+
+    private static function userByMobile(string $mobile): ?array
+    {
+        $mobile=self::normalizeMobile($mobile);
+        if($mobile==='')return null;
+        $pdo=Connection::get();
+        $q=$pdo->prepare('SELECT id,mobile FROM users WHERE mobile=? AND is_active=1 LIMIT 2');
+        $q->execute([$mobile]);$rows=$q->fetchAll(PDO::FETCH_ASSOC);
+        if(count($rows)!==1)return null;
+        return ['id'=>(int)$rows[0]['id'],'mobile'=>$mobile];
+    }
+
+    public static function requestMobile(string $mobile): array
+    {
+        LoginMethods::requireEnabled('mobile');
+        if(!NeginSms::configured()||!class_exists(\SoapClient::class))throw new AuthException(503,'سرویس پیامک ورود تنظیم نشده است.','SMS_NOT_CONFIGURED');
+        $mobile=self::normalizeMobile($mobile);
+        if($mobile==='')throw new AuthException(422,'شماره همراه معتبر وارد کنید.','INVALID_MOBILE');
+        self::schema();
+        $pdo=Connection::get();$ip=substr((string)($_SERVER['REMOTE_ADDR']??''),0,45);
+        $pdo->beginTransaction();
+        try {
+            $q=$pdo->prepare('SELECT COUNT(*) FROM sms_login_requests WHERE ip_address=? AND requested_at>DATE_SUB(UTC_TIMESTAMP(),INTERVAL 15 MINUTE)');
+            $q->execute([$ip]);
+            if((int)$q->fetchColumn()>=10)throw new AuthException(429,'تعداد درخواست‌های ورود زیاد است. ۱۵ دقیقه بعد تلاش کنید.','SMS_RATE_LIMITED');
+            $pdo->prepare('INSERT INTO sms_login_requests(ip_address) VALUES(?)')->execute([$ip]);$pdo->commit();
+        }catch(\Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
+        $user=self::userByMobile($mobile);
+        if(!$user)return ['requested'=>true,'expiresIn'=>300];
+        $uid=$user['id'];$q=$pdo->prepare("SELECT COUNT(*) FROM sms_login_challenges WHERE user_id=? AND purpose='login' AND created_at>DATE_SUB(UTC_TIMESTAMP(),INTERVAL 15 MINUTE)");
+        $q->execute([$uid]);if((int)$q->fetchColumn()>=5)throw new AuthException(429,'تعداد درخواست‌های کد ورود زیاد است.','SMS_RATE_LIMITED');
+        $code=(string)random_int(100000,999999);$hash=password_hash($code,PASSWORD_DEFAULT);
+        $pdo->prepare("UPDATE sms_login_challenges SET consumed_at=UTC_TIMESTAMP() WHERE user_id=? AND purpose='login' AND consumed_at IS NULL")->execute([$uid]);
+        $pdo->prepare("INSERT INTO sms_login_challenges(user_id,purpose,code_hash,expires_at) VALUES(?,'login',?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 5 MINUTE))")->execute([$uid,$hash]);
+        try{
+            $result=(new NeginSms())->send($user['mobile'],'کد ورود سرویس‌یار: '.$code."\nاعتبار: ۵ دقیقه. کد را در اختیار دیگران قرار ندهید.");
+            if(!($result['accepted']??false))throw new AuthException(502,'پیامک ورود توسط سرویس‌دهنده پذیرفته نشد.','SMS_PROVIDER_REJECTED');
+        }catch(\Throwable $e){
+            $pdo->prepare("UPDATE sms_login_challenges SET consumed_at=UTC_TIMESTAMP() WHERE user_id=? AND purpose='login' AND code_hash=?")->execute([$uid,$hash]);throw $e;
+        }
+        return ['requested'=>true,'expiresIn'=>300];
+    }
+
+    public static function verifyMobile(string $mobile,string $code): int
+    {
+        LoginMethods::requireEnabled('mobile');$code=self::digits($code);
+        if(!preg_match('/^[0-9]{6}$/D',$code))throw new AuthException(401,'کد ورود نامعتبر است.','SMS_OTP_INVALID');
+        self::schema();$user=self::userByMobile($mobile);
+        if(!$user)throw new AuthException(401,'کد ورود نامعتبر است.','SMS_OTP_INVALID');
+        $pdo=Connection::get();$pdo->beginTransaction();
+        try {
+            $q=$pdo->prepare("SELECT id,code_hash,attempt_count FROM sms_login_challenges WHERE user_id=? AND purpose='login' AND consumed_at IS NULL AND expires_at>UTC_TIMESTAMP() ORDER BY id DESC LIMIT 1 FOR UPDATE");
+            $q->execute([$user['id']]);$row=$q->fetch(PDO::FETCH_ASSOC);
+            if(!$row||(int)$row['attempt_count']>=5)throw new AuthException(401,'کد ورود نامعتبر یا منقضی است.','SMS_OTP_INVALID');
+            $pdo->prepare('UPDATE sms_login_challenges SET attempt_count=attempt_count+1 WHERE id=?')->execute([$row['id']]);
+            if(!password_verify($code,$row['code_hash'])){$pdo->commit();throw new AuthException(401,'کد ورود صحیح نیست.','SMS_OTP_INVALID');}
+            $pdo->prepare('UPDATE sms_login_challenges SET consumed_at=UTC_TIMESTAMP() WHERE id=?')->execute([$row['id']]);$pdo->commit();return $user['id'];
+        }catch(\Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
+    }
+
 }
