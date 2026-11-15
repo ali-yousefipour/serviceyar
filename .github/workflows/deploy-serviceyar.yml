@@ -72,6 +72,7 @@ jobs:
           test -f frontend/assets/public-site.css
           node --check frontend/assets/operations.js
           node --check frontend/assets/bale-bot.js
+          node tests/bale-integration-contract.cjs
           node --check frontend/assets/vehicle-class-admin.js
           node --check frontend/assets/vehicle-model-picker.js
           node tests/vehicle-model-selector.cjs
