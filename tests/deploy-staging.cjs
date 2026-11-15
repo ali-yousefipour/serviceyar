@@ -12,6 +12,7 @@ const productionDocs=readFileSync('docs/PHASE-17-PRODUCTION.md','utf8');
 const bootstrap=readFileSync('backend/src/bootstrap.php','utf8');
 const baleBot=readFileSync('backend/src/Integrations/BaleBotService.php','utf8');
 const baleDocs=readFileSync('docs/BALE-BOT.md','utf8');
+const providerDocs=readFileSync('docs/PROVIDER-SETUP.md','utf8');
 for(const asset of ['public-site.js','public-site.css','public-site-content.html']){
  const {existsSync}=require('node:fs');
  assert.ok(existsSync('frontend/assets/'+asset),'Missing public asset: '+asset);
@@ -38,4 +39,5 @@ assert.match(bootstrap,/\$allowedOrigins\[\]\s*=\s*'https:\/\/service-yar\.ir'/,
 assert.match(baleBot,/config\('APP_URL','https:\/\/service-yar\.ir'\)/,'Bale webhook generation must default to the canonical host');
 assert.match(baleBot,/\$base='https:\/\/service-yar\.ir'/,'Bale webhook fallback must use the canonical host');
 assert.match(baleDocs,/APP_URL=https:\/\/service-yar\.ir/,'Bale setup documentation must use the canonical host');
+assert.match(providerDocs,/https:\/\/service-yar\.ir\/api\/v1\/integrations\/bale\/webhook/,'Wallet webhook instructions must use the production host');
 console.log('FTP staging isolation and service-yar.ir canonical-domain checks OK');
