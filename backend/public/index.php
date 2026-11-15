@@ -581,6 +581,13 @@ try {
   if($method==='POST'||$method==='PUT'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>OperationsService::saveDocument($s['id'],$aid,(int)$m[1],Request::json(),isset($m[2])?(int)$m[2]:null)]);}
  }
  if($method==='GET'&&$path==='/api/v1/monitoring/users')Response::json(['ok'=>true,'data'=>MonitoringService::users($s['id'],$aid)]);
+ if($method==='GET'&&$path==='/api/v1/operations/portal-vehicle-requests')
+    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\PortalVehicleRequests::list((int)$s['id'],$aid)]);
+ if($method==='POST'&&preg_match('#^/api/v1/operations/portal-vehicle-requests/([0-9]+)/(approve|reject)$#D',$path,$portalVehicle)){
+    $auth->requireCsrf($s);
+    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\PortalVehicleRequests::decide(
+        (int)$s['id'],$aid,(int)$portalVehicle[1],$portalVehicle[2])]);
+ }
  if($method==='GET'&&$path==='/api/v1/operations/dashboard')Response::json(['ok'=>true,'data'=>OperationsService::summary($s['id'],$aid)]);
  if($method==='GET'&&$path==='/api/v1/operations/schools')Response::json(['ok'=>true,'data'=>OperationsService::schoolReport($s['id'],$aid)]);
  if($method==='GET'&&$path==='/api/v1/operations/payroll')Response::json(['ok'=>true,'data'=>OperationsService::payroll($s['id'],$aid,$_GET)]);
