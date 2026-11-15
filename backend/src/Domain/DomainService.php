@@ -760,7 +760,7 @@ final class DomainService {
    $linked->execute([$aid,$id]);
    foreach($linked->fetchAll(\PDO::FETCH_ASSOC) as $service)
     ServicePricing::synchronizeServiceVehicle($pdo,$aid,(int)$service['id'],(string)($service['fee_source']??'taxi'),true,true);
-   self::syncServiceCapacityFromVehicle($pdo,$aid);
+   self::refreshServiceCapacity($pdo,$aid);
   }
   // Vehicle seating capacity must be reflected by assigned services, including older unsynchronized records.
   // Both writes share the current transaction; existing assignments are untouched.
