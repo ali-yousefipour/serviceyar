@@ -8,6 +8,31 @@ use PDO;
 
 final class SmsLogin
 {
+    /** Privileged one-time setup on enabling SMS login; public OTP never runs DDL. */
+    public static function prepareSchema(): void
+    {
+        $pdo=Connection::get();
+        try {
+            $pdo->exec("CREATE TABLE IF NOT EXISTS sms_login_challenges (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                user_id BIGINT UNSIGNED NOT NULL,code_hash VARCHAR(255) NOT NULL,
+                expires_at DATETIME NOT NULL,consumed_at DATETIME NULL,
+                attempt_count INT NOT NULL DEFAULT 0,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_sms_login_user (user_id,created_at,expires_at),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            $pdo->exec("CREATE TABLE IF NOT EXISTS sms_login_requests (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                ip_address VARCHAR(45) NOT NULL,
+                requested_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_sms_login_ip (ip_address,requested_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        } catch(\PDOException $e) {
+            error_log('[ServiceYar][SMS] Unable to initialize OTP schema: '.$e->getCode());
+            throw new AuthException(503,'جدول ورود پیامکی قابل ایجاد نیست؛ مهاجرت 0111_sms_login.sql را اجرا کنید.','SMS_LOGIN_MIGRATION_REQUIRED');
+        }
+    }
     private static function schema(): void
     {
         $pdo=Connection::get();
