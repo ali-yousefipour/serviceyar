@@ -22,6 +22,9 @@ try {
   $secret=(string)config('BALE_WEBHOOK_SECRET','');if(strlen($secret)<32||!hash_equals($secret,$m[1]))throw new AuthException(403,'وب‌هوک مجاز نیست.','FORBIDDEN');
   Response::json(['ok'=>true,'data'=>BalePaymentService::webhook(Request::json())]);
  }
+ if($method==='POST'&&preg_match('#^/api/v1/bale/bot/webhook/([a-f0-9]{64})$#D',$path,$m)){
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\BaleBotService::handleWebhook($m[1],Request::json())]);
+ }
  if($method==='GET'&&($path==='/api/health'||$path==='/api/v1/health'))Response::json(['ok'=>true,'service'=>config('APP_NAME','ServiceYar'),'environment'=>config('APP_ENV','local'),'version'=>'0.3.0','time'=>gmdate('c')]);
  if($method==='GET'&&$path==='/api/v1/health/ready'){try{Connection::get()->query('SELECT 1');Response::json(['ok'=>true,'data'=>['api'=>true,'database'=>true,'time'=>gmdate('c')]]);}catch(\Throwable $e){Response::json(['ok'=>false,'error'=>['code'=>'NOT_READY','message'=>'پایگاه داده آماده نیست.']],503);}}
  if($method==='GET'&&$path==='/api/v1/public/overview'){
@@ -215,12 +218,31 @@ try {
   Response::json(['ok'=>true,'data'=>['authenticated'=>$authenticated]]);
  }
 
+ if($method==='GET'&&$path==='/api/v1/auth/bale/status'){
+  Response::json(['ok'=>true,'data'=>['enabled'=>\ServiceYar\Integrations\BaleBotService::ready()]]);
+ }
+ if($method==='POST'&&$path==='/api/v1/auth/bale/request'){
+  $b=Request::json();Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\BaleBotService::requestLogin((string)($b['username']??''))]);
+ }
+ if($method==='POST'&&$path==='/api/v1/auth/bale/verify'){
+  $b=Request::json();$uid=\ServiceYar\Integrations\BaleBotService::verifyLogin((string)($b['username']??''),(string)($b['code']??''));
+  Response::json(['ok'=>true,'data'=>$auth->loginTrustedUser($uid)]);
+ }
  if($method==='POST'&&$path==='/api/v1/auth/login'){ $b=Request::json();Response::json(['ok'=>true,'data'=>$auth->login((string)($b['username']??''),(string)($b['password']??''))]); }
  if($method==='POST'&&$path==='/api/v1/auth/logout'){ $s=$auth->current();$auth->requireCsrf($s);$auth->logout();Response::json(['ok'=>true,'data'=>['loggedOut'=>true]]); }
  if($method==='GET'&&$path==='/api/v1/auth/me'){ $s=$auth->current();$rs=Connection::get()->prepare('SELECT r.name FROM roles r JOIN user_roles ur ON ur.role_id=r.id WHERE ur.user_id=:u ORDER BY r.id');$rs->execute(['u'=>$s['id']]);Response::json(['ok'=>true,'data'=>['user'=>['id'=>$s['id'],'uuid'=>$s['uuid'],'username'=>$s['username'],'firstName'=>$s['firstName'],'lastName'=>$s['lastName']],'roles'=>$rs->fetchAll(\PDO::FETCH_COLUMN),'permissions'=>Authorization::permissions($s['id']),'agencies'=>AgencyService::sessionList($s['id']),'csrfToken'=>$s['csrfToken']]]); }
  if($method==='GET'&&$path==='/api/v1/auth/csrf'){ $s=$auth->current();Response::json(['ok'=>true,'data'=>['csrfToken'=>$s['csrfToken']]]); }
  $s=$auth->current(); $aid=null;
 
+ if($path==='/api/v1/bale/link'){
+  if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\BaleBotService::status((int)$s['id'])]);
+  if($method==='POST'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\BaleBotService::startLink((int)$s['id'])]);}
+  if($method==='DELETE'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\BaleBotService::unlink((int)$s['id'])]);}
+ }
+ if($method==='POST'&&$path==='/api/v1/bale/message'){
+  $auth->requireCsrf($s);$b=Request::json();
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\BaleBotService::sendToUser((int)$s['id'],(int)($b['recipientId']??0),(string)($b['text']??''))]);
+ }
  // Private profile portraits; self-service and scoped manager access share the same storage.
  if(preg_match('#^/api/v1/(?:auth/profile/photo|users/([0-9]+)/photo|admin/users/([0-9]+)/photo)$#',$path,$photo)){
   $target=isset($photo[2])&&$photo[2]!==''?(int)$photo[2]:(isset($photo[1])&&$photo[1]!==''?(int)$photo[1]:(int)$s['id']);
@@ -533,6 +555,10 @@ try {
    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SepandRegistryImport::run(
     $s['id'],['drivers'=>$_FILES['drivers']??[],'vehicles'=>$_FILES['vehicles']??[]],
     $apply,$binding,(string)($_POST['digest']??''))]);
+ }
+ if($path==='/api/v1/admin/bale-bot'){
+  if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\BaleBotService::overview((int)$s['id'])]);
+  if($method==='PUT'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\BaleBotService::configure((int)$s['id'],Request::json())]);}
  }
  if($path==='/api/v1/admin/platform-settings'){
    if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Settings\PlatformSettings::overview($s['id'])]);
