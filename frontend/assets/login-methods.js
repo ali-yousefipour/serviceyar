@@ -19,7 +19,14 @@
  const createOtp=(method)=>{
   const form=make('form','sy-login-otp-form');form.id='syLogin'+method;
   form.hidden=true;
-  const intro=make('p','sy-login-otp-intro',method==='sms'?'کد یک‌بارمصرف به شماره همراه ثبت‌شده در پروفایل شما پیامک می‌شود.':'کد یک‌بارمصرف به گفتگوی ربات بله متصل به حساب شما ارسال می‌شود.');
+  const intro=make('p','sy-login-otp-intro',method==='sms'?'کد یک‌بارمصرف به شماره همراه ثبت‌شده در پروفایل شما پیامک می‌شود.':'برای ورود با بله، ابتدا ربات syarbot را باز کنید و دکمه «شروع» (Start) را بزنید. کاربران عادی در اولین مراجعه باید شماره همراه خود را با دکمه «اشتراک شماره همراه من» در ربات تأیید کنند. ادمین کل نیز باید اتصال اختصاصی پروفایل خود را انجام داده باشد.');
+  if(method==='bale'){
+   const botLink=make('a','sy-login-bot-link','ورود به ربات syarbot در بله');
+   botLink.href='https://ble.ir/syarbot';botLink.target='_blank';botLink.rel='noopener noreferrer';
+   botLink.setAttribute('aria-label','باز کردن ربات syarbot در پیام‌رسان بله');
+   const backHint=make('p','sy-login-bot-return','پس از زدن Start و اتصال حساب، به این صفحه برگردید، نام کاربری را وارد کنید و کد ورود را بگیرید.');
+   form.append(intro,botLink,backHint);
+  }else form.append(intro);
   const user=make('label','sy-login-field');user.textContent=userLabel;
   const username=make('input');username.name='username';username.required=true;username.maxLength=100;username.autocomplete='username';username.placeholder='نام کاربری یا شماره ورود';user.append(username);
   const send=make('button','sy-login-otp-send','ارسال کد ورود');send.type='button';
@@ -27,7 +34,7 @@
   const code=make('input');code.name='code';code.required=true;code.maxLength=6;code.inputMode='numeric';code.autocomplete='one-time-code';code.placeholder='ــــــ';code.pattern='[0-9۰-۹٠-٩]{6}';code.dir='ltr';codeLabel.append(code);
   const verify=make('button','sy-login-otp-confirm','تأیید کد و ورود');verify.type='submit';
   const info=make('p','sy-login-otp-message');info.setAttribute('role','status');info.setAttribute('aria-live','polite');
-  form.append(intro,user,send,codeLabel,verify,info);
+  form.append(user,send,codeLabel,verify,info);
   send.onclick=async()=>{
    const name=normalize(username.value);
    if(!name){note(info,'ابتدا نام کاربری را وارد کنید.',true);username.focus();return;}
