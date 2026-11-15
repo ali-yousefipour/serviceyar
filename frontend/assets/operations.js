@@ -2184,7 +2184,7 @@ function userManagementTable(box,rows,global){
  const manage=global||can('users','manage'),selfId=Number(session?.user?.id);
  const norm=value=>ServiceYarDates.digits(String(value??'')).replace(/[يى]/g,'ی').replace(/ك/g,'ک').replace(/\s+/g,' ').trim().toLocaleLowerCase('fa');
  box.innerHTML='<div class="sy-admin-user-toolbar">'+
-  '<label class="sy-admin-user-search"><span>جستجوی کاربران</span><input type="search" data-user-search autocomplete="off" placeholder="نام، نام خانوادگی، نام کاربری یا نقش" aria-label="جستجوی کاربران سامانه"></label>'+
+  '<label class="sy-admin-user-search"><span>جستجوی کاربران</span><input type="search" data-user-search autocomplete="off" placeholder="نام، نام کاربری، نقش، شماره همراه یا کد ملی" aria-label="جستجوی کاربران سامانه"></label>'+
   '<span class="sy-admin-user-count" data-user-count aria-live="polite"></span>'+
   (!global&&manage?'<button type="button" data-new-user>کاربر جدید</button>':'')+'</div>'+
   '<div class="table-wrap sy-admin-user-scroll"><table><thead><tr><th>کاربر</th><th>نام کاربری</th><th>شماره همراه</th><th>کد ملی</th><th>نقش</th><th>وضعیت</th><th>عملیات</th></tr></thead><tbody data-user-results></tbody></table></div>';
