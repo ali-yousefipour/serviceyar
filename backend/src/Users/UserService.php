@@ -34,7 +34,7 @@ final class UserService {
   return $rows;
  }
  public static function find(int $u,int $a,int $id): array {self::scope($u,$a,'view');foreach(self::list($u,$a) as $r)if((int)$r['id']===$id)return $r;throw new AuthException(404,'کاربر پیدا نشد.','NOT_FOUND');}
- private static function editable(int $u,int $a,int $id): array {$r=self::find($u,$a,$id);$q=Connection::get()->prepare('SELECT COUNT(*) FROM agency_users WHERE user_id=?');$q->execute([$id]);if(!A::isSuperAdmin($u)&&((bool)array_intersect(['super_admin','agency_admin'],explode(',',(string)$r['role_names']))||(int)$q->fetchColumn()>1))throw new AuthException(403,'ویرایش حساب مشترک یا مدیر کل فقط توسط مدیر کل مجاز است.','PROTECTED_USER');return $r;}
+ private static function editable(int $u,int $a,int $id): array {$r=self::find($u,$a,$id);$q=Connection::get()->prepare('SELECT COUNT(*) FROM agency_users WHERE user_id=?');$q->execute([$id]);if(!A::isSuperAdmin($u)&&((bool)array_intersect(['super_admin','agency_admin','school_company_manager'],explode(',',(string)$r['role_names']))||(int)$q->fetchColumn()>1))throw new AuthException(403,'ویرایش حساب مشترک یا مدیر کل فقط توسط مدیر کل مجاز است.','PROTECTED_USER');return $r;}
  public static function profile(int $userId): array {
   $p=Connection::get();self::requireProfileColumns($p);
   $q=$p->prepare('SELECT id,username,first_name,last_name,mobile,national_code,email,address,postal_code,emergency_phone,photo_version FROM users WHERE id=? AND is_active=1');
