@@ -17,6 +17,7 @@ const publicEntrypoints=[
  '/api/v1/auth/password-reset/confirm',
  '/api/v1/auth/bale/request',
  '/api/v1/auth/bale/verify',
+ '/api/v1/portal/auth/password',
  '/api/v1/auth/login'
 ];
 assert.ok(routeLines.length>=60,'Expected broad API mutation route coverage');
