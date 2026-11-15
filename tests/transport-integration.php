@@ -255,8 +255,10 @@ try{
  try{$reader=new ReflectionMethod(StudentImport::class,'xlsx');$mapped=StudentImport::map($reader->invoke(null,$zipFile));check($mapped[0]['mobile']==='09120000333','XLSX shared strings preserve leading zero');}finally{unlink($zipFile);}
  $bom=StudentImport::map([["\xEF\xBB\xBFfirstName",'lastName','mobile'],['x','y','09120000444']]);check($bom[0]['firstName']==='x','CSV BOM is normalized');
  check(O::schoolReport($uid,$a)['items'][0]['students']==3,'School report aggregates actual students');
+ rejected(fn()=>PayrollDocuments::create($uid,$a,['from'=>$date,'to'=>$date,'lines'=>[['driverId'=>$driver['id'],'amount'=>700.5]]]),'INVALID_PAYROLL_SALARY');
  $doc=PayrollDocuments::create($uid,$a,['from'=>$date,'to'=>$date,'lines'=>[['driverId'=>$driver['id'],'amount'=>700]]]);check(PayrollDocuments::get($uid,$a,$doc['id'])['status']==='draft','Payroll snapshot is a draft, not a payment');
  rejected(fn()=>PayrollDocuments::create($uid,$a,['from'=>$date,'to'=>$date,'lines'=>[['driverId'=>$driver['id'],'amount'=>700]]]),'PAYROLL_EXISTS');
+ rejected(fn()=>PayrollDocuments::update($uid,$a,$doc['id'],['lines'=>[['driverId'=>$driver['id'],'amount'=>750.25]]]),'INVALID_PAYROLL_SALARY');
  PayrollDocuments::update($uid,$a,$doc['id'],['lines'=>[['driverId'=>$driver['id'],'amount'=>750]]]);check((float)PayrollDocuments::get($uid,$a,$doc['id'])['total_amount']===750.0,'Draft payroll amounts can be corrected');
  rejected(fn()=>PayrollDocuments::get($uid,$b,$doc['id']),'NOT_FOUND');PayrollDocuments::approve($uid,$a,$doc['id']);rejected(fn()=>PayrollDocuments::update($uid,$a,$doc['id'],['lines'=>[['driverId'=>$driver['id'],'amount'=>800]]]),'PAYROLL_LOCKED');
  check(PayrollDocuments::validIban('IR490000000000000000000000')&&!PayrollDocuments::validIban('IR480000000000000000000000'),'Bank export enforces IBAN checksum');
