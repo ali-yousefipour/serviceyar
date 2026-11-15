@@ -10,7 +10,7 @@
  if(!root||!passwordForm)return;
 
  const slot=make('section','sy-login-methods');slot.id='syLoginMethods';
- const tabs=make('div','sy-login-method-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','روش ورود به سامانه');
+ const tabs=make('div','sy-login-method-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','روش ورود به سامانه');tabs.setAttribute('aria-orientation','horizontal');
  const state=make('p','sy-login-method-state','در حال دریافت روش‌های مجاز ورود…');state.setAttribute('role','status');state.setAttribute('aria-live','polite');
  const panelsHost=make('div','sy-login-method-panels');
  slot.append(tabs,state,panelsHost);
