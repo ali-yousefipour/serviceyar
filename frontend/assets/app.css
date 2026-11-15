@@ -201,3 +201,53 @@ button{min-height:36px;font-size:12px}.primary{padding:8px 14px;border-radius:9p
 .sy-agency-activate:disabled{opacity:.6}
 @media(max-width:750px){.sy-agency-kpis{grid-template-columns:1fr 1fr}.sy-agency-kpis article:first-child{grid-column:1/-1}.sy-agency-controls label{flex-basis:100%}.sy-agency-controls button{flex:1 1 120px}.sy-admin-agency-panel{padding:14px!important}}
 @media(prefers-reduced-motion:no-preference){.sy-agency-kpis article,.sy-agency-controls button{transition:box-shadow .2s,transform .2s}.sy-agency-kpis article:hover{transform:translateY(-2px);box-shadow:0 12px 28px #14613d12}}
+
+
+/* Company management dashboard - scoped: no global panel regressions */
+.sy-mgmt-dashboard{display:grid;gap:20px;min-width:0}
+.sy-mgmt-dashboard .sy-mgmt-hero{border-radius:22px;padding:24px;min-height:145px;background:linear-gradient(115deg,#102e43 0%,#144f55 53%,#087b63 100%);color:#fff;box-shadow:0 12px 32px #123b4a22}
+.sy-mgmt-dashboard .sy-mgmt-hero .dashboard-kicker,.sy-mgmt-dashboard .sy-mgmt-hero p{color:#e1f6f0}
+.sy-mgmt-dashboard .sy-mgmt-hero h2{color:#fff;margin:5px 0;font-size:clamp(19px,2.1vw,26px)}
+.sy-mgmt-dashboard .sy-mgmt-hero a,.sy-mgmt-dashboard .sy-mgmt-hero button{background:#ffffff19;color:#fff;border:1px solid #ffffff44;border-radius:12px;transition:background .2s,transform .2s}
+.sy-mgmt-dashboard .sy-mgmt-hero a:hover,.sy-mgmt-dashboard .sy-mgmt-hero button:hover{background:#ffffff2c;transform:translateY(-2px)}
+.sy-mgmt-dashboard .sy-mgmt-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.sy-mgmt-dashboard .sy-mgmt-kpi{display:flex;flex-direction:column;gap:8px;min-width:0;border-radius:18px;border:1px solid #e5ebf0;padding:17px 19px;background:#fff;box-shadow:0 6px 22px #233f5710;color:#24384c;text-decoration:none;transition:transform .2s,box-shadow .2s,border-color .2s}
+.sy-mgmt-dashboard .sy-mgmt-kpi:hover{transform:translateY(-3px);box-shadow:0 12px 25px #233f5722;border-color:#a6cbd0}
+.sy-mgmt-dashboard .sy-mgmt-kpi-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;font-weight:700}
+.sy-mgmt-dashboard .sy-mgmt-kpi-head svg{width:23px;height:23px;opacity:.85}
+.sy-mgmt-dashboard .sy-mgmt-kpi strong{font-size:clamp(24px,2.5vw,35px);line-height:1.25;font-weight:850;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.sy-mgmt-dashboard .sy-mgmt-kpi small{font-size:11px;color:#647486;line-height:1.65}
+.sy-mgmt-dashboard .sy-mgmt-tone-green{border-top:4px solid #168660}.sy-mgmt-dashboard .sy-mgmt-tone-green strong{color:#116e56}
+.sy-mgmt-dashboard .sy-mgmt-tone-amber{border-top:4px solid #d49b45}.sy-mgmt-dashboard .sy-mgmt-tone-amber strong{color:#a86f17}
+.sy-mgmt-dashboard .sy-mgmt-tone-blue{border-top:4px solid #467fba}.sy-mgmt-dashboard .sy-mgmt-tone-blue strong{color:#265885}
+.sy-mgmt-dashboard .sy-mgmt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.sy-mgmt-dashboard .sy-mgmt-panel{min-width:0;border:1px solid #e5edf2;border-radius:18px;padding:21px;box-shadow:0 5px 20px #203b500c}
+.sy-mgmt-dashboard .sy-mgmt-panel h3{font-size:16px;font-weight:800;color:#1b3a4a;margin:0}
+.sy-mgmt-dashboard .sy-mgmt-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:13px;margin-bottom:19px}
+.sy-mgmt-dashboard .sy-mgmt-panel-head p{font-size:12px;color:#6b7b87;margin:4px 0 0}
+.sy-mgmt-dashboard .sy-mgmt-inline-stat{border-radius:999px;padding:5px 10px;background:#e3f5ed;color:#116e56;font-weight:800;white-space:nowrap}
+.sy-mgmt-dashboard .sy-mgmt-donut-wrap{display:grid;grid-template-columns:minmax(140px,190px) 1fr;align-items:center;gap:22px}
+.sy-mgmt-dashboard .sy-mgmt-ring{aspect-ratio:1;border-radius:50%;background:conic-gradient(#168660 0 var(--sy-coverage),#e5ebf1 var(--sy-coverage) 100%);display:grid;place-items:center}
+.sy-mgmt-dashboard .sy-mgmt-ring>div{width:75%;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;border-radius:50%;text-align:center}
+.sy-mgmt-dashboard .sy-mgmt-ring strong{font-size:30px;color:#16624f;font-variant-numeric:tabular-nums}
+.sy-mgmt-dashboard .sy-mgmt-ring small{font-size:11px;color:#6a7a85}
+.sy-mgmt-dashboard .sy-mgmt-legend{display:grid;gap:12px}.sy-mgmt-dashboard .sy-mgmt-legend>div{display:flex;align-items:center;gap:8px;font-size:12px}.sy-mgmt-dashboard .sy-mgmt-legend i{width:11px;height:11px;border-radius:4px;flex:0 0 auto}.sy-mgmt-dashboard .sy-mgmt-legend strong{margin-inline-start:auto;font-size:15px}
+.sy-mgmt-dashboard .sy-mgmt-progress-row{margin:17px 0;display:grid;gap:9px}.sy-mgmt-dashboard .sy-mgmt-progress-row>div:first-child{display:flex;justify-content:space-between;gap:10px;font-size:12px}
+.sy-mgmt-dashboard .sy-mgmt-progress{height:11px;background:#e9eef3;border-radius:15px;overflow:hidden}.sy-mgmt-dashboard .sy-mgmt-progress span{display:block;height:100%;border-radius:15px;background:linear-gradient(90deg,#54bea8,#168660)}
+.sy-mgmt-dashboard .sy-mgmt-progress-row>small{color:#637386;font-weight:750}
+.sy-mgmt-dashboard .sy-mgmt-alerts{display:grid;gap:8px;margin-top:16px}.sy-mgmt-dashboard .sy-mgmt-alert{background:#fff4e6;color:#8d5c15;padding:11px 14px;border:1px solid #f1d7a6;border-radius:10px;text-decoration:none}
+.sy-mgmt-dashboard .sy-mgmt-ok{color:#19785b;font-size:12px;background:#e9f8ef;padding:12px;border-radius:10px;margin:0}
+.sy-mgmt-dashboard .sy-mgmt-status-bars{display:grid;gap:12px}.sy-mgmt-dashboard .sy-mgmt-status-bars a{display:grid;grid-template-columns:minmax(75px,1.2fr) minmax(60px,2fr) auto;align-items:center;gap:13px;color:inherit;font-size:12px;text-decoration:none}
+.sy-mgmt-dashboard .sy-mgmt-status-track,.sy-mgmt-dashboard .sy-mgmt-school-track{height:9px;border-radius:10px;background:#edf1f6;overflow:hidden}.sy-mgmt-dashboard .sy-mgmt-status-track i,.sy-mgmt-dashboard .sy-mgmt-school-track i{display:block;height:100%;border-radius:10px;transition:width .4s}
+.sy-mgmt-dashboard .sy-mgmt-status-bars strong{font-size:13px;min-width:30px;text-align:left}
+.sy-mgmt-dashboard .sy-mgmt-school-bars{display:grid;gap:15px}.sy-mgmt-dashboard .sy-mgmt-school-row>div:first-child{display:flex;gap:10px;justify-content:space-between;font-size:12px;margin-bottom:8px}.sy-mgmt-dashboard .sy-mgmt-school-row>div:first-child span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:65%}.sy-mgmt-dashboard .sy-mgmt-school-row strong{color:#a86f17;white-space:nowrap}
+.sy-mgmt-dashboard .sy-mgmt-school-track i{background:linear-gradient(90deg,#eabf6b,#d58d35)}
+.sy-mgmt-dashboard .sy-mgmt-wide{grid-column:1/-1}.sy-mgmt-dashboard .sy-mgmt-wide .table-wrap{max-height:340px;overflow:auto}.sy-mgmt-dashboard .sy-mgmt-wide thead{position:sticky;top:0;background:#f4f8fa;z-index:1}
+.sy-mgmt-dashboard .sy-mgmt-map-panel .dashboard-school-map{min-height:320px;border-radius:12px;overflow:hidden}
+.sy-mgmt-dashboard .sy-mgmt-search{display:grid;grid-template-columns:1fr 150px auto;gap:8px;margin-bottom:16px}.sy-mgmt-dashboard .sy-mgmt-search input,.sy-mgmt-dashboard .sy-mgmt-search select{min-width:0;width:100%}
+.sy-mgmt-dashboard .sy-mgmt-wallet{margin-top:14px;padding:13px;border:1px solid #dce8e5;border-radius:12px;display:flex;align-items:center;flex-wrap:wrap;justify-content:space-between;gap:10px}
+.sy-mgmt-dashboard .sy-mgmt-footnote{margin:0;font-size:12px;color:#708090}
+@media(max-width:1050px){.sy-mgmt-dashboard .sy-mgmt-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.sy-mgmt-dashboard .sy-mgmt-grid{grid-template-columns:1fr}.sy-mgmt-dashboard .sy-mgmt-wide{grid-column:auto}}
+@media(max-width:600px){.sy-mgmt-dashboard .sy-mgmt-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.sy-mgmt-dashboard .sy-mgmt-kpi{padding:13px}.sy-mgmt-dashboard .sy-mgmt-kpi strong{font-size:23px}.sy-mgmt-dashboard .sy-mgmt-hero{padding:18px}.sy-mgmt-dashboard .sy-mgmt-panel{padding:15px}.sy-mgmt-dashboard .sy-mgmt-donut-wrap{grid-template-columns:1fr;justify-items:center}.sy-mgmt-dashboard .sy-mgmt-ring{width:min(190px,100%)}.sy-mgmt-dashboard .sy-mgmt-search{grid-template-columns:1fr}.sy-mgmt-dashboard .sy-mgmt-panel-head{flex-wrap:wrap}}
+@media(max-width:380px){.sy-mgmt-dashboard .sy-mgmt-summary{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.sy-mgmt-dashboard .sy-mgmt-kpi,.sy-mgmt-dashboard .sy-mgmt-progress span,.sy-mgmt-dashboard .sy-mgmt-status-track i{transition:none}}
