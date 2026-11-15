@@ -1701,3 +1701,33 @@ body{background:var(--canvas);color:var(--ink)}
 .sy-bale-profile-panel code{display:inline-block;direction:ltr;unicode-bidi:isolate;overflow-wrap:anywhere;margin-inline:5px;padding:4px 8px;background:#ecf4f1;border-radius:6px;font-size:12px}
 .sy-bale-profile-panel [data-link-message] button{margin-inline:8px}
 @media(max-width:640px){.sy-bale-admin-panel,.sy-bale-message-panel,.sy-bale-profile-panel{padding:12px}.sy-bale-admin-panel .form-grid{grid-template-columns:1fr}}
+
+/* Unified ServiceYar login: compact touch-friendly method selector, RTL and mobile */
+.sy-login-methods{margin:16px 0 14px}
+.sy-login-method-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;padding:5px;border-radius:14px;background:#eef5f0;border:1px solid #dcebe2}
+.sy-login-method-tabs[hidden]{display:none!important}
+.sy-login-method-tab{border:0;border-radius:10px;padding:11px 6px;min-height:48px;cursor:pointer;font:700 12px/1.7 Vazirmatn,Tahoma,sans-serif;color:#486458;background:transparent;transition:background .2s,color .2s,box-shadow .2s}
+.sy-login-method-tab[aria-selected="true"]{background:#fff;color:#096243;box-shadow:0 2px 10px #123a281c}
+.sy-login-method-tab:focus-visible,.sy-login-otp-form button:focus-visible,.sy-login-otp-form input:focus-visible{outline:3px solid #51a887;outline-offset:2px}
+#loginForm[hidden],.sy-login-otp-form[hidden]{display:none!important}
+.sy-login-otp-form{display:grid;gap:14px;animation:syMethodEnter .22s ease-out}
+.sy-login-otp-intro{font:500 12px/1.9 Vazirmatn,Tahoma,sans-serif;color:#476456;margin:0}
+.sy-login-field{display:grid;gap:6px;font:700 12px/1.8 Vazirmatn,Tahoma,sans-serif;color:#254c3b}
+.sy-login-field input{box-sizing:border-box;min-height:48px;width:100%;padding:10px 14px;border:1px solid #cbded2;border-radius:11px;background:#fff;color:#173b2e;font:600 14px Vazirmatn,Tahoma,sans-serif}
+.sy-login-field input[name="code"]{direction:ltr;text-align:center;letter-spacing:8px;font:800 20px Vazirmatn,Tahoma,sans-serif}
+.sy-login-otp-send,.sy-login-otp-confirm{min-height:47px;border-radius:11px;padding:9px 12px;font:750 13px Vazirmatn,Tahoma,sans-serif;cursor:pointer}
+.sy-login-otp-send{background:#edf7f1;color:#156c49;border:1px solid #b8daca}
+.sy-login-otp-confirm{background:#116747;border:1px solid #116747;color:#fff}
+.sy-login-otp-send:disabled,.sy-login-otp-confirm:disabled{opacity:.6;cursor:wait}
+.sy-login-otp-message{font:500 12px/1.9 Vazirmatn,Tahoma,sans-serif;color:#21694b;margin:0;min-height:20px}
+.sy-login-otp-message.error{color:#a42932}
+.sy-login-policy-panel{margin-top:18px;padding:17px;border:1px solid #cddfd5;border-radius:14px;background:#f7fbf9}
+.sy-login-policy-panel h3{margin:0 0 6px;color:#14563b;font:800 16px Vazirmatn,Tahoma,sans-serif}
+.sy-login-policy-panel p{font:500 12px/1.9 Vazirmatn,Tahoma,sans-serif;color:#496757}
+.sy-login-policy-form{display:grid;gap:10px}
+.sy-login-policy-option{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:#fff;border:1px solid #deebe2;color:#254e3a;cursor:pointer;font:650 13px Vazirmatn,Tahoma,sans-serif}
+.sy-login-policy-option input{width:19px;height:19px;min-height:0;accent-color:#0d7752}
+.sy-login-policy-status.error{color:#b12731}
+@keyframes syMethodEnter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:520px){.sy-login-method-tab{font-size:10px;line-height:1.65;padding:9px 3px}.sy-login-method-tabs{gap:3px;padding:4px}.sy-login-methods{margin:12px 0}}
+@media(prefers-reduced-motion:reduce){.sy-login-otp-form{animation:none}.sy-login-method-tab{transition:none}}
