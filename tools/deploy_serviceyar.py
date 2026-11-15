@@ -98,6 +98,10 @@ def verify_live(base_url, build_id, expected_digests):
     parsed_base = urlsplit(base)
     if parsed_base.scheme != "https" or parsed_base.hostname != CANONICAL_HOST:
         raise RuntimeError(f"Live verification must use https://{CANONICAL_HOST}; received {base!r}")
+    # Deployment-only exception requested by the operator: do not validate the
+    # certificate. Still verify HTTP host, exact build marker and asset SHA-256.
+    # This never changes browser TLS behavior or application HTTPS settings.
+    print('WARNING: deploy verification skips TLS certificate validation; check SSL separately.', flush=True)
     checks = [
         ("/", None),
         ("/assets/app.js", "assets/app.js"),
@@ -112,7 +116,7 @@ def verify_live(base_url, build_id, expected_digests):
             "User-Agent": "ServiceYar-Deploy-Verification/1.0",
         })
         try:
-            with urlopen(request, timeout=35) as response:
+            with urlopen(request, timeout=35, context=ssl._create_unverified_context()) as response:
                 body = response.read()
                 status = response.status
                 final_url = response.geturl()
