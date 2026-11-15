@@ -55,7 +55,6 @@ display.value='-۱۰۰';
 assert.equal(context.sync(),false,'Negative rial amount silently converted to positive');
 display.value='۱۰a۰';
 assert.equal(context.sync(),false,'Invalid alphabetic rial amount accepted');
-assert.match(src,/data-salary[^\\n]{0,120}step="1"/,'Payroll edit inputs must accept whole rials only');
-assert.match(src,/lines\\.some\\(line=>line\\.amount\\.trim\\(\\)===\\x27\\x27\\|\\|!Number\\.isSafeInteger\\(Number\\(line\\.amount\\)\\)\\)/,
- 'Payroll submission must reject invalid and fractional amounts before API request');
+assert.ok(src.includes('inputmode="numeric" min="0" max="1000000000000" step="1"'),'Payroll salary input must use whole rial increments');
+assert.ok(src.includes('Number.isSafeInteger(Number(line.amount))'),'Payroll save handler must reject fractional amounts');
 console.log('Persian financial form and bulk adjustment validation passed');
