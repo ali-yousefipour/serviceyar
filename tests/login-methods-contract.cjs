@@ -34,14 +34,14 @@ assert.ok(recovery.includes("public static function confirm(string $username,str
 assert.ok(recovery.includes("purpose='password_reset'"),'recovery challenges have a separate purpose');
 assert.ok(recovery.includes("UPDATE user_sessions SET revoked_at=UTC_TIMESTAMP()"),'password reset revokes existing sessions');
 assert.ok(bot.includes('sendAuthCodeToUser'),'Bale recovery code is sent only to linked user');
-assert.ok(recoveryMigration.includes("ENUM('login','password_reset')"),'SMS recovery purpose migration included');
+assert.ok(recoveryMigration.includes('sms_login_challenges')&&recoveryMigration.includes('password_reset'),'SMS recovery purpose migration included');
 assert.ok(recoveryMigration.includes("'password_reset'"),'Bale recovery purpose migration included');
 
 assert.ok(js.includes("setAttribute('role','tablist')"),'accessible tab list');
 assert.ok(js.includes("setAttribute('aria-selected'"),'accessible active tab');
 assert.ok(js.includes("const panelsHost=make('div','sy-login-method-panels')"),'all login methods share one content container');
 assert.ok(js.includes('panelsHost.append(passwordForm)'), 'password login is inside shared tab panel container');
-assert.ok(js.includes('panelsHost.append(panels.sms,panels.bale)'), 'SMS and Bale are inside same tab panel container');
+assert.ok(js.includes('panelsHost.append(panels.sms,panels.bale,panels.mobile)'), 'SMS, Bale and mobile methods are inside same tab panel container');
 assert.ok(js.includes("button.setAttribute('aria-controls',panels[method].id)"),'each tab controls its dedicated panel');
 assert.ok(js.includes('tabs.hidden=false'),'enabled method tabs remain visible, including a single enabled method');
 assert.ok(html.includes('id="loginForm" method="post" action="/api/v1/auth/login" novalidate hidden'),'password form is hidden until login policy is loaded');
