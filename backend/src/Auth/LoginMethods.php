@@ -7,13 +7,19 @@ use ServiceYar\Integrations\NeginSms;
 
 final class LoginMethods
 {
-    private const KEYS=['password'=>'login_method_password','sms'=>'login_method_sms','bale'=>'login_method_bale'];
+    private const KEYS=[
+        'password'=>'login_method_password',
+        'sms'=>'login_method_sms',
+        'bale'=>'login_method_bale',
+        'mobile'=>'login_method_mobile'
+    ];
 
     public static function policies(): array
     {
         $values=[];
         try {
-            $q=Connection::get()->query("SELECT setting_key,setting_value FROM platform_settings WHERE setting_key IN ('login_method_password','login_method_sms','login_method_bale')");
+            $keys=array_map(fn($key)=>"'".$key."'",array_values(self::KEYS));
+            $q=Connection::get()->query('SELECT setting_key,setting_value FROM platform_settings WHERE setting_key IN ('.implode(',',$keys).')');
             $values=$q->fetchAll(\PDO::FETCH_KEY_PAIR);
         } catch(\PDOException $e) {
             if($e->getCode()!=='42S02'&&(int)($e->errorInfo[1]??0)!==1146)throw $e;
@@ -26,11 +32,13 @@ final class LoginMethods
     public static function publicStatus(): array
     {
         $configured=self::policies();
-        $available=['password'=>true,'sms'=>NeginSms::configured()&&class_exists(\SoapClient::class),'bale'=>BaleBotService::ready()];
+        $smsReady=NeginSms::configured()&&class_exists(\SoapClient::class);
+        $available=['password'=>true,'sms'=>$smsReady,'bale'=>BaleBotService::ready(),'mobile'=>$smsReady];
         return ['methods'=>[
             'password'=>$configured['password'],
             'sms'=>$configured['sms']&&$available['sms'],
-            'bale'=>$configured['bale']&&$available['bale']
+            'bale'=>$configured['bale']&&$available['bale'],
+            'mobile'=>$configured['mobile']&&$available['mobile']
         ],'configured'=>$configured,'available'=>$available];
     }
 
@@ -50,16 +58,18 @@ final class LoginMethods
     public static function save(int $actor,array $input): array
     {
         if(!Authorization::isSuperAdmin($actor))throw new AuthException(403,'فقط ادمین کل مجاز است.','FORBIDDEN');
-        if(count($input)!==3||array_diff(array_keys(self::KEYS),array_keys($input))||array_diff(array_keys($input),array_keys(self::KEYS)))
-            throw new AuthException(422,'هر سه روش ورود باید تعیین شوند.','VALIDATION_ERROR');
+        if(count($input)!==count(self::KEYS)||array_diff(array_keys(self::KEYS),array_keys($input))||array_diff(array_keys($input),array_keys(self::KEYS)))
+            throw new AuthException(422,'تمام روش‌های ورود باید تعیین شوند.','VALIDATION_ERROR');
         foreach($input as $name=>$enabled)
             if(!is_bool($enabled))throw new AuthException(422,'تنظیم روش ورود باید درست یا نادرست باشد.','VALIDATION_ERROR');
         if(!in_array(true,$input,true))
             throw new AuthException(422,'حداقل یک روش ورود باید فعال بماند.','LOGIN_METHOD_REQUIRED');
         $available=self::publicStatus()['available'];
-        if(!$input['password']&&(!$input['sms']||!$available['sms'])&&(!$input['bale']||!$available['bale']))
+        $hasReadyMethod=false;
+        foreach($input as $key=>$enabled)if($enabled&&($available[$key]??false))$hasReadyMethod=true;
+        if(!$hasReadyMethod)
             throw new AuthException(422,'برای جلوگیری از مسدود شدن ورود، حداقل یک روش فعال و آماده لازم است.','LOGIN_METHOD_UNAVAILABLE');
-        if($input['sms'])SmsLogin::prepareSchema();
+        if($input['sms']||$input['mobile'])SmsLogin::prepareSchema();
         $pdo=Connection::get();
         $pdo->beginTransaction();
         try {
