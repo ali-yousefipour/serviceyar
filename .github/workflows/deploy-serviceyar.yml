@@ -164,5 +164,6 @@ jobs:
           FTP_HOST: ${{ secrets.SERVICEYAR_FTP_HOST }}
           FTP_USER: ${{ secrets.SERVICEYAR_FTP_USERNAME }}
           FTP_PASS: ${{ secrets.SERVICEYAR_FTP_PASSWORD }}
+          FTP_REMOTE_ROOT: ${{ vars.SERVICEYAR_FTP_REMOTE_ROOT || '/public_html' }}
           PUBLIC_BASE_URL: https://service-yar.ir
         run: python3 tools/deploy_serviceyar.py
