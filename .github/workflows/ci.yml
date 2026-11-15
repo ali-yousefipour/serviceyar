@@ -36,10 +36,7 @@ jobs:
           node tests/admin-impersonation-contract.cjs
           node tests/api-route-guard-contract.cjs
           node tests/payroll-reconciliation-contract.cjs
-          node tests/company-dashboard-contract.cjs
           node tests/taxi-tariff-footnotes-contract.cjs
-          php tests/taxi-fare-components.php
-          php tests/taxi-financial-integration.php
           node tests/admin-production-schema-contract.cjs
           node --check frontend/assets/bale-bot.js
           node --check frontend/assets/login-methods.js
@@ -57,6 +54,12 @@ jobs:
           node tests/cheque-editor.cjs
           node tests/accounting-report-ui.cjs
           node tests/solar-date.cjs
+      - name: Dashboard contract and production JS parsing
+        run: node tests/company-dashboard-contract.cjs
+      - name: Official fare component unit test
+        run: php tests/taxi-fare-components.php
+      - name: Financial quote integration (read-only fixture)
+        run: php tests/taxi-financial-integration.php
   transport-integration:
     runs-on: ubuntu-latest
     services:
