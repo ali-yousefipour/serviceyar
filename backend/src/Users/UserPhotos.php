@@ -49,6 +49,8 @@ final class UserPhotos {
  }
  public static function upload(int $actor,int $agency,int $target,array $file): array {
   self::access($actor,$agency,$target,true);
+  if(!Connection::get()->query("SHOW COLUMNS FROM users LIKE 'photo_version'")->fetch())
+   throw new AuthException(503,'ابتدا مهاجرت دیتابیس 0109_user_profiles_photos.sql را اجرا کنید.','USER_PROFILE_SCHEMA_REQUIRED');
   $tmp=$file['tmp_name']??null;$size=(int)($file['size']??0);
   if(($file['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_OK||!is_string($tmp)||!is_uploaded_file($tmp)||$size<1||$size>5*1024*1024)
    throw new AuthException(422,'تصویر باید حداکثر ۵ مگابایت باشد.','INVALID_PROFILE_PHOTO');
@@ -84,6 +86,8 @@ final class UserPhotos {
  }
  public static function remove(int $actor,int $agency,int $target): array {
   self::access($actor,$agency,$target,true);
+  if(!Connection::get()->query("SHOW COLUMNS FROM users LIKE 'photo_version'")->fetch())
+   throw new AuthException(503,'ابتدا مهاجرت دیتابیس 0109_user_profiles_photos.sql را اجرا کنید.','USER_PROFILE_SCHEMA_REQUIRED');
   $path=self::path($target);
   if(is_file($path)&&!@unlink($path))throw new AuthException(503,'حذف تصویر ناموفق بود.','PHOTO_DELETE_FAILED');
   $p=Connection::get();
