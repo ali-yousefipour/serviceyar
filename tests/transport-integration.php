@@ -596,6 +596,18 @@ try{
  D::assignStudent($uid,$feeAgency,(int)$repriceService['id'],(int)$repriceStudent['id']);
  check((int)D::get($uid,$feeAgency,'students',(int)$repriceStudent['id'])['monthly_fee']===1500000,
    'Initial agency rate is quoted from the company price schedule');
+ // A school user with student-editing permission but no financial
+ // authorization must not be allowed to reprice tuition and driver pay.
+ $tariffTestRole=insertFixture('roles',['name'=>'tariff_student_only_'.$tag,'title'=>'Student-only test role']);
+ $studentManagePermission=(int)$p->query("SELECT id FROM permissions WHERE name='students.manage'")->fetchColumn();
+ $p->prepare('INSERT INTO role_permissions(role_id,permission_id) VALUES(?,?)')
+   ->execute([$tariffTestRole,$studentManagePermission]);
+ $tariffTestUser=insertFixture('users',['uuid'=>Uuid::v4(),'username'=>'tariff_student_'.$tag,'password_hash'=>'unused']);
+ $p->prepare('INSERT INTO user_roles(user_id,role_id) VALUES(?,?)')
+   ->execute([$tariffTestUser,$tariffTestRole]);
+ $p->prepare('INSERT INTO agency_users(agency_id,user_id) VALUES(?,?)')
+   ->execute([$feeAgency,$tariffTestUser]);
+ rejected(fn()=>\ServiceYar\Domain\AgencySchoolTariffs::recalculate($tariffTestUser,$feeAgency),'FORBIDDEN');
  $p->prepare("UPDATE agency_school_tariffs SET amount_irr=? WHERE agency_id=? AND vehicle_class=1 AND distance_km=5")
    ->execute([1800000,$feeAgency]);
  $agencyReprice=\ServiceYar\Domain\AgencySchoolTariffs::recalculate($uid,$feeAgency);
