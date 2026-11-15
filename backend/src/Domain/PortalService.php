@@ -106,13 +106,34 @@ final class PortalService {
             if($owned)$pdo->commit();return $userId;
         }catch(\Throwable $e){if($owned&&$pdo->inTransaction())$pdo->rollBack();throw $e;}
     }
+    // Re-validate the registered telephone at each request: changing a
+    // guardian's or driver's number revokes the old contact's membership.
+    private static function liveMembershipPredicate(): string {
+        $phones="(m.verified_mobile,CONCAT('+98',SUBSTRING(m.verified_mobile,2)),
+                    CONCAT('98',SUBSTRING(m.verified_mobile,2)))";
+        return "(
+          (m.party_type='driver' AND EXISTS(
+             SELECT 1 FROM drivers d WHERE d.id=m.party_id AND d.agency_id=m.agency_id
+                AND d.is_active=1 AND d.mobile IN $phones
+          ))
+          OR
+          (m.party_type='parent' AND EXISTS(
+             SELECT 1 FROM students st WHERE st.id=m.party_id AND st.agency_id=m.agency_id
+               AND st.is_active=1 AND
+                 (EXISTS(SELECT 1 FROM guardians g WHERE g.student_id=st.id AND g.mobile IN $phones)
+                  OR (st.mobile IN $phones
+                     AND (st.guardian_first_name IS NOT NULL OR st.guardian_last_name IS NOT NULL)))
+          ))
+        )";
+    }
     private static function authorized(int $uid,string $type,int $agencyId,int $partyId): void {
         self::ensureSchema();
         if(!in_array($type,['parent','driver'],true)||$agencyId<1||$partyId<1)
             throw new AuthException(404,'اطلاعات درخواست‌شده یافت نشد.','PORTAL_NOT_FOUND');
         $q=Connection::get()->prepare("SELECT 1 FROM portal_memberships m JOIN users u ON u.id=m.user_id AND u.is_active=1
              JOIN agencies a ON a.id=m.agency_id AND a.is_active=1
-             WHERE m.user_id=? AND m.party_type=? AND m.agency_id=? AND m.party_id=?");
+             WHERE m.user_id=? AND m.party_type=? AND m.agency_id=? AND m.party_id=?
+             AND ".self::liveMembershipPredicate());
         $q->execute([$uid,$type,$agencyId,$partyId]);
         if(!$q->fetchColumn())throw new AuthException(403,'دسترسی به این اطلاعات مجاز نیست.','PORTAL_FORBIDDEN');
     }
@@ -122,7 +143,8 @@ final class PortalService {
           m.agency_id agencyId,a.name agencyName FROM portal_memberships m
           JOIN agencies a ON a.id=m.agency_id AND a.is_active=1
           JOIN users u ON u.id=m.user_id AND u.is_active=1
-          WHERE m.user_id=? ORDER BY m.party_type,m.agency_id,m.party_id",[$uid]);
+          WHERE m.user_id=? AND ".self::liveMembershipPredicate()."
+          ORDER BY m.party_type,m.agency_id,m.party_id",[$uid]);
     }
     public static function dashboard(int $uid,string $type,int $agencyId,int $partyId): array {
         self::authorized($uid,$type,$agencyId,$partyId);
