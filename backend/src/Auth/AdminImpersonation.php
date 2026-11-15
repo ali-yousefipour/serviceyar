@@ -45,6 +45,32 @@ final class AdminImpersonation
         }catch(\Throwable){}
     }
 
+    private static function ensureSchema(PDO $pdo): void
+    {
+        try{
+            $pdo->exec("CREATE TABLE IF NOT EXISTS admin_impersonation_sessions (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                admin_user_id BIGINT UNSIGNED NOT NULL,
+                target_user_id BIGINT UNSIGNED NOT NULL,
+                agency_id BIGINT UNSIGNED NOT NULL,
+                admin_session_hash CHAR(64) NOT NULL,
+                target_session_hash CHAR(64) NOT NULL UNIQUE,
+                started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                ended_at DATETIME NULL,
+                ip_address VARCHAR(45) NULL,
+                user_agent VARCHAR(500) NULL,
+                INDEX idx_admin_impersonation_admin_active (admin_user_id, ended_at),
+                INDEX idx_admin_impersonation_admin_session (admin_session_hash, ended_at),
+                INDEX idx_admin_impersonation_target (target_user_id, ended_at),
+                CONSTRAINT fk_admin_impersonation_admin FOREIGN KEY (admin_user_id) REFERENCES users(id) ON DELETE RESTRICT,
+                CONSTRAINT fk_admin_impersonation_target FOREIGN KEY (target_user_id) REFERENCES users(id) ON DELETE RESTRICT,
+                CONSTRAINT fk_admin_impersonation_agency FOREIGN KEY (agency_id) REFERENCES agencies(id) ON DELETE RESTRICT
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        }catch(\PDOException){
+            throw new AuthException(503,'ساختار ورود نیابتی آماده نیست؛ مهاجرت 0113 یا مجوز CREATE TABLE دیتابیس را بررسی کنید.','IMPERSONATION_SCHEMA_UNAVAILABLE');
+        }
+    }
+
     private static function adminToken(): string
     {
         $token=$_COOKIE[self::SESSION_COOKIE]??'';
@@ -109,6 +135,7 @@ final class AdminImpersonation
         $adminToken=self::adminToken();
         $adminHash=hash('sha256',$adminToken);
         $pdo=Connection::get();
+        self::ensureSchema($pdo);
         $adminQuery=$pdo->prepare(
             'SELECT expires_at FROM user_sessions
              WHERE token_hash=? AND user_id=? AND revoked_at IS NULL AND expires_at>UTC_TIMESTAMP() LIMIT 1'
