@@ -314,6 +314,7 @@ final class BaleBotService {
    'botEnabled'=>self::ready()];
  }
  public static function requestLogin(string $username): array {
+  \ServiceYar\Auth\LoginMethods::requireEnabled('bale');
   if(!self::ready())throw new AuthException(503,'ورود با بله فعال نیست.','BALE_DISABLED');
   $username=strtr(trim($username),['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']);
   if($username===''||strlen($username)>100)throw new AuthException(422,'نام کاربری معتبر نیست.','VALIDATION_ERROR');
@@ -342,6 +343,7 @@ final class BaleBotService {
   return ['requested'=>true,'expiresIn'=>300];
  }
  public static function verifyLogin(string $username,string $code): int {
+  \ServiceYar\Auth\LoginMethods::requireEnabled('bale');
   if(!self::ready())throw new AuthException(503,'ورود با بله فعال نیست.','BALE_DISABLED');
   if(!preg_match('/^[0-9]{6}$/D',$code))throw new AuthException(401,'کد ورود معتبر نیست.','BALE_OTP_INVALID');
   $pdo=Connection::get();$pdo->beginTransaction();
