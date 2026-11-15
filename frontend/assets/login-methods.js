@@ -71,7 +71,7 @@
   const timerHost=make('div','sy-login-otp-timer-host');
   const codeLabel=make('label','sy-login-field');codeLabel.textContent='کد تأیید ۶ رقمی';codeLabel.hidden=true;
   const code=make('input');code.name='code';code.required=true;code.maxLength=6;code.inputMode='numeric';
-  code.autocomplete='one-time-code';code.placeholder='ــــــ';code.pattern='[0-9۰-۹٠-٩]{6}';code.dir='ltr';codeLabel.append(code);
+  code.autocomplete='one-time-code';code.placeholder='ــــــ';code.pattern='[0-9۰-۹٠-٩]{6}';code.dir='ltr';code.disabled=true;codeLabel.append(code);
   const verify=make('button','sy-login-otp-confirm','تأیید کد و ورود');verify.type='submit';verify.hidden=true;verify.disabled=true;
   const info=make('p','sy-login-otp-message');info.setAttribute('role','status');info.setAttribute('aria-live','polite');
   form.append(send,timerHost,codeLabel,verify,info);
