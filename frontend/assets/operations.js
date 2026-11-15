@@ -1280,7 +1280,14 @@ async function attachDriverVehiclePicker(form,row){
     '<label>کلاس خودرو<select name="tariffVehicleClass" required><option value="">انتخاب کلاس</option><option value="1">کلاس ۱</option><option value="2">کلاس ۲</option><option value="3">کلاس ۳</option></select></label>'+
     '<label>ظرفیت<input name="capacity" type="number" min="1" max="50" value="4" required></label>'+
     '<label>نام مالک<input name="ownerName" maxlength="200"></label>'+
-    '<label>شماره شاسی (VIN)<input name="vin" maxlength="100" dir="ltr"></label></div>'+
+    '<label>شماره شاسی (VIN)<input name="vin" maxlength="40" dir="ltr"></label>'+
+    '<label>تیپ یا سیستم خودرو<input name="vehicleSystem" maxlength="100"></label>'+
+    '<label>سال ساخت<input name="makeYear" type="number" min="1300" max="2100" inputmode="numeric"></label>'+
+    '<label>رنگ خودرو<input name="color" maxlength="70"></label>'+
+    '<label>نوع سوخت<select name="fuelType"><option value="">نامشخص</option><option value="بنزین">بنزین</option><option value="گاز و بنزین">گاز و بنزین</option><option value="گازوئیل">گازوئیل</option><option value="هیبریدی">هیبریدی</option><option value="برقی">برقی</option></select></label>'+
+    '<label>شماره موتور<input name="engineNumber" maxlength="100"></label>'+
+    '<label>شماره شاسی<input name="chassisNumber" maxlength="100"></label>'+
+    '<label>شماره بیمه<input name="insuranceNumber" maxlength="120"></label></div>'+
     '<p data-new-vehicle-error role="alert" class="error" hidden></p>'+
     '<footer><button type="button" data-register-back>بازگشت به جستجو</button><button class="primary" type="submit">ثبت خودرو و انتخاب برای راننده</button></footer></form>';
    const newForm=registration.querySelector('form'),plate=registration.querySelector('fieldset');
@@ -1290,6 +1297,7 @@ async function attachDriverVehiclePicker(form,row){
    if(prefill?.capacity)newForm.elements.capacity.value=prefill.capacity;
    if(prefill?.tariffVehicleClass)newForm.elements.tariffVehicleClass.value=prefill.tariffVehicleClass;
    const picker=window.ServiceYarVehicleModels?window.ServiceYarVehicleModels.attach(newForm.elements.vehicleTrim,newForm.elements.tariffVehicleClass,{initialValue:prefill?.model||''}):Promise.resolve(null);
+   newForm.elements.vehicleTrim.required=true;
    newForm.querySelector('[data-register-back]').onclick=()=>{registration.hidden=true;results.hidden=false;status.textContent='خودرو را از نتایج انتخاب کنید یا پلاک جدید وارد کنید.';};
    const digit=v=>normalize(v).replace(/\D/g,'');
    newForm.onsubmit=async e=>{
@@ -1305,7 +1313,11 @@ async function attachDriverVehiclePicker(form,row){
      const payload={plate:parts[0]+parts[1]+parts[2]+'-'+parts[3],
       vehicleTrim:newForm.elements.vehicleTrim.value.trim(),model:newForm.elements.vehicleTrim.value.trim(),
       tariffVehicleClass:newForm.elements.tariffVehicleClass.value,capacity:Number(newForm.elements.capacity.value),
-      ownerName:newForm.elements.ownerName.value.trim(),vin:newForm.elements.vin.value.trim()};
+      ownerName:newForm.elements.ownerName.value.trim(),vin:newForm.elements.vin.value.trim(),
+      vehicleSystem:newForm.elements.vehicleSystem.value.trim(),makeYear:newForm.elements.makeYear.value||null,
+      color:newForm.elements.color.value.trim(),fuelType:newForm.elements.fuelType.value,
+      engineNumber:newForm.elements.engineNumber.value.trim(),chassisNumber:newForm.elements.chassisNumber.value.trim(),
+      insuranceNumber:newForm.elements.insuranceNumber.value.trim()};
      const saved=await write('/api/v1/vehicles',payload,'POST');
      lookupCache={};
      setVehicle({id:saved.id,plate:saved.plate||payload.plate});
