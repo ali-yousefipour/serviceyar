@@ -270,6 +270,35 @@ try {
  if($method==='GET'&&$path==='/api/v1/auth/me'){ header('Cache-Control: private, no-store, max-age=0'); $s=$auth->current();$rs=Connection::get()->prepare('SELECT r.name FROM roles r JOIN user_roles ur ON ur.role_id=r.id WHERE ur.user_id=:u ORDER BY r.id');$rs->execute(['u'=>$s['id']]);Response::json(['ok'=>true,'data'=>['user'=>['id'=>$s['id'],'uuid'=>$s['uuid'],'username'=>$s['username'],'firstName'=>$s['firstName'],'lastName'=>$s['lastName']],'roles'=>$rs->fetchAll(\PDO::FETCH_COLUMN),'permissions'=>Authorization::permissions($s['id']),'agencies'=>AgencyService::sessionList($s['id']),'csrfToken'=>$s['csrfToken'],'impersonation'=>$s['impersonation']??null]]); }
  if($method==='GET'&&$path==='/api/v1/auth/csrf'){ $s=$auth->current();Response::json(['ok'=>true,'data'=>['csrfToken'=>$s['csrfToken']]]); }
  $s=$auth->current(); $aid=null;
+ // Separate, capability-scoped parent/driver portal. Party IDs are always
+ // authorized against the authenticated Bale-verified membership server-side.
+ if($path==='/api/v1/portal/memberships'&&$method==='GET'){
+   header('Cache-Control: private, no-store');
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\PortalService::memberships((int)$s['id'])]);
+ }
+ if($path==='/api/v1/portal/password'&&$method==='POST'){
+   $auth->requireCsrf($s);$b=Request::json();
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\PortalService::setPassword(
+     (int)$s['id'],(string)($b['password']??''),(string)($b['confirm']??''),(string)($b['currentPassword']??''))]);
+ }
+ if(preg_match('#^/api/v1/portal/(parent|driver)/([0-9]+)/([0-9]+)$#D',$path,$portal)){
+   $type=(string)$portal[1];$company=(int)$portal[2];$person=(int)$portal[3];
+   header('Cache-Control: private, no-store');
+   if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\PortalService::dashboard(
+     (int)$s['id'],$type,$company,$person)]);
+   if($method==='PATCH'){
+     $auth->requireCsrf($s);
+     Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\PortalService::updateProfile(
+       (int)$s['id'],$type,$company,$person,Request::json())]);
+   }
+ }
+ if(preg_match('#^/api/v1/portal/driver/([0-9]+)/([0-9]+)/vehicle-request$#D',$path,$portal)
+     &&$method==='POST'){
+   $auth->requireCsrf($s);
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\PortalService::requestVehicleChange(
+      (int)$s['id'],(int)$portal[1],(int)$portal[2],Request::json())]);
+ }
+
  if($path==='/api/v1/admin/impersonation/users'&&$method==='GET'){
   $agencyId=filter_var($_GET['agencyId']??null,FILTER_VALIDATE_INT);
   if(!$agencyId)throw new AuthException(422,'شرکت انتخاب‌شده معتبر نیست.','INVALID_AGENCY');
