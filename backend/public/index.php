@@ -556,6 +556,7 @@ try {
     $s['id'],['drivers'=>$_FILES['drivers']??[],'vehicles'=>$_FILES['vehicles']??[]],
     $apply,$binding,(string)($_POST['digest']??''))]);
  }
+ if($method==='GET'&&$path==='/api/v1/admin/bale-bot/check')Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\BaleBotService::health((int)$s['id'])]);
  if($path==='/api/v1/admin/bale-bot'){
   if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\BaleBotService::overview((int)$s['id'])]);
   if($method==='PUT'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\BaleBotService::configure((int)$s['id'],Request::json())]);}
