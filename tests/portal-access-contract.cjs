@@ -33,7 +33,7 @@ assert.match(ui,/\/api\/v1\/auth\/bale\/request/,'Portal requests real Bale OTP'
 assert.match(ui,/\/api\/v1\/portal\/auth\/password/,'Portal password login active');
 assert.match(ui,/\/api\/v1\/portal\/password/,'First password setup available');
 assert.match(ui,/\/api\/v1\/portal\/driver\//,'Driver portal pages remain distinct');
-assert.match(deploy,/\("/portal\.html", "portal\.html"\)/,'Live portal HTML checksum verification enabled');
+assert.ok(deploy.includes('("/portal.html", "portal.html")'),'Live portal HTML checksum verification enabled');
 assert.match(workflow,/cp frontend\/portal\.html deploy-payload\/portal\.html/,'Portal HTML deployed');
 new Function(ui);
 console.log('Portal secure Bale enrollment, parental privacy, driver scope, bank and vehicle update, UI and deployment contract: OK');
