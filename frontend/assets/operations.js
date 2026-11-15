@@ -3441,7 +3441,14 @@ function attachStudentTariff(form){
    const result=await write('/api/v1/operations/tariffs/quote',data);
    if(current!==request||!form.isConnected)return;
    fee.value=String(result.monthlyFee);fee.dispatchEvent(new Event('input',{bubbles:true}));
-   status.textContent='مبلغ ماهانه اولیا: '+number(result.monthlyFee)+' ریال · مبنای راننده: '+number(result.driverBaseMonthly)+' ریال';
+   const shares=result.parentFareComponents;
+   status.textContent='مبلغ ماهانه اولیا: '+number(result.monthlyFee)+' ریال · مبنای راننده: '+number(result.driverBaseMonthly)+' ریال'
+    +(shares?' · سهم‌های بهای اولیا: نظارت '+number(shares.supervisionParentShare)
+      +'، هماهنگی '+number(shares.coordinationParentShare)
+      +'، بالاسری '+number(shares.overheadParentShare)
+      +'، گواهی '+number(shares.certificateParentShare)
+      +'، بیمه '+number(shares.insuranceParentShare)
+      +' ریال. سهم هماهنگی تا مصوبه شورای ترافیک قابل توزیع نیست؛ هیچ‌یک از این سهم‌ها به‌تنهایی کسورات حقوق راننده نیستند.':'');
   }catch(e){if(current===request&&form.isConnected)status.textContent=e.message;}
   finally{if(current===request&&form.isConnected)button.disabled=false;}
  };
