@@ -222,6 +222,7 @@ try {
   Response::json(['ok'=>true,'data'=>['enabled'=>\ServiceYar\Integrations\BaleBotService::ready()]]);
  }
  if($method==='POST'&&$path==='/api/v1/auth/bale/request'){
+  header('Cache-Control: no-store, max-age=0');header('X-ServiceYar-Auth-Flow: bale-otp-request');
   $b=Request::json();Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\BaleBotService::requestLogin((string)($b['username']??''))]);
  }
  if($method==='POST'&&$path==='/api/v1/auth/bale/verify'){
@@ -555,6 +556,10 @@ try {
    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SepandRegistryImport::run(
     $s['id'],['drivers'=>$_FILES['drivers']??[],'vehicles'=>$_FILES['vehicles']??[]],
     $apply,$binding,(string)($_POST['digest']??''))]);
+ }
+ if($method==='GET'&&$path==='/api/v1/admin/bale-bot/user-link') {
+  header('Cache-Control: no-store');
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\BaleBotService::inspectUserLink((int)$s['id'],(string)($_GET['username']??''))]);
  }
  if($method==='GET'&&$path==='/api/v1/admin/bale-bot/check')Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\BaleBotService::health((int)$s['id'])]);
  if($path==='/api/v1/admin/bale-bot'){
