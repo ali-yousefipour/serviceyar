@@ -32,6 +32,8 @@ assert.ok(policy.includes("'mobile'=>$configured['mobile']&&$available['mobile']
 assert.ok(recovery.includes("public static function request(string $username,string $channel)"),'password recovery request implemented');
 assert.ok(recovery.includes("public static function confirm(string $username,string $channel,string $code,string $password,string $confirmation)"),'password recovery confirmation implemented');
 assert.ok(recovery.includes("purpose='password_reset'"),'recovery challenges have a separate purpose');
+assert.ok(sms.includes('public static function recoveryReady()'),'SMS recovery stays hidden until migration is applied');
+assert.ok(recovery.includes('baleRecoveryReady()'),'Bale recovery stays hidden until migration is applied');
 assert.ok(recovery.includes("UPDATE user_sessions SET revoked_at=UTC_TIMESTAMP()"),'password reset revokes existing sessions');
 assert.ok(bot.includes('sendAuthCodeToUser'),'Bale recovery code is sent only to linked user');
 assert.ok(recoveryMigration.includes('sms_login_challenges')&&recoveryMigration.includes('password_reset'),'SMS recovery purpose migration included');
