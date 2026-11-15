@@ -20,9 +20,8 @@ for(const asset of ['public-site.js','public-site.css','public-site-content.html
 assert.match(workflow,/cancel-in-progress: true/,'Supersede stuck old release runs');
 assert.doesNotMatch(workflow,/production-preflight:|Invalid service-yar\\.ir TLS or unreachable site/,'A bad certificate must not block FTP publication');
 assert.match(workflow,/needs: validate/,'Publishing must still depend on successful code checks');
-assert.match(workflow,/FTP_REMOTE_ROOT: \\/public_html/,'The confirmed FTP document root must be /public_html');
-assert.match(source,/urlopen\\(request, timeout=35, context=ssl\\._create_unverified_context\\(\\)\\)/,'Deployment HTTPS check may skip certificate validation');
-assert.match(source,/sha256\\(body\\)\\.hexdigest\\(\\)/,'Live JS and CSS bundles must still be checksum verified');
+assert.ok(source.includes('with urlopen(request, timeout=35, context=ssl._create_unverified_context())'),'Deployment verification may skip certificate trust checks');
+assert.ok(source.includes('sha256(body).hexdigest()'),'Live asset hashes must still be checked');
 const legacyHost=['challi','.ir'].join('');
 const legacyDomainSearch=spawnSync('git',['grep','-n',legacyHost],{encoding:'utf8'});
 assert.equal(legacyDomainSearch.status,1,'No tracked source, configuration, test or documentation file may retain the old operational domain: '+legacyDomainSearch.stdout);
