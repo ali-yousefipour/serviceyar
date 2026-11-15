@@ -19,8 +19,9 @@ for(const asset of ['public-site.js','public-site.css','public-site-content.html
 }
 assert.match(workflow,/cancel-in-progress: true/,'Supersede stuck old release runs');
 assert.match(workflow,/production-preflight:/,'Deployment must explicitly validate the production prerequisite configuration');
-assert.match(workflow,/::error title=Missing production document root/,'Missing document-root must be an actionable failure, not a green skipped deploy');
-assert.match(workflow,/::error title=Production TLS not verified/,'Missing TLS confirmation must fail visibly');
+assert.match(workflow,/FTP_REMOTE_ROOT: \/public_html/,'The confirmed FTP document root must be /public_html');
+assert.match(workflow,/curl --fail --silent --show-error --location/,'TLS must be checked against the actual public hostname');
+assert.match(workflow,/::error title=Invalid service-yar\.ir TLS or unreachable site/,'TLS failures must block the release with an actionable error');
 assert.match(workflow,/needs: production-preflight/,'Publishing must depend on the production safety check');
 const legacyHost=['challi','.ir'].join('');
 const legacyDomainSearch=spawnSync('git',['grep','-n',legacyHost],{encoding:'utf8'});
@@ -31,7 +32,8 @@ assert.match(source,/final\.hostname != CANONICAL_HOST/,'Live verification must 
 assert.match(source,/https:\/\/www\.service-yar\.ir\//,'TLS diagnostics must inspect the production www alias');
 assert.doesNotMatch(source,/challi\.ir/,'The legacy host must not remain a production verification target');
 assert.match(workflow,/PUBLIC_BASE_URL: https:\/\/service-yar\.ir/,'Production deployment must explicitly verify service-yar.ir');
-assert.match(workflow,/FTP_REMOTE_ROOT: \$\{\{ vars\.SERVICEYAR_FTP_REMOTE_ROOT \}\}/,'Production document root must come from an explicit repository variable');
+assert.match(workflow,/FTP_REMOTE_ROOT: \/public_html/,'Confirmed hosting root must be used directly');
+assert.doesNotMatch(workflow,/SERVICEYAR_PRODUCTION_SSL_READY|SERVICEYAR_FTP_REMOTE_ROOT/,'Legacy manual prerequisite flags must no longer block publication');
 assert.doesNotMatch(workflow,/challi\.ir/,'The deployment workflow must not publish or verify the legacy host');
 assert.match(workflow,/RewriteCond %\{HTTP_HOST\} \^www\\\.service-yar\\\.ir\$/,'The www alias must redirect to the canonical apex');
 assert.match(workflow,/RewriteCond %\{HTTPS\} !=on/,'HTTP requests must be upgraded to HTTPS');
@@ -40,7 +42,7 @@ assert.match(html,/<link rel="canonical" href="https:\/\/service-yar\.ir\/">/,'T
 assert.match(html,/<meta property="og:url" content="https:\/\/service-yar\.ir\/">/,'Open Graph metadata must use the production URL');
 assert.match(productionDocs,/APP_URL=https:\/\/service-yar\.ir/,'Production environment docs must use the canonical URL');
 assert.match(productionDocs,/CORS_ALLOWED_ORIGINS=https:\/\/service-yar\.ir/,'Production CORS docs must use the canonical origin');
-assert.match(productionDocs,/SERVICEYAR_FTP_REMOTE_ROOT/,'Production docs must explain how to set the actual hosting document root');
+assert.match(productionDocs,/\/public_html/,'Production docs must specify the verified hosting root');
 assert.match(bootstrap,/\$allowedOrigins\[\]\s*=\s*'https:\/\/service-yar\.ir'/,'Production API must trust the canonical origin during the domain cutover');
 assert.match(baleBot,/config\('APP_URL','https:\/\/service-yar\.ir'\)/,'Bale webhook generation must default to the canonical host');
 assert.match(baleBot,/\$base='https:\/\/service-yar\.ir'/,'Bale webhook fallback must use the canonical host');
