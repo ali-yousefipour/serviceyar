@@ -25,7 +25,7 @@ final class LoginMethods
             if($e->getCode()!=='42S02'&&(int)($e->errorInfo[1]??0)!==1146)throw $e;
         }
         $result=[];
-        foreach(self::KEYS as $key=>$setting)$result[$key]=!isset($values[$setting])||$values[$setting]==='1';
+        foreach(self::KEYS as $key=>$setting)$result[$key]=isset($values[$setting])?$values[$setting]==='1':$key!=='mobile';
         return $result;
     }
 
