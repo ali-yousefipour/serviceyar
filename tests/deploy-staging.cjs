@@ -27,7 +27,7 @@ assert.match(source,/final\.hostname != CANONICAL_HOST/,'Live verification must 
 assert.match(source,/https:\/\/www\.service-yar\.ir\//,'TLS diagnostics must inspect the production www alias');
 assert.doesNotMatch(source,/challi\.ir/,'The legacy host must not remain a production verification target');
 assert.match(workflow,/PUBLIC_BASE_URL: https:\/\/service-yar\.ir/,'Production deployment must explicitly verify service-yar.ir');
-assert.match(workflow,/FTP_REMOTE_ROOT: \\$\{\{ vars\.SERVICEYAR_FTP_REMOTE_ROOT \|\| '\/public_html' \}\}/,'Production document root must be configurable without changing credentials');
+assert.match(workflow,/FTP_REMOTE_ROOT: \$\{\{ vars\.SERVICEYAR_FTP_REMOTE_ROOT \|\| '\/public_html' \}\}/,'Production document root must be configurable without changing credentials');
 assert.doesNotMatch(workflow,/challi\.ir/,'The deployment workflow must not publish or verify the legacy host');
 assert.match(workflow,/RewriteCond %\{HTTP_HOST\} \^www\\\.service-yar\\\.ir\$/,'The www alias must redirect to the canonical apex');
 assert.match(workflow,/RewriteCond %\{HTTPS\} !=on/,'HTTP requests must be upgraded to HTTPS');
