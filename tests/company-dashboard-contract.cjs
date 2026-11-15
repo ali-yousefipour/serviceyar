@@ -1,0 +1,31 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const backend=fs.readFileSync('backend/src/Domain/OperationsService.php','utf8');
+const frontend=fs.readFileSync('frontend/assets/operations.js','utf8');
+const css=fs.readFileSync('frontend/assets/app.css','utf8');
+const start=backend.indexOf('public static function summary(');
+const end=backend.indexOf('public static function ',start+25);
+const code=backend.slice(start,end);
+assert.ok(start>=0,'dashboard summary exists');
+for(const term of ['assignedStudents','unassignedStudents','activeServices','staffedServices','servicesWithoutActiveDriver','servingDrivers','serviceCapacity','capacityUtilization','statusMismatch']){
+ assert.ok(code.includes("'"+term+"'"),'Backend metric '+term);
+}
+assert.match(code,/JOIN services sv ON sv\.id=ss\.service_id AND sv\.agency_id=st\.agency_id/,'Assignment must be company scoped');
+assert.match(code,/sv\.is_active=1 AND sv\.status<>'cancelled'/,'Only active noncancelled services count');
+assert.match(code,/st\.agency_id=:a AND st\.is_active=1/,'Only company active students count');
+assert.match(code,/COUNT\(DISTINCT st\.id\)/,'School assignments count distinct students');
+assert.match(code,/EXISTS\(SELECT 1 FROM service_students/,'Mismatch counts individual student records');
+assert.match(code,/COUNT\(DISTINCT CASE WHEN sv\.id IS NOT NULL THEN st\.id END\)/,'School assigned counts based on real links');
+assert.match(frontend,/const agencyAtRequest=currentAgency\?\.id/,'Dashboard request captures agency before asynchronous calls');
+assert.match(frontend,/currentAgency\?\.id!==agencyAtRequest/,'Dashboard prevents late company response from replacing current company');
+assert.match(frontend,/const assigned=Math\.min\(total,Math\.max\(0,Number\(metrics\.assignedStudents\)\|\|0\)\)/,'Donut uses actual assignments');
+assert.match(frontend,/staleStatuses>0/,'Dashboard flags stale stored statuses');
+assert.match(frontend,/sy-mgmt-kpi/,'Managerial KPI cards present');
+assert.match(frontend,/sy-mgmt-school-bars/,'School comparison has its own chart');
+assert.match(frontend,/data-status=/,'Status categories remain navigable');
+assert.match(frontend,/schoolRows=schools\.map/,'All schools included in detail table');
+assert.match(css,/\.sy-mgmt-dashboard \.sy-mgmt-grid/,'Dashboard CSS is scoped');
+assert.match(css,/@media\(max-width:600px\)/,'Mobile layout available');
+new Function(frontend);
+console.log('Company dashboard API scope, real assignments, school chart, responsive UI and JS syntax contract: OK');
