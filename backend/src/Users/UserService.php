@@ -8,7 +8,7 @@ use ServiceYar\Support\Uuid;
 use ServiceYar\Domain\OperationsService as O;
 final class UserService {
  private static function scope(int $u,int $a,string $op): void {A::requirePermission($u,'users.'.$op);if($a)A::requireAgencyAccess($u,$a);elseif(!A::isSuperAdmin($u))throw new AuthException(403,'فقط مدیر کل مجاز است.','FORBIDDEN');}
- public static function list(int $u,int $a): array {self::scope($u,$a,'view');$q=Connection::get()->prepare('SELECT u.id,u.username,u.first_name,u.last_name,u.is_active,GROUP_CONCAT(DISTINCT r.title) roles,GROUP_CONCAT(DISTINCT r.name) role_names FROM users u LEFT JOIN user_roles ur ON ur.user_id=u.id LEFT JOIN roles r ON r.id=ur.role_id WHERE '.($a?'EXISTS(SELECT 1 FROM agency_users au WHERE au.user_id=u.id AND au.agency_id=?)':'1=1').' GROUP BY u.id ORDER BY u.id DESC');$q->execute($a?[$a]:[]);return $q->fetchAll();}
+ public static function list(int $u,int $a): array {self::scope($u,$a,'view');$q=Connection::get()->prepare('SELECT u.id,u.username,u.first_name,u.last_name,u.is_active,GROUP_CONCAT(DISTINCT r.title) roles,GROUP_CONCAT(DISTINCT r.name) role_names FROM users u LEFT JOIN user_roles ur ON ur.user_id=u.id LEFT JOIN roles r ON r.id=ur.role_id WHERE u.deleted_at IS NULL AND '.($a?'EXISTS(SELECT 1 FROM agency_users au WHERE au.user_id=u.id AND au.agency_id=?)':'1=1').' GROUP BY u.id ORDER BY u.id DESC');$q->execute($a?[$a]:[]);return $q->fetchAll();}
  public static function find(int $u,int $a,int $id): array {self::scope($u,$a,'view');foreach(self::list($u,$a) as $r)if((int)$r['id']===$id)return $r;throw new AuthException(404,'کاربر پیدا نشد.','NOT_FOUND');}
  private static function editable(int $u,int $a,int $id): array {$r=self::find($u,$a,$id);$q=Connection::get()->prepare('SELECT COUNT(*) FROM agency_users WHERE user_id=?');$q->execute([$id]);if(!A::isSuperAdmin($u)&&((bool)array_intersect(['super_admin','agency_admin'],explode(',',(string)$r['role_names']))||(int)$q->fetchColumn()>1))throw new AuthException(403,'ویرایش حساب مشترک یا مدیر کل فقط توسط مدیر کل مجاز است.','PROTECTED_USER');return $r;}
  private static function password(mixed $pw): string {if(!is_string($pw)||strlen($pw)<8||strlen($pw)>72||str_contains($pw,"\0"))throw new AuthException(422,'رمز باید ۸ تا ۷۲ بایت باشد.','VALIDATION_ERROR');return $pw;}
@@ -25,6 +25,33 @@ final class UserService {
    else{if(!$a)throw new AuthException(422,'شرکت را انتخاب کنید.','VALIDATION_ERROR');$pw=self::password($b['password']??null);$p->prepare('INSERT INTO users(uuid,username,password_hash,first_name,last_name,is_active) VALUES(?,?,?,?,?,?)')->execute([Uuid::v4(),$name,password_hash($pw,PASSWORD_DEFAULT),$fn,$ln,(int)$active]);$id=(int)$p->lastInsertId();$p->prepare('INSERT INTO agency_users(agency_id,user_id) VALUES(?,?)')->execute([$a,$id]);}
    if($rid){$p->prepare('DELETE FROM user_roles WHERE user_id=?')->execute([$id]);$p->prepare('INSERT INTO user_roles(user_id,role_id) VALUES(?,?)')->execute([$id,$rid]);}
    if((int)$active===0||$rid)$p->prepare('UPDATE user_sessions SET revoked_at=UTC_TIMESTAMP() WHERE user_id=? AND revoked_at IS NULL')->execute([$id]);self::audit($p,$u,$id,'user.saved');return self::find($u,$a,$id);
+  });
+ }
+ /** Super-admin deletion is a one-way archive so invoices, operations and audits keep their FK owners. */
+ public static function delete(int $u,int $target): array {
+  self::scope($u,0,'manage');
+  if($target<1)throw new AuthException(422,'شناسه کاربر نامعتبر است.','VALIDATION_ERROR');
+  if($u===$target)throw new AuthException(409,'حذف حساب کاربری خودتان مجاز نیست.','SELF_PROTECTION');
+  return O::transaction(function($p)use($u,$target){
+   $column=$p->query("SHOW COLUMNS FROM users LIKE 'deleted_at'")->fetch();
+   if(!$column)throw new AuthException(503,'ابتدا مهاجرت دیتابیس 0108_user_soft_delete.sql را اجرا کنید.','USER_SCHEMA_UPDATE_REQUIRED');
+   $q=$p->prepare('SELECT id,username,deleted_at FROM users WHERE id=? FOR UPDATE');
+   $q->execute([$target]);$row=$q->fetch(\PDO::FETCH_ASSOC);
+   if(!$row||$row['deleted_at']!==null)throw new AuthException(404,'کاربر یافت نشد یا قبلاً حذف شده است.','NOT_FOUND');
+   $roles=$p->prepare("SELECT r.name FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=?");
+   $roles->execute([$target]);$names=$roles->fetchAll(\PDO::FETCH_COLUMN);
+   if(in_array('super_admin',$names,true)){
+    $count=$p->query("SELECT COUNT(DISTINCT u.id) FROM users u
+     JOIN user_roles ur ON ur.user_id=u.id JOIN roles r ON r.id=ur.role_id
+     WHERE r.name='super_admin' AND u.is_active=1 AND u.deleted_at IS NULL")->fetchColumn();
+    if((int)$count<=1)throw new AuthException(409,'حذف آخرین مدیر کل فعال سامانه امکان‌پذیر نیست.','LAST_SUPER_ADMIN');
+   }
+   $p->prepare('UPDATE users SET is_active=0,deleted_at=UTC_TIMESTAMP() WHERE id=?')->execute([$target]);
+   $p->prepare('UPDATE user_sessions SET revoked_at=UTC_TIMESTAMP() WHERE user_id=? AND revoked_at IS NULL')->execute([$target]);
+   // Keep roles and agency links as historical references, but the deleted user
+   // cannot authenticate and no longer appears in the management table.
+   self::audit($p,$u,$target,'user.deleted');
+   return ['deleted'=>true,'id'=>$target];
   });
  }
  private static function audit($p,int $u,int $id,string $action): void {$p->prepare('INSERT INTO audit_logs(uuid,user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?)')->execute([Uuid::v4(),$u,$action,'user',(string)$id]);}
