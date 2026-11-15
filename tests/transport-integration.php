@@ -278,8 +278,13 @@ try{
  $driverUid=\ServiceYar\Domain\PortalService::provisionVerifiedMobile('09129990002');
  check(is_int($driverUid)&&$driverUid>0,'Verified driver contact creates portal');
  $driverView=\ServiceYar\Domain\PortalService::dashboard($driverUid,'driver',$a,(int)$driver['id']);
+ $expectedDriverRows=$p->prepare("SELECT COUNT(*) FROM services sv JOIN service_students ss ON ss.service_id=sv.id
+   JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id AND st.is_active=1
+   WHERE sv.agency_id=? AND sv.driver_id=? AND sv.is_active=1 AND sv.status<>'cancelled'");
+ $expectedDriverRows->execute([$a,$driver['id']]);
  check((int)$driverView['driver']['id']===(int)$driver['id']
-   &&!empty($driverView['students']),'Driver sees only assigned students and services');
+   &&count($driverView['students'])===(int)$expectedDriverRows->fetchColumn(),
+   'Driver portal shows exactly own currently active assignments, including zero after reassignment');
  rejected(fn()=>\ServiceYar\Domain\PortalService::dashboard(
    $driverUid,'parent',$a,(int)$s1['id']),'PORTAL_FORBIDDEN');
  rejected(fn()=>\ServiceYar\Domain\PortalService::updateProfile(
