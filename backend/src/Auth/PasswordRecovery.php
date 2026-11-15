@@ -37,10 +37,19 @@ final class PasswordRecovery
         ];
     }
 
-    private static function requireChannel(string $channel): void
+    private static function requireChannel(string $channel,bool $forDelivery=false): void
     {
-        $methods=self::methods();
-        if(!in_array($channel,['sms','bale'],true)||!($methods[$channel]??false))
+        if(!in_array($channel,['sms','bale'],true))
+            throw new AuthException(403,'روش بازیابی رمز عبور معتبر نیست.','PASSWORD_RECOVERY_METHOD_DISABLED');
+        $policy=LoginMethods::policies();
+        $schemaReady=$channel==='sms'?SmsLogin::recoveryReady():self::baleRecoveryReady();
+        $enabled=$channel==='sms'
+            ?(($policy['sms']??false)||($policy['mobile']??false))
+            :($policy['bale']??false);
+        $providerReady=$channel==='sms'
+            ?(NeginSms::configured()&&class_exists(\\SoapClient::class))
+            :BaleBotService::ready();
+        if(!$enabled||!$schemaReady||($forDelivery&&!$providerReady))
             throw new AuthException(403,'این روش بازیابی رمز عبور فعال یا آماده نیست.','PASSWORD_RECOVERY_METHOD_DISABLED');
     }
 
