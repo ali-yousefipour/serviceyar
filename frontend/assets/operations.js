@@ -179,6 +179,7 @@ function renderNav(){
   },true);
  }
  const adminMode=session?.roles?.includes('super_admin')&&!session?.impersonation;
+ $('app').classList.toggle('sy-admin-mode',adminMode);
  renderAgencySelector();
  if(adminMode){
   $('agencyPickerWrap').hidden=true;
