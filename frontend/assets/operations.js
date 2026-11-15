@@ -2252,7 +2252,7 @@ function syPhotoWidget(row,url){
  (url&&Number(row?.has_photo)?'<img alt="تصویر '+esc(name)+'" src="'+esc(url)+'" class="sy-profile-avatar-img">':'<div class="sy-profile-avatar-fallback">'+esc(name.trim().charAt(0)||'ک')+'</div>')+
  '</div><div><h4>تصویر پروفایل</h4><p>تصویر JPG، PNG یا WebP تا ۵ مگابایت. تصویر به شکل مربعی ذخیره می‌شود.</p>'+
  '<label class="sy-user-photo-button">انتخاب یا تغییر تصویر<input name="photo" type="file" accept="image/jpeg,image/png,image/webp"></label>'+
- (url?'<button type="button" data-remove-photo class="sy-user-remove-photo">حذف عکس</button>':'')+'</div></div>';
+ (url&&Number(row?.has_photo)?'<button type="button" data-remove-photo class="sy-user-remove-photo">حذف عکس</button>':'')+'</div></div>';
 }
 function syBindPhoto(form){
  const img=form.querySelector('.sy-profile-avatar-img');
