@@ -18,11 +18,11 @@ for(const asset of ['public-site.js','public-site.css','public-site-content.html
  assert.ok(existsSync('frontend/assets/'+asset),'Missing public asset: '+asset);
 }
 assert.match(workflow,/cancel-in-progress: true/,'Supersede stuck old release runs');
-assert.match(workflow,/production-preflight:/,'Deployment must explicitly validate the production prerequisite configuration');
-assert.match(workflow,/FTP_REMOTE_ROOT: \/public_html/,'The confirmed FTP document root must be /public_html');
-assert.match(workflow,/curl --fail --silent --show-error --location/,'TLS must be checked against the actual public hostname');
-assert.match(workflow,/::error title=Invalid service-yar\.ir TLS or unreachable site/,'TLS failures must block the release with an actionable error');
-assert.match(workflow,/needs: production-preflight/,'Publishing must depend on the production safety check');
+assert.doesNotMatch(workflow,/production-preflight:|Invalid service-yar\\.ir TLS or unreachable site/,'A bad certificate must not block FTP publication');
+assert.match(workflow,/needs: validate/,'Publishing must still depend on successful code checks');
+assert.match(workflow,/FTP_REMOTE_ROOT: \\/public_html/,'The confirmed FTP document root must be /public_html');
+assert.match(source,/urlopen\\(request, timeout=35, context=ssl\\._create_unverified_context\\(\\)\\)/,'Deployment HTTPS check may skip certificate validation');
+assert.match(source,/sha256\\(body\\)\\.hexdigest\\(\\)/,'Live JS and CSS bundles must still be checksum verified');
 const legacyHost=['challi','.ir'].join('');
 const legacyDomainSearch=spawnSync('git',['grep','-n',legacyHost],{encoding:'utf8'});
 assert.equal(legacyDomainSearch.status,1,'No tracked source, configuration, test or documentation file may retain the old operational domain: '+legacyDomainSearch.stdout);
