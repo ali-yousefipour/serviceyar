@@ -37,9 +37,27 @@ final class BaleBotService {
   Connection::get()->prepare('INSERT INTO platform_settings(setting_key,setting_value) VALUES(?,?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)')->execute([$key,$value]);
  }
  private static function cipherKey(): string {
-  $key=(string)config('BALE_SETTINGS_KEY',config('DB_PASSWORD',''));
-  if(strlen($key)<12)throw new AuthException(503,'برای نگهداری امن توکن بله، BALE_SETTINGS_KEY با حداقل ۱۲ کاراکتر در تنظیمات سرور تعریف شود.','BALE_ENCRYPTION_KEY_REQUIRED');
-  return hash('sha256','serviceyar-bale-v1|'.$key,true);
+  $configured=trim((string)config('BALE_SETTINGS_KEY',''));
+  if(strlen($configured)>=12)return hash('sha256','serviceyar-bale-v1|'.$configured,true);
+  // Generate a durable server-only key when the hosting .env has no BALE_SETTINGS_KEY.
+  // The storage directory is denied by the deployment's web-server access rules.
+  $directory=dirname(__DIR__,3).'/storage/private';
+  $path=$directory.'/bale-settings.key';
+  if(!is_dir($directory)&&!@mkdir($directory,0700,true)&&!is_dir($directory))
+   throw new AuthException(503,'پوشه امن storage/private قابل ایجاد نیست؛ دسترسی نوشتن هاست یا BALE_SETTINGS_KEY را تنظیم کنید.','BALE_KEY_STORAGE_UNAVAILABLE');
+  if(!is_file($path)){
+   $generated=bin2hex(random_bytes(32));
+   $handle=@fopen($path,'x');
+   if($handle!==false){
+    @chmod($path,0600);
+    try{if(fwrite($handle,$generated)!==strlen($generated))throw new \RuntimeException('Secret key could not be persisted');}
+    finally{fclose($handle);}
+   }
+  }
+  $key=@file_get_contents($path);
+  if(!is_string($key)||!preg_match('/^[a-f0-9]{64}$/D',trim($key)))
+   throw new AuthException(503,'کلید رمزگذاری امن بله قابل خواندن نیست؛ مجوز پوشه storage/private یا BALE_SETTINGS_KEY را بررسی کنید.','BALE_KEY_STORAGE_UNAVAILABLE');
+  return hash('sha256','serviceyar-bale-v1|'.trim($key),true);
  }
  private static function encrypt(string $plaintext): string {
   $iv=random_bytes(12);$tag='';
@@ -51,7 +69,12 @@ final class BaleBotService {
   $raw=base64_decode($encoded,true);
   if($raw===false||strlen($raw)<29)throw new AuthException(503,'تنظیمات محرمانه بله قابل خواندن نیست.','BALE_ENCRYPTION_ERROR');
   $token=openssl_decrypt(substr($raw,28),'aes-256-gcm',self::cipherKey(),OPENSSL_RAW_DATA,substr($raw,0,12),substr($raw,12,16));
-  if($token===false)throw new AuthException(503,'کلید رمزگذاری توکن بله تغییر کرده است.','BALE_ENCRYPTION_ERROR');
+  // Preserve credentials saved by earlier releases which derived the key from DB_PASSWORD.
+  if($token===false){
+   $legacy=(string)config('DB_PASSWORD','');
+   if(strlen($legacy)>=12)$token=openssl_decrypt(substr($raw,28),'aes-256-gcm',hash('sha256','serviceyar-bale-v1|'.$legacy,true),OPENSSL_RAW_DATA,substr($raw,0,12),substr($raw,12,16));
+  }
+  if($token===false)throw new AuthException(503,'رمزگشایی توکن بله ناموفق است؛ کلید قبلی را بازگردانید یا توکن جدید ثبت کنید.','BALE_ENCRYPTION_ERROR');
   return $token;
  }
  private static function token(): string {
@@ -91,7 +114,10 @@ final class BaleBotService {
  }
  private static function webhookUrl(): string {
   $base=rtrim((string)config('APP_URL',''),'/');
-  if(!preg_match('#^https://[^/]+$#i',$base))throw new AuthException(503,'APP_URL باید نشانی HTTPS اصلی سامانه باشد.','BALE_APP_URL_REQUIRED');
+  if(!preg_match('#^https://[^/]+$#i',$base)){
+   // Canonical application host, never a user-supplied Host header.
+   $base='https://challi.ir';
+  }
   return $base.'/api/v1/bale/bot/webhook/'.self::setting('bale_auth_webhook_secret');
  }
  public static function configure(int $uid,array $data): array {
