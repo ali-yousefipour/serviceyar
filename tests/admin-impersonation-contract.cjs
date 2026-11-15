@@ -42,6 +42,8 @@ assert.ok(operations.includes('renderUsers'),'user selection supports instant se
 assert.ok(operations.includes('/api/v1/admin/impersonation/start'),'modal starts the secure impersonation flow');
 assert.ok(operations.includes('syAdminNeginSms')&&operations.includes('syAdminLoginMethods')&&operations.includes('syAdminBale'),'all existing provider and login settings have their own admin routes');
 assert.ok(operations.includes('await Promise.allSettled(panelTasks)'),'asynchronous admin panels finish initialization before section routing');
+assert.ok(operations.includes('const token=pageToken;\\n await originalCompaniesPage();\\n if(token!==pageToken'),'admin workspace wrapper ignores stale route completions');
+assert.ok(app.includes('const requestToken=pageToken')&&app.includes('if(requestToken!==pageToken)return;'),'company overview responses cannot overwrite a newer route');
 assert.ok(!operations.includes('void taxiOrganizationAdminPanel(adminPanel,token)'),'admin panel initialization must not be fire-and-forget');
 assert.ok(operations.includes('companyLoadSequence')&&operations.includes('requestSequence!==companyLoadSequence'),'late company-user responses cannot overwrite a newer selection');
 assert.ok(operations.includes('focusableSelector')&&operations.includes("document.removeEventListener('keydown',keyHandler)"),'impersonation dialog traps focus and releases its keyboard listener');
