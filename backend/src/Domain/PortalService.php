@@ -284,7 +284,8 @@ final class PortalService {
         if(!self::memberships($uid))throw new AuthException(403,'حساب پنل یافت نشد.','PORTAL_FORBIDDEN');
         if(strlen($password)<10||strlen($password)>200||$password!==$confirm)
             throw new AuthException(422,'رمز باید حداقل ۱۰ کاراکتر داشته باشد و تکرار آن یکسان باشد.','INVALID_PASSWORD');
-        $pdo=Connection::get();$pdo->beginTransaction();
+        $pdo=Connection::get();$ownsTransaction=!$pdo->inTransaction();
+        if($ownsTransaction)$pdo->beginTransaction();
         try {
             $q=$pdo->prepare("SELECT c.password_set_at,u.password_hash FROM portal_credentials c
                JOIN users u ON u.id=c.user_id WHERE c.user_id=? FOR UPDATE");
@@ -294,8 +295,9 @@ final class PortalService {
                 throw new AuthException(403,'برای تغییر رمز، رمز فعلی را وارد کنید.','CURRENT_PASSWORD_REQUIRED');
             $pdo->prepare('UPDATE users SET password_hash=? WHERE id=?')->execute([password_hash($password,PASSWORD_DEFAULT),$uid]);
             $pdo->prepare('UPDATE portal_credentials SET password_set_at=UTC_TIMESTAMP() WHERE user_id=?')->execute([$uid]);
-            $pdo->commit();return ['updated'=>true,'username'=>self::rows($pdo,'SELECT username FROM users WHERE id=?',[$uid])[0]['username']];
-        }catch(\Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
+            if($ownsTransaction)$pdo->commit();
+            return ['updated'=>true,'username'=>self::rows($pdo,'SELECT username FROM users WHERE id=?',[$uid])[0]['username']];
+        }catch(\Throwable $e){if($ownsTransaction&&$pdo->inTransaction())$pdo->rollBack();throw $e;}
     }
     public static function requestVehicleChange(int $uid,int $agencyId,int $driverId,array $body): array {
         self::authorized($uid,'driver',$agencyId,$driverId);
