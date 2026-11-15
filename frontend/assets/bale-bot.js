@@ -144,5 +144,5 @@
    finally{button.disabled=false;}
   };
  };
- void initializeLogin();
+ // Unified three-method login interface is initialized by login-methods.js.
 })();
