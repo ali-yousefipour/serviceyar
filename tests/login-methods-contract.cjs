@@ -52,6 +52,7 @@ assert.ok(js.includes("mobile:'ورود با موبایل و کد'"),'dedicated 
 assert.ok(js.includes("panels.mobile=createOtp('mobile')"),'mobile OTP panel is created');
 assert.ok(js.includes('/api/v1/auth/password-reset/request'),'forgot password requests a reset code');
 assert.ok(js.includes('/api/v1/auth/password-reset/confirm'),'forgot password confirms a reset code');
+assert.ok(js.includes("event.key!=='Enter'"),'recovery fields do not accidentally submit password login');
 assert.ok(js.includes('recoveryTimer.start(300)'),'recovery code validity countdown is displayed');
 assert.ok(js.includes('timer.start(300)'),'login OTP validity countdown is displayed');
 assert.ok(js.indexOf("form.append(user);")<js.indexOf("if(method==='bale')"),'Bale username field precedes explanatory instructions');
