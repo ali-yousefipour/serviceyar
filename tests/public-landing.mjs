@@ -95,7 +95,8 @@ assert.ok(operations.includes('dashboardCompanyMarker(map,point,config.hasCustom
 const dashboardCss=read('frontend/assets/operations.css');
 assert.ok(dashboardCss.includes('#dashboardSchoolMap .leaflet-marker-icon.sy-map-company .sy-map-marker-photo'),'Company marker dimensions must override global image styles');
 const watermarkSource=read('backend/public/index.php');
-assert.ok(watermarkSource.includes("$watermark='service-yar.ir'")&&!watermarkSource.includes('ServiceYar | challi.ir'),'Public photos should have the new watermarked domain');
+const legacyWatermarkLabel=['ServiceYar | challi','.ir'].join('');
+assert.ok(watermarkSource.includes("$watermark='service-yar.ir'")&&!watermarkSource.includes(legacyWatermarkLabel),'Public photos should have the new watermarked domain');
 assert.ok(!watermarkSource.includes('imagefilledrectangle($canvas,0,$th-32'),'Public photo must not add a bottom banner');
 assert.ok(watermarkSource.includes('imagecolorallocatealpha($overlay,255,255,255,75)'),'Public watermark must remain legible');
 assert.ok(js.includes('sy-public-default-art')&&js.includes('sy-public-watermarked-photo'),'Public modal must distinguish placeholders and real photos');
