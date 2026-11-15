@@ -127,7 +127,12 @@ final class PortalService {
     public static function dashboard(int $uid,string $type,int $agencyId,int $partyId): array {
         self::authorized($uid,$type,$agencyId,$partyId);
         $pdo=Connection::get();
-        $agency=self::rows($pdo,"SELECT id,name FROM agencies WHERE id=? AND is_active=1",[$agencyId])[0]??null;
+        $agency=self::rows($pdo,"SELECT a.id,a.name,a.code,a.sepand_national_id,
+             (SELECT setting_value FROM agency_settings WHERE agency_id=a.id AND setting_key='company_manager_name') managerName,
+             (SELECT setting_value FROM agency_settings WHERE agency_id=a.id AND setting_key='company_phone') phone,
+             (SELECT setting_value FROM agency_settings WHERE agency_id=a.id AND setting_key='company_ceo_mobile') managerMobile,
+             (SELECT setting_value FROM agency_settings WHERE agency_id=a.id AND setting_key='company_address') address
+             FROM agencies a WHERE a.id=? AND a.is_active=1",[$agencyId])[0]??null;
         $configured=self::rows($pdo,"SELECT password_set_at FROM portal_credentials WHERE user_id=?",[$uid]);
         $profile=self::rows($pdo,"SELECT username,first_name,last_name,mobile,address,postal_code,email FROM users WHERE id=?",[$uid])[0]??[];
         $base=['portalType'=>$type,'agency'=>$agency,'profile'=>$profile,
@@ -153,6 +158,13 @@ final class PortalService {
             $invoices=self::rows($pdo,"SELECT id,title,amount,status,issue_date,due_date
                 FROM invoices WHERE agency_id=? AND party_type='student' AND party_id=?
                 AND status<>'cancelled' ORDER BY issue_date DESC,id DESC",[$agencyId,$partyId]);
+            // Installment schedules are issued as independent invoices.
+            // Keep actual due dates and payment amounts, never synthesize them.
+            $installments=self::rows($pdo,"SELECT i.id,i.title,i.amount,i.status,i.due_date
+                FROM invoices i WHERE i.agency_id=? AND i.party_type='student'
+                 AND i.party_id=? AND i.status<>'cancelled'
+                 AND (i.title LIKE 'قسط %' OR i.title LIKE 'برنامه %')
+                ORDER BY i.due_date,i.id",[$agencyId,$partyId]);
             $payments=self::rows($pdo,"SELECT p.id,p.amount,p.payment_date,p.method,p.reference_no,p.invoice_id
                 FROM payments p JOIN invoices i ON i.id=p.invoice_id AND i.agency_id=p.agency_id
                 WHERE i.agency_id=? AND i.party_type='student' AND i.party_id=?
@@ -175,7 +187,7 @@ final class PortalService {
                 $invoices[$i]['remainingAmount']=max(0,(float)$invoices[$i]['amount']-$allocated);
             }
             return $base+['student'=>$student,'guardian'=>$guardian,'services'=>$services,
-                'finance'=>['invoices'=>$invoices,'payments'=>$payments,
+                'finance'=>['invoices'=>$invoices,'installments'=>$installments,'payments'=>$payments,
                    'total'=>$total,'paid'=>$received,'balance'=>max(0,$total-$received),
                    'credit'=>max(0,$received-$total)],
                 'installmentsNote'=>'برنامه اقساط بر اساس سند قطعی شرکت نمایش داده می‌شود؛ برای تاریخ سررسید قطعی از شرکت استعلام کنید.'];
