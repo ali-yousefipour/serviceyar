@@ -32,7 +32,7 @@ assert.match(source,/\("\/assets\/app\.js", "assets\/app\.js"\)/,'Release verifi
 assert.match(source,/https:\/\/www\.service-yar\.ir\//,'TLS diagnostics must inspect the production www alias');
 assert.doesNotMatch(source,/challi\.ir/,'The legacy host must not remain a production verification target');
 assert.match(workflow,/PUBLIC_BASE_URL: https:\/\/service-yar\.ir/,'Production deployment must explicitly verify service-yar.ir');
-assert.match(workflow,/FTP_REMOTE_ROOT: \/(?:\\r?\\n|$)/,'FTP account is chrooted to the website public_html directory');
+assert.ok(workflow.includes('FTP_REMOTE_ROOT: /\n'),'FTP account is chrooted to the website public_html directory');
 assert.match(source,/posixpath\.join\(ROOT, name\)/,'Publishing into chroot must not generate double slash paths');
 assert.match(source,/expected index\.html, assets and backend/,'FTP root must be checked before publishing');
 assert.doesNotMatch(workflow,/SERVICEYAR_PRODUCTION_SSL_READY|SERVICEYAR_FTP_REMOTE_ROOT/,'Legacy manual prerequisite flags must no longer block publication');
