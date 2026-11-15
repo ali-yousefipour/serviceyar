@@ -2566,8 +2566,9 @@ async function taxiOrganizationAdminPanel(container,token){
 }
 const originalCompaniesPage=companiesPage;
 companiesPage=async function(){
- await originalCompaniesPage();if(!session.roles?.includes('super_admin'))return;
  const token=pageToken;
+ await originalCompaniesPage();
+ if(token!==pageToken||!session?.roles?.includes('super_admin'))return;
  try{
   const [rows,platform]=await Promise.all([api('/api/v1/admin/users'),api('/api/v1/admin/platform-settings')]);
   if(token!==pageToken)return;
