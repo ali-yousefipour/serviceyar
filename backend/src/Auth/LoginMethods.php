@@ -32,7 +32,7 @@ final class LoginMethods
     public static function publicStatus(): array
     {
         $configured=self::policies();
-        $smsReady=NeginSms::configured()&&class_exists(\SoapClient::class);
+        $smsReady=NeginSms::ready();
         $available=['password'=>true,'sms'=>$smsReady,'bale'=>BaleBotService::ready(),'mobile'=>$smsReady];
         return ['methods'=>[
             'password'=>$configured['password'],
