@@ -246,6 +246,8 @@ body{background:var(--canvas);color:var(--ink)}
 #app .sy-command-sidebar .sy-account-menu>summary{list-style:none;cursor:pointer;display:flex!important;align-items:center;gap:11px;padding:12px 10px!important;outline-offset:2px}
 #app .sy-command-sidebar .sy-account-menu>summary::-webkit-details-marker{display:none}
 #app .sy-account-avatar{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;color:#063e2f;background:linear-gradient(135deg,#f8e6b5,#cba151);border:1px solid #efd493;border-radius:12px;font-size:18px;font-weight:850}
+#app .sy-account-avatar.sy-account-avatar-has-photo{overflow:hidden;padding:0;background:#eaf4ee;border-color:#b7dbc9}
+#app .sy-account-avatar .sy-account-avatar-image{display:block;width:100%;height:100%;object-fit:cover;object-position:center;border-radius:inherit;max-width:none}
 #app .sy-account-identity{display:grid;gap:2px;min-width:0;flex:1}
 #app .sy-account-identity strong{font-size:12px;color:#fff;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
 #app .sy-account-identity small{font-size:10px;color:#bfdaca;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
