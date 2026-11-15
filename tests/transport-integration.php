@@ -695,8 +695,11 @@ try{
  ]);
  check($profileData['firstName']==='کاربر'&&$profileData['mobile']==='09123456789',
   'User may edit their own personal contact and identity information');
+ check(($profileData['has_photo']??null)===false,
+  'Users without portraits expose has_photo=false to avoid missing-image requests');
  $globalUsers=\ServiceYar\Users\UserService::list($uid,0);
  $viewerResult=array_values(array_filter($globalUsers,fn($item)=>(int)$item['id']===$viewer))[0]??[];
+ check(($viewerResult['has_photo']??null)===false,'User list does not advertise missing portrait as an image URL');
  check(($viewerResult['national_code']??null)==='1234567891'
    &&($viewerResult['address']??null)==='مشهد، نشانی نمونه',
   'Global administrator sees saved national identifier and contact details');
