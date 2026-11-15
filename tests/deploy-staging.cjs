@@ -10,6 +10,8 @@ const workflow=readFileSync('.github/workflows/deploy-serviceyar.yml','utf8');
 const html=readFileSync('frontend/index.html','utf8');
 const productionDocs=readFileSync('docs/PHASE-17-PRODUCTION.md','utf8');
 const bootstrap=readFileSync('backend/src/bootstrap.php','utf8');
+const baleBot=readFileSync('backend/src/Integrations/BaleBotService.php','utf8');
+const baleDocs=readFileSync('docs/BALE-BOT.md','utf8');
 for(const asset of ['public-site.js','public-site.css','public-site-content.html']){
  const {existsSync}=require('node:fs');
  assert.ok(existsSync('frontend/assets/'+asset),'Missing public asset: '+asset);
@@ -33,4 +35,7 @@ assert.match(html,/<meta property="og:url" content="https:\/\/service-yar\.ir\/"
 assert.match(productionDocs,/APP_URL=https:\/\/service-yar\.ir/,'Production environment docs must use the canonical URL');
 assert.match(productionDocs,/CORS_ALLOWED_ORIGINS=https:\/\/service-yar\.ir/,'Production CORS docs must use the canonical origin');
 assert.match(bootstrap,/\$allowedOrigins\[\]\s*=\s*'https:\/\/service-yar\.ir'/,'Production API must trust the canonical origin during the domain cutover');
+assert.match(baleBot,/config\('APP_URL','https:\/\/service-yar\.ir'\)/,'Bale webhook generation must default to the canonical host');
+assert.match(baleBot,/\$base='https:\/\/service-yar\.ir'/,'Bale webhook fallback must use the canonical host');
+assert.match(baleDocs,/APP_URL=https:\/\/service-yar\.ir/,'Bale setup documentation must use the canonical host');
 console.log('FTP staging isolation and service-yar.ir canonical-domain checks OK');
