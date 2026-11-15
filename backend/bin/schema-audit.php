@@ -110,7 +110,7 @@ $report=[
  'active_role_counts'=>$roles,
  'tenant_user_management_grant_gaps'=>$missingGrants,
  'backup_table_candidates'=>$backupCandidates,
- 'warning'=>'Backup candidates are NOT proven unused. This audit is read-only and does not authorize DROP TABLE.',
+ 'warning'=>'Backup candidates are NOT proven unused. This audit is read-only and does not authorize destructive schema changes.',
 ];
 echo json_encode($report,JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR)."\n";
 if($schemaIssues||$missingGrants)exit(2);
