@@ -24,9 +24,13 @@ final class BaleBotService {
   }
  }
  private static function setting(string $key): string {
-  self::ensureSchema();
-  $q=Connection::get()->prepare('SELECT setting_value FROM platform_settings WHERE setting_key=?');
-  $q->execute([$key]);return (string)($q->fetchColumn()?:'');
+  try{
+   $q=Connection::get()->prepare('SELECT setting_value FROM platform_settings WHERE setting_key=?');
+   $q->execute([$key]);return (string)($q->fetchColumn()?:'');
+  }catch(\PDOException $e){
+   if($e->getCode()==='42S02'||(int)($e->errorInfo[1]??0)===1146)return '';
+   throw $e;
+  }
  }
  private static function put(string $key,string $value): void {
   Connection::get()->prepare('INSERT INTO platform_settings(setting_key,setting_value) VALUES(?,?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)')->execute([$key,$value]);
@@ -77,6 +81,7 @@ final class BaleBotService {
  public static function configure(int $uid,array $data): array {
   if(!Authorization::isSuperAdmin($uid))throw new AuthException(403,'فقط ادمین کل مجاز است.','FORBIDDEN');
   if(array_diff(array_keys($data),['token','enabled']))throw new AuthException(422,'ورودی تنظیمات بله معتبر نیست.','VALIDATION_ERROR');
+  self::ensureSchema();
   $token=trim((string)($data['token']??''));
   if($token!==''&&!preg_match('/^[A-Za-z0-9:_-]{25,200}$/D',$token))throw new AuthException(422,'قالب توکن بله نامعتبر است.','VALIDATION_ERROR');
   if($token!==''){
@@ -95,6 +100,7 @@ final class BaleBotService {
   return self::overview($uid);
  }
  public static function status(int $user): array {
+  if(!self::ready())return ['enabled'=>false,'linked'=>false,'botUsername'=>self::setting('bale_auth_username')];
   $q=Connection::get()->prepare('SELECT chat_id FROM bale_user_links WHERE user_id=?');
   $q->execute([$user]);return ['enabled'=>self::ready(),'linked'=>(bool)$q->fetchColumn(),'botUsername'=>self::setting('bale_auth_username')];
  }
