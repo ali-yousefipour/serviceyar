@@ -2181,8 +2181,55 @@ function financeInputFields(prefix='quote'){
  return `<div class="form-grid"><label>مسافت یک‌طرفه (کیلومتر)<input id="${prefix}Km" type="number" min="0" max="1000" step="1" inputmode="numeric" value="5"></label><label>روزهای کارکرد<input id="${prefix}Days" type="number" min="0" max="31" step="1" value="22"></label><label>تعداد مسیر در روز<input id="${prefix}Trips" type="number" min="1" max="4" step="1" value="2"></label></div>`;
 }
 function userManagementTable(box,rows,global){
- const manage=global||can('users','manage');box.innerHTML=`${!global&&manage?'<button data-new-user>کاربر جدید</button>':''}<div class="table-wrap"><table><thead><tr><th>نام کاربری</th><th>نام</th><th>نقش</th><th>وضعیت</th><th>عملیات</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.username)}</td><td>${esc(person(r))}</td><td>${esc(r.roles||r.role_names)}</td><td>${Number(r.is_active)?'فعال':'غیرفعال'}</td><td>${manage?`<button data-edit-user="${r.id}">ویرایش</button><button data-user-password="${r.id}">تغییر رمز</button>`:''}</td></tr>`).join('')}</tbody></table></div>`;
- box.querySelector('[data-new-user]')?.addEventListener('click',()=>userEditor(null,false));box.querySelectorAll('[data-edit-user]').forEach(b=>b.onclick=()=>userEditor(rows.find(r=>String(r.id)===b.dataset.editUser),global));box.querySelectorAll('[data-user-password]').forEach(b=>b.onclick=()=>passwordDialog(rows.find(r=>String(r.id)===b.dataset.userPassword),global));
+ const manage=global||can('users','manage'),selfId=Number(session?.user?.id);
+ const norm=value=>ServiceYarDates.digits(String(value??'')).replace(/[يى]/g,'ی').replace(/ك/g,'ک').replace(/\s+/g,' ').trim().toLocaleLowerCase('fa');
+ box.innerHTML='<div class="sy-admin-user-toolbar">'+
+  '<label class="sy-admin-user-search"><span>جستجوی کاربران</span><input type="search" data-user-search autocomplete="off" placeholder="نام، نام خانوادگی، نام کاربری یا نقش" aria-label="جستجوی کاربران سامانه"></label>'+
+  '<span class="sy-admin-user-count" data-user-count aria-live="polite"></span>'+
+  (!global&&manage?'<button type="button" data-new-user>کاربر جدید</button>':'')+'</div>'+
+  '<div class="table-wrap sy-admin-user-scroll"><table><thead><tr><th>نام کاربری</th><th>نام</th><th>نقش</th><th>وضعیت</th><th>عملیات</th></tr></thead><tbody data-user-results></tbody></table></div>';
+ const input=box.querySelector('[data-user-search]'),tbody=box.querySelector('[data-user-results]'),counter=box.querySelector('[data-user-count]');
+ const render=()=>{
+  const term=norm(input.value);
+  const visible=rows.filter(r=>!term||norm([r.username,r.first_name,r.last_name,person(r),r.roles,r.role_names].join(' ')).includes(term));
+  counter.textContent='نمایش '+number(visible.length)+' از '+number(rows.length)+' کاربر';
+  tbody.innerHTML=visible.length?visible.map(r=>'<tr><td>'+esc(r.username||'—')+'</td><td>'+esc(person(r))+'</td><td>'+esc(r.roles||r.role_names||'—')+'</td><td>'+(Number(r.is_active)?'فعال':'غیرفعال')+'</td><td class="sy-user-row-actions">'+
+   (manage?'<button type="button" data-edit-user="'+Number(r.id)+'">ویرایش</button><button type="button" data-user-password="'+Number(r.id)+'">تغییر رمز</button>'+
+   (global&&Number(r.id)!==selfId?'<button type="button" class="sy-user-delete" data-user-delete="'+Number(r.id)+'">حذف</button>':''):'—')+
+   '</td></tr>').join(''):'<tr><td colspan="5" class="sy-users-no-results">کاربری مطابق عبارت جستجو پیدا نشد.</td></tr>';
+  tbody.querySelectorAll('[data-edit-user]').forEach(b=>b.onclick=()=>userEditor(rows.find(r=>String(r.id)===b.dataset.editUser),global));
+  tbody.querySelectorAll('[data-user-password]').forEach(b=>b.onclick=()=>passwordDialog(rows.find(r=>String(r.id)===b.dataset.userPassword),global));
+  tbody.querySelectorAll('[data-user-delete]').forEach(b=>b.onclick=()=>confirmGlobalUserDelete(rows.find(r=>String(r.id)===b.dataset.userDelete)));
+ };
+ input.addEventListener('input',render);
+ box.querySelector('[data-new-user]')?.addEventListener('click',()=>userEditor(null,false));
+ render();
+}
+function confirmGlobalUserDelete(user){
+ if(!user||!session.roles?.includes('super_admin')||Number(user.id)===Number(session.user.id))return;
+ dialog('حذف کاربر سامانه','<form id="syDeleteUserForm" class="sy-user-delete-confirm">'+
+  '<p>کاربر <strong>'+esc(person(user))+'</strong> با نام کاربری <strong dir="ltr">'+esc(user.username)+'</strong> از فهرست کاربران حذف و دسترسی او بلافاصله قطع خواهد شد.</p>'+
+  '<p>اطلاعات مالی، قراردادها و سوابق ثبت‌شده توسط این حساب برای حفظ تاریخچه سامانه باقی می‌مانند. این عملیات از طریق این پنل قابل بازگشت نیست.</p>'+
+  '<label>برای تأیید، نام کاربری را دقیقاً وارد کنید<input name="confirmation" autocomplete="off" required placeholder="'+esc(user.username)+'"></label>'+
+  '<div class="sy-user-delete-actions"><button type="button" data-cancel-delete>انصراف</button><button type="submit" class="sy-user-delete" disabled data-confirm-delete>حذف نهایی کاربر</button></div></form>');
+ const form=$('syDeleteUserForm'),value=form.elements.confirmation,submit=form.querySelector('[data-confirm-delete]');
+ form.querySelector('[data-cancel-delete]').onclick=closeDialog;
+ value.oninput=()=>{submit.disabled=value.value.trim()!==String(user.username);};
+ form.onsubmit=async event=>{
+  event.preventDefault();
+  if(value.value.trim()!==String(user.username))return;
+  submit.disabled=true;
+  const error=$('formError');error.hidden=true;
+  try{
+   const result=await api('/api/v1/admin/users/'+Number(user.id),{method:'DELETE',headers:{'X-CSRF-Token':session.csrfToken}});
+   if(!result?.deleted)throw new Error('تأیید حذف کاربر از سرور دریافت نشد.');
+   closeDialog();notify('کاربر حذف شد و نشست‌های فعال او بسته شدند.');
+   await companiesPage();
+  }catch(e){
+   if(error){error.textContent=e.message;error.hidden=false;error.focus();}
+   submit.disabled=false;
+  }
+ };
 }
 function ownProfileDialog(){
  const self=session?.user||{};
