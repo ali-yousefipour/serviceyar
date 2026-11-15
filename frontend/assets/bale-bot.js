@@ -16,7 +16,7 @@
   const toggle=el('button','sy-bale-login-toggle','ورود با پیام‌رسان بله');
   toggle.type='button';toggle.setAttribute('aria-expanded','false');
   const form=el('form','sy-bale-login-form');form.hidden=true;
-  form.innerHTML='<p>نام کاربری سامانه را وارد کنید؛ کد ورود به گفتگوی بله متصل به حساب ارسال می‌شود.</p>'+
+  form.innerHTML='<p>نام کاربری سامانه را وارد کنید؛ کد ورود به گفتگوی بله متصل به حساب ارسال می‌شود.</p><p class="muted">برای اولین استفاده، باید یک‌بار با رمز عبور وارد سامانه شوید و از پروفایل، کد اتصال بله را دریافت و برای ربات ارسال کنید. ثبت شماره همراه یا زدن Start به‌تنهایی اتصال را برقرار نمی‌کند.</p>'+
    '<label>نام کاربری<input name="username" maxlength="100" autocomplete="username" required></label>'+
    '<button type="button" data-request-otp class="primary">ارسال کد ورود به بله</button>'+
    '<label>کد یک‌بارمصرف<input name="code" maxlength="6" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9۰-۹]{6}" required></label>'+
@@ -87,17 +87,18 @@
   await previousProfileDialog();
   const form=document.getElementById('syOwnProfileForm');if(!form)return;
   const block=el('section','sy-bale-profile-panel');
-  block.innerHTML='<h4>اتصال حساب به پیام‌رسان بله</h4><p>پس از اتصال، ورود یک‌بارمصرف و پیام‌های سامانه را در بله دریافت می‌کنید.</p>'+
-   '<div class="sy-bale-actions"><button type="button" data-link-bale>دریافت کد اتصال</button><button type="button" data-unlink-bale>قطع اتصال</button></div><p data-link-message role="status"></p>';
+  block.innerHTML='<h4>اتصال حساب به پیام‌رسان بله</h4><p>برای ورود با بله، فقط ثبت شماره موبایل در پروفایل یا زدن Start کافی نیست. یک‌بار روی «دریافت کد اتصال» بزنید و دستور نمایش‌داده‌شده را در گفتگوی خصوصی ربات ارسال کنید.</p>'+
+   '<div class="sy-bale-actions"><button type="button" data-link-bale>دریافت کد اتصال</button><button type="button" data-link-refresh>بررسی مجدد اتصال</button><button type="button" data-unlink-bale>قطع اتصال</button></div><p data-link-message role="status"></p>';
   form.querySelector('button[type=submit]')?.before(block);
   const feedback=block.querySelector('[data-link-message]');
   const refresh=async()=>{
    const info=await api('/api/v1/bale/link');
    if(!block.isConnected)return;
-   message(feedback,info.linked?'حساب شما به بله متصل است.':info.enabled?'حساب بله هنوز متصل نیست.':'ربات بله توسط مدیر سامانه فعال نشده است.');
+   message(feedback,info.linked?'حساب بله شما با موفقیت متصل است و می‌توانید از صفحه ورود کد بگیرید.':info.enabled?'حساب بله هنوز متصل نشده است؛ کد اتصال را دریافت کرده و دستور /start به‌همراه کد را در ربات ارسال کنید.':'ربات بله توسط مدیر سامانه فعال نشده است.');
    block.querySelector('[data-link-bale]').disabled=!info.enabled;
    block.querySelector('[data-unlink-bale]').disabled=!info.linked;
   };
+  block.querySelector('[data-link-refresh]').onclick=async()=>{try{await refresh();}catch(e){showLinkError(feedback,e);}};
   block.querySelector('[data-link-bale]').onclick=async()=>{
    try{
     const data=await api('/api/v1/bale/link',{method:'POST',headers:{'X-CSRF-Token':session.csrfToken},body:'{}'});
