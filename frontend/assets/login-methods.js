@@ -266,7 +266,6 @@
     const reset=status.recoveryMethods||{};
     readiness.textContent='وضعیت بازیابی رمز: پیامک '+(reset.sms?'آماده':'نیازمند مهاجرت دیتابیس/تنظیم پیامک')+' · ربات بله '+(reset.bale?'آماده':'نیازمند مهاجرت دیتابیس/تنظیم ربات');
    }
-   }
   };
   form.onsubmit=async e=>{
    e.preventDefault();if(!Object.values(checks).some(x=>x.checked)){note(result,'حداقل یک روش ورود را انتخاب کنید.',true);return;}
