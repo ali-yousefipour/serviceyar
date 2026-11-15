@@ -15,6 +15,7 @@ import socket
 import ssl
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
+from urllib.parse import urlsplit
 
 ROOT = os.environ.get("FTP_REMOTE_ROOT", "/public_html").rstrip("/") or "/"
 PAYLOAD = Path("deploy-payload")
@@ -24,6 +25,24 @@ RUN_ID = "".join(c for c in os.environ.get("GITHUB_RUN_ID", "local") if c.isasci
 STAGING = ROOT + "/.serviceyar-staging-" + (RUN_ID or "local")
 MANIFEST = ROOT + "/.serviceyar-manifest.json"
 SCHEMA = 1
+CANONICAL_HOST = "service-yar.ir"
+
+
+def production_base_url():
+    """Return the one canonical HTTPS production origin; reject accidental host drift."""
+    base = os.environ.get("PUBLIC_BASE_URL", f"https://{CANONICAL_HOST}").rstrip("/")
+    parsed = urlsplit(base)
+    if (
+        parsed.scheme != "https"
+        or parsed.hostname != CANONICAL_HOST
+        or parsed.path not in ("", "/")
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise RuntimeError(
+            f"PUBLIC_BASE_URL must be https://{CANONICAL_HOST}; received {base!r}"
+        )
+    return base
 
 
 def ensure_dir(ftp, path, known):
@@ -74,8 +93,11 @@ def previous_files(ftp):
 
 
 def verify_live(base_url, build_id, expected_digests):
-    """Verify the public domain serves the exact release, not just the FTP copy."""
+    """Verify the canonical HTTPS host serves the exact release, not just the FTP copy."""
     base = base_url.rstrip("/")
+    parsed_base = urlsplit(base)
+    if parsed_base.scheme != "https" or parsed_base.hostname != CANONICAL_HOST:
+        raise RuntimeError(f"Live verification must use https://{CANONICAL_HOST}; received {base!r}")
     checks = [
         ("/", None),
         ("/assets/operations.js", "assets/operations.js"),
@@ -92,6 +114,13 @@ def verify_live(base_url, build_id, expected_digests):
             with urlopen(request, timeout=35) as response:
                 body = response.read()
                 status = response.status
+                final_url = response.geturl()
+            final = urlsplit(final_url)
+            if final.scheme != "https" or final.hostname != CANONICAL_HOST:
+                raise RuntimeError(
+                    f"Production request left the canonical origin: {final_url!r}; "
+                    f"expected https://{CANONICAL_HOST}"
+                )
         except (URLError, HTTPError, TimeoutError) as error:
             host = base.split("://", 1)[-1].split("/", 1)[0].split(":", 1)[0]
             try:
@@ -101,7 +130,7 @@ def verify_live(base_url, build_id, expected_digests):
                 print(f"DNS lookup failed for {host}: {dns_error}", flush=True)
             # Diagnostic only: inspect whether the HTTP virtual host serves this release
             # when TLS certificate validation is failing. Never accept this as a pass.
-            for candidate in ("https://www.challi.ir/", "http://challi.ir/", "http://www.challi.ir/"):
+            for candidate in ("https://www.service-yar.ir/", "http://service-yar.ir/", "http://www.service-yar.ir/"):
                 try:
                     diagnostic = Request(candidate + "?deploy_diagnostic=" + build_id, headers={"Cache-Control": "no-cache", "User-Agent": "ServiceYar-Deploy-Diagnostic/1.0"})
                     with urlopen(diagnostic, timeout=12, context=ssl._create_unverified_context()) as response:
@@ -176,7 +205,7 @@ def main():
         print(f"Release: {len(changed)} changed, {len(files) - len(changed)} unchanged, {len(files)} total", flush=True)
         if not changed:
             print("FTP manifest matches this release; public HTTP verification is still required", flush=True)
-            verify_live(os.environ.get("PUBLIC_BASE_URL", "https://challi.ir"), os.environ.get("GITHUB_SHA", "local"), digests)
+            verify_live(production_base_url(), os.environ.get("GITHUB_SHA", "local"), digests)
             return
 
         dirs = set()
@@ -203,7 +232,7 @@ def main():
             verify(ftp, digests[name], live)
 
         # Verify the actual domain/document-root before declaring the release successful.
-        verify_live(os.environ.get("PUBLIC_BASE_URL", "https://challi.ir"), os.environ.get("GITHUB_SHA", "local"), digests)
+        verify_live(production_base_url(), os.environ.get("GITHUB_SHA", "local"), digests)
 
         # Commit metadata only after FTP and public HTTP checks have passed.
         manifest = json.dumps({
