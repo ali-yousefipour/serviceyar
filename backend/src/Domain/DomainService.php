@@ -119,6 +119,41 @@ final class DomainService {
   unset($record['agency_id']);
   return ['found'=>true,'plate'=>$plate,'source'=>$sameAgency?'current_agency':'shared_registry','vehicle'=>$record];
  }
+ /**
+  * Search vehicle plate references across Sepand imports and agency records.
+  * Only non-sensitive vehicle descriptors leave the source agency. The caller
+  * may link only its own vehicle; foreign ones must be registered locally.
+  */
+ public static function searchVehicleRegistry(int $uid,int $aid,string $query): array {
+  Authorization::requirePermission($uid,'drivers.view');
+  Authorization::requireAgencyAccess($uid,$aid);
+  $term=strtr(trim($query),['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9','ي'=>'ی','ك'=>'ک']);
+  $term=preg_replace('/[\s\-\/ـ]+/u','',$term)??'';
+  if(mb_strlen($term)<2||mb_strlen($term)>24)return [];
+  $pdo=Connection::get();
+  $expr='plate';
+  foreach([' ','-','/','ـ','ایران',"\t"] as $sep)$expr='REPLACE('.$expr.','.$pdo->quote($sep).", '')";
+  foreach(['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹','٠','١','٢','٣','٤','٥','٦','٧','٨','٩'] as $i=>$digit)
+   $expr='REPLACE('.$expr.','.$pdo->quote($digit).','.$pdo->quote((string)($i%10)).')';
+  $expr="REPLACE(REPLACE($expr,'ي','ی'),'ك','ک')";
+  $q=$pdo->prepare("SELECT id,agency_id,plate,model,vehicle_trim,vehicle_type,tariff_vehicle_class,capacity
+    FROM vehicles WHERE $expr LIKE :q
+    ORDER BY (agency_id=:agency) DESC,id DESC LIMIT 80");
+  $q->execute(['q'=>'%'.addcslashes($term,'%_\\').'%','agency'=>$aid]);
+  $out=[];$seen=[];
+  while($row=$q->fetch(\PDO::FETCH_ASSOC)){
+   $normalized=preg_replace('/[\s\-\/ـ]+/u','',strtr((string)$row['plate'],['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9']))??'';
+   if(isset($seen[$normalized]))continue;
+   $seen[$normalized]=true;
+   $local=(int)$row['agency_id']===$aid;
+   $out[]=['id'=>$local?(int)$row['id']:null,'plate'=>$row['plate'],
+    'model'=>$row['vehicle_trim']?:$row['model'],'vehicleType'=>$row['vehicle_type'],
+    'tariffVehicleClass'=>$row['tariff_vehicle_class'],'capacity'=>$row['capacity'],
+    'inCurrentAgency'=>$local,'source'=>$local?'company':'shared_registry'];
+   if(count($out)>=25)break;
+  }
+  return $out;
+ }
  /** Enforce non-duplicate plates for manual API registration, not Sepand's historical import reconciliation. */
  public static function createVehicleFromForm(int $uid,int $aid,array $body): array {
   self::assertNewVehiclePlate($uid,$aid,(string)($body['plate']??''));
