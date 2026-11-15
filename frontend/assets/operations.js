@@ -2231,20 +2231,85 @@ function confirmGlobalUserDelete(user){
   }
  };
 }
-function ownProfileDialog(){
- const self=session?.user||{};
- dialog('ویرایش پروفایل من',`<form id="syOwnProfileForm" class="sy-own-profile-form"><p class="muted">اطلاعات حساب کاربری شما</p><label>نام کاربری<input value="${esc(self.username)}" disabled autocomplete="username"></label><div class="form-grid"><label>نام<input name="firstName" maxlength="100" value="${esc(self.firstName||'')}" required></label><label>نام خانوادگی<input name="lastName" maxlength="120" value="${esc(self.lastName||'')}"></label></div><button class="primary" type="submit">ذخیره تغییرات</button></form>`);
- const form=document.getElementById('syOwnProfileForm');
- if(!form)return;
- form.onsubmit=async event=>{
-  event.preventDefault();
-  const button=form.querySelector('[type="submit"]');button.disabled=true;
-  try{
-   const data=await write('/api/v1/auth/profile',{firstName:form.elements.firstName.value.trim(),lastName:form.elements.lastName.value.trim()},'PUT');
-   session.user.firstName=data.firstName;session.user.lastName=data.lastName;
-   closeDialog();renderNav();notify('اطلاعات پروفایل با موفقیت ذخیره شد.');
-  }catch(error){const box=document.getElementById('formError');if(box){box.textContent=error.message;box.hidden=false;}button.disabled=false;}
- };
+
+function syUserPhotoUrl(id,global=false){
+ return global?'/api/v1/admin/users/'+encodeURIComponent(id)+'/photo':scoped('/api/v1/users/'+encodeURIComponent(id)+'/photo');
+}
+function syPhotoFields(data={}){
+ const value=(snake,camel)=>esc(data[snake]??data[camel]??'');
+ return '<div class="sy-user-personal-fields">'+
+ '<label>شماره همراه<input name="mobile" inputmode="tel" maxlength="11" autocomplete="tel" placeholder="۰۹xxxxxxxxx" value="'+value('mobile','mobile')+'"></label>'+
+ '<label>کد ملی<input name="nationalCode" inputmode="numeric" maxlength="10" value="'+value('national_code','nationalCode')+'"></label>'+
+ '<label>ایمیل<input name="email" type="email" autocomplete="email" maxlength="190" value="'+value('email','email')+'"></label>'+
+ '<label>کد پستی<input name="postalCode" inputmode="numeric" maxlength="10" value="'+value('postal_code','postalCode')+'"></label>'+
+ '<label>شماره اضطراری<input name="emergencyPhone" inputmode="tel" maxlength="11" value="'+value('emergency_phone','emergencyPhone')+'"></label>'+
+ '<label class="sy-user-address-field">نشانی<textarea name="address" maxlength="1000" autocomplete="street-address">'+value('address','address')+'</textarea></label></div>';
+}
+function syPhotoWidget(row,url){
+ const name=[row?.first_name||row?.firstName,row?.last_name||row?.lastName].filter(Boolean).join(' ')||row?.username||'کاربر';
+ return '<div class="sy-user-photo-editor"><div class="sy-profile-avatar">'+
+ (url?'<img alt="تصویر '+esc(name)+'" src="'+esc(url)+'" class="sy-profile-avatar-img">':'<div class="sy-profile-avatar-fallback">ک</div>')+
+ '</div><div><h4>تصویر پروفایل</h4><p>تصویر JPG، PNG یا WebP تا ۵ مگابایت. تصویر به شکل مربعی ذخیره می‌شود.</p>'+
+ '<label class="sy-user-photo-button">انتخاب یا تغییر تصویر<input name="photo" type="file" accept="image/jpeg,image/png,image/webp"></label>'+
+ (url?'<button type="button" data-remove-photo class="sy-user-remove-photo">حذف عکس</button>':'')+'</div></div>';
+}
+function syBindPhoto(form){
+ const img=form.querySelector('.sy-profile-avatar-img');
+ if(img)img.onerror=()=>img.replaceWith(Object.assign(document.createElement('div'),{className:'sy-profile-avatar-fallback',textContent:'ک'}));
+ form.elements.photo?.addEventListener('change',()=>{
+  const file=form.elements.photo.files?.[0];if(!file)return;
+  const objectUrl=URL.createObjectURL(file);
+  const holder=form.querySelector('.sy-profile-avatar');
+  holder.replaceChildren();
+  const preview=document.createElement('img');preview.className='sy-profile-avatar-img';preview.alt='پیش‌نمایش عکس';preview.src=objectUrl;
+  preview.onload=()=>URL.revokeObjectURL(objectUrl);
+  holder.append(preview);
+ });
+}
+async function syUploadUserPhoto(url,file){
+ if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>5*1024*1024)throw Error('تصویر باید JPG، PNG یا WebP و حداکثر ۵ مگابایت باشد.');
+ const body=new FormData();body.append('photo',file);
+ const resp=await fetch(url,{method:'POST',credentials:'same-origin',headers:{'X-CSRF-Token':session.csrfToken,'Accept':'application/json'},body});
+ const json=await resp.json().catch(()=>({}));
+ if(!resp.ok||!json.ok)throw Error(json.error?.message||'بارگذاری تصویر ناموفق بود.');
+ return json.data;
+}
+async function syRemoveUserPhoto(url){
+ const resp=await fetch(url,{method:'DELETE',credentials:'same-origin',headers:{'X-CSRF-Token':session.csrfToken,'Accept':'application/json'}});
+ const json=await resp.json().catch(()=>({}));
+ if(!resp.ok||!json.ok)throw Error(json.error?.message||'حذف تصویر ناموفق بود.');
+ return json.data;
+}
+async function ownProfileDialog(){
+ try{
+  const self=await api('/api/v1/auth/profile'),url='/api/v1/auth/profile/photo';
+  const html='<form id="syOwnProfileForm" class="sy-professional-user-form">'+syPhotoWidget(self,url)+
+   '<section class="sy-user-profile-sections"><h4>اطلاعات حساب</h4><div class="form-grid">'+
+   '<label>نام کاربری<input value="'+esc(self.username)+'" disabled></label>'+
+   '<label>نام<input name="firstName" maxlength="100" required value="'+esc(self.first_name)+'"></label>'+
+   '<label>نام خانوادگی<input name="lastName" maxlength="120" value="'+esc(self.last_name)+'"></label></div>'+
+   '<h4>اطلاعات هویتی و تماس</h4>'+syPhotoFields(self)+'</section>'+
+   '<button class="primary" type="submit">ذخیره پروفایل</button></form>';
+  dialog('پروفایل و اطلاعات شخصی',html);
+  const form=$('syOwnProfileForm');syBindPhoto(form);
+  form.querySelector('[data-remove-photo]')?.addEventListener('click',async()=>{
+   if(!confirm('تصویر پروفایل حذف شود؟'))return;
+   try{await syRemoveUserPhoto(url);form.querySelector('.sy-profile-avatar').innerHTML='<div class="sy-profile-avatar-fallback">ک</div>';form.elements.photo.value='';notify('تصویر حذف شد.');}
+   catch(e){notify(e.message,true);}
+  });
+  form.onsubmit=async e=>{
+   e.preventDefault();const button=form.querySelector('[type=submit]');button.disabled=true;
+   try{
+    const data=Object.fromEntries(new FormData(form));delete data.photo;
+    const saved=await write('/api/v1/auth/profile',data,'PUT');
+    let photoError=null;
+    if(form.elements.photo.files?.[0])try{await syUploadUserPhoto(url,form.elements.photo.files[0]);}catch(e){photoError=e;}
+    session.user.firstName=saved.firstName;session.user.lastName=saved.lastName;
+    closeDialog();renderNav();
+    notify(photoError?'اطلاعات ذخیره شد؛ عکس ذخیره نشد: '+photoError.message:'پروفایل ذخیره شد.',Boolean(photoError));
+   }catch(e){const box=$('formError');if(box){box.textContent=e.message;box.hidden=false;}button.disabled=false;}
+  };
+ }catch(e){notify('دریافت پروفایل ناموفق بود: '+e.message,true);}
 }
 function passwordDialog(row,global=false,self=Number(row.id)===Number(session.user.id)){
  dialog('تغییر رمز '+row.username,`<form id="changePasswordForm"><p class="muted">پس از تغییر رمز، همه نشست‌های قبلی این کاربر بسته می‌شوند.</p>${self?'<label>رمز فعلی<input name="currentPassword" type="password" autocomplete="current-password" required></label>':''}<label>رمز جدید<input name="password" type="password" autocomplete="new-password" minlength="8" maxlength="72" required></label><label>تکرار رمز جدید<input name="passwordConfirmation" type="password" autocomplete="new-password" minlength="8" maxlength="72" required></label><button class="primary">ذخیره رمز جدید</button></form>`);
