@@ -590,7 +590,7 @@ try{
    ->execute([1800000,$feeAgency]);
  $agencyReprice=\ServiceYar\Domain\AgencySchoolTariffs::recalculate($uid,$feeAgency);
  check(($agencyReprice['updated']??0)>=1&&($agencyReprice['invoicesSynced']??0)>=1,
-   'Agency tariff recalculation reports changed students and synchronized tuition invoices');
+   'Agency tariff recalculation reports changed students and synchronized tuition invoices: '.json_encode($agencyReprice));
  $recalculatedStudent=D::get($uid,$feeAgency,'students',(int)$feeStudent['id']);
  check((int)$recalculatedStudent['monthly_fee']===1800000
    &&(int)$recalculatedStudent['driver_base_monthly']===1800000,
