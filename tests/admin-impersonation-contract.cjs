@@ -1,0 +1,45 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
+
+const migration=read('database/migrations/0113_admin_impersonation_sessions.sql');
+const service=read('backend/src/Auth/AdminImpersonation.php');
+const auth=read('backend/src/Auth/AuthService.php');
+const routes=read('backend/public/index.php');
+const app=read('frontend/assets/app.js');
+const operations=read('frontend/assets/operations.js');
+const html=read('frontend/index.html');
+const css=read('frontend/assets/brand-theme.css');
+
+for(const column of ['admin_user_id','target_user_id','agency_id','admin_session_hash','target_session_hash','started_at','ended_at'])
+ assert.ok(migration.includes(column),'audit session column '+column);
+assert.ok(service.includes('Authorization::isSuperAdmin($userId)'),'impersonation is restricted to super admins');
+assert.ok(service.includes('au.agency_id=?'),'target account must belong to selected agency');
+assert.ok(service.includes("sr.name='super_admin'"),'super-admin accounts cannot be impersonated');
+assert.ok(service.includes('random_bytes(32)'),'target session token is cryptographically random');
+assert.ok(service.includes('hash(\'sha256\',$targetToken)'),'target session token is stored as a hash');
+assert.ok(service.includes("'httponly'=>true")&&service.includes("'samesite'=>'Strict'"),'original administrator session is protected by an HttpOnly Strict cookie');
+assert.ok(service.includes('MAX_DURATION_SECONDS=14400'),'impersonation duration is bounded');
+assert.ok(service.includes('admin.impersonation.started')&&service.includes('admin.impersonation.ended'),'impersonation start and stop are audited');
+assert.ok(service.includes('target_session_hash=? AND i.admin_session_hash=?'),'return operation is bound to both original and target sessions');
+assert.ok(service.includes('restoreAfterInvalidTarget'),'administrator session can be restored after target session expiry or revocation');
+assert.ok(auth.includes('AdminImpersonation::context($hash)'),'current auth context exposes active impersonation');
+assert.ok(auth.includes('AdminImpersonation::restoreAfterInvalidTarget($hash)'),'invalid target sessions restore the original admin session');
+assert.ok(routes.includes('/api/v1/admin/impersonation/users'),'company-scoped target user list API exists');
+assert.ok(routes.includes('/api/v1/admin/impersonation/start'),'start API exists');
+assert.ok(routes.includes('/api/v1/admin/impersonation/stop'),'stop API exists');
+assert.ok(routes.includes("'impersonation'=>$s['impersonation']??null"),'auth/me returns the active impersonation context');
+assert.ok(routes.includes('$contextAgency>0?$contextAgency'),'agency scope defaults to the selected impersonated company');
+assert.ok(app.includes('#admin-dashboard'),'super admin lands on the management dashboard');
+assert.ok(app.includes('returnFromImpersonation'),'header and logout controls can return to the original admin session');
+assert.ok(app.includes('session.impersonation.agencyId'),'impersonated user opens in the selected company context');
+assert.ok(operations.includes('syOpenImpersonation'),'super admin navigation has a dedicated impersonation action');
+assert.ok(operations.includes('adminSectionPage'),'admin settings are routed to independent navigation pages');
+assert.ok(operations.includes('renderCompanies'),'company selection supports instant search');
+assert.ok(operations.includes('renderUsers'),'user selection supports instant search');
+assert.ok(operations.includes('/api/v1/admin/impersonation/start'),'modal starts the secure impersonation flow');
+assert.ok(operations.includes('syAdminNeginSms')&&operations.includes('syAdminLoginMethods')&&operations.includes('syAdminBale'),'all existing provider and login settings have their own admin routes');
+assert.ok(html.includes('id="syAdminReturn"'),'persistent return-to-admin control exists');
+assert.ok(css.includes('.sy-admin-hero')&&css.includes('.sy-admin-impersonation-dialog'),'admin dashboard and modal have dedicated responsive design');
+console.log('Super-admin workspace routing, settings navigation and audited company/user impersonation: OK');
