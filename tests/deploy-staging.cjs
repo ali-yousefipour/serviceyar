@@ -11,4 +11,7 @@ for(const asset of ['public-site.js','public-site.css','public-site-content.html
  assert.ok(existsSync('frontend/assets/'+asset),'Missing public asset: '+asset);
 }
 assert.match(workflow,/cancel-in-progress: true/,'Supersede stuck old release runs');
+assert.match(source,/PUBLIC_BASE_URL", "https:\/\/challi\.ir"/,'Live release verification must target the production challi.ir domain by default');
+assert.match(workflow,/PUBLIC_BASE_URL: https:\/\/challi\.ir/,'Production deployment must explicitly verify challi.ir');
+assert.match(source,/https:\/\/www\.challi\.ir\//,'TLS diagnostics must inspect the production www host');
 console.log('FTP staging isolation and public website deployment checks OK');
