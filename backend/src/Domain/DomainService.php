@@ -137,7 +137,7 @@ final class DomainService {
    $expr='REPLACE('.$expr.','.$pdo->quote($digit).','.$pdo->quote((string)($i%10)).')';
   $expr="REPLACE(REPLACE($expr,'ي','ی'),'ك','ک')";
   $q=$pdo->prepare("SELECT id,agency_id,plate,model,vehicle_trim,vehicle_type,tariff_vehicle_class,capacity
-    FROM vehicles WHERE $expr LIKE :q
+    FROM vehicles WHERE is_active=1 AND $expr LIKE :q
     ORDER BY (agency_id=:agency) DESC,id DESC LIMIT 80");
   $q->execute(['q'=>'%'.addcslashes($term,'%_\\').'%','agency'=>$aid]);
   $out=[];$seen=[];
