@@ -19,10 +19,18 @@
 APP_ENV=production
 APP_DEBUG=false
 APP_SECURE_COOKIE=1
-APP_URL=https://YOUR-DOMAIN
+APP_URL=https://service-yar.ir
 SESSION_LIFETIME=604800
-CORS_ALLOWED_ORIGINS=https://YOUR-DOMAIN
+CORS_ALLOWED_ORIGINS=https://service-yar.ir
 ```
+
+## دامنه عملیاتی و تنظیمات هاست
+
+- دامنه اصلی و مرجع سامانه: `https://service-yar.ir`.
+- نشانی `www.service-yar.ir` به دامنه اصلی هدایت می‌شود.
+- درخواست‌های HTTP دامنه اصلی به HTTPS هدایت می‌شوند.
+- در فایل `.env` موجود روی هاست، مقادیر `APP_URL` و `CORS_ALLOWED_ORIGINS` باید دقیقاً مطابق دامنه بالا تنظیم شوند.
+- فایل `.env` و رمزهای دیتابیس خارج از مخزن هستند و فرایند Deploy آن‌ها را بازنویسی نمی‌کند؛ این مقادیر باید در تنظیمات هاست نیز بررسی شوند.
 
 ## استقرار
 1. Document Root وب‌سرور فقط روی `backend/public` قرار گیرد.
@@ -43,9 +51,11 @@ CORS_ALLOWED_ORIGINS=https://YOUR-DOMAIN
 ## کنترل نهایی
 Phase 17 زمانی کامل است که Deployment واقعی، HTTPS، Backup/Restore، Log Rotation، Monitoring و Rollback روی محیط مقصد اجرا و ثبت شده باشند.
 
-## تنظیم اتصال دیتابیس Challi (Production)
+## تنظیم اتصال دیتابیس فعلی روی هاست (Production)
 
 برای نصب فعلی روی هاست اشتراکی، فایل `.env` باید در ریشه `public_html` باشد؛ کد آن را از همان مسیر می‌خواند. این فایل در مخزن نیست و نباید به Git اضافه شود.
+
+نام دیتابیس و کاربر فعلی (`challi_ali`) مستقل از دامنه وب است و با تغییر دامنه نباید تغییر کند.
 
 مقادیر اتصال روی هاست:
 ```dotenv
