@@ -37,6 +37,9 @@ assert.match(tariff,/\$trafficAmount=empty\(\$rate\['overridden'\]\)\?\(int\)rou
 assert.match(tariff,/\$rate\['driverMonthly'\]=\$baseDriver\+\$trafficAmount/,'Driver total must include district uplift');
 assert.match(tariff,/parent_monthly_riyal'\]\+\$driver\*\$traffic\*1\.19658/,'Default parent amount already contains district uplift');
 assert.match(tariff,/overrideAmountsAreFinal/,'Admin override is not modified a second time');
+assert.match(tariff,/\$additionalDriver=\$inheritedOverride\?\(int\)round\(\$extra\*\(1\+\$traffic\)\):\$extra/,'20km override extrapolation must only uplift the extra distance');
+assert.match(tariff,/\$rate\['parentPayableMonthly'\]/,'Special quote must expose parents payable separately from whole transport cost');
+assert.match(tariff,/TRIPARTITE_AGREEMENT_REQUIRED/,'Exceptional-school three-party billing requires documented agreement');
 const base=reference.classes[0].brackets[0].driver_1405_riyal;
 assert.equal(base,10000000);
 assert.equal(base*1.25,12500000,'Example: district 6 driver remuneration');
