@@ -99,7 +99,7 @@ jobs:
 
   deploy:
     # Never publish to a guessed directory; set the exact domain document root in repository Variables.
-    if: ${{ vars.SERVICEYAR_FTP_REMOTE_ROOT != '' }}
+    if: ${{ vars.SERVICEYAR_FTP_REMOTE_ROOT != '' && vars.SERVICEYAR_PRODUCTION_SSL_READY == 'true' }}
     name: Upload ServiceYar to service-yar.ir
     needs: validate
     runs-on: ubuntu-24.04
