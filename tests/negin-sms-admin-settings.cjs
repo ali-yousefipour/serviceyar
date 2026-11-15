@@ -13,7 +13,7 @@ const docs=read('docs/LOGIN-METHODS.md');
 for(const key of ['negin_sms_username_enc','negin_sms_password_enc','negin_sms_enabled'])
  assert.ok(provider.includes(key),'provider setting key '+key);
 assert.ok(provider.includes('aes-256-gcm'),'provider credentials are encrypted at rest');
-assert.ok(provider.includes('storage/private/negin-sms.key'),'dedicated private encryption key is persisted outside public assets');
+assert.ok(provider.includes("'/storage/private'")&&provider.includes("'/negin-sms.key'"),'dedicated private encryption key is persisted outside public assets');
 assert.ok(provider.includes('Authorization::isSuperAdmin($actor)'),'only super admin can manage provider credentials');
 assert.ok(provider.includes('self::encrypt($username)')&&provider.includes('self::encrypt($password)'),'username and password are encrypted before persistence');
 assert.ok(provider.includes("'usernameHint'=>$hint"),'API returns only a masked username hint');
