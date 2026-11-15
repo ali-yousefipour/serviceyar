@@ -101,7 +101,7 @@ def verify_live(base_url, build_id, expected_digests):
                 print(f"DNS lookup failed for {host}: {dns_error}", flush=True)
             # Diagnostic only: inspect whether the HTTP virtual host serves this release
             # when TLS certificate validation is failing. Never accept this as a pass.
-            for candidate in ("https://www.service-yar.ir/", "http://service-yar.ir/", "http://www.service-yar.ir/"):
+            for candidate in ("https://www.challi.ir/", "http://challi.ir/", "http://www.challi.ir/"):
                 try:
                     diagnostic = Request(candidate + "?deploy_diagnostic=" + build_id, headers={"Cache-Control": "no-cache", "User-Agent": "ServiceYar-Deploy-Diagnostic/1.0"})
                     with urlopen(diagnostic, timeout=12, context=ssl._create_unverified_context()) as response:
@@ -176,7 +176,7 @@ def main():
         print(f"Release: {len(changed)} changed, {len(files) - len(changed)} unchanged, {len(files)} total", flush=True)
         if not changed:
             print("FTP manifest matches this release; public HTTP verification is still required", flush=True)
-            verify_live(os.environ.get("PUBLIC_BASE_URL", "https://service-yar.ir"), os.environ.get("GITHUB_SHA", "local"), digests)
+            verify_live(os.environ.get("PUBLIC_BASE_URL", "https://challi.ir"), os.environ.get("GITHUB_SHA", "local"), digests)
             return
 
         dirs = set()
@@ -203,7 +203,7 @@ def main():
             verify(ftp, digests[name], live)
 
         # Verify the actual domain/document-root before declaring the release successful.
-        verify_live(os.environ.get("PUBLIC_BASE_URL", "https://service-yar.ir"), os.environ.get("GITHUB_SHA", "local"), digests)
+        verify_live(os.environ.get("PUBLIC_BASE_URL", "https://challi.ir"), os.environ.get("GITHUB_SHA", "local"), digests)
 
         # Commit metadata only after FTP and public HTTP checks have passed.
         manifest = json.dumps({
