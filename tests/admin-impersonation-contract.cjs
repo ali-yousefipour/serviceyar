@@ -41,6 +41,11 @@ assert.ok(operations.includes('renderCompanies'),'company selection supports ins
 assert.ok(operations.includes('renderUsers'),'user selection supports instant search');
 assert.ok(operations.includes('/api/v1/admin/impersonation/start'),'modal starts the secure impersonation flow');
 assert.ok(operations.includes('syAdminNeginSms')&&operations.includes('syAdminLoginMethods')&&operations.includes('syAdminBale'),'all existing provider and login settings have their own admin routes');
+assert.ok(operations.includes('await Promise.allSettled(panelTasks)'),'asynchronous admin panels finish initialization before section routing');
+assert.ok(!operations.includes('void taxiOrganizationAdminPanel(adminPanel,token)'),'admin panel initialization must not be fire-and-forget');
+assert.ok(operations.includes('companyLoadSequence')&&operations.includes('requestSequence!==companyLoadSequence'),'late company-user responses cannot overwrite a newer selection');
+assert.ok(operations.includes('focusableSelector')&&operations.includes("document.removeEventListener('keydown',keyHandler)"),'impersonation dialog traps focus and releases its keyboard listener');
+assert.ok(operations.includes('returnFocus.focus()')&&operations.includes('overlay.__syClose=close'),'closing the impersonation dialog restores focus and supports safe cleanup');
 assert.ok(html.includes('id="syAdminReturn"'),'persistent return-to-admin control exists');
 assert.ok(css.includes('.sy-admin-hero')&&css.includes('.sy-admin-impersonation-dialog'),'admin dashboard and modal have dedicated responsive design');
 console.log('Super-admin workspace routing, settings navigation and audited company/user impersonation: OK');
