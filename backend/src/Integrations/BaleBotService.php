@@ -240,7 +240,7 @@ final class BaleBotService {
  }
  public static function requestLogin(string $username): array {
   if(!self::ready())throw new AuthException(503,'ورود با بله فعال نیست.','BALE_DISABLED');
-  $username=trim($username);
+  $username=strtr(trim($username),['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']);
   if($username===''||strlen($username)>100)throw new AuthException(422,'نام کاربری معتبر نیست.','VALIDATION_ERROR');
   $pdo=Connection::get();
   $ip=substr((string)($_SERVER['REMOTE_ADDR']??''),0,45);
@@ -272,7 +272,8 @@ final class BaleBotService {
   $pdo=Connection::get();$pdo->beginTransaction();
   try {
    $u=$pdo->prepare('SELECT u.id FROM users u JOIN bale_user_links l ON l.user_id=u.id WHERE u.username=? AND u.is_active=1 LIMIT 1');
-   $u->execute([trim($username)]);$uid=(int)$u->fetchColumn();
+   $username=strtr(trim($username),['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']);
+   $u->execute([$username]);$uid=(int)$u->fetchColumn();
    if(!$uid)throw new AuthException(401,'کد ورود معتبر نیست.','BALE_OTP_INVALID');
    $q=$pdo->prepare("SELECT id,code_hash,attempt_count FROM bale_auth_challenges WHERE user_id=? AND purpose='login' AND consumed_at IS NULL AND expires_at>UTC_TIMESTAMP() ORDER BY id DESC LIMIT 1 FOR UPDATE");
    $q->execute([$uid]);$challenge=$q->fetch(PDO::FETCH_ASSOC);
