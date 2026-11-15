@@ -238,6 +238,16 @@ final class BaleBotService {
   self::send((string)$chat,$text);
   return ['sent'=>true,'recipientId'=>$recipient];
  }
+ public static function inspectUserLink(int $actor,string $username): array {
+  if(!Authorization::isSuperAdmin($actor))throw new AuthException(403,'بررسی اتصال بله فقط برای ادمین کل مجاز است.','FORBIDDEN');
+  $username=strtr(trim($username),['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']);
+  if($username===''||strlen($username)>100)throw new AuthException(422,'نام کاربری معتبر نیست.','VALIDATION_ERROR');
+  $q=Connection::get()->prepare('SELECT u.id,u.is_active,l.chat_id FROM users u LEFT JOIN bale_user_links l ON l.user_id=u.id WHERE u.username=? LIMIT 1');
+  $q->execute([$username]);$row=$q->fetch(PDO::FETCH_ASSOC);
+  return ['userFound'=>(bool)$row,'userActive'=>$row?(bool)$row['is_active']:false,
+   'baleLinked'=>$row&&!empty($row['chat_id']),
+   'botEnabled'=>self::ready()];
+ }
  public static function requestLogin(string $username): array {
   if(!self::ready())throw new AuthException(503,'ورود با بله فعال نیست.','BALE_DISABLED');
   $username=strtr(trim($username),['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']);
