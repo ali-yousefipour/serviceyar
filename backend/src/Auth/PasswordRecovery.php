@@ -14,12 +14,26 @@ final class PasswordRecovery
         return strtr(trim($value),['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']);
     }
 
+    private static function baleRecoveryReady(): bool
+    {
+        try{
+            $pdo=Connection::get();
+            $q=$pdo->query("SELECT COLUMN_NAME,COLUMN_TYPE,DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='bale_auth_challenges' AND COLUMN_NAME IN ('purpose','code_hash')");
+            $columns=[];foreach($q->fetchAll(PDO::FETCH_ASSOC) as $row)$columns[$row['COLUMN_NAME']]=$row;
+            return isset($columns['purpose'],$columns['code_hash'])
+                &&str_contains((string)$columns['purpose']['COLUMN_TYPE'],'password_reset')
+                &&strtolower((string)$columns['code_hash']['DATA_TYPE'])==='varchar';
+        }catch(\Throwable){return false;}
+    }
+
     public static function methods(): array
     {
         $policy=LoginMethods::policies();
+        $smsSchema=SmsLogin::recoveryReady();
+        $baleSchema=self::baleRecoveryReady();
         return [
-            'sms'=>(($policy['sms']??false)||($policy['mobile']??false))&&NeginSms::configured()&&class_exists(\SoapClient::class),
-            'bale'=>($policy['bale']??false)&&BaleBotService::ready()
+            'sms'=>(($policy['sms']??false)||($policy['mobile']??false))&&NeginSms::configured()&&class_exists(\SoapClient::class)&&$smsSchema,
+            'bale'=>($policy['bale']??false)&&BaleBotService::ready()&&$baleSchema
         ];
     }
 
@@ -45,7 +59,6 @@ final class PasswordRecovery
         self::requireChannel($channel);
         $username=self::digits($username);
         if($username===''||strlen($username)>100)throw new AuthException(422,'نام کاربری معتبر نیست.','VALIDATION_ERROR');
-        if($channel==='sms')SmsLogin::prepareSchema();
         $pdo=Connection::get();
         try {
             if($channel==='sms')$pdo->query("SELECT purpose FROM sms_login_challenges LIMIT 0");
