@@ -2316,10 +2316,48 @@ function passwordDialog(row,global=false,self=Number(row.id)===Number(session.us
  $('changePasswordForm').onsubmit=async e=>{e.preventDefault();const button=e.target.querySelector('button');button.disabled=true;try{const url=self?'/api/v1/auth/password':(global?'/api/v1/admin/users/':'/api/v1/users/')+row.id+'/password';const d=await write(url,Object.fromEntries(new FormData(e.target)));e.target.reset();closeDialog();if(d.requiresLogin)location.reload();else notify('رمز تغییر کرد و نشست‌های قبلی بسته شدند.');}catch(err){$('formError').textContent=err.message;$('formError').hidden=false;button.disabled=false;}};
 }
 function userEditor(row,global){
- const roles=[['operator','اپراتور']];if(global||session.roles?.includes('super_admin'))roles.push(['agency_admin','مدیر شرکت']);const self=Number(row?.id)===Number(session.user.id);if(global)roles.push(['super_admin','مدیر کل']);
- dialog(row?'ویرایش کاربر':'کاربر جدید',`<form id="userEditor"><div class="form-grid"><label>نام کاربری<input name="username" required minlength="3" maxlength="100" value="${esc(row?.username)}"></label><label>نام<input name="firstName" value="${esc(row?.first_name)}"></label><label>نام خانوادگی<input name="lastName" value="${esc(row?.last_name)}"></label>${!row?'<label>رمز اولیه<input name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="72"></label>':''}${!self?`<label>نقش<select name="role"><option value="">حفظ نقش فعلی</option>${roles.map(([k,t])=>`<option value="${k}">${t}</option>`).join('')}</select></label><label>وضعیت<select name="isActive"><option value="1">فعال</option><option value="0" ${Number(row?.is_active)===0?'selected':''}>غیرفعال</option></select></label>`:''}</div><button class="primary">ذخیره کاربر</button></form>`);
- if(!row&&$('userEditor').elements.role)$('userEditor').elements.role.value='operator';
- $('userEditor').onsubmit=async e=>{e.preventDefault();const button=e.target.querySelector('button');button.disabled=true;try{const body=Object.fromEntries(new FormData(e.target));if(!body.role)delete body.role;await write((global?'/api/v1/admin/users':'/api/v1/users')+(row?'/'+row.id:''),body,row?'PUT':'POST');closeDialog();notify('کاربر ذخیره شد.');if(global)await companiesPage();else await settingsPage();}catch(err){$('formError').textContent=err.message;$('formError').hidden=false;button.disabled=false;}};
+ const roles=[['operator','اپراتور']];
+ if(global||session.roles?.includes('super_admin'))roles.push(['agency_admin','مدیر شرکت']);
+ const self=Number(row?.id)===Number(session.user.id);
+ if(global)roles.push(['super_admin','مدیر کل']);
+ const url=row?.id?syUserPhotoUrl(row.id,global):'';
+ const roleOptions=roles.map(([k,t])=>'<option value="'+k+'">'+t+'</option>').join('');
+ const controls=!self?'<label>نقش<select name="role"><option value="">حفظ نقش فعلی</option>'+roleOptions+'</select></label>'+
+  '<label>وضعیت<select name="isActive"><option value="1">فعال</option><option value="0" '+(Number(row?.is_active)===0?'selected':'')+'>غیرفعال</option></select></label>':'';
+ const html='<form id="userEditor" class="sy-professional-user-form">'+syPhotoWidget(row,url)+
+  '<section class="sy-user-profile-sections"><h4>اطلاعات حساب</h4><div class="form-grid">'+
+  '<label>نام کاربری<input name="username" required minlength="3" maxlength="100" value="'+esc(row?.username)+'"></label>'+
+  '<label>نام<input name="firstName" required maxlength="100" value="'+esc(row?.first_name)+'"></label>'+
+  '<label>نام خانوادگی<input name="lastName" maxlength="120" value="'+esc(row?.last_name)+'"></label>'+
+  (!row?'<label>رمز اولیه<input name="password" type="password" minlength="8" maxlength="72" autocomplete="new-password" required></label>':'')+
+  controls+'</div><h4>مشخصات هویتی و تماس</h4>'+syPhotoFields(row)+'</section>'+
+  '<button class="primary" type="submit">ذخیره اطلاعات کاربر</button></form>';
+ dialog(row?'ویرایش اطلاعات کاربر':'ثبت کاربر جدید',html);
+ const form=$('userEditor');syBindPhoto(form);
+ if(!row&&form.elements.role)form.elements.role.value='operator';
+ form.querySelector('[data-remove-photo]')?.addEventListener('click',async()=>{
+  if(!confirm('تصویر این کاربر حذف شود؟'))return;
+  try{
+   await syRemoveUserPhoto(url);form.querySelector('.sy-profile-avatar').innerHTML='<div class="sy-profile-avatar-fallback">ک</div>';
+   form.elements.photo.value='';notify('تصویر کاربر حذف شد.');
+  }catch(e){notify(e.message,true);}
+ });
+ form.onsubmit=async e=>{
+  e.preventDefault();const button=form.querySelector('[type=submit]');button.disabled=true;
+  try{
+   const body=Object.fromEntries(new FormData(form));delete body.photo;
+   if(!body.role)delete body.role;
+   const saved=await write((global?'/api/v1/admin/users':'/api/v1/users')+(row?'/'+row.id:''),body,row?'PUT':'POST');
+   let photoError=null;
+   if(form.elements.photo.files?.[0]){
+    try{await syUploadUserPhoto(syUserPhotoUrl(saved.id||row?.id,global),form.elements.photo.files[0]);}
+    catch(e){photoError=e;}
+   }
+   closeDialog();
+   notify(photoError?'کاربر ذخیره شد اما عکس بارگذاری نشد: '+photoError.message:'اطلاعات کاربر ذخیره شد.',Boolean(photoError));
+   if(global)await companiesPage();else await settingsPage();
+  }catch(e){const box=$('formError');if(box){box.textContent=e.message;box.hidden=false;}button.disabled=false;}
+ };
 }
 async function taxiOrganizationAdminPanel(container,token){
  const panel=document.createElement('section');
