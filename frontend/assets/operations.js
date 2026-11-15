@@ -2193,11 +2193,11 @@ function userManagementTable(box,rows,global){
   const term=norm(input.value);
   const visible=rows.filter(r=>!term||norm([r.username,r.first_name,r.last_name,r.mobile,r.national_code,r.email,r.address,person(r),r.roles,r.role_names].join(' ')).includes(term));
   counter.textContent='نمایش '+number(visible.length)+' از '+number(rows.length)+' کاربر';
-  tbody.innerHTML=visible.length?visible.map(r=>'<tr><td class="sy-user-cell"><img class="sy-user-avatar-sm" src="'+esc(syUserPhotoUrl(r.id,global))+'" alt="" loading="lazy"><span>'+esc(person(r))+'</span></td><td>'+esc(r.username||'—')+'</td><td dir="ltr">'+esc(persianDigits(r.mobile||'—'))+'</td><td dir="ltr">'+esc(persianDigits(r.national_code||'—'))+'</td><td>'+esc(r.roles||r.role_names||'—')+'</td><td>'+(Number(r.is_active)?'فعال':'غیرفعال')+'</td><td class="sy-user-row-actions">'+
+  tbody.innerHTML=visible.length?visible.map(r=>'<tr><td class="sy-user-cell">'+(Number(r.has_photo)?'<img class="sy-user-avatar-sm" src="'+esc(syUserPhotoUrl(r.id,global))+'" alt="" loading="lazy">':'<span class="sy-user-avatar-fallback" aria-hidden="true">'+esc((person(r)||'ک').trim().charAt(0))+'</span>')+'<span>'+esc(person(r))+'</span></td><td>'+esc(r.username||'—')+'</td><td dir="ltr">'+esc(persianDigits(r.mobile||'—'))+'</td><td dir="ltr">'+esc(persianDigits(r.national_code||'—'))+'</td><td>'+esc(r.roles||r.role_names||'—')+'</td><td>'+(Number(r.is_active)?'فعال':'غیرفعال')+'</td><td class="sy-user-row-actions">'+
    (manage?'<button type="button" data-edit-user="'+Number(r.id)+'">ویرایش</button><button type="button" data-user-password="'+Number(r.id)+'">تغییر رمز</button>'+
    (global&&Number(r.id)!==selfId?'<button type="button" class="sy-user-delete" data-user-delete="'+Number(r.id)+'">حذف</button>':''):'—')+
    '</td></tr>').join(''):'<tr><td colspan="7" class="sy-users-no-results">کاربری مطابق عبارت جستجو پیدا نشد.</td></tr>';
-  tbody.querySelectorAll('.sy-user-avatar-sm').forEach(img=>img.addEventListener('error',()=>{img.replaceWith(Object.assign(document.createElement('span'),{className:'sy-user-avatar-fallback',textContent:(form.elements.firstName?.value||form.elements.username?.value||'ک').trim().charAt(0)||'ک'}));},{once:true}));
+  tbody.querySelectorAll('.sy-user-avatar-sm').forEach(img=>img.addEventListener('error',()=>{const name=img.closest('.sy-user-cell')?.querySelector('span:last-child')?.textContent||'ک';const fallback=document.createElement('span');fallback.className='sy-user-avatar-fallback';fallback.setAttribute('aria-hidden','true');fallback.textContent=name.trim().charAt(0)||'ک';img.replaceWith(fallback);},{once:true}));
   tbody.querySelectorAll('[data-edit-user]').forEach(b=>b.onclick=()=>userEditor(rows.find(r=>String(r.id)===b.dataset.editUser),global));
   tbody.querySelectorAll('[data-user-password]').forEach(b=>b.onclick=()=>passwordDialog(rows.find(r=>String(r.id)===b.dataset.userPassword),global));
   tbody.querySelectorAll('[data-user-delete]').forEach(b=>b.onclick=()=>confirmGlobalUserDelete(rows.find(r=>String(r.id)===b.dataset.userDelete)));
@@ -2249,22 +2249,30 @@ function syPhotoFields(data={}){
 function syPhotoWidget(row,url){
  const name=[row?.first_name||row?.firstName,row?.last_name||row?.lastName].filter(Boolean).join(' ')||row?.username||'کاربر';
  return '<div class="sy-user-photo-editor"><div class="sy-profile-avatar">'+
- (url?'<img alt="تصویر '+esc(name)+'" src="'+esc(url)+'" class="sy-profile-avatar-img">':'<div class="sy-profile-avatar-fallback">'+esc(name.trim().charAt(0)||'ک')+'</div>')+
+ (url&&Number(row?.has_photo)?'<img alt="تصویر '+esc(name)+'" src="'+esc(url)+'" class="sy-profile-avatar-img">':'<div class="sy-profile-avatar-fallback">'+esc(name.trim().charAt(0)||'ک')+'</div>')+
  '</div><div><h4>تصویر پروفایل</h4><p>تصویر JPG، PNG یا WebP تا ۵ مگابایت. تصویر به شکل مربعی ذخیره می‌شود.</p>'+
  '<label class="sy-user-photo-button">انتخاب یا تغییر تصویر<input name="photo" type="file" accept="image/jpeg,image/png,image/webp"></label>'+
  (url?'<button type="button" data-remove-photo class="sy-user-remove-photo">حذف عکس</button>':'')+'</div></div>';
 }
 function syBindPhoto(form){
  const img=form.querySelector('.sy-profile-avatar-img');
- if(img)img.onerror=()=>img.replaceWith(Object.assign(document.createElement('div'),{className:'sy-profile-avatar-fallback',textContent:'ک'}));
+ if(img)img.onerror=()=>{
+  const fallback=document.createElement('div');fallback.className='sy-profile-avatar-fallback';fallback.textContent=(form.elements.firstName?.value||form.elements.username?.value||'ک').trim().charAt(0)||'ک';
+  img.replaceWith(fallback);
+ };
  form.elements.photo?.addEventListener('change',()=>{
   const file=form.elements.photo.files?.[0];if(!file)return;
-  const objectUrl=URL.createObjectURL(file);
-  const holder=form.querySelector('.sy-profile-avatar');
-  holder.replaceChildren();
-  const preview=document.createElement('img');preview.className='sy-profile-avatar-img';preview.alt='پیش‌نمایش عکس';preview.src=objectUrl;
-  preview.onload=()=>URL.revokeObjectURL(objectUrl);
-  holder.append(preview);
+  if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>5*1024*1024){notify('تصویر باید JPG، PNG یا WebP و حداکثر ۵ مگابایت باشد.',true);form.elements.photo.value='';return;}
+  const reader=new FileReader();
+  reader.onload=()=>{
+   if(!form.isConnected||!reader.result)return;
+   const holder=form.querySelector('.sy-profile-avatar');if(!holder)return;
+   const preview=document.createElement('img');preview.className='sy-profile-avatar-img';preview.alt='پیش‌نمایش عکس';
+   preview.onerror=()=>{preview.replaceWith(Object.assign(document.createElement('div'),{className:'sy-profile-avatar-fallback',textContent:'ک'}));};
+   preview.src=String(reader.result);holder.replaceChildren(preview);
+  };
+  reader.onerror=()=>notify('پیش‌نمایش تصویر قابل خواندن نیست.',true);
+  reader.readAsDataURL(file);
  });
 }
 async function syUploadUserPhoto(url,file){
