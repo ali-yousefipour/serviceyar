@@ -118,7 +118,10 @@ final class BaleBotService {
  private static function webhookUrl(): string {
   $base=rtrim((string)config('APP_URL',''),'/');
   if(!preg_match('#^https://[^/]+$#i',$base)){
-   // Canonical application host, never a user-supplied Host header.
+   // Fall back only when serving the known production hostname, never on localhost.
+   $host=strtolower((string)($_SERVER['HTTP_HOST']??''));
+   if($host!=='challi.ir'&&$host!=='www.challi.ir')
+    throw new AuthException(503,'APP_URL باید روی نشانی HTTPS سامانه تنظیم شود.','BALE_APP_URL_REQUIRED');
    $base='https://challi.ir';
   }
   return $base.'/api/v1/bale/bot/webhook/'.self::setting('bale_auth_webhook_secret');
