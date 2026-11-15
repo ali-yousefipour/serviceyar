@@ -1933,3 +1933,38 @@ body{background:var(--canvas);color:var(--ink)}
 @media(max-width:700px){.sy-admin-hero{align-items:stretch;flex-direction:column}.sy-admin-hero-action{justify-content:center}.sy-admin-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.sy-admin-metric{padding:13px}.sy-admin-metric strong{font-size:22px}.sy-admin-quick-grid{grid-template-columns:1fr}.sy-admin-page-heading{align-items:flex-start;flex-direction:column}.sy-admin-impersonation-dialog{max-height:92vh;padding:15px;border-radius:18px}.sy-impersonation-confirm{align-items:stretch;flex-direction:column}.sy-impersonation-confirm .primary{width:100%}.sy-admin-return{min-height:38px;padding:8px 10px;font-size:10px}}
 @media(max-width:420px){.sy-admin-metric-grid{grid-template-columns:1fr 1fr}.sy-admin-metric-icon{width:35px;height:35px}.sy-admin-metric-label{font-size:10px}.sy-admin-metric strong{font-size:20px}.sy-admin-company-summary{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){.sy-admin-impersonation-overlay,.sy-admin-impersonation-dialog{animation:none!important}.sy-admin-return,.sy-admin-metric,.sy-admin-quick-card,.sy-admin-hero-action,.sy-impersonation-result{transition:none!important}}
+
+
+/* Admin-specific navigation and consistent management forms/tables */
+#app.sy-admin-mode .sy-command-sidebar{background:linear-gradient(180deg,#103e2d 0%,#0a3023 100%);border-color:rgba(211,184,124,.16);box-shadow:8px 0 32px rgba(5,43,27,.12)}
+#app.sy-admin-mode .sy-sidebar-brand{border-bottom-color:rgba(255,255,255,.09)}
+#app.sy-admin-mode .sy-sidebar-brand-copy strong{color:#fff}
+#app.sy-admin-mode .sy-sidebar-brand-copy small{color:#d9c99f}
+#app.sy-admin-mode .sidebar .nav,#app.sy-admin-mode .nav-group>summary{border-radius:11px;transition:background .18s,color .18s}
+#app.sy-admin-mode .sidebar .nav:hover,#app.sy-admin-mode .nav-group>summary:hover,#app.sy-admin-mode .nav-group[open]>summary{background:rgba(255,255,255,.09);color:#fff}
+#app.sy-admin-mode .sidebar .nav.active{background:linear-gradient(110deg,rgba(207,178,112,.23),rgba(255,255,255,.09));color:#f5dfad;box-shadow:inset 3px 0 #c8a767}
+#app.sy-admin-mode .nav-popup a[aria-current=page]{background:#e9f4ec;color:#165a3a;font-weight:900}
+#app.sy-admin-mode .nav-group.current-group>summary{color:#f1ddb0}
+#app.sy-admin-mode .sy-sidebar-bottom{border-top-color:rgba(255,255,255,.1)}
+#app.sy-admin-mode .sy-admin-impersonation-trigger{border-radius:12px}
+.sy-admin-page-card .toolbar{align-items:center;gap:12px}
+.sy-admin-page-card .toolbar h2,.sy-admin-page-card .toolbar h3{margin:0;color:#1c4d34;font:900 15px/1.7 Vazirmatn,Tahoma,sans-serif}
+.sy-admin-page-card .toolbar p,.sy-admin-page-card .muted{color:#7c8c81;font:500 10px/1.9 Vazirmatn,Tahoma,sans-serif}
+.sy-admin-page-card .table-wrap{max-height:min(66vh,680px);overflow:auto;border:1px solid #e6eee8;border-radius:13px;scrollbar-width:thin;scrollbar-color:#b8cdbd #f4f8f5}
+.sy-admin-page-card table{width:100%;border-collapse:separate;border-spacing:0;font:500 10px/1.8 Vazirmatn,Tahoma,sans-serif}
+.sy-admin-page-card thead th{position:sticky;top:0;z-index:2;background:#edf5ef!important;color:#315b42!important;border-bottom:1px solid #dce9df!important;font-weight:900;white-space:nowrap}
+.sy-admin-page-card th,.sy-admin-page-card td{padding:10px 12px;border-bottom:1px solid #edf2ee;text-align:right;vertical-align:middle}
+.sy-admin-page-card tbody tr:hover{background:#f7fbf7}
+.sy-admin-page-card tbody tr:last-child td{border-bottom:0}
+.sy-admin-page-card :is(input:not([type=checkbox]),select,textarea){max-width:100%;min-height:41px;border:1px solid #dce7df;border-radius:10px;background:#fff;color:#264b36;font:600 11px Vazirmatn,Tahoma,sans-serif}
+.sy-admin-page-card :is(input,select,textarea):focus{outline:0;border-color:#79ae8c;box-shadow:0 0 0 3px rgba(36,117,70,.1)}
+.sy-admin-page-card .company-editor,.sy-admin-page-card form{border-radius:14px}
+.sy-admin-page-card .primary{border-radius:10px;font:800 11px Vazirmatn,Tahoma,sans-serif}
+.sy-admin-page-card .link{font:750 10px Vazirmatn,Tahoma,sans-serif}
+.sy-admin-page-card .status-active{border-radius:30px;padding:4px 9px;background:#e9f6ed;color:#28734b;font:800 9px Vazirmatn,Tahoma,sans-serif}
+.sy-admin-page-card .status-inactive{border-radius:30px;padding:4px 9px;background:#fff0ef;color:#a44743;font:800 9px Vazirmatn,Tahoma,sans-serif}
+@media(max-width:720px){
+ .sy-admin-page-card .table-wrap{max-height:65vh}
+ .sy-admin-page-card th,.sy-admin-page-card td{padding:8px 9px;font-size:9px}
+ .sy-admin-page-card .toolbar{align-items:flex-start}
+}
