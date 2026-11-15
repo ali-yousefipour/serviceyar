@@ -289,6 +289,25 @@ try{
    $driverUid,'parent',$a,(int)$s1['id']),'PORTAL_FORBIDDEN');
  rejected(fn()=>\ServiceYar\Domain\PortalService::updateProfile(
    $driverUid,'driver',$a,(int)$driver['id'],['plate'=>'123']),'PORTAL_PROFILE_INVALID');
+ $driverEdited=\ServiceYar\Domain\PortalService::updateProfile($driverUid,'driver',$a,
+    (int)$driver['id'],['firstName'=>'راننده جدید','lastName'=>'آزمایشی',
+     'bankName'=>'بانک آزمایشی','iban'=>'IR490000000000000000000000']);
+ check($driverEdited['driver']['first_name']==='راننده جدید'
+   &&$driverEdited['driver']['last_name']==='آزمایشی'
+   &&$driverEdited['driver']['iban']==='IR490000000000000000000000',
+   'Driver can safely update own legal profile and validated IBAN');
+ rejected(fn()=>\ServiceYar\Domain\PortalService::updateProfile($driverUid,'driver',$a,
+   (int)$driver['id'],['iban'=>'IR000000000000000000000000']),'INVALID_IBAN');
+ rejected(fn()=>\ServiceYar\Domain\PortalService::updateProfile($driverUid,'driver',$a,
+   (int)$driver['id'],['nationalCode'=>'1234567891']),'INVALID_NATIONAL_CODE');
+ $p->prepare('UPDATE drivers SET mobile=? WHERE id=? AND agency_id=?')
+   ->execute(['09129990003',$driver['id'],$a]);
+ check(\ServiceYar\Domain\PortalService::memberships($driverUid)===[],
+   'Changing company-registered mobile immediately invalidates stale portal membership');
+ rejected(fn()=>\ServiceYar\Domain\PortalService::dashboard(
+   $driverUid,'driver',$a,(int)$driver['id']),'PORTAL_FORBIDDEN');
+ $p->prepare('UPDATE drivers SET mobile=? WHERE id=? AND agency_id=?')
+   ->execute(['09129990002',$driver['id'],$a]);
  check(\ServiceYar\Domain\PortalService::provisionVerifiedMobile('09120009999')===null,
    'Unknown phone cannot create a portal user');
 
