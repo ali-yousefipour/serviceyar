@@ -56,7 +56,7 @@ final class TaxiOrganizationTariffs
         try {
             $q=$pdo->prepare('SELECT distance_km,driver_monthly_irr,parent_monthly_irr FROM taxi_organization_tariffs WHERE academic_year=? AND district=? AND vehicle_class=?');
             $q->execute([self::YEAR,$district,$class]);
-            $rows=[];foreach($q as $r)$rows[(int)$r['distance_km']]=[
+            $rows=[];foreach($q->fetchAll(PDO::FETCH_ASSOC) as $r)$rows[(int)$r['distance_km']]=[
                 'distanceKm'=>(int)$r['distance_km'],
                 'driverMonthly'=>(int)$r['driver_monthly_irr'],
                 'parentMonthly'=>(int)$r['parent_monthly_irr'],
