@@ -18,7 +18,7 @@ for(const asset of ['public-site.js','public-site.css','public-site-content.html
  assert.ok(existsSync('frontend/assets/'+asset),'Missing public asset: '+asset);
 }
 assert.match(workflow,/cancel-in-progress: true/,'Supersede stuck old release runs');
-assert.match(workflow,/if: \$\{\{ vars\.SERVICEYAR_FTP_REMOTE_ROOT != '' \}\}/,'Production deployment must remain disabled until the real document root is configured');
+assert.match(workflow,/if: \$\{\{ vars\.SERVICEYAR_FTP_REMOTE_ROOT != '' && vars\.SERVICEYAR_PRODUCTION_SSL_READY == 'true' \}\}/,'Production deployment must wait for a verified document root and valid SSL certificate');
 const legacyHost=['challi','.ir'].join('');
 const legacyDomainSearch=spawnSync('git',['grep','-n',legacyHost],{encoding:'utf8'});
 assert.equal(legacyDomainSearch.status,1,'No tracked source, configuration, test or documentation file may retain the old operational domain: '+legacyDomainSearch.stdout);
