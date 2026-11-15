@@ -19,7 +19,7 @@
  passwordForm.id='syLoginPanelPassword';passwordForm.setAttribute('role','tabpanel');
  passwordForm.before(slot);panelsHost.append(passwordForm);
  const panels={password:passwordForm},tabButtons={};
- let available=[],selected='password',recoveryMethods={sms:false,bale:false};
+ let available=[],selected='password';
 
  const makeTimer=(container,send,verify,code,info)=>{
   let interval=null,remaining=0,cooldown=0;
@@ -133,11 +133,10 @@
   }
   const labels=passwordForm.querySelectorAll(':scope > label');labels.forEach(el=>el.hidden=!show);
   const wraps=passwordForm.querySelectorAll(':scope > .login-input-wrap');wraps.forEach(el=>el.hidden=!show);
-  recoveryLink.hidden=!show;recovery.hidden=show;
+  recoveryLink.hidden=show?!(recoveryMethodsFromServer.sms||recoveryMethodsFromServer.bale):true;recovery.hidden=show;
  };
  recoveryLink.onclick=()=>{
   togglePasswordForm(false);
-  recoveryMethods={sms:false,bale:false};
   recoveryChannels.replaceChildren();
   const choices=['sms','bale'].filter(key=>recoveryMethodsFromServer[key]);
   if(!choices.length){note(recoveryInfo,'روش بازیابی رمز عبور در حال حاضر فعال نیست.',true);return;}
@@ -217,9 +216,10 @@
   try{
    const result=await api('/api/v1/auth/methods');
    recoveryMethodsFromServer=result.recoveryMethods||{sms:Boolean(result.methods?.sms||result.methods?.mobile),bale:Boolean(result.methods?.bale)};
+   recoveryLink.hidden=!(recoveryMethodsFromServer.sms||recoveryMethodsFromServer.bale);
    render(result.methods||{});
   }catch(e){
-   recoveryMethodsFromServer={sms:false,bale:false};render({});
+   recoveryMethodsFromServer={sms:false,bale:false};recoveryLink.hidden=true;render({});
    state.textContent='دریافت تنظیمات ورود از سرور ناموفق بود. اتصال را بررسی و صفحه را دوباره بارگذاری کنید.';
   }
  }
