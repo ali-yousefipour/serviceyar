@@ -62,6 +62,15 @@ final class UserPhotos {
    throw new AuthException(503,'پردازش تصویر روی سرور فعال نیست.','IMAGE_PROCESSOR_UNAVAILABLE');
   $src=@imagecreatefromstring((string)file_get_contents($tmp));
   if(!$src)throw new AuthException(422,'فایل تصویر قابل خواندن نیست.','INVALID_PROFILE_PHOTO');
+  // Respect the EXIF orientation of portraits taken with mobile cameras.
+  if(($info['mime']??'')==='image/jpeg'&&function_exists('exif_read_data')){
+   $exif=@exif_read_data($tmp,'IFD0');
+   $orientation=(int)($exif['Orientation']??1);
+   if(in_array($orientation,[3,6,8],true)){
+    $rotated=@imagerotate($src,[3=>180,6=>270,8=>90][$orientation],0);
+    if($rotated){imagedestroy($src);$src=$rotated;}
+   }
+  }
   $width=imagesx($src);$height=imagesy($src);$side=min($width,$height);
   $out=imagecreatetruecolor(512,512);
   if(!$out){imagedestroy($src);throw new AuthException(503,'پردازش تصویر انجام نشد.','IMAGE_PROCESSOR_UNAVAILABLE');}
