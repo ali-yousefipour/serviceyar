@@ -15,5 +15,8 @@ DEALLOCATE PREPARE serviceyar_stmt;
 ALTER TABLE bale_auth_challenges
  MODIFY COLUMN purpose ENUM('link','login','password_reset') NOT NULL;
 
+-- Recovery hashes use password_hash() and therefore need room for the full hash.
+ALTER TABLE bale_auth_challenges MODIFY COLUMN code_hash VARCHAR(255) NOT NULL;
+
 -- The mobile OTP method is controlled by platform_settings.login_method_mobile.
 -- No new user data is required: it uses the existing users.mobile profile field.
