@@ -86,7 +86,24 @@ final class TaxiOrganizationTariffs
             $rate=['distanceKm'=>$km,'driverMonthly'=>$last['driverMonthly']+$extra,
                 'parentMonthly'=>(int)round($last['parentMonthly']+$extra*1.19658),'overridden'=>false];
         }
-        return $rate+['district'=>$district,'vehicleClass'=>$class,'academicYear'=>self::YEAR,'currency'=>'IRR'];
+        // The published footnote adds the district traffic coefficient to
+        // DRIVER remuneration, not only to the parents' invoice. Default
+        // parentMonthly already includes the traffic surcharge; don't add it
+        // twice. Explicit admin overrides are complete quoted amounts and
+        // retain their entered driver/parent totals unchanged.
+        $baseDriver=(int)$rate['driverMonthly'];
+        $traffic=self::TRAFFIC[$district];
+        $trafficAmount=empty($rate['overridden'])?(int)round($baseDriver*$traffic):0;
+        $rate['driverMonthly']=$baseDriver+$trafficAmount;
+        return $rate+[
+            'driverBaseBeforeTraffic'=>$baseDriver,
+            'driverTrafficSurcharge'=>$trafficAmount,
+            'trafficRatePercent'=>$traffic*100,
+            'overrideAmountsAreFinal'=>!empty($rate['overridden']),
+            'distanceBasis'=>'average_outbound_and_return',
+            'district'=>$district,'vehicleClass'=>$class,
+            'academicYear'=>self::YEAR,'currency'=>'IRR'
+        ];
     }
     public static function quoteStudent(PDO $pdo,int $agencyId,int $schoolId,mixed $class,mixed $distance): array {
         $q=$pdo->prepare('SELECT region FROM schools WHERE id=? AND agency_id=?');
