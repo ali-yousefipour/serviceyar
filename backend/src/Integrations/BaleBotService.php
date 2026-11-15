@@ -99,6 +99,17 @@ final class BaleBotService {
   }
   return self::overview($uid);
  }
+ public static function health(int $uid): array {
+  if(!Authorization::isSuperAdmin($uid))throw new AuthException(403,'فقط ادمین کل مجاز است.','FORBIDDEN');
+  if(!self::ready())return ['connected'=>false,'webhookCorrect'=>false,'message'=>'ربات فعال نیست.'];
+  $me=self::call('getMe');
+  $hook=self::call('getWebhookInfo');
+  $info=is_array($hook['result']??null)?$hook['result']:[];
+  return ['connected'=>true,'botUsername'=>(string)($me['result']['username']??''),
+   'webhookCorrect'=>hash_equals(self::webhookUrl(),(string)($info['url']??'')),
+   'pendingUpdates'=>(int)($info['pending_update_count']??0),
+   'lastError'=>(string)($info['last_error_message']??'')];
+ }
  public static function status(int $user): array {
   if(!self::ready())return ['enabled'=>false,'linked'=>false,'botUsername'=>self::setting('bale_auth_username')];
   $q=Connection::get()->prepare('SELECT chat_id FROM bale_user_links WHERE user_id=?');
