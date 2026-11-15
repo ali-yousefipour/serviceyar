@@ -687,6 +687,26 @@ try{
    \ServiceYar\Users\UserService::list($uid,0),'id')),true),
   'Deleted users disappear from the global management list');
  rejected(fn()=>\ServiceYar\Users\UserService::delete($uid,$userToDelete),'NOT_FOUND');
+ // Expanded profile data: administrator and self-service share one validated schema.
+ $profileData=\ServiceYar\Users\UserService::updateOwnProfile($viewer,[
+  'firstName'=>'کاربر','lastName'=>'آزمایشی','mobile'=>'09123456789',
+  'nationalCode'=>'1234567891','email'=>'sample@example.org',
+  'address'=>'مشهد، نشانی نمونه','postalCode'=>'1234567890','emergencyPhone'=>'09120000000'
+ ]);
+ check($profileData['firstName']==='کاربر'&&$profileData['mobile']==='09123456789',
+  'User may edit their own personal contact and identity information');
+ $globalUsers=\ServiceYar\Users\UserService::list($uid,0);
+ $viewerResult=array_values(array_filter($globalUsers,fn($item)=>(int)$item['id']===$viewer))[0]??[];
+ check(($viewerResult['national_code']??null)==='1234567891'
+   &&($viewerResult['address']??null)==='مشهد، نشانی نمونه',
+  'Global administrator sees saved national identifier and contact details');
+ rejected(fn()=>\ServiceYar\Users\UserService::updateOwnProfile($viewer,[
+  'firstName'=>'کاربر','lastName'=>'آزمایشی','nationalCode'=>'1111111111']),'INVALID_NATIONAL_CODE');
+ rejected(fn()=>\ServiceYar\Users\UserService::updateOwnProfile($viewer,[
+  'firstName'=>'کاربر','lastName'=>'آزمایشی','mobile'=>'123']),'INVALID_MOBILE');
+ $adminProfile=\ServiceYar\Users\UserService::save($uid,0,['mobile'=>'09121111111'], $viewer);
+ check(($adminProfile['mobile']??'')==='09121111111',
+  'Super administrator may correct other user contact information');
  echo "Transport integration: $checks checks passed. All fixtures rolled back.\n";
 }finally{if($p->inTransaction())$p->rollBack();}
 
