@@ -594,8 +594,8 @@ try {
     $apply,$binding,(string)($_POST['digest']??''))]);
  }
  if($path==='/api/v1/admin/sms-provider'){
-  if($method==='GET')Response::json(['ok'=>true,'data'=>\\ServiceYar\\Integrations\\NeginSms::overview((int)$s['id'])]);
-  if($method==='PUT'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\\ServiceYar\\Integrations\\NeginSms::configure((int)$s['id'],Request::json())]);}
+  if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\NeginSms::overview((int)$s['id'])]);
+  if($method==='PUT'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\NeginSms::configure((int)$s['id'],Request::json())]);}
  }
  if($path==='/api/v1/admin/login-methods'){
   if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Auth\LoginMethods::overview((int)$s['id'])]);
