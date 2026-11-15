@@ -2861,13 +2861,13 @@ $('transportSettings').onsubmit=async e=>{e.preventDefault();try{await write('/a
  const deductionPanel=document.createElement('section');
  deductionPanel.className='panel sy-settings-panel sy-deductions-panel';
  deductionPanel.dataset.settingsTab='deductions';
- deductionPanel.innerHTML=`<header class="sy-settings-section-head"><div><h2>کسورات رانندگان</h2><p>درصدهای کسرشونده از مجموع شهریه ماهانه سرویس؛ مبنای محاسبه مبلغ خالص قابل پرداخت به راننده</p></div></header>
+ deductionPanel.innerHTML=`<header class="sy-settings-section-head"><div><h2>کسورات قراردادی رانندگان</h2><p>این درصدها صرفاً سیاست تسویه شرکت با راننده هستند و با سهم‌های ۳٪ نظارت، ۱٪ هماهنگی و ۷٪ بالاسری مندرج در بهای خدمات اولیا یکسان فرض نمی‌شوند. سهم هماهنگی اولیا بدون مصوبه شورای ترافیک قابل توزیع نیست.</p></div></header>
  <form id="driverDeductionSettings" class="sy-deduction-form">
  <div class="form-grid sy-settings-grid">
  ${Object.entries({supervision:'مدیریت، نظارت و بازرسی',coordination:'اطلاع‌رسانی و هماهنگی',overhead:'بالاسری شرکت',insurance:'بیمه راننده'}).map(([key,label])=>`<label>${label} (درصد)<input type="number" name="${key}" inputmode="decimal" min="0" max="100" step="0.001" required value="${esc(rates[key])}" ${can('settings','manage')?'':'disabled'}></label>`).join('')}
  </div>
  <div class="sy-deduction-summary" aria-live="polite"><span>جمع کسورات</span><strong id="deductionTotal"></strong><span>خالص راننده از هر ۱۰۰ ریال</span><strong id="deductionNet"></strong></div>
- <p class="muted">درصدهای پیش‌فرض: ۳٪ + ۱٪ + ۷٪ + ۷٫۸٪ = ۱۸٫۸٪. تغییر درصدها بر محاسبات بعدی و نمایش محاسباتی سرویس‌ها اثر می‌گذارد؛ اسناد حقوق قطعی قبلی بدون اصلاحیه بازنویسی نمی‌شوند.</p>
+ <p class="muted">درصدهای قدیمی کسورات قراردادی: ۳٪ + ۱٪ + ۷٪ + ۷٫۸٪ = ۱۸٫۸٪؛ این مقادیر از گذشته برای حفظ سازگاری قراردادهای ثبت‌شده باقی مانده‌اند و نباید به معنای دستور نرخ‌نامه تاکسیرانی برای کسر سهم اولیا از حقوق راننده تلقی شوند. تغییرات فقط بر محاسبات آتی اثر دارد و اسناد نهایی گذشته تغییر نمی‌کنند.</p>
  ${can('settings','manage')?'<div class="member-actions"><button type="submit" class="primary">ذخیره درصد کسورات</button><button type="button" id="resetDeductionRates">بازگردانی مقادیر پیش‌فرض</button></div>':''}
  <p id="deductionSaveStatus" role="status"></p>
  </form>`;
