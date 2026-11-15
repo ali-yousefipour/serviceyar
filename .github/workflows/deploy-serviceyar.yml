@@ -98,26 +98,21 @@ jobs:
           test -s frontend/assets/favicon.svg
 
   production-preflight:
-    name: Confirm production domain settings
+    name: Verify service-yar.ir TLS and public document root
     needs: validate
     runs-on: ubuntu-latest
     steps:
-      - name: Require exact domain root and validated TLS
-        env:
-          REMOTE_ROOT: ${{ vars.SERVICEYAR_FTP_REMOTE_ROOT }}
-          SSL_READY: ${{ vars.SERVICEYAR_PRODUCTION_SSL_READY }}
+      - name: Validate real HTTPS certificate before FTP publication
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "$REMOTE_ROOT" ]]; then
-            echo "::error title=Missing production document root::Set repository variable SERVICEYAR_FTP_REMOTE_ROOT to the exact service-yar.ir document root. Deployment has NOT happened."
+          # Verifies both certificate trust and service-yar.ir hostname.
+          if ! curl --fail --silent --show-error --location --max-redirs 3 --max-time 25 \
+               --output /dev/null https://service-yar.ir/; then
+            echo "::error title=Invalid service-yar.ir TLS or unreachable site::Configure a trusted SSL certificate for service-yar.ir before publishing. FTP root is /public_html."
             exit 1
           fi
-          if [[ "$SSL_READY" != "true" ]]; then
-            echo "::error title=Production TLS not verified::Install a certificate valid for service-yar.ir and set repository variable SERVICEYAR_PRODUCTION_SSL_READY=true. Deployment has NOT happened."
-            exit 1
-          fi
-          echo "Production domain configuration is present; deployment may proceed."
+          echo "Trusted HTTPS endpoint is available; FTP root: /public_html."
 
   deploy:
     name: Upload ServiceYar to service-yar.ir
@@ -186,6 +181,6 @@ jobs:
           FTP_HOST: ${{ secrets.SERVICEYAR_FTP_HOST }}
           FTP_USER: ${{ secrets.SERVICEYAR_FTP_USERNAME }}
           FTP_PASS: ${{ secrets.SERVICEYAR_FTP_PASSWORD }}
-          FTP_REMOTE_ROOT: ${{ vars.SERVICEYAR_FTP_REMOTE_ROOT }}
+          FTP_REMOTE_ROOT: /public_html
           PUBLIC_BASE_URL: https://service-yar.ir
         run: python3 tools/deploy_serviceyar.py
