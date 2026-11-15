@@ -12,6 +12,7 @@
  slot.id='syLoginMethods';
  const tabs=make('div','sy-login-method-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','انتخاب روش ورود');
  slot.append(tabs);
+ const unavailable=make('p','sy-login-method-unavailable','روش ورود فعالی در دسترس نیست. لطفاً با مدیر سامانه تماس بگیرید.');unavailable.setAttribute('role','alert');unavailable.hidden=true;slot.append(unavailable);
  const panels={password:passwordForm};
  passwordForm.before(slot);
  const userLabel='نام کاربری سامانه';
@@ -73,7 +74,7 @@
  };
  const render=(enabled)=>{
   available=Object.keys(labels).filter(x=>Boolean(enabled[x]));
-  if(!available.length)available=['password'];
+  unavailable.hidden=available.length>0;
   tabs.replaceChildren();
   for(const method of available){
    const button=make('button','sy-login-method-tab');
@@ -89,7 +90,8 @@
    tabs.append(button);tabButtons[method]=button;
   }
   tabs.hidden=available.length===1;
-  activate(available.includes(selected)?selected:available[0]);
+  if(available.length)activate(available.includes(selected)?selected:available[0]);
+  else for(const form of Object.values(panels))form.hidden=true;
   const heading=root.querySelector('.login-heading p');
   if(heading)heading.textContent=available.length>1?'روش ورود دلخواه خود را انتخاب کنید.':'برای ورود، اطلاعات حساب خود را وارد کنید.';
  };
@@ -97,7 +99,7 @@
  panels.sms.hidden=true;panels.bale.hidden=true;
  async function reload(){
   try{const result=await api('/api/v1/auth/methods');render(result.methods||{password:true});}
-  catch(e){render({password:true});}
+  catch(e){render({});unavailable.textContent='دریافت روش‌های مجاز ورود از سرور ناموفق بود. اتصال را بررسی و صفحه را دوباره بارگذاری کنید.';}
  }
  void reload();
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!window.serviceyarSessionActive)void reload();});
