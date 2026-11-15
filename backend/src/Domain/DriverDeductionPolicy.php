@@ -5,7 +5,11 @@ namespace ServiceYar\Domain;
 use ServiceYar\Auth\AuthException;
 use ServiceYar\Database\Connection;
 
-/** Company-specific driver deduction policy, with backward-compatible defaults. */
+/**
+ * Contractual driver PAYROLL deductions (historical defaults preserved).
+ * Official 3%/1%/7% parent-side tariff shares are NOT payroll withholdings
+ * merely because their labels overlap. No coordination distribution occurs here.
+ */
 final class DriverDeductionPolicy
 {
     public const KEY='driver_deduction_rates';
@@ -59,6 +63,9 @@ final class DriverDeductionPolicy
         }
         $total=array_sum(array_filter($amounts,fn($k)=>str_ends_with($k,'_deduction'),ARRAY_FILTER_USE_KEY));
         return $amounts+[
+            'deduction_origin'=>'agency_driver_payroll_policy',
+            'independent_of_parent_fare_shares'=>true,
+            'coordination_beneficiary_allocation'=>'not_performed',
             'deduction_rate'=>array_sum($rates),
             'total_deductions'=>$total,
             'net_earned'=>max(0,round($gross)-$total)
