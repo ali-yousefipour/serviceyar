@@ -2187,16 +2187,17 @@ function userManagementTable(box,rows,global){
   '<label class="sy-admin-user-search"><span>جستجوی کاربران</span><input type="search" data-user-search autocomplete="off" placeholder="نام، نام خانوادگی، نام کاربری یا نقش" aria-label="جستجوی کاربران سامانه"></label>'+
   '<span class="sy-admin-user-count" data-user-count aria-live="polite"></span>'+
   (!global&&manage?'<button type="button" data-new-user>کاربر جدید</button>':'')+'</div>'+
-  '<div class="table-wrap sy-admin-user-scroll"><table><thead><tr><th>نام کاربری</th><th>نام</th><th>نقش</th><th>وضعیت</th><th>عملیات</th></tr></thead><tbody data-user-results></tbody></table></div>';
+  '<div class="table-wrap sy-admin-user-scroll"><table><thead><tr><th>کاربر</th><th>نام کاربری</th><th>شماره همراه</th><th>کد ملی</th><th>نقش</th><th>وضعیت</th><th>عملیات</th></tr></thead><tbody data-user-results></tbody></table></div>';
  const input=box.querySelector('[data-user-search]'),tbody=box.querySelector('[data-user-results]'),counter=box.querySelector('[data-user-count]');
  const render=()=>{
   const term=norm(input.value);
-  const visible=rows.filter(r=>!term||norm([r.username,r.first_name,r.last_name,person(r),r.roles,r.role_names].join(' ')).includes(term));
+  const visible=rows.filter(r=>!term||norm([r.username,r.first_name,r.last_name,r.mobile,r.national_code,r.email,r.address,person(r),r.roles,r.role_names].join(' ')).includes(term));
   counter.textContent='نمایش '+number(visible.length)+' از '+number(rows.length)+' کاربر';
-  tbody.innerHTML=visible.length?visible.map(r=>'<tr><td>'+esc(r.username||'—')+'</td><td>'+esc(person(r))+'</td><td>'+esc(r.roles||r.role_names||'—')+'</td><td>'+(Number(r.is_active)?'فعال':'غیرفعال')+'</td><td class="sy-user-row-actions">'+
+  tbody.innerHTML=visible.length?visible.map(r=>'<tr><td class="sy-user-cell"><img class="sy-user-avatar-sm" src="'+esc(syUserPhotoUrl(r.id,global))+'" alt="" loading="lazy"><span>'+esc(person(r))+'</span></td><td>'+esc(r.username||'—')+'</td><td dir="ltr">'+esc(persianDigits(r.mobile||'—'))+'</td><td dir="ltr">'+esc(persianDigits(r.national_code||'—'))+'</td><td>'+esc(r.roles||r.role_names||'—')+'</td><td>'+(Number(r.is_active)?'فعال':'غیرفعال')+'</td><td class="sy-user-row-actions">'+
    (manage?'<button type="button" data-edit-user="'+Number(r.id)+'">ویرایش</button><button type="button" data-user-password="'+Number(r.id)+'">تغییر رمز</button>'+
    (global&&Number(r.id)!==selfId?'<button type="button" class="sy-user-delete" data-user-delete="'+Number(r.id)+'">حذف</button>':''):'—')+
-   '</td></tr>').join(''):'<tr><td colspan="5" class="sy-users-no-results">کاربری مطابق عبارت جستجو پیدا نشد.</td></tr>';
+   '</td></tr>').join(''):'<tr><td colspan="7" class="sy-users-no-results">کاربری مطابق عبارت جستجو پیدا نشد.</td></tr>';
+  tbody.querySelectorAll('.sy-user-avatar-sm').forEach(img=>img.addEventListener('error',()=>{img.replaceWith(Object.assign(document.createElement('span'),{className:'sy-user-avatar-fallback',textContent:'ک'}));},{once:true}));
   tbody.querySelectorAll('[data-edit-user]').forEach(b=>b.onclick=()=>userEditor(rows.find(r=>String(r.id)===b.dataset.editUser),global));
   tbody.querySelectorAll('[data-user-password]').forEach(b=>b.onclick=()=>passwordDialog(rows.find(r=>String(r.id)===b.dataset.userPassword),global));
   tbody.querySelectorAll('[data-user-delete]').forEach(b=>b.onclick=()=>confirmGlobalUserDelete(rows.find(r=>String(r.id)===b.dataset.userDelete)));
