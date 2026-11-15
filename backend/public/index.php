@@ -220,7 +220,7 @@ try {
 
  if($method==='GET'&&$path==='/api/v1/auth/methods'){
   header('Cache-Control: no-store, max-age=0');
-  Response::json(['ok'=>true,'data'=>\ServiceYar\Auth\LoginMethods::publicStatus()]);
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Auth\LoginMethods::publicStatus()+['recoveryMethods'=>\ServiceYar\Auth\PasswordRecovery::methods()]]);
  }
  if($method==='POST'&&$path==='/api/v1/auth/sms/request'){
   header('Cache-Control: no-store, max-age=0');
@@ -232,6 +232,27 @@ try {
   $b=Request::json();
   $uid=\ServiceYar\Auth\SmsLogin::verify((string)($b['username']??''),(string)($b['code']??''));
   Response::json(['ok'=>true,'data'=>$auth->loginTrustedUser($uid)]);
+ }
+ if($method==='POST'&&$path==='/api/v1/auth/mobile/request'){
+  header('Cache-Control: no-store, max-age=0');
+  $b=Request::json();
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Auth\SmsLogin::requestMobile((string)($b['mobile']??''))]);
+ }
+ if($method==='POST'&&$path==='/api/v1/auth/mobile/verify'){
+  header('Cache-Control: no-store, max-age=0');
+  $b=Request::json();
+  $uid=\ServiceYar\Auth\SmsLogin::verifyMobile((string)($b['mobile']??''),(string)($b['code']??''));
+  Response::json(['ok'=>true,'data'=>$auth->loginTrustedUser($uid)]);
+ }
+ if($method==='POST'&&$path==='/api/v1/auth/password-reset/request'){
+  header('Cache-Control: no-store, max-age=0');
+  $b=Request::json();
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Auth\PasswordRecovery::request((string)($b['username']??''),(string)($b['channel']??''))]);
+ }
+ if($method==='POST'&&$path==='/api/v1/auth/password-reset/confirm'){
+  header('Cache-Control: no-store, max-age=0');
+  $b=Request::json();
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Auth\PasswordRecovery::confirm((string)($b['username']??''),(string)($b['channel']??''),(string)($b['code']??''),(string)($b['newPassword']??''),(string)($b['passwordConfirmation']??''))]);
  }
  if($method==='GET'&&$path==='/api/v1/auth/bale/status'){
   Response::json(['ok'=>true,'data'=>['enabled'=>\ServiceYar\Integrations\BaleBotService::ready()]]);
