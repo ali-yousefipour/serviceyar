@@ -82,4 +82,40 @@ final class TaxiFareComponents
             'currency'=>'IRR',
         ];
     }
+    /**
+     * Non-posting preview only. Beneficiaries and ratios MUST come from the
+     * actual Mashhad Traffic Council resolution, not guessed defaults.
+     * Never creates any ledger or payroll transaction.
+     */
+    public static function previewCoordinationAllocation(
+        int $amount, array $beneficiaryPercentages, string $councilDecisionReference
+    ): array {
+        if($amount<0||trim($councilDecisionReference)==='')
+            throw new AuthException(422,'شماره مصوبه شورای ترافیک و مبلغ معتبر الزامی است.','COORDINATION_RESOLUTION_REQUIRED');
+        if(!$beneficiaryPercentages||count($beneficiaryPercentages)>30)
+            throw new AuthException(422,'ذی‌نفعان مصوب مشخص نشده‌اند.','COORDINATION_BENEFICIARIES_REQUIRED');
+        $units=[];
+        foreach($beneficiaryPercentages as $beneficiary=>$percent) {
+            if(!is_string($beneficiary)||trim($beneficiary)===''||
+               !is_numeric($percent)||!is_finite((float)$percent)||
+               (float)$percent<0||(float)$percent>100)
+                throw new AuthException(422,'درصد تسهیم ذی‌نفع نامعتبر است.','INVALID_COORDINATION_ALLOCATION');
+            // Resolution percentages are expressed with up to three decimals.
+            $scaled=round((float)$percent*1000);
+            if(abs($scaled-(float)$percent*1000)>0.000001)
+                throw new AuthException(422,'درصد تسهیم حداکثر سه رقم اعشار دارد.','INVALID_COORDINATION_ALLOCATION');
+            $units[$beneficiary]=(int)$scaled;
+        }
+        if(array_sum($units)!==100000)
+            throw new AuthException(422,'جمع سهم‌های مصوب باید دقیقاً ۱۰۰٪ باشد.','COORDINATION_PERCENT_TOTAL');
+        $result=[];$left=$amount;$names=array_keys($units);
+        foreach($names as $i=>$name){
+            $share=$i===count($names)-1?$left:intdiv($amount*$units[$name],100000);
+            $result[$name]=$share;$left-=$share;
+        }
+        return ['approvedResolutionReference'=>trim($councilDecisionReference),
+            'amountIrr'=>$amount,'previewOnly'=>true,'posted'=>false,
+            'beneficiaryAmountsIrr'=>$result];
+    }
+
 }
