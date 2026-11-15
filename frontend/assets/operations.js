@@ -276,7 +276,7 @@ function render(){
  if(!session)return;
  if(!document.getElementById('syMenuPalette')?.hidden)document.querySelector('#syMenuPalette [data-menu-close]')?.click();
  if($('modal')?.firstElementChild)closeDialog();
- disposeMaps();$('dashboardBackdrop')?.remove();
+ disposeMaps();$('dashboardBackdrop')?.remove();$('content').classList.remove('sy-super-admin-workspace');
  const token=++pageToken,[raw,action,recordId]=location.hash.slice(1).split('/');
  const isAdmin=session.roles?.includes('super_admin')&&!session.impersonation;
  const adminTitles={
@@ -3709,6 +3709,7 @@ window.addEventListener('afterprint',()=>{companyPrintHeader?.remove();companyPr
 
 
 async function adminDashboardPage(token){
+ $('content').classList.add('sy-super-admin-workspace');
  $('content').innerHTML='<div class="loading">در حال دریافت آمار کل سامانه…</div>';
  try{
   const data=await api('/api/v1/admin/overview');if(token!==pageToken)return;
