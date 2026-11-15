@@ -37,10 +37,10 @@ final class SmsLogin
     {
         $pdo=Connection::get();
         try {
-            $pdo->query('SELECT id FROM sms_login_challenges LIMIT 0');
+            $pdo->query('SELECT id,purpose FROM sms_login_challenges LIMIT 0');
             $pdo->query('SELECT ip_address FROM sms_login_requests LIMIT 0');
         } catch(\PDOException $e) {
-            throw new AuthException(503,'جدول‌های ورود پیامکی آماده نیستند. مهاجرت 0111_sms_login.sql را اجرا کنید.','SMS_LOGIN_MIGRATION_REQUIRED');
+            throw new AuthException(503,'ساختار ورود پیامکی به‌روز نیست؛ مهاجرت 0112_login_recovery_and_mobile_otp.sql را اجرا کنید.','SMS_LOGIN_MIGRATION_REQUIRED');
         }
     }
     private static function digits(string $text): string
