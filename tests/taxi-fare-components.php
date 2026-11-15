@@ -29,6 +29,8 @@ eq(700000,$special['overheadParentShare'],'overhead calculated before 1.2');
 eq(0,$special['coordinationParentShare'],'no 1% for special');
 eq(0,$special['supervisionParentShare'],'no 3% for special');
 eq(0,$special['certificateParentShare'],'no certificate for special');
+eq(13690600,$special['parentMonthly'],'special total based on workbook rules and 7.8% insurance');
+eq(4563534,$special['payerShares']['parents'],'parents pay their rounded final third');
 eq($special['parentMonthly'],array_sum([
     $special['payerShares']['municipality'],
     $special['payerShares']['special_education'],
@@ -39,4 +41,16 @@ eq(null,$vocational['payerShares'],'no unfounded one-third split for vocational 
 $alloc=Fare::previewCoordinationAllocation(101,['city'=>33.333,'school'=>66.667],'traffic-council-verified-001');
 eq(101,array_sum($alloc['beneficiaryAmountsIrr']),'allocation conservation');
 eq(false,$alloc['posted'],'preview cannot move money');
+try {
+    Fare::previewCoordinationAllocation(100,['company'=>100],'');
+    throw new RuntimeException('Allocation without council decision should fail');
+} catch (\ServiceYar\Auth\AuthException $e) {
+    eq('COORDINATION_RESOLUTION_REQUIRED',$e->codeName,'resolution guard');
+}
+try {
+    Fare::previewCoordinationAllocation(100,['company'=>70,'school'=>20],'1234');
+    throw new RuntimeException('Allocation that does not total 100% should fail');
+} catch (\ServiceYar\Auth\AuthException $e) {
+    eq('COORDINATION_PERCENT_TOTAL',$e->codeName,'percentage sum guard');
+}
 echo "Taxi parent-side breakdown and council-only preview: OK\n";
