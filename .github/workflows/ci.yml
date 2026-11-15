@@ -84,6 +84,7 @@ jobs:
           trap 'status=$?; if [ "$status" -ne 0 ]; then echo "PHP integration diagnostics:"; tail -100 storage/logs/serviceyar-error.log 2>/dev/null || true; fi' EXIT
           php backend/bin/migrate.php
           php backend/bin/migrate.php
+          php tests/company-manager-authorization.php
           php tests/transport-integration.php
           php tests/seed-preview.php
       - name: HTTP contracts and CSRF
