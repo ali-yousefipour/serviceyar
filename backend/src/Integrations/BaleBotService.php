@@ -288,6 +288,14 @@ final class BaleBotService {
   if($replyMarkup!==null)$body['reply_markup']=$replyMarkup;
   self::call('sendMessage',$body);
  }
+ /** Send an authentication/recovery code only to an already-linked active account. */
+ public static function sendAuthCodeToUser(int $userId,string $message): void {
+  if(!self::ready())throw new AuthException(503,'ربات بله برای ارسال کد فعال نیست.','BALE_DISABLED');
+  $q=Connection::get()->prepare('SELECT l.chat_id FROM bale_user_links l JOIN users u ON u.id=l.user_id WHERE u.id=? AND u.is_active=1 LIMIT 1');
+  $q->execute([$userId]);$chat=$q->fetchColumn();
+  if(!$chat)throw new AuthException(409,'حساب بله به کاربر متصل نیست.','BALE_NOT_LINKED');
+  self::send((string)$chat,$message);
+ }
  public static function sendToUser(int $actor,int $recipient,string $text): array {
   if(!self::ready())throw new AuthException(503,'ربات فعال نیست.','BALE_DISABLED');
   if(!Authorization::isSuperAdmin($actor)){
