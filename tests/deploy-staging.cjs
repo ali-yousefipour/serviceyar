@@ -29,6 +29,7 @@ assert.equal(legacyDomainSearch.status,1,'No tracked source, configuration, test
 assert.match(source,/CANONICAL_HOST = "service-yar\.ir"/,'The deployment verifier must pin the canonical production hostname');
 assert.match(source,/PUBLIC_BASE_URL", f"https:\/\/\{CANONICAL_HOST\}"/,'Live verification must default to service-yar.ir');
 assert.match(source,/final\.hostname != CANONICAL_HOST/,'Live verification must reject redirects away from the canonical host');
+assert.match(source,/\("\/assets\/app\.js", "assets\/app\.js"\)/,'Release verification must check that the public application actually serves the newly deployed admin-routing bundle');
 assert.match(source,/https:\/\/www\.service-yar\.ir\//,'TLS diagnostics must inspect the production www alias');
 assert.doesNotMatch(source,/challi\.ir/,'The legacy host must not remain a production verification target');
 assert.match(workflow,/PUBLIC_BASE_URL: https:\/\/service-yar\.ir/,'Production deployment must explicitly verify service-yar.ir');
