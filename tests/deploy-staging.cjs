@@ -6,12 +6,25 @@ assert.match(source,/\.serviceyar-staging-/,'Each workflow must use an independe
 assert.match(source,/verify\(ftp, digests\[name\], live\)/,'Published files must be verified');
 assert.match(source,/3 if name == "index.html"/,'HTML index must publish last');
 const workflow=readFileSync('.github/workflows/deploy-serviceyar.yml','utf8');
+const html=readFileSync('frontend/index.html','utf8');
+const productionDocs=readFileSync('docs/PHASE-17-PRODUCTION.md','utf8');
 for(const asset of ['public-site.js','public-site.css','public-site-content.html']){
  const {existsSync}=require('node:fs');
  assert.ok(existsSync('frontend/assets/'+asset),'Missing public asset: '+asset);
 }
 assert.match(workflow,/cancel-in-progress: true/,'Supersede stuck old release runs');
-assert.match(source,/PUBLIC_BASE_URL", "https:\/\/challi\.ir"/,'Live release verification must target the production challi.ir domain by default');
-assert.match(workflow,/PUBLIC_BASE_URL: https:\/\/challi\.ir/,'Production deployment must explicitly verify challi.ir');
-assert.match(source,/https:\/\/www\.challi\.ir\//,'TLS diagnostics must inspect the production www host');
-console.log('FTP staging isolation and public website deployment checks OK');
+assert.match(source,/CANONICAL_HOST = "service-yar\.ir"/,'The deployment verifier must pin the canonical production hostname');
+assert.match(source,/PUBLIC_BASE_URL", f"https:\/\/\{CANONICAL_HOST\}"/,'Live verification must default to service-yar.ir');
+assert.match(source,/final\.hostname != CANONICAL_HOST/,'Live verification must reject redirects away from the canonical host');
+assert.match(source,/https:\/\/www\.service-yar\.ir\//,'TLS diagnostics must inspect the production www alias');
+assert.doesNotMatch(source,/challi\.ir/,'The legacy host must not remain a production verification target');
+assert.match(workflow,/PUBLIC_BASE_URL: https:\/\/service-yar\.ir/,'Production deployment must explicitly verify service-yar.ir');
+assert.doesNotMatch(workflow,/challi\.ir/,'The deployment workflow must not publish or verify the legacy host');
+assert.match(workflow,/RewriteCond %\{HTTP_HOST\} \^www\\\.service-yar\\\.ir\$/,'The www alias must redirect to the canonical apex');
+assert.match(workflow,/RewriteCond %\{HTTPS\} !=on/,'HTTP requests must be upgraded to HTTPS');
+assert.match(workflow,/RewriteRule \^ https:\/\/service-yar\.ir%\{REQUEST_URI\}/,'The production rewrite must preserve paths on the canonical host');
+assert.match(html,/<link rel="canonical" href="https:\/\/service-yar\.ir\/">/,'The public application must advertise the canonical URL');
+assert.match(html,/<meta property="og:url" content="https:\/\/service-yar\.ir\/">/,'Open Graph metadata must use the production URL');
+assert.match(productionDocs,/APP_URL=https:\/\/service-yar\.ir/,'Production environment docs must use the canonical URL');
+assert.match(productionDocs,/CORS_ALLOWED_ORIGINS=https:\/\/service-yar\.ir/,'Production CORS docs must use the canonical origin');
+console.log('FTP staging isolation and service-yar.ir canonical-domain checks OK');
