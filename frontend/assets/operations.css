@@ -3023,3 +3023,27 @@ body.sy-menu-palette-open{overflow:hidden}
 .sy-driver-vehicle-new input,.sy-driver-vehicle-new select{width:100%;min-height:42px;box-sizing:border-box}
 .sy-driver-vehicle-new footer{display:flex;justify-content:flex-end;gap:10px}
 @media(max-width:640px){.sy-driver-vehicle-content{padding:12px}.sy-driver-vehicle-actions{grid-template-columns:1fr}.sy-driver-vehicle-actions button{width:100%}.sy-driver-vehicle-item{flex-direction:column;align-items:stretch}.sy-driver-vehicle-item .iran-plate{max-width:100%}.sy-driver-vehicle-new .form-grid{grid-template-columns:1fr}.sy-driver-vehicle-dialog>header{padding:12px}}
+
+
+/* Super-admin user management: accessible search, sticky table, protected deletion */
+.sy-admin-user-toolbar{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:12px 0 16px}
+.sy-admin-user-search{display:grid;gap:6px;flex:1 1 290px;max-width:520px;font-weight:600}
+.sy-admin-user-search input{width:100%;box-sizing:border-box;min-height:44px;padding:9px 14px;border:1px solid #bbd2c6;border-radius:12px;background:#fff;font:inherit;color:#1c4232}
+.sy-admin-user-search input:focus-visible{outline:2px solid #0e8560;outline-offset:2px}
+.sy-admin-user-count{padding:10px 12px;color:#52675a;font-size:.87rem;white-space:nowrap}
+.sy-admin-user-scroll{max-height:540px;overflow:auto;border:1px solid #dae8df;border-radius:13px}
+.sy-admin-user-scroll table{width:100%;min-width:600px;border-collapse:separate;border-spacing:0}
+.sy-admin-user-scroll thead th{position:sticky;top:0;z-index:2;background:#e9f3ec}
+.sy-user-row-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.sy-user-row-actions button{min-height:36px;padding:6px 10px;font-size:.83rem;border-radius:9px}
+.sy-user-delete{color:#9f2525!important;background:#fff3f1!important;border:1px solid #e7b0aa!important;cursor:pointer;border-radius:9px}
+.sy-user-delete:hover:not(:disabled){background:#fbe3e0!important}
+.sy-user-delete:disabled{opacity:.48;cursor:not-allowed}
+.sy-users-no-results{padding:25px!important;text-align:center;color:#718376}
+.sy-user-delete-confirm{display:grid;gap:13px;line-height:1.9}
+.sy-user-delete-confirm p{margin:0}
+.sy-user-delete-confirm label{display:grid;gap:7px;font-weight:600}
+.sy-user-delete-confirm input{width:100%;box-sizing:border-box;min-height:45px;padding:8px 12px;border:1px solid #bccdc4;border-radius:10px;direction:ltr}
+.sy-user-delete-actions{display:flex;justify-content:flex-end;gap:10px}
+.sy-user-delete-actions button{min-height:44px;padding:8px 15px}
+@media(max-width:640px){.sy-admin-user-toolbar{align-items:stretch}.sy-admin-user-search{flex-basis:100%;max-width:none}.sy-admin-user-count{padding:4px}.sy-user-row-actions{min-width:160px}.sy-user-delete-actions button{flex:1}}
