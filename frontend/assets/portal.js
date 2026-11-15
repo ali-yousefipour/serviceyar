@@ -99,6 +99,8 @@
        ['نام کاربری',data.profile?.username],['شماره همراه تأییدشده',data.profile?.mobile],['نوع حساب',parent?'ولی دانش‌آموز':'راننده سرویس']].map(([k,v])=>'<div><span>'+esc(k)+'</span><b>'+esc(v||'—')+'</b></div>').join('')+'</div></section>'+
    '<section class="portal-panel"><h2>ویرایش مشخصات</h2><form id="portalProfileForm" class="portal-profile-form">'+
       (parent?inputField('guardianName','نام ولی',p.name)+inputField('guardianRelation','نسبت با دانش‌آموز',p.relation_title):
+       inputField('firstName','نام',p.first_name,'required maxlength="100"')+inputField('lastName','نام خانوادگی',p.last_name,'required maxlength="100"')+
+       inputField('nationalCode','کد ملی',p.national_code,'inputmode="numeric" maxlength="10"')+
        inputField('bankName','بانک',p.bank_name)+inputField('bankAccount','شماره حساب',p.bank_account)+inputField('iban','شماره شبا',p.iban,'dir="ltr" maxlength="26"'))+
       inputField('address','نشانی',address)+
       (parent?inputField('returnAddress','نشانی برگشت',data.student?.return_address):'')+
