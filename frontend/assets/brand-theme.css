@@ -1731,3 +1731,11 @@ body{background:var(--canvas);color:var(--ink)}
 @keyframes syMethodEnter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:520px){.sy-login-method-tab{font-size:10px;line-height:1.65;padding:9px 3px}.sy-login-method-tabs{gap:3px;padding:4px}.sy-login-methods{margin:12px 0}}
 @media(prefers-reduced-motion:reduce){.sy-login-otp-form{animation:none}.sy-login-method-tab{transition:none}}
+
+/* Clear Bale bot onboarding action inside the login OTP panel. */
+.sy-login-bot-link{display:flex;align-items:center;justify-content:center;gap:9px;min-height:47px;padding:10px 14px;border:1px solid #b9d9c6;border-radius:12px;background:linear-gradient(110deg,#e8f5ec,#f3faf5);color:#086744!important;text-decoration:none!important;font:800 13px Vazirmatn,Tahoma,sans-serif;box-shadow:0 3px 10px rgba(9,91,58,.07);transition:background .18s,border-color .18s,transform .18s,box-shadow .18s}
+.sy-login-bot-link:before{content:"↗";display:grid;place-items:center;width:25px;height:25px;border-radius:8px;background:#d3eadb;color:#086744;font-size:16px}
+.sy-login-bot-link:hover{background:#dff0e5;border-color:#92c3a3;transform:translateY(-1px);box-shadow:0 5px 13px rgba(9,91,58,.11)}
+.sy-login-bot-link:focus-visible{outline:3px solid rgba(19,126,83,.28);outline-offset:3px}
+.sy-login-bot-return{margin:-5px 0 0;color:#557364;font:500 11px/1.9 Vazirmatn,Tahoma,sans-serif}
+@media(prefers-reduced-motion:reduce){.sy-login-bot-link{transition:none}}
