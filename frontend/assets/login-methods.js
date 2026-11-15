@@ -107,6 +107,7 @@
 
  // Password recovery is a sub-flow inside the password tab, not a separate login method.
  const recoveryLink=make('button','sy-password-forgot','فراموشی رمز عبور؟');recoveryLink.type='button';
+ const passwordSuccess=make('p','sy-login-otp-message');passwordSuccess.hidden=true;
  const recovery=make('section','sy-password-recovery');recovery.hidden=true;
  const recoveryTitle=make('h3','','بازیابی رمز عبور');
  const recoveryIntro=make('p','sy-login-otp-intro','نام کاربری را وارد کنید و روش دریافت کد بازیابی را انتخاب نمایید. پس از تأیید کد می‌توانید رمز جدید تعیین کنید.');
@@ -125,7 +126,7 @@
  const recoveryBack=make('button','sy-recovery-back','بازگشت به ورود');recoveryBack.type='button';
  const recoveryInfo=make('p','sy-login-otp-message');recoveryInfo.setAttribute('role','status');recoveryInfo.setAttribute('aria-live','polite');
  recovery.append(recoveryTitle,recoveryIntro,recoveryChannels,recoveryUser,recoverySend,recoveryTimerHost,recoveryCodeLabel,newPasswordLabel,confirmPasswordLabel,recoveryConfirm,recoveryBack,recoveryInfo);
- passwordForm.append(recoveryLink,recovery);
+ passwordForm.append(recoveryLink,passwordSuccess,recovery);
  let recoveryChannel='';
  const recoveryTimer=makeTimer(recoveryTimerHost,recoverySend,recoveryConfirm,recoveryCode,recoveryInfo);
  const togglePasswordForm=show=>{
@@ -137,7 +138,7 @@
   recoveryLink.hidden=show?!(recoveryMethodsFromServer.sms||recoveryMethodsFromServer.bale):true;recovery.hidden=show;
  };
  recoveryLink.onclick=()=>{
-  togglePasswordForm(false);
+  passwordSuccess.hidden=true;togglePasswordForm(false);
   recoveryChannels.replaceChildren();
   const choices=['sms','bale'].filter(key=>recoveryMethodsFromServer[key]);
   if(!choices.length){note(recoveryInfo,'روش بازیابی رمز عبور در حال حاضر فعال نیست.',true);return;}
@@ -175,10 +176,11 @@
   try{
    await api('/api/v1/auth/password-reset/confirm',{method:'POST',body:JSON.stringify({username,channel:recoveryChannel,code,newPassword:newPassword.value,passwordConfirmation:confirmPassword.value})});
    recoveryTimer.stop();recoveryCode.value='';newPassword.value='';confirmPassword.value='';
-   togglePasswordForm(true);note(document.getElementById('loginError'),'رمز عبور با موفقیت تغییر کرد. اکنون با رمز جدید وارد شوید.');
+   togglePasswordForm(true);passwordSuccess.textContent='رمز عبور با موفقیت تغییر کرد. اکنون با رمز جدید وارد شوید.';passwordSuccess.hidden=false;
   }catch(e){note(recoveryInfo,e.message||'تغییر رمز عبور انجام نشد.',true);recoveryConfirm.disabled=false;}
  };
  recoveryBack.onclick=()=>{recoveryTimer.stop();togglePasswordForm(true);};
+ [document.getElementById('username'),document.getElementById('password')].forEach(input=>input?.addEventListener('input',()=>{passwordSuccess.hidden=true;}));
  [recoveryUsername,recoveryCode,newPassword,confirmPassword].forEach(input=>input.addEventListener('keydown',event=>{
   if(event.key!=='Enter')return;
   event.preventDefault();
@@ -237,7 +239,7 @@
  companiesPage=async function(){
   await oldCompaniesPage();
   if(!session?.roles?.includes('super_admin'))return;
-  const parent=document.getElementById('syAdminIntegrations');
+  const parent=document.getElementById('content');
   if(!parent||parent.querySelector('#syAdminLoginMethods'))return;
   const block=make('section','sy-login-policy-panel');block.id='syAdminLoginMethods';
   const title=make('h3','','مدیریت روش‌های ورود کاربران');
@@ -248,14 +250,22 @@
    const desc=make('span','',labels[key]);row.append(checkbox,desc);checks[key]=checkbox;form.append(row);
   }
   const submit=make('button','primary','ذخیره روش‌های ورود');submit.type='submit';
+  const readiness=make('p','sy-login-policy-readiness');readiness.setAttribute('role','status');
   const result=make('p','sy-login-policy-status');result.setAttribute('role','status');
-  form.append(submit,result);block.append(title,description,form);parent.append(block);
+  form.append(submit,result);block.append(title,description,readiness,form);parent.append(block);
   const refresh=async()=>{
    const status=await api('/api/v1/admin/login-methods');if(!block.isConnected)return;
    for(const key of Object.keys(checks)){
     checks[key].checked=Boolean(status.configured[key]);
-    if(key==='sms'||key==='mobile')checks[key].parentElement.title=status.available[key]?'سرویس پیامک آماده است':'این روش نیازمند تنظیم سرویس پیامک نگین و افزونه SOAP است';
-    if(key==='bale')checks[key].parentElement.title=status.available[key]?'ربات بله آماده است':'ربات بله باید فعال و متصل باشد';
+    checks[key].disabled=!status.available[key]&&!status.configured[key];
+    if(key==='sms'||key==='mobile')checks[key].parentElement.title=status.available[key]?'سرویس پیامک آماده است':'برای فعال‌سازی، سرویس پیامک نگین و افزونه SOAP را تنظیم کنید.';
+    if(key==='bale')checks[key].parentElement.title=status.available[key]?'ربات بله آماده است':'برای فعال‌سازی، ربات بله را تنظیم و متصل کنید.';
+   }
+   const readiness=block.querySelector('.sy-login-policy-readiness');
+   if(readiness){
+    const reset=status.recoveryMethods||{};
+    readiness.textContent='وضعیت بازیابی رمز: پیامک '+(reset.sms?'آماده':'نیازمند مهاجرت دیتابیس/تنظیم پیامک')+' · ربات بله '+(reset.bale?'آماده':'نیازمند مهاجرت دیتابیس/تنظیم ربات');
+   }
    }
   };
   form.onsubmit=async e=>{
