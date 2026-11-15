@@ -64,7 +64,7 @@ final class BaleBotService {
  private static function call(string $method,array $body=[],?string $override=null): array {
   $token=$override??self::token();
   if(!preg_match('/^[A-Za-z0-9:_-]{25,200}$/D',$token))throw new AuthException(503,'توکن ربات بله معتبر نیست.','BALE_TOKEN_INVALID');
-  if(!in_array($method,['getMe','setWebhook','getWebhookInfo','sendMessage'],true))throw new \InvalidArgumentException('Unsupported Bale API method');
+  if(!in_array($method,['getMe','setWebhook','deleteWebhook','getWebhookInfo','sendMessage'],true))throw new \InvalidArgumentException('Unsupported Bale API method');
   $data=JsonHttp::post('https://tapi.bale.ai/bot'.$token.'/'.$method,$body,[],12);
   if(($data['ok']??false)!==true)throw new AuthException(502,'بله درخواست را تأیید نکرد.','BALE_API_ERROR');
   return $data;
@@ -98,6 +98,9 @@ final class BaleBotService {
    self::put('bale_auth_webhook_registered','0');
    self::call('setWebhook',['url'=>self::webhookUrl()]);
    self::put('bale_auth_webhook_registered','1');
+  }else{
+   if(self::setting('bale_auth_token')!=='')self::call('deleteWebhook');
+   self::put('bale_auth_webhook_registered','0');
   }
   return self::overview($uid);
  }
