@@ -10,7 +10,7 @@ for(const item of reference.classes){
  assert.equal(item.brackets.at(-1).distance_km,20);
  assert.equal(item.brackets.length,18);
 }
-assert.match(tariff,/self::TRAFFIC=\[1=>0\.0,2=>0\.10,3=>0\.25,4=>0\.25,5=>0\.10,6=>0\.25,7=>0\.10,8=>0\.0\]/,'Official district traffic coefficients');
+assert.match(tariff,/const TRAFFIC=\[1=>0\.0,2=>0\.10,3=>0\.25,4=>0\.25,5=>0\.10,6=>0\.25,7=>0\.10,8=>0\.0\]/,'Official district traffic coefficients');
 assert.match(tariff,/\$km=max\(3,\(int\)ceil\(\(float\)\$distance\)\)/,'Distance selection documented for separate rounding policy review');
 assert.match(tariff,/\$extra=\(\$km-20\)\*\(int\)\$vehicle\['extra_driver_riyal_per_km'\]/,'Linear increase after 20km');
 assert.match(tariff,/\$trafficAmount=empty\(\$rate\['overridden'\]\)\?\(int\)round\(\$baseDriver\*\$traffic\):0/,'Traffic must also increase default driver entitlement, never overrides');
