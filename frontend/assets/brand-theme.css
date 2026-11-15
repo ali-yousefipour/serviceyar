@@ -1746,3 +1746,49 @@ body{background:var(--canvas);color:var(--ink)}
 .sy-login-bot-link:focus-visible{outline:3px solid rgba(19,126,83,.28);outline-offset:3px}
 .sy-login-bot-return{margin:-5px 0 0;color:#557364;font:500 11px/1.9 Vazirmatn,Tahoma,sans-serif}
 @media(prefers-reduced-motion:reduce){.sy-login-bot-link{transition:none}}
+
+/* Login methods: one contained card, policy-driven tabs and one shared panel. */
+#login .login-card{width:min(460px,100%)!important;max-width:100%!important}
+#login .login-heading{margin-bottom:20px!important}
+#login .sy-login-methods{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:12px!important;width:100%!important;min-width:0!important;margin:0 0 17px!important}
+#login .sy-login-method-tabs{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(110px,1fr))!important;gap:5px!important;width:100%!important;min-width:0!important;padding:5px!important;margin:0!important;border:1px solid #dce9e1!important;border-radius:14px!important;background:#edf4ef!important}
+#login .sy-login-method-tabs[hidden]{display:none!important}
+#login .sy-login-method-tab{display:flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;min-width:0!important;min-height:47px!important;padding:9px 8px!important;border:1px solid transparent!important;border-radius:10px!important;background:transparent!important;color:#557064!important;box-shadow:none!important;white-space:nowrap!important;font:750 12px/1.6 Vazirmatn,Tahoma,sans-serif!important;cursor:pointer!important;transition:background .18s,border-color .18s,color .18s,box-shadow .18s!important}
+#login .sy-login-method-tab:hover{background:#f8fcf9!important;color:#145a3d!important}
+#login .sy-login-method-tab[aria-selected="true"]{background:#fff!important;border-color:#c9dfd1!important;color:#075c3e!important;box-shadow:0 2px 8px rgba(8,77,48,.08)!important}
+#login .sy-login-method-tab:focus-visible{outline:3px solid rgba(14,125,79,.25)!important;outline-offset:2px!important}
+#login .sy-login-method-icon{display:grid!important;place-items:center!important;width:25px!important;height:25px!important;flex:none!important;border-radius:8px!important;background:#dcece2!important;color:#0b7650!important;font-size:14px!important}
+#login .sy-login-method-tab[aria-selected="true"] .sy-login-method-icon{background:#0b7650!important;color:#fff!important}
+#login .sy-login-method-label{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#login .sy-login-method-panels{width:100%!important;min-width:0!important;padding:19px!important;border:1px solid #e0eae3!important;border-radius:16px!important;background:#fff!important;box-shadow:0 8px 24px rgba(22,68,43,.045)!important}
+#login .sy-login-method-panel[hidden],#login .sy-login-method-state[hidden],#login .login-card form[hidden]{display:none!important}
+#login .sy-login-method-state{margin:0!important;padding:13px 15px!important;border:1px solid #f0dfb9!important;border-radius:12px!important;background:#fffaf0!important;color:#795b1b!important;font:600 12px/1.9 Vazirmatn,Tahoma,sans-serif!important}
+#login .sy-login-method-panel,#login .login-card .sy-login-otp-form{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:11px!important;width:100%!important;min-width:0!important;margin:0!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+#login .sy-login-method-panel label,#login .sy-login-field{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:6px!important;margin:2px 0 0!important;color:#315744!important;font:750 12px/1.7 Vazirmatn,Tahoma,sans-serif!important}
+#login .sy-login-field input{box-sizing:border-box!important;width:100%!important;min-width:0!important;min-height:47px!important;padding:10px 13px!important;border:1px solid #d6e3da!important;border-radius:11px!important;background:#fbfdfb!important;color:#173d2f!important;font:500 14px Vazirmatn,Tahoma,sans-serif!important;box-shadow:none!important}
+#login .sy-login-field input:focus{border-color:#78ad8c!important;outline:0!important;box-shadow:0 0 0 3px rgba(21,125,78,.1)!important}
+#login .sy-login-field input[name="code"]{direction:ltr!important;text-align:center!important;letter-spacing:8px!important;font:800 19px Vazirmatn,Tahoma,sans-serif!important}
+#login .sy-login-otp-intro{margin:0 0 2px!important;color:#536f60!important;font:500 11px/2 Vazirmatn,Tahoma,sans-serif!important}
+#login .sy-login-bot-link{display:flex!important;align-items:center!important;justify-content:center!important;min-height:45px!important;margin:0!important;padding:9px 12px!important;border:1px solid #b9d9c6!important;border-radius:11px!important;background:#eaf5ee!important;color:#086744!important;text-decoration:none!important;font:800 12px Vazirmatn,Tahoma,sans-serif!important}
+#login .sy-login-bot-link:hover{background:#dff0e5!important;border-color:#92c3a3!important}
+#login .sy-login-bot-return{margin:0!important;color:#657d70!important;font:500 10px/1.9 Vazirmatn,Tahoma,sans-serif!important}
+#login .sy-login-otp-send,#login .sy-login-otp-confirm{display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;min-height:46px!important;margin:0!important;padding:9px 13px!important;border-radius:11px!important;font:800 12px Vazirmatn,Tahoma,sans-serif!important;cursor:pointer!important}
+#login .sy-login-otp-send{border:1px solid #b8d9c5!important;background:#edf7f0!important;color:#126943!important;box-shadow:none!important}
+#login .sy-login-otp-confirm{border:1px solid #0c7049!important;background:linear-gradient(110deg,#0c7854,#07513a)!important;color:#fff!important;box-shadow:0 5px 13px rgba(7,91,56,.13)!important}
+#login .sy-login-otp-send:disabled,#login .sy-login-otp-confirm:disabled{opacity:.58!important;cursor:wait!important}
+#login .sy-login-otp-message{min-height:18px!important;margin:0!important;color:#21694b!important;font:500 10px/1.9 Vazirmatn,Tahoma,sans-serif!important}
+#login .sy-login-otp-message.error{color:#ad3038!important}
+#login .sy-login-method-tab,#login .sy-login-bot-link,#login .sy-login-otp-send,#login .sy-login-otp-confirm{transition:background .18s,border-color .18s,color .18s,box-shadow .18s!important}
+@media(max-width:680px){
+ #login .login-card{width:100%!important}
+ #login .sy-login-method-panels{padding:15px!important}
+ #login .sy-login-method-tab{min-height:45px!important;font-size:11px!important}
+}
+@media(max-width:390px){
+ #login .sy-login-method-tabs{grid-template-columns:repeat(auto-fit,minmax(90px,1fr))!important;gap:3px!important;padding:4px!important}
+ #login .sy-login-method-tab{gap:5px!important;padding:8px 4px!important;font-size:10px!important}
+ #login .sy-login-method-panels{padding:13px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ #login .sy-login-method-tab,#login .sy-login-bot-link,#login .sy-login-otp-send,#login .sy-login-otp-confirm{transition:none!important}
+}
