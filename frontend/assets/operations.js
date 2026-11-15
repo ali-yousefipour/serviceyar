@@ -2197,7 +2197,7 @@ function userManagementTable(box,rows,global){
    (manage?'<button type="button" data-edit-user="'+Number(r.id)+'">ویرایش</button><button type="button" data-user-password="'+Number(r.id)+'">تغییر رمز</button>'+
    (global&&Number(r.id)!==selfId?'<button type="button" class="sy-user-delete" data-user-delete="'+Number(r.id)+'">حذف</button>':''):'—')+
    '</td></tr>').join(''):'<tr><td colspan="7" class="sy-users-no-results">کاربری مطابق عبارت جستجو پیدا نشد.</td></tr>';
-  tbody.querySelectorAll('.sy-user-avatar-sm').forEach(img=>img.addEventListener('error',()=>{img.replaceWith(Object.assign(document.createElement('span'),{className:'sy-user-avatar-fallback',textContent:'ک'}));},{once:true}));
+  tbody.querySelectorAll('.sy-user-avatar-sm').forEach(img=>img.addEventListener('error',()=>{img.replaceWith(Object.assign(document.createElement('span'),{className:'sy-user-avatar-fallback',textContent:(form.elements.firstName?.value||form.elements.username?.value||'ک').trim().charAt(0)||'ک'}));},{once:true}));
   tbody.querySelectorAll('[data-edit-user]').forEach(b=>b.onclick=()=>userEditor(rows.find(r=>String(r.id)===b.dataset.editUser),global));
   tbody.querySelectorAll('[data-user-password]').forEach(b=>b.onclick=()=>passwordDialog(rows.find(r=>String(r.id)===b.dataset.userPassword),global));
   tbody.querySelectorAll('[data-user-delete]').forEach(b=>b.onclick=()=>confirmGlobalUserDelete(rows.find(r=>String(r.id)===b.dataset.userDelete)));
@@ -2249,7 +2249,7 @@ function syPhotoFields(data={}){
 function syPhotoWidget(row,url){
  const name=[row?.first_name||row?.firstName,row?.last_name||row?.lastName].filter(Boolean).join(' ')||row?.username||'کاربر';
  return '<div class="sy-user-photo-editor"><div class="sy-profile-avatar">'+
- (url?'<img alt="تصویر '+esc(name)+'" src="'+esc(url)+'" class="sy-profile-avatar-img">':'<div class="sy-profile-avatar-fallback">ک</div>')+
+ (url?'<img alt="تصویر '+esc(name)+'" src="'+esc(url)+'" class="sy-profile-avatar-img">':'<div class="sy-profile-avatar-fallback">'+esc(name.trim().charAt(0)||'ک')+'</div>')+
  '</div><div><h4>تصویر پروفایل</h4><p>تصویر JPG، PNG یا WebP تا ۵ مگابایت. تصویر به شکل مربعی ذخیره می‌شود.</p>'+
  '<label class="sy-user-photo-button">انتخاب یا تغییر تصویر<input name="photo" type="file" accept="image/jpeg,image/png,image/webp"></label>'+
  (url?'<button type="button" data-remove-photo class="sy-user-remove-photo">حذف عکس</button>':'')+'</div></div>';
