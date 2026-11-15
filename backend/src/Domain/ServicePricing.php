@@ -14,7 +14,7 @@ final class ServicePricing {
         if(!in_array($mode,self::SOURCES,true))throw new AuthException(422,'روش محاسبه هزینه باید تاکسیرانی، تعرفه شرکت یا توافقی باشد.','INVALID_FEE_SOURCE');
         return $mode;
     }
-    public static function quote(PDO $pdo,int $aid,array $student,string $source): array {
+    public static function quote(PDO $pdo,int $aid,array $student,string $source,array $options=[]): array {
         $source=self::source($source);
         $school=(int)($student['school_id']??0);
         $class=$student['tariff_vehicle_class']??null;
@@ -30,8 +30,10 @@ final class ServicePricing {
         if($school<1||$class===null||$class===''||$distance===null||$distance==='')
             throw new AuthException(422,'برای محاسبه تعرفه، مدرسه، کلاس خودرو و مسافت الزامی هستند.','TARIFF_INPUT_REQUIRED');
         if($source==='taxi'){
-            $quote=TaxiOrganizationTariffs::quoteStudent($pdo,$aid,$school,$class,$distance);
-            return ['monthlyFee'=>$quote['parentMonthly'],'driverBaseMonthly'=>$quote['driverMonthly'],
+            $quote=TaxiOrganizationTariffs::quoteStudent($pdo,$aid,$school,$class,$distance,$options);
+            return ['monthlyFee'=>$quote['parentPayableMonthly']??$quote['parentMonthly'],'driverBaseMonthly'=>$quote['driverMonthly'],
+                'fullParentSideFare'=>$quote['parentMonthly'],
+                'requiresConfirmedSpecialAgreement'=>($options['specialService']??'normal')==='exceptional_school',
                 // Parent-side fare components are informational, not driver deductions.
                 'parentFareComponents'=>$quote['parentComponents']??null,
                 'feeSource'=>$source,'distanceAppliedKm'=>$quote['distanceKm'],'currency'=>'IRR'];
