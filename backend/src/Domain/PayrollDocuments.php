@@ -8,6 +8,19 @@ use ServiceYar\Database\Connection;
 
 final class PayrollDocuments
 {
+    /** A bank-payable salary must be a whole, nonnegative number of rials. */
+    private static function salaryRials(mixed $raw): int
+    {
+        if (!is_int($raw) && !is_float($raw) && !is_string($raw)) {
+            throw new AuthException(422,'مبلغ حقوق باید عدد صحیح ریالی باشد.','INVALID_PAYROLL_SALARY');
+        }
+        if (!is_numeric($raw) || !is_finite((float)$raw) ||
+            (float)$raw < 0 || (float)$raw > 1000000000000 ||
+            floor((float)$raw) !== (float)$raw) {
+            throw new AuthException(422,'مبلغ حقوق باید عدد صحیح ریالی باشد.','INVALID_PAYROLL_SALARY');
+        }
+        return (int)$raw;
+    }
     public static function list(int $uid,int $aid,array $filter): array
     {
         Authorization::requirePermission($uid,'finance.view');Authorization::requireAgencyAccess($uid,$aid);[$from,$to]=OperationsService::range($filter);
@@ -47,7 +60,7 @@ final class PayrollDocuments
             $q=$p->prepare('SELECT id FROM payroll_documents WHERE agency_id=:a AND date_from=:f AND date_to=:t');$q->execute(['a'=>$aid,'f'=>$from,'t'=>$to]);if($q->fetchColumn())throw new AuthException(409,'برای این بازه سند حقوق ثبت شده است.','PAYROLL_EXISTS');
             $payroll=OperationsService::payroll($uid,$aid,['from'=>$from,'to'=>$to]);$actual=[];foreach($payroll['items'] as $row)$actual[(int)$row['id']]=$row;
             $chosen=[];$total=0;
-            foreach($lines as $line){if(!is_array($line))throw new AuthException(422,'ردیف حقوق نامعتبر است.','VALIDATION_ERROR');$id=(int)($line['driverId']??0);$amount=$line['amount']??null;if(!isset($actual[$id])||isset($chosen[$id]))throw new AuthException(422,'راننده تکراری یا خارج از شرکت است.','CROSS_SCOPE_REFERENCE');if(!is_numeric($amount)||!is_finite((float)$amount)||(float)$amount<0||(float)$amount>1000000000000)throw new AuthException(422,'حقوق نامعتبر است.','VALIDATION_ERROR');$chosen[$id]=['row'=>$actual[$id],'salary'=>round((float)$amount,2)];$total+=round((float)$amount,2);}
+            foreach($lines as $line){if(!is_array($line))throw new AuthException(422,'ردیف حقوق نامعتبر است.','VALIDATION_ERROR');$id=(int)($line['driverId']??0);$amount=$line['amount']??null;if(!isset($actual[$id])||isset($chosen[$id]))throw new AuthException(422,'راننده تکراری یا خارج از شرکت است.','CROSS_SCOPE_REFERENCE');$salary=self::salaryRials($amount);$chosen[$id]=['row'=>$actual[$id],'salary'=>$salary];$total+=$salary;}
             $no='PAY-'.str_replace('-','',$from).'-'.bin2hex(random_bytes(3));$p->prepare('INSERT INTO payroll_documents(agency_id,document_no,date_from,date_to,total_amount,created_by) VALUES(:a,:n,:f,:t,:v,:u)')->execute(['a'=>$aid,'n'=>$no,'f'=>$from,'t'=>$to,'v'=>$total,'u'=>$uid]);$doc=(int)$p->lastInsertId();
             $q=$p->prepare('INSERT INTO payroll_document_lines(document_id,driver_id,earned,agreed,paid,salary,supervision_deduction,coordination_deduction,overhead_deduction,insurance_deduction,total_deductions) VALUES(:doc,:driver,:earned,:agreed,:paid,:salary,:supervision,:coordination,:overhead,:insurance,:total)');foreach($chosen as $driver=>$item){$r=$item['row'];$q->execute(['doc'=>$doc,'driver'=>$driver,'earned'=>$r['earned'],'agreed'=>$r['agreed'],'paid'=>$r['paid'],'salary'=>$item['salary'],'supervision'=>$r['supervision_deduction'],'coordination'=>$r['coordination_deduction'],'overhead'=>$r['overhead_deduction'],'insurance'=>$r['insurance_deduction'],'total'=>$r['total_deductions']]);}
             OperationsService::audit($uid,$aid,'create_payroll','payroll_documents',$doc);return ['id'=>$doc,'documentNo'=>$no,'total'=>$total,'status'=>'draft'];
@@ -67,7 +80,7 @@ final class PayrollDocuments
             $q=$p->prepare('SELECT status FROM payroll_documents WHERE id=:id AND agency_id=:a FOR UPDATE');$q->execute(['id'=>$id,'a'=>$aid]);$status=$q->fetchColumn();if($status===false)throw new AuthException(404,'سند پیدا نشد.','NOT_FOUND');if($status!=='draft')throw new AuthException(409,'سند تأییدشده قابل تغییر نیست.','PAYROLL_LOCKED');
             $q=$p->prepare('SELECT driver_id FROM payroll_document_lines WHERE document_id=?');$q->execute([$id]);$drivers=array_map('intval',$q->fetchAll(PDO::FETCH_COLUMN));$lines=$body['lines']??null;if(!is_array($lines)||count($lines)!==count($drivers))throw new AuthException(422,'همه ردیف‌های سند را ارسال کنید.','VALIDATION_ERROR');
             $seen=[];$total=0;$q=$p->prepare('UPDATE payroll_document_lines SET salary=:v WHERE document_id=:doc AND driver_id=:driver');
-            foreach($lines as $line){if(!is_array($line))throw new AuthException(422,'ردیف حقوق نامعتبر است.','VALIDATION_ERROR');$driver=(int)($line['driverId']??0);$value=$line['amount']??null;if(!in_array($driver,$drivers,true)||isset($seen[$driver])||!is_numeric($value)||!is_finite((float)$value)||(float)$value<0||(float)$value>1000000000000)throw new AuthException(422,'ردیف حقوق نامعتبر است.','VALIDATION_ERROR');$seen[$driver]=true;$value=round((float)$value,2);$total+=$value;$q->execute(['v'=>$value,'doc'=>$id,'driver'=>$driver]);}
+            foreach($lines as $line){if(!is_array($line))throw new AuthException(422,'ردیف حقوق نامعتبر است.','VALIDATION_ERROR');$driver=(int)($line['driverId']??0);$value=$line['amount']??null;if(!in_array($driver,$drivers,true)||isset($seen[$driver]))throw new AuthException(422,'ردیف حقوق نامعتبر است.','VALIDATION_ERROR');$seen[$driver]=true;$value=self::salaryRials($value);$total+=$value;$q->execute(['v'=>$value,'doc'=>$id,'driver'=>$driver]);}
             $p->prepare('UPDATE payroll_documents SET total_amount=:v WHERE id=:id AND agency_id=:a')->execute(['v'=>$total,'id'=>$id,'a'=>$aid]);OperationsService::audit($uid,$aid,'update_payroll','payroll_documents',$id);return ['total'=>$total];
         });
     }
