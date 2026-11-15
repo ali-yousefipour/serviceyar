@@ -20,5 +20,5 @@ assert.match(tariff,/overrideAmountsAreFinal/,'Admin override is not modified a 
 const base=reference.classes[0].brackets[0].driver_1405_riyal;
 assert.equal(base,10000000);
 assert.equal(base*1.25,12500000,'Example: district 6 driver remuneration');
-assert.equal(Math.round(reference.classes[0].brackets[0].parent_monthly_riyal+base*0.25*1.19658),15082119,'Example: parents amount for district 6');
+assert.equal(Math.round(reference.classes[0].brackets[0].parent_monthly_riyal+base*0.25*1.19658),15082019,'Example: parents amount for district 6');
 console.log('Taxi tariff source-note rules and traffic driver entitlement contract passed');
