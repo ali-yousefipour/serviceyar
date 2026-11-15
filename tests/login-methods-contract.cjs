@@ -59,6 +59,11 @@ assert.ok(js.includes('recoveryTimer.start(300)'),'recovery code validity countd
 assert.ok(js.includes('timer.start(300)'),'login OTP validity countdown is displayed');
 assert.ok(js.indexOf("form.append(user);")<js.indexOf("if(method==='bale')"),'Bale username field precedes explanatory instructions');
 assert.ok(js.includes('recoveryMethodsFromServer'),'recovery options follow active admin login policy');
+assert.ok(js.includes("recoveryLink.hidden=!(recoveryMethodsFromServer.sms||recoveryMethodsFromServer.bale)"),'recovery action is shown only when a provider is ready');
+assert.ok(js.includes("passwordSuccess.hidden=false"),'successful password reset displays a confirmation message');
+assert.ok(js.includes("const parent=document.getElementById('content')"),'super-admin login settings are mounted on the actual admin page');
+assert.ok(js.includes("checks[key].disabled=!status.available[key]&&!status.configured[key]"),'unavailable login providers cannot be enabled accidentally');
+
 
 assert.ok(js.includes('session.csrfToken'),'policy editor uses CSRF');
 assert.ok(js.includes('https://ble.ir/syarbot'),'login links to syarbot');
