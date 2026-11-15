@@ -98,6 +98,8 @@ jobs:
           test -s frontend/assets/favicon.svg
 
   deploy:
+    # Never publish to a guessed directory; set the exact domain document root in repository Variables.
+    if: ${{ vars.SERVICEYAR_FTP_REMOTE_ROOT != '' }}
     name: Upload ServiceYar to service-yar.ir
     needs: validate
     runs-on: ubuntu-24.04
@@ -164,6 +166,6 @@ jobs:
           FTP_HOST: ${{ secrets.SERVICEYAR_FTP_HOST }}
           FTP_USER: ${{ secrets.SERVICEYAR_FTP_USERNAME }}
           FTP_PASS: ${{ secrets.SERVICEYAR_FTP_PASSWORD }}
-          FTP_REMOTE_ROOT: ${{ vars.SERVICEYAR_FTP_REMOTE_ROOT || '/public_html' }}
+          FTP_REMOTE_ROOT: ${{ vars.SERVICEYAR_FTP_REMOTE_ROOT }}
           PUBLIC_BASE_URL: https://service-yar.ir
         run: python3 tools/deploy_serviceyar.py
