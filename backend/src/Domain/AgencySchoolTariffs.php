@@ -42,15 +42,60 @@ final class AgencySchoolTariffs {
   $fee=$q->fetchColumn();return $fee===false?null:(int)$fee;
  }
  public static function recalculate(int $uid,int $aid): array {
-  Authorization::requirePermission($uid,'students.manage');Authorization::requireAgencyAccess($uid,$aid);
-  $pdo=Connection::get();$q=$pdo->prepare('SELECT id,school_id,academic_year,tariff_distance_km,tariff_vehicle_class FROM students WHERE agency_id=? AND is_active=1');$q->execute([$aid]);
-  $update=$pdo->prepare('UPDATE students SET monthly_fee=?,tariff_calculated_at=NOW() WHERE id=? AND agency_id=?');
-  $updated=0;$skipped=0;
-  foreach($q as $r){
-   $fee=self::quote($pdo,$aid,(int)$r['school_id'],(string)($r['academic_year']?:self::YEAR),$r['tariff_distance_km'],$r['tariff_vehicle_class']);
-   if($fee===null){$skipped++;continue;}
-   $update->execute([$fee,$r['id'],$aid]);$updated++;
-  }
-  return ['updated'=>$updated,'skipped'=>$skipped,'currency'=>'IRR'];
+  Authorization::requirePermission($uid,'students.manage');
+  Authorization::requireAgencyAccess($uid,$aid);
+  // Reprice only agency-rate students. Official Taxi Organization and agreed
+  // prices are independent contracts and must never be overwritten here.
+  return OperationsService::transaction(function(PDO $pdo)use($aid): array {
+   $query=$pdo->prepare("SELECT id,school_id,academic_year,tariff_distance_km,tariff_vehicle_class
+     FROM students
+     WHERE agency_id=? AND is_active=1 AND fee_source='agency'
+     ORDER BY id FOR UPDATE");
+   $query->execute([$aid]);
+   $students=$query->fetchAll(PDO::FETCH_ASSOC);
+   $update=$pdo->prepare("UPDATE students
+     SET monthly_fee=?,driver_base_monthly=?,tariff_calculated_at=NOW()
+     WHERE id=? AND agency_id=? AND fee_source='agency'");
+   $linked=$pdo->prepare("SELECT DISTINCT sv.id
+     FROM service_students ss JOIN services sv ON sv.id=ss.service_id
+     WHERE ss.student_id=? AND sv.agency_id=? AND sv.is_active=1
+       AND sv.status<>'cancelled'");
+   $updated=0;$unchanged=0;$skipped=0;$syncedInvoices=0;$serviceIds=[];
+   foreach($students as $student){
+    $id=(int)$student['id'];
+    $fee=self::quote($pdo,$aid,(int)$student['school_id'],
+       (string)($student['academic_year']?:self::YEAR),
+       $student['tariff_distance_km'],$student['tariff_vehicle_class']);
+    if($fee===null){$skipped++;continue;}
+    $current=$pdo->prepare('SELECT monthly_fee,driver_base_monthly FROM students WHERE id=? AND agency_id=?');
+    $current->execute([$id,$aid]);
+    $before=$current->fetch(PDO::FETCH_ASSOC);
+    if($before && (int)$before['monthly_fee']===$fee && (int)$before['driver_base_monthly']===$fee){
+     $unchanged++;
+     continue;
+    }
+    $update->execute([$fee,$fee,$id,$aid]);
+    $invoice=StudentServiceBilling::sync($pdo,$aid,$id);
+    if($invoice!==null)$syncedInvoices++;
+    $linked->execute([$id,$aid]);
+    foreach($linked->fetchAll(PDO::FETCH_COLUMN) as $serviceId)$serviceIds[(int)$serviceId]=true;
+    $updated++;
+   }
+   $gross=$pdo->prepare("SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0)
+     FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=?
+     WHERE ss.service_id=?");
+   $serviceUpdate=$pdo->prepare("UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?");
+   foreach(array_keys($serviceIds) as $serviceId){
+    $gross->execute([$aid,$serviceId]);
+    $net=OperationsService::driverDeductions((float)$gross->fetchColumn(),$aid)['net_earned'];
+    $serviceUpdate->execute([$net,$serviceId,$aid]);
+   }
+   return [
+    'updated'=>$updated,'unchanged'=>$unchanged,'skipped'=>$skipped,
+    'invoicesSynced'=>$syncedInvoices,'servicesUpdated'=>count($serviceIds),
+    'currency'=>'IRR','feeSource'=>'agency'
+   ];
+  });
  }
+
 }
