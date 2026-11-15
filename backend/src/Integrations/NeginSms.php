@@ -98,8 +98,10 @@ final class NeginSms
 
     public static function configured(): bool
     {
-        $credentials=self::credentials();
-        return self::enabled()&&$credentials['username']!==''&&$credentials['password']!=='';
+        try{
+            $credentials=self::credentials();
+            return self::enabled()&&$credentials['username']!==''&&$credentials['password']!=='';
+        }catch(\Throwable){return false;}
     }
 
     public static function ready(): bool
@@ -146,6 +148,12 @@ final class NeginSms
             strlen($password)>500
         ))
             throw new AuthException(422,'طول یا قالب اطلاعات پنل پیامک معتبر نیست.','VALIDATION_ERROR');
+        $current=$hasUsername?null:self::credentials();
+        $hasUsableCredentials=$hasUsername||(
+            ($current['username']??'')!==''&&($current['password']??'')!==''
+        );
+        if($input['enabled']&&!$hasUsableCredentials)
+            throw new AuthException(422,'برای فعال‌کردن پیامک، ابتدا نام کاربری و رمز پنل نگین را ثبت کنید.','SMS_CREDENTIALS_REQUIRED');
 
         $pdo=Connection::get();
         try{
@@ -158,16 +166,21 @@ final class NeginSms
             throw new AuthException(503,'جدول تنظیمات سامانه آماده نیست؛ مهاجرت 0032 یا دسترسی دیتابیس را بررسی کنید.','PLATFORM_SETTINGS_MIGRATION_REQUIRED');
         }
 
-        if($hasUsername){
+        $encryptedUsername=$hasUsername?self::encrypt($username):null;
+        $encryptedPassword=$hasUsername?self::encrypt($password):null;
+        $pdo->beginTransaction();
+        try{
             $put=$pdo->prepare('INSERT INTO platform_settings(setting_key,setting_value) VALUES(?,?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)');
-            $put->execute([self::USERNAME_KEY,self::encrypt($username)]);
-            $put->execute([self::PASSWORD_KEY,self::encrypt($password)]);
+            if($hasUsername){
+                $put->execute([self::USERNAME_KEY,$encryptedUsername]);
+                $put->execute([self::PASSWORD_KEY,$encryptedPassword]);
+            }
+            $put->execute([self::ENABLED_KEY,$input['enabled']?'1':'0']);
+            $pdo->commit();
+        }catch(\Throwable $e){
+            if($pdo->inTransaction())$pdo->rollBack();
+            throw $e;
         }
-        $put=$pdo->prepare('INSERT INTO platform_settings(setting_key,setting_value) VALUES(?,?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)');
-        $put->execute([self::ENABLED_KEY,$input['enabled']?'1':'0']);
-
-        if($input['enabled']&&!self::configured())
-            throw new AuthException(422,'برای فعال‌کردن پیامک، ابتدا نام کاربری و رمز پنل نگین را ثبت کنید.','SMS_CREDENTIALS_REQUIRED');
 
         return self::overview($actor);
     }
