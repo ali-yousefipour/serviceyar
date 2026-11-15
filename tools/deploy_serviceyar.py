@@ -11,6 +11,8 @@ import io
 import json
 import os
 import posixpath
+import socket
+import ssl
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 
@@ -91,9 +93,26 @@ def verify_live(base_url, build_id, expected_digests):
                 body = response.read()
                 status = response.status
         except (URLError, HTTPError, TimeoutError) as error:
+            host = base.split("://", 1)[-1].split("/", 1)[0].split(":", 1)[0]
+            try:
+                addresses = sorted({item[4][0] for item in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)})
+                print(f"DNS {host}: {', '.join(addresses)}", flush=True)
+            except OSError as dns_error:
+                print(f"DNS lookup failed for {host}: {dns_error}", flush=True)
+            # Diagnostic only: inspect whether the HTTP virtual host serves this release
+            # when TLS certificate validation is failing. Never accept this as a pass.
+            for candidate in ("https://www.service-yar.ir/", "http://service-yar.ir/", "http://www.service-yar.ir/"):
+                try:
+                    diagnostic = Request(candidate + "?deploy_diagnostic=" + build_id, headers={"Cache-Control": "no-cache", "User-Agent": "ServiceYar-Deploy-Diagnostic/1.0"})
+                    with urlopen(diagnostic, timeout=12, context=ssl._create_unverified_context()) as response:
+                        body = response.read(400000).decode("utf-8", "replace")
+                        print(f"DIAGNOSTIC ONLY {candidate}: HTTP {response.status}; build={build_id in body}; final={response.url}", flush=True)
+                except Exception as diagnostic_error:
+                    print(f"DIAGNOSTIC ONLY {candidate}: {diagnostic_error}", flush=True)
             raise RuntimeError(
                 f"Public-host verification failed for {url}: {error}. "
-                "FTP upload alone does not prove that this is the domain document root."
+                "The FTP upload may have completed, but the public domain cannot be verified securely. "
+                "Check the domain SSL certificate and its document-root mapping."
             ) from error
         if status != 200:
             raise RuntimeError(f"Public-host verification returned HTTP {status} for {route}")
