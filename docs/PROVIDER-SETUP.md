@@ -47,7 +47,7 @@ BALE_WEBHOOK_SECRET=...
 بازو و توکن کیف پول از سرویس بله تهیه می‌شوند. secret تصادفی وب‌هوک باید دست‌کم ۳۲ نویسه از حروف، ارقام، `_` و `-` باشد؛ مثلاً خروجی `bin2hex(random_bytes(32))`. آدرس وب‌هوک:
 
 ```text
-https://YOUR-DOMAIN/api/v1/integrations/bale/webhook/YOUR_RANDOM_SECRET
+https://service-yar.ir/api/v1/integrations/bale/webhook/YOUR_RANDOM_SECRET
 ```
 
 این آدرس در تنظیمات بازوی بله ثبت می‌شود؛ نصب پروژه خودکار وب‌هوک یا مجوز بیرونی ایجاد نمی‌کند. توکن آزمایشی کیف پول در `APP_ENV=production` پذیرفته نمی‌شود. توکن بازو/secret/درخواست پرداخت در لاگ عمومی چاپ نشود.
