@@ -167,9 +167,9 @@ final class BaleBotService {
    'lastError'=>(string)($info['last_error_message']??'')];
  }
  public static function status(int $user): array {
-  if(!self::ready())return ['enabled'=>false,'linked'=>false,'botUsername'=>self::setting('bale_auth_username')];
+  if(!self::ready())return ['enabled'=>false,'linked'=>false,'requiresCode'=>Authorization::isSuperAdmin($user),'botUsername'=>self::setting('bale_auth_username')];
   $q=Connection::get()->prepare('SELECT chat_id FROM bale_user_links WHERE user_id=?');
-  $q->execute([$user]);return ['enabled'=>self::ready(),'linked'=>(bool)$q->fetchColumn(),'botUsername'=>self::setting('bale_auth_username')];
+  $q->execute([$user]);return ['enabled'=>self::ready(),'linked'=>(bool)$q->fetchColumn(),'requiresCode'=>Authorization::isSuperAdmin($user),'botUsername'=>self::setting('bale_auth_username')];
  }
  public static function startLink(int $user): array {
   if(!self::ready())throw new AuthException(503,'ربات بله هنوز فعال نشده است.','BALE_DISABLED');
@@ -184,6 +184,64 @@ final class BaleBotService {
   Connection::get()->prepare('DELETE FROM bale_user_links WHERE user_id=?')->execute([$user]);
   Connection::get()->prepare('DELETE FROM bale_auth_challenges WHERE user_id=?')->execute([$user]);
   return ['linked'=>false];
+ }
+
+ private static function normalizedMobile(string $value): string {
+  $phone=strtr(trim($value),['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']);
+  $phone=preg_replace('/[\s\-()]/u','',$phone);
+  if(str_starts_with($phone,'0098'))$phone=substr($phone,4);
+  elseif(str_starts_with($phone,'+98'))$phone=substr($phone,3);
+  elseif(str_starts_with($phone,'98')&&strlen($phone)===12)$phone=substr($phone,2);
+  if(preg_match('/^9[0-9]{9}$/D',$phone))$phone='0'.$phone;
+  return preg_match('/^09[0-9]{9}$/D',$phone)?$phone:'';
+ }
+ private static function contactKeyboard(): array {
+  return ['keyboard'=>[[['text'=>'اشتراک شماره همراه من','request_contact'=>true]]],
+    'resize_keyboard'=>true,'one_time_keyboard'=>true];
+ }
+ private static function autoLinkContact(string $chat,array $message): void {
+  $sender=(string)($message['from']['id']??'');
+  $contact=$message['contact']??null;
+  if(!is_array($contact)||!preg_match('/^[0-9]{1,30}$/D',$sender)||$sender!==$chat||
+     !isset($contact['user_id'])||(string)$contact['user_id']!==$sender) {
+   self::send($chat,'برای اتصال امن، از دکمه «اشتراک شماره همراه من» در همین گفتگو استفاده کنید. شماره مخاطب دیگر یا شماره متنی پذیرفته نمی‌شود.',self::contactKeyboard());
+   return;
+  }
+  $mobile=self::normalizedMobile((string)($contact['phone_number']??''));
+  if($mobile===''){self::send($chat,'شماره همراه معتبر ایرانی شناسایی نشد.',self::contactKeyboard());return;}
+  $pdo=Connection::get();
+  $exists=$pdo->query("SHOW COLUMNS FROM users LIKE 'mobile'");
+  if(!$exists->fetch(PDO::FETCH_ASSOC)){self::send($chat,'ساختار شماره همراه پروفایل روی سرور آماده نیست.');return;}
+  // Compare all active accounts to prevent ambiguous shared phone numbers.
+  $query=$pdo->query("SELECT id,mobile FROM users WHERE is_active=1 AND mobile IS NOT NULL AND mobile<>''");
+  $matches=[];
+  foreach($query->fetchAll(PDO::FETCH_ASSOC) as $account)
+   if(self::normalizedMobile((string)$account['mobile'])===$mobile)$matches[]=(int)$account['id'];
+  if(count($matches)!==1){
+   self::send($chat,'برای شماره همراه شما حساب فعال یکتایی پیدا نشد. شماره پروفایل را بررسی کنید یا با پشتیبانی تماس بگیرید.');
+   return;
+  }
+  $userId=$matches[0];
+  if(Authorization::isSuperAdmin($userId)){
+   self::send($chat,'حساب ادمین کل فقط با کد اتصال اختصاصی از پروفایل سامانه قابل اتصال است.');
+   return;
+  }
+  $existing=$pdo->prepare('SELECT user_id,chat_id FROM bale_user_links WHERE chat_id=? OR user_id=? LIMIT 2');
+  $existing->execute([$chat,$userId]);
+  $links=$existing->fetchAll(PDO::FETCH_ASSOC);
+  if(count($links)>0){
+   if(count($links)===1&&(int)$links[0]['user_id']===$userId&&(string)$links[0]['chat_id']===$chat){
+    self::send($chat,'حساب شما قبلاً به سرویس‌یار متصل شده است.');return;
+   }
+   self::send($chat,'این حساب یا گفتگوی بله قبلاً متصل است. ابتدا از پروفایل سامانه اتصال قبلی را قطع کنید.');
+   return;
+  }
+  try{$pdo->prepare('INSERT INTO bale_user_links(user_id,chat_id) VALUES(?,?)')->execute([$userId,$chat]);}
+  catch(\PDOException $e){
+   if($e->getCode()==='23000'){self::send($chat,'اتصال دیگری قبلاً ثبت شده است؛ وضعیت اتصال را در پروفایل بررسی کنید.');return;}
+   throw $e;
+  }
+  self::send($chat,'شماره همراه شما تأیید و حساب سرویس‌یار متصل شد. اکنون از صفحه ورود کد یک‌بارمصرف بله دریافت کنید.');
  }
  public static function handleWebhook(string $secret,array $update): array {
   $saved=self::setting('bale_auth_webhook_secret');
@@ -200,7 +258,9 @@ final class BaleBotService {
   if($updateId===''||!preg_match('/^[0-9]{1,30}$/D',$updateId))return ['accepted'=>true];
   try{Connection::get()->prepare('INSERT INTO bale_webhook_updates(update_id) VALUES(?)')->execute([$updateId]);}
   catch(\PDOException $e){if($e->getCode()==='23000')return ['accepted'=>true,'duplicate'=>true];throw $e;}
-  if(preg_match('/^\/start\s+([a-f0-9]{32})$/i',$text,$match)){
+  if(isset($update['message']['contact'])&&is_array($update['message']['contact'])){
+   self::autoLinkContact($id,$update['message']);
+  }elseif(preg_match('/^\/start\s+([a-f0-9]{32})$/i',$text,$match)){
    $pdo=Connection::get();$hash=hash('sha256',strtolower($match[1]));
    $pdo->beginTransaction();
    try{
@@ -217,14 +277,16 @@ final class BaleBotService {
    $linked=Connection::get()->prepare('SELECT u.id FROM bale_user_links l JOIN users u ON u.id=l.user_id AND u.is_active=1 WHERE l.chat_id=? LIMIT 1');
    $linked->execute([$id]);
    if($linked->fetchColumn())self::send($id,'حساب شما به سرویس‌یار متصل است. اکنون می‌توانید از صفحه ورود سامانه، کد یک‌بارمصرف بله دریافت کنید.');
-   else self::send($id,'این گفتگو هنوز به هیچ حساب کاربری سرویس‌یار متصل نیست. ثبت شماره همراه در پروفایل و زدن Start به‌تنهایی کافی نیست. ابتدا با نام کاربری و رمز وارد سامانه شوید، از پروفایل گزینه «دریافت کد اتصال» را بزنید و دستور /start همراه با کد اختصاصی را در همین گفتگو ارسال کنید. برای بررسی وضعیت دستور /status را بفرستید.');
+   else self::send($id,'برای کاربران عادی، دکمه اشتراک شماره همراه من را بزنید؛ شماره باید در پروفایل سرویس‌یار ثبت شده باشد. ادمین کل فقط با کد اختصاصی پروفایل متصل می‌شود.',self::contactKeyboard());
   }else{
    self::send($id,'برای اتصال حساب، کد یک‌بارمصرف را از پروفایل سرویس‌یار دریافت کنید و با دستور /start ارسال کنید.');
   }
   return ['accepted'=>true];
  }
- private static function send(string $chat,string $message): void {
-  self::call('sendMessage',['chat_id'=>$chat,'text'=>$message]);
+ private static function send(string $chat,string $message,?array $replyMarkup=null): void {
+  $body=['chat_id'=>$chat,'text'=>$message];
+  if($replyMarkup!==null)$body['reply_markup']=$replyMarkup;
+  self::call('sendMessage',$body);
  }
  public static function sendToUser(int $actor,int $recipient,string $text): array {
   if(!self::ready())throw new AuthException(503,'ربات فعال نیست.','BALE_DISABLED');
