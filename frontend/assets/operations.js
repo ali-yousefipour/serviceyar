@@ -178,15 +178,26 @@ function renderNav(){
    }
   },true);
  }
- renderAgencySelector();$('nav').innerHTML=`<a class="nav" href="#dashboard" title="داشبورد">${samarMenuIcon('dashboard')}<span>داشبورد</span></a>`+menus.map(([icon,title,items])=>{const visible=items.filter(([key])=>can(key.split('/')[0],(key.endsWith('/new')||key.endsWith('/quick')||key.endsWith('/fees')||key==='driver-assignment')?'manage':'view'));return visible.length?`<details class="nav-group"><summary title="${esc(title)}">${samarMenuIcon(icon)}<span>${esc(title)}</span></summary><div class="nav-popup" aria-label="${esc(title)}">${visible.map(([key,text])=>`<a href="#${key}" aria-label="${esc(text)}">${samarMenuIcon(key)}<span>${esc(text)}</span></a>`).join('')}</div></details>`:''}).join('')+(session?.roles?.includes('super_admin')?`<a class="nav" href="#companies" title="تنظیمات سامانه">${navIcon('settings')}<span>تنظیمات سامانه</span></a>`:'');
- // Put the finance action immediately below Dashboard, within the permission-controlled menu.
- document.getElementById('quickReceipt')?.remove();
- if(can('ledger','manage')){
-  const receiptLink=document.createElement('a');
-  receiptLink.className='nav sy-nav-receipt';receiptLink.href='#ledger';receiptLink.dataset.page='ledger';
-  receiptLink.title='ثبت دریافت و پرداخت';
-  receiptLink.innerHTML=navIcon('payments')+'<span>ثبت دریافت و پرداخت</span>';
-  $('nav').querySelector('a[href="#dashboard"]')?.after(receiptLink);
+ const adminMode=session?.roles?.includes('super_admin')&&!session?.impersonation;
+ renderAgencySelector();
+ if(adminMode){
+  $('agencyPickerWrap').hidden=true;
+  $('nav').innerHTML=
+   `<a class="nav" href="#admin-dashboard" title="داشبورد مدیریتی">${samarMenuIcon('dashboard')}<span>داشبورد مدیریتی</span></a>`+
+   `<details class="nav-group"><summary title="مدیریت سامانه">${samarMenuIcon('company')}<span>مدیریت سامانه</span></summary><div class="nav-popup" aria-label="مدیریت سامانه"><a href="#admin-agencies">${samarMenuIcon('company')}<span>مدیریت شرکت‌ها</span></a><a href="#admin-users">${samarMenuIcon('students')}<span>مدیریت کاربران</span></a></div></details>`+
+   `<details class="nav-group"><summary title="تنظیمات سامانه">${navIcon('settings')}<span>تنظیمات سامانه</span></summary><div class="nav-popup" aria-label="تنظیمات سامانه"><a href="#admin-platform">${navIcon('settings')}<span>کلیدهای سامانه و نقشه</span></a><a href="#admin-sms">${navIcon('messages')}<span>سرویس پیامک نگین</span></a><a href="#admin-bale">${navIcon('messages')}<span>ربات پیام‌رسان بله</span></a><a href="#admin-login">${navIcon('settings')}<span>روش‌های ورود کاربران</span></a><a href="#admin-taxi-tariffs">${navIcon('accounts')}<span>نرخ‌نامه سازمان تاکسیرانی</span></a><a href="#admin-vehicle-classes">${navIcon('vehicles')}<span>کلاس‌های تعرفه خودرو</span></a><a href="#admin-sepand">${navIcon('drivers')}<span>ورود اطلاعات سپند</span></a></div></details>`+
+   `<button type="button" class="nav sy-admin-impersonation-trigger" id="syOpenImpersonation" title="ورود نیابت">${navIcon('drivers')}<span>ورود نیابت</span><span class="sy-nav-action-arrow" aria-hidden="true">↗</span></button>`;
+  $('syOpenImpersonation').onclick=()=>{document.querySelector('.sidebar')?.classList.remove('nav-open');if($('navigationShade'))$('navigationShade').hidden=true;openAdminImpersonationDialog();};
+ }else{
+  $('nav').innerHTML=`<a class="nav" href="#dashboard" title="داشبورد">${samarMenuIcon('dashboard')}<span>داشبورد</span></a>`+menus.map(([icon,title,items])=>{const visible=items.filter(([key])=>can(key.split('/')[0],(key.endsWith('/new')||key.endsWith('/quick')||key.endsWith('/fees')||key==='driver-assignment')?'manage':'view'));return visible.length?`<details class="nav-group"><summary title="${esc(title)}">${samarMenuIcon(icon)}<span>${esc(title)}</span></summary><div class="nav-popup" aria-label="${esc(title)}">${visible.map(([key,text])=>`<a href="#${key}" aria-label="${esc(text)}">${samarMenuIcon(key)}<span>${esc(text)}</span></a>`).join('')}</div></details>`:''}).join('');
+  document.getElementById('quickReceipt')?.remove();
+  if(can('ledger','manage')){
+   const receiptLink=document.createElement('a');
+   receiptLink.className='nav sy-nav-receipt';receiptLink.href='#ledger';receiptLink.dataset.page='ledger';
+   receiptLink.title='ثبت دریافت و پرداخت';
+   receiptLink.innerHTML=navIcon('payments')+'<span>ثبت دریافت و پرداخت</span>';
+   $('nav').querySelector('a[href="#dashboard"]')?.after(receiptLink);
+  }
  }
  const navSearch=document.createElement('label');
  navSearch.className='sy-nav-search';navSearch.setAttribute('for','syNavSearch');
@@ -233,7 +244,7 @@ function renderNav(){
    if(query&&visible)group.open=true;
    if(!query)group.open=false;
   });
-  $('nav').querySelectorAll(':scope > a.nav').forEach(link=>{link.hidden=!!query&&!normalizeMenuText(link.textContent).includes(query);if(!link.hidden)matches++;});
+  $('nav').querySelectorAll(':scope > a.nav, :scope > button.nav').forEach(link=>{link.hidden=!!query&&!normalizeMenuText(link.textContent).includes(query);if(!link.hidden)matches++;});
   navSearch.querySelector('small').textContent=query?(matches?'نتایج مرتبط: '+number(matches):'بخشی با این نام پیدا نشد.'):'';
  });
   $('nav').querySelectorAll('details').forEach(d=>d.addEventListener('toggle',()=>{if(d.open){if(navSearchInput.value.trim())return;const popup=d.querySelector('.nav-popup');popup.style.removeProperty('top');$('nav').querySelectorAll('details').forEach(other=>{if(other!==d)other.open=false;});}}));
@@ -241,17 +252,19 @@ function renderNav(){
  if(side){
   side.setAttribute('aria-label','منوی اصلی سرویس‌یار');
   const brand=side.querySelector('.sy-sidebar-brand-copy small');
-  if(brand)brand.textContent=currentAgency?.name||'مدیریت یکپارچه سرویس مدارس';
+  if(brand)brand.textContent=adminMode?'مدیریت کل سامانه':(session?.impersonation?'ورود نیابتی · '+(session.impersonation.agencyName||currentAgency?.name||'شرکت'):currentAgency?.name||'مدیریت یکپارچه سرویس مدارس');
   const displayName=[session?.user?.firstName,session?.user?.lastName].filter(Boolean).join(' ')||session?.user?.username||'کاربر سامانه';
   const sideName=document.getElementById('syAccountName');
   if(sideName)sideName.textContent=displayName;
   const avatar=document.getElementById('syAccountAvatar');
   if(avatar)void syRefreshSidebarAvatar();
   const role=document.getElementById('syAccountRole');
-  if(role)role.textContent=(session?.roles||[]).includes('super_admin')?'مدیر کل سامانه':(session?.roles||[]).includes('agency_admin')?'مدیر شرکت':'حساب کاربری';
+  if(role)role.textContent=session?.impersonation?'ورود نیابتی · از طرف مدیر کل':(session?.roles||[]).includes('super_admin')?'مدیر کل سامانه':(session?.roles||[]).includes('agency_admin')?'مدیر شرکت':'حساب کاربری';
+  const returnButton=$('syAdminReturn');if(returnButton){returnButton.hidden=!session?.impersonation;returnButton.title=session?.impersonation?'بازگشت به پنل ادمین کل':'';}
+  const logoutButton=$('logout');if(logoutButton)logoutButton.textContent=session?.impersonation?'بازگشت به پنل ادمین':'خروج از حساب';
   if(sideName)sideName.textContent=[session?.user?.firstName,session?.user?.lastName].filter(Boolean).join(' ')||session?.user?.username||'کاربر سامانه';
   side.querySelector('#nav')?.addEventListener('click',event=>{
-   if(event.target.closest('a[href^="#"]'))side.classList.remove('nav-open');
+   if(event.target.closest('a[href^="#"],#syOpenImpersonation'))side.classList.remove('nav-open');
   });
  }
  document.querySelector('.logo').title='سرویس‌یار';document.querySelector('.main').classList.add('transport-main');
