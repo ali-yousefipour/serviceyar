@@ -1,4 +1,4 @@
-name: Upload to service-yar
+name: Upload to challi.ir
 
 on:
   push:
@@ -97,7 +97,7 @@ jobs:
           test -s frontend/assets/favicon.svg
 
   deploy:
-    name: Upload ServiceYar to service-yar.ir
+    name: Upload ServiceYar to challi.ir
     needs: validate
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -156,4 +156,5 @@ jobs:
           FTP_HOST: ${{ secrets.SERVICEYAR_FTP_HOST }}
           FTP_USER: ${{ secrets.SERVICEYAR_FTP_USERNAME }}
           FTP_PASS: ${{ secrets.SERVICEYAR_FTP_PASSWORD }}
+          PUBLIC_BASE_URL: https://challi.ir
         run: python3 tools/deploy_serviceyar.py
