@@ -32,6 +32,8 @@ final class ServicePricing {
         if($source==='taxi'){
             $quote=TaxiOrganizationTariffs::quoteStudent($pdo,$aid,$school,$class,$distance);
             return ['monthlyFee'=>$quote['parentMonthly'],'driverBaseMonthly'=>$quote['driverMonthly'],
+                // Parent-side fare components are informational, not driver deductions.
+                'parentFareComponents'=>$quote['parentComponents']??null,
                 'feeSource'=>$source,'distanceAppliedKm'=>$quote['distanceKm'],'currency'=>'IRR'];
         }
         $fee=AgencySchoolTariffs::quote($pdo,$aid,$school,$year,$distance,$class);
