@@ -704,6 +704,9 @@ try{
   'firstName'=>'کاربر','lastName'=>'آزمایشی','nationalCode'=>'1111111111']),'INVALID_NATIONAL_CODE');
  rejected(fn()=>\ServiceYar\Users\UserService::updateOwnProfile($viewer,[
   'firstName'=>'کاربر','lastName'=>'آزمایشی','mobile'=>'123']),'INVALID_MOBILE');
+ rejected(fn()=>\ServiceYar\Users\UserPhotos::remove($viewer,$a,$uid),'FORBIDDEN');
+ $photoRemoval=\ServiceYar\Users\UserPhotos::remove($uid,0,$viewer);
+ check($photoRemoval['removed']===true,'Only authorized managers and users may remove a portrait');
  $adminProfile=\ServiceYar\Users\UserService::save($uid,0,['mobile'=>'09121111111'], $viewer);
  check(($adminProfile['mobile']??'')==='09121111111',
   'Super administrator may correct other user contact information');
