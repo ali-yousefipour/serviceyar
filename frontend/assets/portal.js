@@ -184,7 +184,7 @@
      const body=method==='bale'?{username:mobile,code:normal(el('portalCode').value)}:{username:mobile,password:el('portalPasswordInput').value};
      if(method==='bale'&&!/^[0-9]{6}$/.test(body.code)){note('کد ۶ رقمی را وارد کنید.',true);return;}
      const button=el('portalVerify');button.disabled=true;
-     try{await api('/api/v1/auth/'+(method==='bale'?'bale/verify':'login'),body,'POST');
+     try{await api((method==='bale'?'/api/v1/auth/bale/verify':'/api/v1/portal/auth/password'),body,'POST');
        await loadPortal();note('');
      }catch(err){note(err.message,true);button.disabled=false;}
    };
