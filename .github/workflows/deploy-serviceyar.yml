@@ -97,11 +97,31 @@ jobs:
           test -s frontend/assets/Vazirmatn-Regular.woff2
           test -s frontend/assets/favicon.svg
 
-  deploy:
-    # Never publish to a guessed directory; set the exact domain document root in repository Variables.
-    if: ${{ vars.SERVICEYAR_FTP_REMOTE_ROOT != '' && vars.SERVICEYAR_PRODUCTION_SSL_READY == 'true' }}
-    name: Upload ServiceYar to service-yar.ir
+  production-preflight:
+    name: Confirm production domain settings
     needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require exact domain root and validated TLS
+        env:
+          REMOTE_ROOT: ${{ vars.SERVICEYAR_FTP_REMOTE_ROOT }}
+          SSL_READY: ${{ vars.SERVICEYAR_PRODUCTION_SSL_READY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$REMOTE_ROOT" ]]; then
+            echo "::error title=Missing production document root::Set repository variable SERVICEYAR_FTP_REMOTE_ROOT to the exact service-yar.ir document root. Deployment has NOT happened."
+            exit 1
+          fi
+          if [[ "$SSL_READY" != "true" ]]; then
+            echo "::error title=Production TLS not verified::Install a certificate valid for service-yar.ir and set repository variable SERVICEYAR_PRODUCTION_SSL_READY=true. Deployment has NOT happened."
+            exit 1
+          fi
+          echo "Production domain configuration is present; deployment may proceed."
+
+  deploy:
+    name: Upload ServiceYar to service-yar.ir
+    needs: production-preflight
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
