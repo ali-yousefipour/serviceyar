@@ -80,10 +80,7 @@ jobs:
           node tests/admin-impersonation-contract.cjs
           node tests/api-route-guard-contract.cjs
           node tests/payroll-reconciliation-contract.cjs
-          node tests/company-dashboard-contract.cjs
           node tests/taxi-tariff-footnotes-contract.cjs
-          php tests/taxi-fare-components.php
-          php tests/taxi-financial-integration.php
           node tests/bale-integration-contract.cjs
           node tests/bale-anonymous-login.cjs
           node tests/bale-regular-user-link.cjs
@@ -102,6 +99,13 @@ jobs:
           test -s frontend/assets/operations.css
           test -s frontend/assets/Vazirmatn-Regular.woff2
           test -s frontend/assets/favicon.svg
+
+      - name: Dashboard contract and production JS parsing
+        run: node tests/company-dashboard-contract.cjs
+      - name: Official fare component unit test
+        run: php tests/taxi-fare-components.php
+      - name: Financial quote integration (read-only fixture)
+        run: php tests/taxi-financial-integration.php
 
   deploy:
     name: Upload ServiceYar to service-yar.ir
