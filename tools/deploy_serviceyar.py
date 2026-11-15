@@ -165,7 +165,7 @@ def verify_live(base_url, build_id, expected_digests):
             if build_id not in html:
                 import re
                 from subprocess import run
-                apparent_builds = re.findall(r'/assets/(?:app|operations)\\.js\\?v=([a-f0-9]{8,64})', html)
+                apparent_builds = re.findall(r'/assets/(?:app|operations)\.js\?v=([a-f0-9]{8,64})', html)
                 print(f"LIVE DOMAIN MISMATCH: expected={build_id[:12]}, HTML asset builds={apparent_builds[:5]}", flush=True)
                 print("LIVE HTTP: status={}, final={}, server={}, cache={}, age={}, via={}".format(
                     status, final_url, live_headers.get("server",""),
