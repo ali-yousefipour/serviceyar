@@ -1682,3 +1682,22 @@ body{background:var(--canvas);color:var(--ink)}
 #app:not([hidden]) ~ #publicSite,
 #app:not([hidden]) ~ #login{display:none!important;visibility:hidden!important}
 #app[hidden],#publicSite[hidden],#login[hidden]{display:none!important}
+
+/* Bale bot: compact RTL settings, login, linking and message delivery. */
+.sy-bale-admin-panel,.sy-bale-message-panel,.sy-bale-profile-panel{margin-top:18px;padding:16px;border:1px solid #d4e5dd;border-radius:14px;background:#f7fbf9;line-height:1.85}
+.sy-bale-admin-panel h3,.sy-bale-message-panel h3,.sy-bale-profile-panel h4{margin:0 0 6px;color:#13533e}
+.sy-bale-admin-panel form,.sy-bale-message-panel form{display:grid;gap:12px}
+.sy-bale-admin-panel label,.sy-bale-message-panel label{display:grid;gap:5px;min-width:0}
+.sy-bale-admin-panel input,.sy-bale-message-panel select,.sy-bale-message-panel textarea{max-width:100%;min-height:40px}
+.sy-bale-checkbox{display:flex!important;align-items:center;gap:8px}
+.sy-bale-checkbox input{min-height:initial}
+.sy-bale-login{border-top:1px solid #d8e6de;margin-top:14px;padding-top:12px}
+.sy-bale-login-toggle{width:100%;background:#e9f5ee;color:#126c49;border:1px solid #b8d8c6;border-radius:10px;padding:10px}
+.sy-bale-login-form{display:grid;gap:10px;margin-top:12px}
+.sy-bale-login-form label{display:grid;gap:5px}
+.sy-bale-login-form input{max-width:100%}
+.sy-bale-login-form[hidden]{display:none}
+.sy-bale-actions{display:flex;gap:9px;flex-wrap:wrap}
+.sy-bale-profile-panel code{display:inline-block;direction:ltr;unicode-bidi:isolate;overflow-wrap:anywhere;margin-inline:5px;padding:4px 8px;background:#ecf4f1;border-radius:6px;font-size:12px}
+.sy-bale-profile-panel [data-link-message] button{margin-inline:8px}
+@media(max-width:640px){.sy-bale-admin-panel,.sy-bale-message-panel,.sy-bale-profile-panel{padding:12px}.sy-bale-admin-panel .form-grid{grid-template-columns:1fr}}
