@@ -59,6 +59,7 @@ final class LoginMethods
         $available=self::publicStatus()['available'];
         if(!$input['password']&&(!$input['sms']||!$available['sms'])&&(!$input['bale']||!$available['bale']))
             throw new AuthException(422,'برای جلوگیری از مسدود شدن ورود، حداقل یک روش فعال و آماده لازم است.','LOGIN_METHOD_UNAVAILABLE');
+        if($input['sms'])SmsLogin::prepareSchema();
         $pdo=Connection::get();
         $pdo->beginTransaction();
         try {
