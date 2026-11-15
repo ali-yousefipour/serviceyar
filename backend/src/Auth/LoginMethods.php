@@ -26,7 +26,7 @@ final class LoginMethods
     public static function publicStatus(): array
     {
         $configured=self::policies();
-        $available=['password'=>true,'sms'=>NeginSms::configured(),'bale'=>BaleBotService::ready()];
+        $available=['password'=>true,'sms'=>NeginSms::configured()&&class_exists(\SoapClient::class),'bale'=>BaleBotService::ready()];
         return ['methods'=>[
             'password'=>$configured['password'],
             'sms'=>$configured['sms']&&$available['sms'],
