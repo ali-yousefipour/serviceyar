@@ -15,7 +15,7 @@ use ServiceYar\Integrations\BalePaymentService;
 use ServiceYar\Integrations\MapService;
 
 $method=$_SERVER['REQUEST_METHOD']??'GET';$path=parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)?:'/';$requestId=bin2hex(random_bytes(8));header('X-Request-ID: '.$requestId);
-function agencyId(array $session): int { $raw=$_GET['agencyId']??null; $id=$raw!==null?(int)$raw:AgencyService::currentId($session['id']); if($id<1)throw new AuthException(422,'شناسه شرکت نامعتبر است.','VALIDATION_ERROR'); Authorization::requireAgencyAccess($session['id'],$id); return $id; }
+function agencyId(array $session): int { $raw=$_GET['agencyId']??null; $contextAgency=(int)($session['impersonation']['agencyId']??0); $id=$raw!==null?(int)$raw:($contextAgency>0?$contextAgency:AgencyService::currentId($session['id'])); if($id<1)throw new AuthException(422,'شناسه شرکت نامعتبر است.','VALIDATION_ERROR'); Authorization::requireAgencyAccess($session['id'],$id); return $id; }
 try {
  if($method==='OPTIONS'){http_response_code(204);exit;}
  if($method==='POST'&&preg_match('#^/api/v1/integrations/bale/webhook/([a-zA-Z0-9_-]+)$#',$path,$m)){
@@ -266,10 +266,23 @@ try {
   Response::json(['ok'=>true,'data'=>$auth->loginTrustedUser($uid)]);
  }
  if($method==='POST'&&$path==='/api/v1/auth/login'){ \ServiceYar\Auth\LoginMethods::requireEnabled('password');$b=Request::json();Response::json(['ok'=>true,'data'=>$auth->login((string)($b['username']??''),(string)($b['password']??''))]); }
- if($method==='POST'&&$path==='/api/v1/auth/logout'){ $s=$auth->current();$auth->requireCsrf($s);$auth->logout();Response::json(['ok'=>true,'data'=>['loggedOut'=>true]]); }
- if($method==='GET'&&$path==='/api/v1/auth/me'){ $s=$auth->current();$rs=Connection::get()->prepare('SELECT r.name FROM roles r JOIN user_roles ur ON ur.role_id=r.id WHERE ur.user_id=:u ORDER BY r.id');$rs->execute(['u'=>$s['id']]);Response::json(['ok'=>true,'data'=>['user'=>['id'=>$s['id'],'uuid'=>$s['uuid'],'username'=>$s['username'],'firstName'=>$s['firstName'],'lastName'=>$s['lastName']],'roles'=>$rs->fetchAll(\PDO::FETCH_COLUMN),'permissions'=>Authorization::permissions($s['id']),'agencies'=>AgencyService::sessionList($s['id']),'csrfToken'=>$s['csrfToken']]]); }
+ if($method==='POST'&&$path==='/api/v1/auth/logout'){ $s=$auth->current();$auth->requireCsrf($s);if(!empty($s['impersonation']))Response::json(['ok'=>true,'data'=>\ServiceYar\Auth\AdminImpersonation::stop($s)]);$auth->logout();Response::json(['ok'=>true,'data'=>['loggedOut'=>true]]); }
+ if($method==='GET'&&$path==='/api/v1/auth/me'){ $s=$auth->current();$rs=Connection::get()->prepare('SELECT r.name FROM roles r JOIN user_roles ur ON ur.role_id=r.id WHERE ur.user_id=:u ORDER BY r.id');$rs->execute(['u'=>$s['id']]);Response::json(['ok'=>true,'data'=>['user'=>['id'=>$s['id'],'uuid'=>$s['uuid'],'username'=>$s['username'],'firstName'=>$s['firstName'],'lastName'=>$s['lastName']],'roles'=>$rs->fetchAll(\PDO::FETCH_COLUMN),'permissions'=>Authorization::permissions($s['id']),'agencies'=>AgencyService::sessionList($s['id']),'csrfToken'=>$s['csrfToken'],'impersonation'=>$s['impersonation']??null]]); }
  if($method==='GET'&&$path==='/api/v1/auth/csrf'){ $s=$auth->current();Response::json(['ok'=>true,'data'=>['csrfToken'=>$s['csrfToken']]]); }
  $s=$auth->current(); $aid=null;
+ if($path==='/api/v1/admin/impersonation/users'&&$method==='GET'){
+  $agencyId=filter_var($_GET['agencyId']??null,FILTER_VALIDATE_INT);
+  if(!$agencyId)throw new AuthException(422,'شرکت انتخاب‌شده معتبر نیست.','INVALID_AGENCY');
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Auth\AdminImpersonation::users((int)$s['id'],(int)$agencyId)]);
+ }
+ if($path==='/api/v1/admin/impersonation/start'&&$method==='POST'){
+  $auth->requireCsrf($s);
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Auth\AdminImpersonation::start($s,Request::json())]);
+ }
+ if($path==='/api/v1/admin/impersonation/stop'&&$method==='POST'){
+  $auth->requireCsrf($s);
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Auth\AdminImpersonation::stop($s)]);
+ }
 
  if($path==='/api/v1/bale/link'){
   if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\BaleBotService::status((int)$s['id'])]);
