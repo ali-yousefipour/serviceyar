@@ -148,6 +148,14 @@ final class TaxiOrganizationTariffs
         if(!Authorization::isSuperAdmin($uid))throw new AuthException(403,'فقط ادمین کل به نرخ‌نامه تاکسیرانی دسترسی دارد.','SUPER_ADMIN_REQUIRED');
         if(!isset(self::TRAFFIC[$district]))throw new AuthException(422,'ناحیه معتبر نیست.','INVALID_DISTRICT');
         $class=self::vehicle($class);$rates=self::rates(Connection::get(),$district,$class);ksort($rates);
+        // Preserve editable source amounts, but expose the effective driver
+        // remuneration so the editor cannot silently confuse base vs uplift.
+        foreach($rates as &$rate){
+            $rate['effectiveDriverMonthly']=!empty($rate['overridden'])
+                ?(int)$rate['driverMonthly']
+                :(int)round((int)$rate['driverMonthly']*(1+self::TRAFFIC[$district]));
+            $rate['enteredOverrideIsFinal']=!empty($rate['overridden']);
+        }unset($rate);
         return ['academicYear'=>self::YEAR,'district'=>$district,'vehicleClass'=>$class,'trafficPercent'=>self::TRAFFIC[$district]*100,'rows'=>array_values($rates)];
     }
     public static function save(int $uid,array $input): array {
