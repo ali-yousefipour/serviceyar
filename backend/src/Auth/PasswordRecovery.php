@@ -127,11 +127,14 @@ final class PasswordRecovery
                 $pdo->commit();throw new AuthException(401,'کد بازیابی صحیح نیست.','PASSWORD_RESET_INVALID');
             }
             $pdo->prepare('UPDATE '.$table.' SET consumed_at=UTC_TIMESTAMP() WHERE id=?')->execute([$challenge['id']]);
-            $other=$channel==='sms'?'bale_auth_challenges':'sms_login_challenges';
-            $pdo->prepare("UPDATE ".$other." SET consumed_at=UTC_TIMESTAMP() WHERE user_id=? AND purpose='password_reset' AND consumed_at IS NULL")->execute([$uid]);
-            // Invalidate any still-live sign-in codes as well as reset codes after a credential reset.
-            $pdo->prepare("UPDATE sms_login_challenges SET consumed_at=UTC_TIMESTAMP() WHERE user_id=? AND purpose='login' AND consumed_at IS NULL")->execute([$uid]);
-            $pdo->prepare("UPDATE bale_auth_challenges SET consumed_at=UTC_TIMESTAMP() WHERE user_id=? AND purpose='login' AND consumed_at IS NULL")->execute([$uid]);
+            // Invalidate reset and sign-in challenges on both providers when their tables are installed.
+            foreach(['sms_login_challenges','bale_auth_challenges'] as $challengeTable){
+                $column=$pdo->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME='purpose'");
+                $column->execute([$challengeTable]);
+                if((int)$column->fetchColumn()>0){
+                    $pdo->prepare("UPDATE ".$challengeTable." SET consumed_at=UTC_TIMESTAMP() WHERE user_id=? AND purpose IN ('login','password_reset') AND consumed_at IS NULL")->execute([$uid]);
+                }
+            }
             $pdo->prepare('UPDATE users SET password_hash=? WHERE id=?')->execute([password_hash($password,PASSWORD_DEFAULT),$uid]);
             $pdo->prepare('UPDATE user_sessions SET revoked_at=UTC_TIMESTAMP() WHERE user_id=? AND revoked_at IS NULL')->execute([$uid]);
             $pdo->prepare("INSERT INTO audit_logs(uuid,user_id,action,entity_type,entity_id) VALUES(UUID(),?,'auth.password_reset','user',?)")->execute([$uid,(string)$uid]);
