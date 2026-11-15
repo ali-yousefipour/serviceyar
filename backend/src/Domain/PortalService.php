@@ -13,6 +13,35 @@ use ServiceYar\Database\Connection;
  * an approval-required vehicle change request.
  */
 final class PortalService {
+    private static bool $schemaReady=false;
+    private static function ensureSchema(): void {
+        if(self::$schemaReady)return;
+        $pdo=Connection::get();
+        try {
+            $tables=$pdo->query("SELECT TABLE_NAME FROM information_schema.TABLES
+                WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN
+                 ('portal_memberships','portal_credentials','portal_vehicle_change_requests')")
+                ->fetchAll(PDO::FETCH_COLUMN);
+            if(count($tables)!==3) {
+                // Existing shared hosting deploy uploads PHP/SQL over FTP but
+                // cannot execute the migration through an SSH shell.
+                // Create only the idempotent, audited 0115 schema, never ALTER
+                // unrelated production tables or backfill unauthorized users.
+                $sql=file_get_contents(dirname(__DIR__,3).'/database/migrations/0115_parent_driver_portals.sql');
+                if(!is_string($sql)||$sql==='')throw new \RuntimeException('Portal migration file missing');
+                $sql=preg_replace('/^\s*--[^\n]*$/m','',$sql);
+                foreach(preg_split('/;\s*(?:\r?\n|$)/',(string)$sql) as $statement) {
+                    if(trim($statement)!=='')$pdo->exec(trim($statement));
+                }
+            }
+            $pdo->exec("INSERT IGNORE INTO roles(name,title) VALUES
+                ('parent_portal','ولی دانش‌آموز'),('driver_portal','راننده سرویس مدارس')");
+            self::$schemaReady=true;
+        } catch(\Throwable $error) {
+            error_log('[ServiceYar][portal] Schema not ready: '.$error->getMessage());
+            throw new AuthException(503,'جداول پنل والدین و رانندگان آماده نیستند؛ مهاجرت 0115 را اجرا کنید.','PORTAL_SCHEMA_REQUIRED');
+        }
+    }
     private static function mobile(string $value): string {
         $value=strtr(trim($value),['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']);
         if(str_starts_with($value,'+98'))$value='0'.substr($value,3);
@@ -31,7 +60,7 @@ final class PortalService {
      */
     public static function provisionVerifiedMobile(string $phone): ?int {
         $mobile=self::mobile($phone);if($mobile==='')return null;
-        $pdo=Connection::get();
+        self::ensureSchema();$pdo=Connection::get();
         $parent=self::rows($pdo,"SELECT DISTINCT s.agency_id,s.id party_id,'parent' party_type
           FROM students s LEFT JOIN guardians g ON g.student_id=s.id
           JOIN agencies a ON a.id=s.agency_id AND a.is_active=1
@@ -78,6 +107,7 @@ final class PortalService {
         }catch(\Throwable $e){if($owned&&$pdo->inTransaction())$pdo->rollBack();throw $e;}
     }
     private static function authorized(int $uid,string $type,int $agencyId,int $partyId): void {
+        self::ensureSchema();
         if(!in_array($type,['parent','driver'],true)||$agencyId<1||$partyId<1)
             throw new AuthException(404,'اطلاعات درخواست‌شده یافت نشد.','PORTAL_NOT_FOUND');
         $q=Connection::get()->prepare("SELECT 1 FROM portal_memberships m JOIN users u ON u.id=m.user_id AND u.is_active=1
@@ -87,6 +117,7 @@ final class PortalService {
         if(!$q->fetchColumn())throw new AuthException(403,'دسترسی به این اطلاعات مجاز نیست.','PORTAL_FORBIDDEN');
     }
     public static function memberships(int $uid): array {
+        self::ensureSchema();
         return self::rows(Connection::get(),"SELECT m.party_type portalType,m.party_id partyId,
           m.agency_id agencyId,a.name agencyName FROM portal_memberships m
           JOIN agencies a ON a.id=m.agency_id AND a.is_active=1
