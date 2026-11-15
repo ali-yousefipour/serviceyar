@@ -178,6 +178,12 @@
   }catch(e){note(recoveryInfo,e.message||'تغییر رمز عبور انجام نشد.',true);recoveryConfirm.disabled=false;}
  };
  recoveryBack.onclick=()=>{recoveryTimer.stop();togglePasswordForm(true);};
+ [recoveryUsername,recoveryCode,newPassword,confirmPassword].forEach(input=>input.addEventListener('keydown',event=>{
+  if(event.key!=='Enter')return;
+  event.preventDefault();
+  if(input===recoveryUsername)recoverySend.click();
+  else recoveryConfirm.click();
+ }));
 
  const activate=(method,focus=false)=>{
   if(!available.includes(method))return;
