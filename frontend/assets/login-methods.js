@@ -106,7 +106,7 @@
  panelsHost.append(panels.sms,panels.bale,panels.mobile);
 
  // Password recovery is a sub-flow inside the password tab, not a separate login method.
- const recoveryLink=make('button','sy-password-forgot','فراموشی رمز عبور؟');recoveryLink.type='button';
+ const recoveryLink=make('button','sy-password-forgot','فراموشی رمز عبور؟');recoveryLink.type='button';recoveryLink.hidden=true;
  const passwordSuccess=make('p','sy-login-otp-message');passwordSuccess.hidden=true;
  const recovery=make('section','sy-password-recovery');recovery.hidden=true;
  const recoveryTitle=make('h3','','بازیابی رمز عبور');
