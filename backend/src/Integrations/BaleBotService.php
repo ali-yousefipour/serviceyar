@@ -213,8 +213,11 @@ final class BaleBotService {
     $pdo->commit();
     self::send($id,'حساب بله شما به سرویس‌یار متصل شد. اکنون می‌توانید کد ورود را در همین گفتگو دریافت کنید.');
    }catch(\Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
-  }elseif($text==='/start'||$text==='/help'){
-   self::send($id,'به ربات سرویس‌یار خوش آمدید. ابتدا وارد حساب کاربری خود در سایت شوید و از قسمت پروفایل، کد اتصال بله را دریافت کنید. سپس دستور /start و کد اتصال را ارسال نمایید.');
+  }elseif(in_array($text,['/start','/help','/status'],true)){
+   $linked=Connection::get()->prepare('SELECT u.id FROM bale_user_links l JOIN users u ON u.id=l.user_id AND u.is_active=1 WHERE l.chat_id=? LIMIT 1');
+   $linked->execute([$id]);
+   if($linked->fetchColumn())self::send($id,'حساب شما به سرویس‌یار متصل است. اکنون می‌توانید از صفحه ورود سامانه، کد یک‌بارمصرف بله دریافت کنید.');
+   else self::send($id,'این گفتگو هنوز به هیچ حساب کاربری سرویس‌یار متصل نیست. ثبت شماره همراه در پروفایل و زدن Start به‌تنهایی کافی نیست. ابتدا با نام کاربری و رمز وارد سامانه شوید، از پروفایل گزینه «دریافت کد اتصال» را بزنید و دستور /start همراه با کد اختصاصی را در همین گفتگو ارسال کنید. برای بررسی وضعیت دستور /status را بفرستید.');
   }else{
    self::send($id,'برای اتصال حساب، کد یک‌بارمصرف را از پروفایل سرویس‌یار دریافت کنید و با دستور /start ارسال کنید.');
   }
