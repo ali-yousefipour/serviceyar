@@ -56,7 +56,7 @@
    form.elements.enabled.checked=Boolean(info.configured);
    overview.textContent='توکن: '+(info.tokenStored?'ثبت شده':'ثبت نشده')+' | ربات: '+(info.botUsername?'@'+info.botUsername:'نامشخص')+' | وب‌هوک: '+(info.webhookRegistered?'ثبت شده':'ثبت نشده');
   };
-  form.querySelector('[data-bale-refresh]').onclick=async()=>{try{await refresh();message(status,'وضعیت بررسی شد.');}catch(e){message(status,e.message,true);}};
+  form.querySelector('[data-bale-refresh]').onclick=async()=>{try{await refresh();const health=await api('/api/v1/admin/bale-bot/check');message(status,health.connected?'اتصال به بله برقرار است. وب‌هوک: '+(health.webhookCorrect?'صحیح':'نیازمند اصلاح')+'؛ پیام‌های در انتظار: '+Number(health.pendingUpdates||0)+(health.lastError?'؛ آخرین خطا: '+health.lastError:''):'ربات هنوز فعال نشده است.',!health.webhookCorrect);}catch(e){message(status,e.message,true);}};
   form.onsubmit=async e=>{
    e.preventDefault();const button=form.querySelector('[type=submit]');button.disabled=true;
    try{
