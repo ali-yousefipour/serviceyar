@@ -32,3 +32,9 @@ CREATE TABLE IF NOT EXISTS portal_vehicle_change_requests (
  CONSTRAINT fk_portal_vehicle_request_user FOREIGN KEY(user_id) REFERENCES users(id),
  CONSTRAINT fk_portal_vehicle_request_agency FOREIGN KEY(agency_id) REFERENCES agencies(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS portal_credentials (
+ user_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+ password_set_at DATETIME NULL,
+ CONSTRAINT fk_portal_credentials_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
