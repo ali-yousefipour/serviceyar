@@ -1,5 +1,6 @@
 const assert=require('node:assert/strict');
 const {readFileSync}=require('node:fs');
+const {spawnSync}=require('node:child_process');
 const source=readFileSync('tools/deploy_serviceyar.py','utf8');
 assert.match(source,/GITHUB_RUN_ID/,'FTP staging must use a unique workflow run ID');
 assert.match(source,/\.serviceyar-staging-/,'Each workflow must use an independent staging folder');
@@ -13,6 +14,9 @@ for(const asset of ['public-site.js','public-site.css','public-site-content.html
  assert.ok(existsSync('frontend/assets/'+asset),'Missing public asset: '+asset);
 }
 assert.match(workflow,/cancel-in-progress: true/,'Supersede stuck old release runs');
+const legacyHost=['challi','.ir'].join('');
+const legacyDomainSearch=spawnSync('git',['grep','-n',legacyHost],{encoding:'utf8'});
+assert.equal(legacyDomainSearch.status,1,'No tracked source, configuration, test or documentation file may retain the old operational domain: '+legacyDomainSearch.stdout);
 assert.match(source,/CANONICAL_HOST = "service-yar\.ir"/,'The deployment verifier must pin the canonical production hostname');
 assert.match(source,/PUBLIC_BASE_URL", f"https:\/\/\{CANONICAL_HOST\}"/,'Live verification must default to service-yar.ir');
 assert.match(source,/final\.hostname != CANONICAL_HOST/,'Live verification must reject redirects away from the canonical host');
