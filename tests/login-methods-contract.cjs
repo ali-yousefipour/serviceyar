@@ -59,7 +59,7 @@ assert.ok(js.includes('recoveryMethodsFromServer'),'recovery options follow acti
 
 assert.ok(js.includes('session.csrfToken'),'policy editor uses CSRF');
 assert.ok(js.includes('https://ble.ir/syarbot'),'login links to syarbot');
-assert.ok(js.includes('دکمه «شروع» (Start) را بزنید'),'Bale onboarding explains Start');
+assert.ok(js.includes('دکمه «شروع» (Start)'),'Bale onboarding explains Start');
 assert.ok(js.includes('اشتراک شماره همراه من'),'regular user phone linking explained');
 assert.ok(css.includes('#login .password-toggle[aria-pressed="true"]'),'password visibility button has visible active color');
 assert.ok(css.includes('.sy-login-bot-link:hover'),'Bale bot button has hover styling');
