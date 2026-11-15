@@ -120,6 +120,7 @@ def verify_live(base_url, build_id, expected_digests):
                 body = response.read()
                 status = response.status
                 final_url = response.geturl()
+                live_headers = {key.lower(): val for key, val in response.headers.items()}
             final = urlsplit(final_url)
             if final.scheme != "https" or final.hostname != CANONICAL_HOST:
                 raise RuntimeError(
@@ -162,9 +163,33 @@ def verify_live(base_url, build_id, expected_digests):
         if route == "/":
             html = body.decode("utf-8", "replace")
             if build_id not in html:
+                import re
+                from subprocess import run
+                apparent_builds = re.findall(r'/assets/(?:app|operations)\\.js\\?v=([a-f0-9]{8,64})', html)
+                print(f"LIVE DOMAIN MISMATCH: expected={build_id[:12]}, HTML asset builds={apparent_builds[:5]}", flush=True)
+                print("LIVE HTTP: status={}, final={}, server={}, cache={}, age={}, via={}".format(
+                    status, final_url, live_headers.get("server",""),
+                    live_headers.get("x-litespeed-cache",live_headers.get("x-cache","")),
+                    live_headers.get("age",""), live_headers.get("via","")), flush=True)
+                try:
+                    host_ips = sorted({item[4][0] for item in socket.getaddrinfo(CANONICAL_HOST,443,type=socket.SOCK_STREAM)})
+                    print(f"LIVE DNS {CANONICAL_HOST}: {host_ips}", flush=True)
+                except OSError as error:
+                    print(f"LIVE DNS lookup failed: {error}", flush=True)
+                origin_ip = os.environ.get("SERVICEYAR_FTP_PEER_IP","").strip()
+                if origin_ip and ":" not in origin_ip:
+                    # Use the FTP server's actual peer IP as an origin diagnostic;
+                    # curl keeps HTTPS SNI/Host unchanged while bypassing public DNS.
+                    result = run([
+                        "curl", "--noproxy", "*", "--silent", "--show-error", "--insecure",
+                        "--location", "--max-time", "18", "--resolve",
+                        f"{CANONICAL_HOST}:443:{origin_ip}", "-o", "/dev/null",
+                        "-w", "%{http_code} %{url_effective}", url
+                    ], capture_output=True, text=True, timeout=22)
+                    print(f"ORIGIN DIRECT {origin_ip}: {result.stdout.strip()}; error={result.stderr.strip()[:180]}", flush=True)
                 raise RuntimeError(
                     f"{base}/ is not serving uploaded index.html build {build_id[:12]}; "
-                    "check FTP_REMOTE_ROOT and the domain document root."
+                    "FTP checksums are correct. Inspect DNS/vhost or server-side HTML caching."
                 )
             print(f"Public homepage verified: {base}/ serves build {build_id[:12]}", flush=True)
         else:
@@ -193,7 +218,9 @@ def main():
     # realistic limit without bypassing checksum verification.
     with FTP(timeout=120) as ftp:
         ftp.connect(os.environ["FTP_HOST"], 21)
-        print(f"FTP server peer IP: {ftp.sock.getpeername()[0]}", flush=True)
+        ftp_peer_ip = ftp.sock.getpeername()[0]
+        os.environ["SERVICEYAR_FTP_PEER_IP"] = ftp_peer_ip
+        print(f"FTP server peer IP: {ftp_peer_ip}", flush=True)
         ftp.login(os.environ["FTP_USER"], os.environ["FTP_PASS"])
         print(f"FTP login directory: {ftp.pwd()}", flush=True)
         try:
