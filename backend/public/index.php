@@ -400,7 +400,17 @@ try {
   if(!$district||$district<1||$district>8||!in_array($class,['1','2','3'],true))throw new AuthException(422,'ناحیه یا کلاس خودرو نامعتبر است.','INVALID_TAXI_TARIFF');
   $rates=\ServiceYar\Domain\TaxiOrganizationTariffs::rates(Connection::get(),$district,\ServiceYar\Domain\TaxiOrganizationTariffs::CLASSES[$class]);
   ksort($rates);
-  $rows=[];foreach($rates as $km=>$rate)$rows[]=['distanceKm'=>(int)$km,'driverMonthly'=>(int)$rate['driverMonthly'],'parentMonthly'=>(int)$rate['parentMonthly']];
+  $rows=[];foreach($rates as $km=>$rate){
+   // The public rate table must show the same district-adjusted driver
+   // remuneration that the quote API returns; manual overrides are final.
+   $base=(int)$rate['driverMonthly'];
+   $traffic=\ServiceYar\Domain\TaxiOrganizationTariffs::TRAFFIC[$district];
+   $driver=!empty($rate['overridden'])?$base:(int)round($base*(1+$traffic));
+   $rows[]=['distanceKm'=>(int)$km,'driverMonthly'=>$driver,
+     'driverBeforeTraffic'=>$base,
+     'parentMonthly'=>(int)$rate['parentMonthly'],
+     'overridden'=>(bool)($rate['overridden']??false)];
+  }
   Response::json(['ok'=>true,'data'=>['district'=>$district,'vehicleClass'=>$class,'rows'=>$rows]]);
  }
  if($method==='POST'&&$path==='/api/v1/operations/tariffs/quote'){
