@@ -42,6 +42,7 @@ if(!$apply){
         JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)."\n";
     exit(0);
 }
+// Migration history must already exist; do not introduce implicit-commit DDL in this transaction.
 $pdo->beginTransaction();
 try{
     $pdo->exec("INSERT IGNORE INTO permissions(name,title) VALUES
@@ -51,11 +52,6 @@ try{
        SELECT r.id,p.id FROM roles r CROSS JOIN permissions p
        WHERE r.name IN ('agency_admin','school_company_manager','super_admin')
        AND p.name IN ('users.view','users.manage')");
-    $pdo->exec("CREATE TABLE IF NOT EXISTS migrations (
-       id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-       migration VARCHAR(255) NOT NULL UNIQUE,
-       applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $q=$pdo->prepare("INSERT IGNORE INTO migrations(migration) VALUES(?)");
     $q->execute(['0114_school_company_manager_user_permissions.sql']);
     $pdo->commit();
