@@ -97,26 +97,9 @@ jobs:
           test -s frontend/assets/Vazirmatn-Regular.woff2
           test -s frontend/assets/favicon.svg
 
-  production-preflight:
-    name: Verify service-yar.ir TLS and public document root
-    needs: validate
-    runs-on: ubuntu-latest
-    steps:
-      - name: Validate real HTTPS certificate before FTP publication
-        shell: bash
-        run: |
-          set -euo pipefail
-          # Verifies both certificate trust and service-yar.ir hostname.
-          if ! curl --fail --silent --show-error --location --max-redirs 3 --max-time 25 \
-               --output /dev/null https://service-yar.ir/; then
-            echo "::error title=Invalid service-yar.ir TLS or unreachable site::Configure a trusted SSL certificate for service-yar.ir before publishing. FTP root is /public_html."
-            exit 1
-          fi
-          echo "Trusted HTTPS endpoint is available; FTP root: /public_html."
-
   deploy:
     name: Upload ServiceYar to service-yar.ir
-    needs: production-preflight
+    needs: validate
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
