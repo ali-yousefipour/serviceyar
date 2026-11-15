@@ -36,6 +36,7 @@ jobs:
           node tests/admin-impersonation-contract.cjs
           node tests/api-route-guard-contract.cjs
           node tests/payroll-reconciliation-contract.cjs
+          node tests/company-dashboard-contract.cjs
           node tests/taxi-tariff-footnotes-contract.cjs
           php tests/taxi-fare-components.php
           php tests/taxi-financial-integration.php
