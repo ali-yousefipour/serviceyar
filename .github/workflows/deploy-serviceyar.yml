@@ -122,8 +122,13 @@ jobs:
           rm -rf deploy-payload
           mkdir -p deploy-payload/assets deploy-payload/backend deploy-payload/database deploy-payload/storage
           cp frontend/index.html deploy-payload/index.html
-          sed -i "s/__BUILD_ID__/${GITHUB_SHA}/g" deploy-payload/index.html
+          cp frontend/portal.html deploy-payload/portal.html
+          sed -i "s/__BUILD_ID__/${GITHUB_SHA}/g" deploy-payload/index.html deploy-payload/portal.html
           cp frontend/assets/* deploy-payload/assets/
+          test -s deploy-payload/portal.html
+          test -s deploy-payload/assets/portal.js
+          test -s deploy-payload/assets/portal.css
+          grep -q "${GITHUB_SHA}" deploy-payload/portal.html
           cp -a backend/. deploy-payload/backend/
           cp -a database/. deploy-payload/database/
           cp -a storage/. deploy-payload/storage/
