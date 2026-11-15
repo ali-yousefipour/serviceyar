@@ -36,8 +36,58 @@ final class OperationsService
         $p=self::scope($uid,$aid,'dashboard.view');$counts=[];
         foreach(['schools','students','drivers','services'] as $t){$extra=$t==='drivers'?" AND status='active'":'';$q=$p->prepare("SELECT COUNT(*) FROM $t WHERE agency_id=:a AND is_active=1$extra");$q->execute(['a'=>$aid]);$counts[$t]=(int)$q->fetchColumn();}
         $q=$p->prepare('SELECT service_status,COUNT(*) total FROM students WHERE agency_id=:a AND is_active=1 GROUP BY service_status');$q->execute(['a'=>$aid]);$statuses=$q->fetchAll();
-        $q=$p->prepare('SELECT sc.id,sc.name,sc.latitude,sc.longitude,sc.photo_path,COUNT(st.id) students,SUM(CASE WHEN st.service_status<>\'assigned\' THEN 1 ELSE 0 END) unassigned FROM schools sc LEFT JOIN students st ON st.school_id=sc.id AND st.agency_id=sc.agency_id AND st.is_active=1 WHERE sc.agency_id=:a AND sc.is_active=1 GROUP BY sc.id,sc.name,sc.latitude,sc.longitude,sc.photo_path ORDER BY sc.name');$q->execute(['a'=>$aid]);
-        return ['counts'=>$counts,'statuses'=>$statuses,'schools'=>$q->fetchAll()];
+        // Operational assignment means a real, non-cancelled active service,
+        // not merely the potentially stale students.service_status label.
+        $q=$p->prepare("SELECT COUNT(DISTINCT st.id) FROM students st
+            INNER JOIN service_students ss ON ss.student_id=st.id
+            INNER JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=st.agency_id
+               AND sv.is_active=1 AND sv.status<>'cancelled'
+            WHERE st.agency_id=:a AND st.is_active=1");
+        $q->execute(['a'=>$aid]);$assigned=(int)$q->fetchColumn();
+        $q=$p->prepare("SELECT COUNT(*) FROM services sv
+            INNER JOIN drivers d ON d.id=sv.driver_id AND d.agency_id=sv.agency_id
+            WHERE sv.agency_id=:a AND sv.is_active=1 AND sv.status<>'cancelled'
+              AND d.is_active=1 AND d.status='active'");
+        $q->execute(['a'=>$aid]);$staffedServices=(int)$q->fetchColumn();
+        $q=$p->prepare("SELECT COUNT(DISTINCT d.id) FROM drivers d
+            INNER JOIN services sv ON sv.driver_id=d.id AND sv.agency_id=d.agency_id
+               AND sv.is_active=1 AND sv.status<>'cancelled'
+            WHERE d.agency_id=:a AND d.is_active=1 AND d.status='active'");
+        $q->execute(['a'=>$aid]);$servingDrivers=(int)$q->fetchColumn();
+        $q=$p->prepare("SELECT COALESCE(SUM(sv.capacity),0) FROM services sv
+            WHERE sv.agency_id=:a AND sv.is_active=1 AND sv.status<>'cancelled'");
+        $q->execute(['a'=>$aid]);$totalCapacity=(int)$q->fetchColumn();
+        $q=$p->prepare("SELECT COUNT(*) FROM services sv WHERE sv.agency_id=:a
+            AND sv.is_active=1 AND sv.status<>'cancelled'");
+        $q->execute(['a'=>$aid]);$activeServices=(int)$q->fetchColumn();
+        $q=$p->prepare("SELECT sc.id,sc.name,sc.latitude,sc.longitude,sc.photo_path,
+              COUNT(DISTINCT st.id) students,
+              COUNT(DISTINCT CASE WHEN sv.id IS NOT NULL THEN st.id END) assigned,
+              COUNT(DISTINCT st.id)-COUNT(DISTINCT CASE WHEN sv.id IS NOT NULL THEN st.id END) unassigned
+            FROM schools sc
+            LEFT JOIN students st ON st.school_id=sc.id AND st.agency_id=sc.agency_id AND st.is_active=1
+            LEFT JOIN service_students ss ON ss.student_id=st.id
+            LEFT JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=sc.agency_id
+                 AND sv.is_active=1 AND sv.status<>'cancelled'
+            WHERE sc.agency_id=:a AND sc.is_active=1
+            GROUP BY sc.id,sc.name,sc.latitude,sc.longitude,sc.photo_path
+            ORDER BY unassigned DESC,students DESC,sc.name");
+        $q->execute(['a'=>$aid]);$schools=$q->fetchAll();
+        $unassigned=max(0,$counts['students']-$assigned);
+        return [
+          'counts'=>$counts,'statuses'=>$statuses,'schools'=>$schools,
+          'metrics'=>[
+            'assignedStudents'=>$assigned,'unassignedStudents'=>$unassigned,
+            'assignmentRate'=>$counts['students']>0?round(100*$assigned/$counts['students'],1):0,
+            'activeServices'=>$activeServices,'staffedServices'=>$staffedServices,
+            'servicesWithoutActiveDriver'=>max(0,$activeServices-$staffedServices),
+            'servingDrivers'=>$servingDrivers,'serviceCapacity'=>$totalCapacity,
+            'capacityUtilization'=>$totalCapacity>0?round(100*$assigned/$totalCapacity,1):0,
+            'statusMismatch'=>abs($assigned-(int)array_sum(array_map(
+                static fn($s)=>(string)($s['service_status']??'')==='assigned'?(int)$s['total']:0,$statuses))),
+          ],
+          'generatedAt'=>gmdate('c'),'dataScope'=>'agency','financialDataIncluded'=>false
+        ];
     }
 
     public static function assign(int $uid,int $aid,int $serviceId,int $studentId,?string $address=null,?int $order=null): void
