@@ -1,5 +1,8 @@
 -- Idempotent grant for the school-service companies' actual manager role.
 -- Authorization::requireAgencyAccess remains mandatory for tenant-scoped actions.
+INSERT IGNORE INTO roles(name,title) VALUES
+ ('school_company_manager','مدیر شرکت سرویس مدارس');
+
 INSERT IGNORE INTO permissions(name,title) VALUES
  ('users.view','مشاهده کاربران شرکت'),
  ('users.manage','مدیریت کاربران شرکت');
