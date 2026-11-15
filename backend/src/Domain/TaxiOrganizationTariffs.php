@@ -110,6 +110,11 @@ final class TaxiOrganizationTariffs
         if($licenseVerified!==null&&!is_bool($licenseVerified))
             throw new AuthException(422,'وضعیت پروانه راننده باید تأییدشده باشد.','INVALID_LICENSE_STATUS');
         $specialOrDiscount=$special!=='normal'||$licenseVerified===true;
+        // Tripartite one-third billing exists only after an actual agreement;
+        // an unapproved label alone must never reduce parents' debt.
+        if($special==='exceptional_school'
+            && trim((string)($options['tripartiteAgreementReference']??''))==='')
+            throw new AuthException(422,'برای تسهیم سه‌جانبه، شناسه تفاهمنامه معتبر الزامی است.','TRIPARTITE_AGREEMENT_REQUIRED');
         // Custom admin override amounts are final; calculating special fares
         // on top of them without explicit contract approval is unsafe.
         if($specialOrDiscount&&!empty($rate['overridden']))
@@ -119,6 +124,8 @@ final class TaxiOrganizationTariffs
             $specialOrDiscount?null:(int)$rate['parentMonthly']
         );
         $rate['parentMonthly']=$breakdown['parentMonthly'];
+        $rate['parentPayableMonthly']=$special==='exceptional_school'
+            ?(int)$breakdown['payerShares']['parents']:(int)$breakdown['parentMonthly'];
         $rate['driverMonthly']=$breakdown['driverMonthly'];
         $rate['parentComponents']=$breakdown;
         return $rate+[
@@ -131,11 +138,11 @@ final class TaxiOrganizationTariffs
             'academicYear'=>self::YEAR,'currency'=>'IRR'
         ];
     }
-    public static function quoteStudent(PDO $pdo,int $agencyId,int $schoolId,mixed $class,mixed $distance): array {
+    public static function quoteStudent(PDO $pdo,int $agencyId,int $schoolId,mixed $class,mixed $distance,array $options=[]): array {
         $q=$pdo->prepare('SELECT region FROM schools WHERE id=? AND agency_id=?');
         $q->execute([$schoolId,$agencyId]);$region=$q->fetchColumn();
         if($region===false)throw new AuthException(422,'مدرسه متعلق به شرکت نیست.','SCHOOL_MISMATCH');
-        return self::quote($pdo,self::district($region),$class,$distance);
+        return self::quote($pdo,self::district($region),$class,$distance,$options);
     }
     public static function editor(int $uid,int $district,string $class): array {
         if(!Authorization::isSuperAdmin($uid))throw new AuthException(403,'فقط ادمین کل به نرخ‌نامه تاکسیرانی دسترسی دارد.','SUPER_ADMIN_REQUIRED');
