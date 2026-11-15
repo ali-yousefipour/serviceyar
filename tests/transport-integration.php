@@ -65,7 +65,7 @@ try{
  $registryLocal=D::searchVehicleRegistry($uid,$a,'52ب123');
  check(count($registryLocal)===1&&$registryLocal[0]['id']===(int)$currentPlate['id']
   &&$registryLocal[0]['inCurrentAgency'],'Local vehicles are directly selectable from driver plate lookup');
- rejected(fn()=>D::save($viewer,$b,'drivers',['vehicleId'=>$currentPlate['id']],1),'SCOPE_FORBIDDEN');
+ rejected(fn()=>D::save($viewer,$b,'drivers',['vehicleId'=>$currentPlate['id']],1),'FORBIDDEN');
  check((int)$as['agreed_amount']===1250000,'Service agreed monthly driver amount persists');
  $contract=D::save($uid,$a,'contracts',['title'=>'قرارداد آزمایشی','partyType'=>'student','partyId'=>$s1['id'],'startDate'=>'2026-10-01','endDate'=>'2027-06-01','amount'=>'1200000']);
  check((int)$contract['amount']===1200000,'Contract integer rial amount stored');
