@@ -226,6 +226,24 @@ try{
  $messages=O::queueMessages($uid,$a,['recipientType'=>'student','ids'=>[$s1['id']],'body'=>'test']);check($messages['delivery']==='pending_provider','Queue does not claim delivery');
  check(O::validDate('2024-02-29')&&!O::validDate('2025-02-29'),'Dates validate real calendar days');check(O::distance(['latitude'=>0,'longitude'=>0],['latitude'=>0,'longitude'=>0])===0.0,'Zero distance');
  $summary=O::summary($uid,$a);check($summary['counts']['schools']===1&&$summary['counts']['students']===3,'Dashboard aggregates tenant data');
+ check(isset($summary['metrics'])&&$summary['dataScope']==='agency','Company dashboard returns agency-scoped operational metrics');
+ check($summary['metrics']['assignedStudents']+$summary['metrics']['unassignedStudents']===$summary['counts']['students'],
+   'Dashboard real service assignments partition active students exactly');
+ check($summary['metrics']['assignedStudents']>=0
+   &&$summary['metrics']['assignedStudents']<=$summary['counts']['students'],'Dashboard assignment never exceeds students');
+ check($summary['metrics']['servicesWithoutActiveDriver']
+   ===$summary['metrics']['activeServices']-$summary['metrics']['staffedServices'],
+   'Dashboard driver coverage exactly partitions active services');
+ check(array_sum(array_map(static fn($sc)=>(int)$sc['students'],$summary['schools']))===$summary['counts']['students'],
+   'School breakdown matches active company student count');
+ foreach($summary['schools'] as $sc){
+   check((int)$sc['assigned']+(int)$sc['unassigned']===(int)$sc['students'],
+     'Each school partitions real assignments');
+ }
+ $foreignDashboard=O::summary($uid,$b);
+ check($foreignDashboard['counts']['students']===1
+   &&$foreignDashboard['metrics']['assignedStudents']===0,
+   'Dashboard must not include students or service assignments from other agencies');
  $docs=O::saveDocument($uid,$a,(int)$driver['id'],['documentType'=>'گواهینامه','documentNo'=>'demo','expiresAt'=>'2027-01-01']);check(count(O::documents($uid,$a,(int)$driver['id']))===1,'Driver document persists');
  rejected(fn()=>O::saveDocument($uid,$b,(int)$driver['id'],['documentType'=>'x']),'CROSS_SCOPE_REFERENCE');
  D::delete($uid,$a,'services',(int)$group['service']['id']);check(D::get($uid,$a,'students',(int)$s1['id'])['service_status']==='waiting','Deactivating service synchronizes student status');
