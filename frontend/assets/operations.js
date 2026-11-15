@@ -44,17 +44,17 @@ function schoolPhotoUrl(row){
 }
 const columns={messages:['channel','recipientType','recipientId','subject','status','providerStatus','attempts'],schools:['code','name','shift','schoolType','region'],students:['fullName','schoolId','driverName','serviceStatus','paymentStatus','mobile','monthlyFee','invoiceTotal','paidTotal','outstandingFee'],drivers:['firstName','lastName','nationalCode','mobile','sepandStatus','status','vehicleId'],vehicles:['plate','ownerName','driverName','model','vin','tariffVehicleClass','sepandStatus','capacity'],services:['code','title','driverId','schoolId','capacity','monthlyFee','agreedAmount','shift']};
 const relations={schoolId:'schools',driverId:'drivers',oldDriverId:'drivers',newDriverId:'drivers',studentId:'students',vehicleId:'vehicles',serviceId:'services',packId:'packs',invoiceId:'invoices',parentId:'accounts'};
-const permissionFor={'installments':'finance','school-statement':'finance','daily-schedule':'services','driver-assignment':'services','school-report':'reports',schools:'schools',students:'students',drivers:'drivers',vehicles:'drivers',services:'services',packs:'services',contracts:'services','driver-work':'finance','driver-payments':'finance','school-charges':'finance','service-charges':'finance',invoices:'finance',payments:'finance',accounts:'finance','accounting-documents':'finance',wallets:'finance',ledger:'finance',messages:'messages','driver-changes':'services','driver-ratings':'drivers','parent-reports':'messages',reports:'reports',monitoring:'monitoring','bale-payments':'finance',settings:'settings',dashboard:'dashboard',grouping:'services',payroll:'finance','finance-report':'finance',distances:'reports',import:'students','previous-students':'students',agreements:'services'};
+const permissionFor={'installments':'finance','school-statement':'finance','daily-schedule':'services','driver-assignment':'services','school-report':'reports',schools:'schools',students:'students',drivers:'drivers',vehicles:'drivers',services:'services',packs:'services',contracts:'services','driver-work':'finance','driver-payments':'finance','school-charges':'finance','service-charges':'finance',invoices:'finance',payments:'finance',accounts:'finance','accounting-documents':'finance',wallets:'finance',ledger:'finance',messages:'messages','driver-changes':'services','driver-ratings':'drivers','portal-vehicle-requests':'drivers','parent-reports':'messages',reports:'reports',monitoring:'monitoring','bale-payments':'finance',settings:'settings',dashboard:'dashboard',grouping:'services',payroll:'finance','finance-report':'finance',distances:'reports',import:'students','previous-students':'students',agreements:'services'};
 const menus=[
  ['schools','مدرسه',[['schools/new','مدرسه جدید'],['schools','لیست مدارس'],['school-report','گزارش مدارس']]],
  ['students','دانش‌آموزان',[['students/new','دانش‌آموز جدید'],['import','ثبت دانش‌آموز از اکسل'],['previous-students','دانش‌آموزان سال قبل'],['students','لیست دانش‌آموزان']]],
- ['drivers','رانندگان',[['drivers','مدیریت راننده‌ها'],['driver-ratings','امتیاز و گزارش'],['driver-work','گزارش عملکرد راننده'],['finance-report','دریافتی پرداختی رانندگان']]],
+ ['drivers','رانندگان',[['drivers','مدیریت راننده‌ها'],['driver-ratings','امتیاز و گزارش'],['portal-vehicle-requests','درخواست‌های اصلاح خودرو'],['driver-work','گزارش عملکرد راننده'],['finance-report','دریافتی پرداختی رانندگان']]],
  ['services','سرویس‌ها',[['services/new','سرویس جدید'],['grouping','دسته‌بندی هوشمند'],['packs','پک‌های سرویس'],['services','عملیات سرویس‌ها'],['students/fees','تغییر سریع هزینه سرویس'],['service-charges','حق‌السرویس']]],
  ['accounts','مالی',[['accounts','تعاریف حسابداری'],['accounting-documents','اسناد حسابداری'],['agreements','ثبت مبلغ توافقی راننده'],['payroll','فیش حقوق راننده'],['driver-payments','سند پرداخت حقوق راننده'],['finance-report','گزارش دریافتی پرداختی'],['invoices','گزارش وضعیت کلی پرداخت'],['wallets','کیف پول'],['installments','پیش‌پرداخت و اقساط']]],
  ['reports','امکانات',[['messages','پیام‌رسانی'],['monitoring','مانیتورینگ'],['distances','بررسی فاصله‌های ناجور'],['reports','خروجی گزارشات'],['settings','تنظیمات'],['vehicles','خودروها'],['driver-assignment','تخصیص پیشنهادی راننده'],['daily-schedule','برنامه روزانه و تداخل شیفت‌ها'],['driver-changes','تغییر راننده'],['contracts','قراردادها'],['accounting-documents/statement','گزارش حساب'],['accounting-documents/quick','سند سریع'],['accounting-documents/defaults','حساب‌های پیش‌فرض'],['accounting-documents/cheques','چک‌های دریافتی و عملیات چک'],['ledger','دریافت و پرداخت'],['school-statement','صورت‌وضعیت سرویس مدارس'],['bale-payments','پرداخت کیف پول بله'],['school-charges','بدهی مدارس'],['payments','پرداخت‌ها'],['parent-reports','گزارشات والدین']]]
 ];
 for(const [k,v] of Object.entries(resources))titles[k]=v[0];
-Object.assign(titles,{'installments':'برنامه پیش‌پرداخت و اقساط','school-statement':'صورت‌وضعیت سرویس مدارس','daily-schedule':'برنامه روزانه سرویس‌ها','driver-assignment':'تخصیص پیشنهادی راننده','school-report':'گزارش مدارس','bale-payments':'پرداخت کیف پول بله',import:'ثبت دانش‌آموز از اکسل','previous-students':'دانش‌آموزان سال قبل',grouping:'دسته‌بندی هوشمند',payroll:'فیش حقوق راننده','finance-report':'گزارش دریافتی پرداختی',monitoring:'مانیتورینگ',distances:'بررسی فاصله‌های ناجور',agreements:'ثبت مبلغ توافقی راننده'});
+Object.assign(titles,{'installments':'برنامه پیش‌پرداخت و اقساط','school-statement':'صورت‌وضعیت سرویس مدارس','daily-schedule':'برنامه روزانه سرویس‌ها','driver-assignment':'تخصیص پیشنهادی راننده','school-report':'گزارش مدارس','portal-vehicle-requests':'درخواست‌های اصلاح خودرو','bale-payments':'پرداخت کیف پول بله',import:'ثبت دانش‌آموز از اکسل','previous-students':'دانش‌آموزان سال قبل',grouping:'دسته‌بندی هوشمند',payroll:'فیش حقوق راننده','finance-report':'گزارش دریافتی پرداختی',monitoring:'مانیتورینگ',distances:'بررسی فاصله‌های ناجور',agreements:'ثبت مبلغ توافقی راننده'});
 let pageToken=0,gridState=null,lookupCache={};
 let chequeSearchSequence=0;
 let journalRequestSequence=0,initialSearch='',initialStudentStatus='',returnFocus=null;
@@ -319,7 +319,7 @@ function render(){
  $('nav').querySelectorAll('details').forEach(d=>{const active=!!d.querySelector('[aria-current=page]');d.classList.toggle('current-group',active);if(active)d.open=true;});
  if(key!=='companies'&&!currentAgency){$('content').innerHTML='<div class="empty">ابتدا شرکت فعال را انتخاب کنید.</div>';return;}
  if(key!=='companies'&&!can(key)){$('content').innerHTML='<div class="error">برای مشاهده این بخش مجوز ندارید.</div>';return;}
- const task=key==='services'&&action==='new'?newServicePage(token,recordId):key==='installments'?installmentPage():key==='daily-schedule'?dailySchedulePage(token):key==='driver-assignment'?driverAssignmentPage(token):key==='accounting-documents'?(action==='statement'?accountStatementPage(token):action==='quick'?quickJournalPage(token):action==='defaults'?financialAccountsPage(token):action==='cheques'?chequePage(token):journalPage(token)):key==='dashboard'?dashboard(token):key==='companies'?companiesPage():key==='contracts'?contractsPage(token):key==='settings'?settingsPage():key==='reports'?reportsPage(token):key==='import'?importPage(token):key==='bale-payments'?balePaymentsPage(token):key==='school-statement'?schoolStatementPage(token):['payroll','finance-report','distances','monitoring','grouping','school-report'].includes(key)?operationPage(key,token):resourcePage(key==='previous-students'?'students':key==='agreements'?'services':key,token,{previous:key==='previous-students',agreements:key==='agreements'});
+ const task=key==='portal-vehicle-requests'?portalVehicleRequestsPage(token):key==='services'&&action==='new'?newServicePage(token,recordId):key==='installments'?installmentPage():key==='daily-schedule'?dailySchedulePage(token):key==='driver-assignment'?driverAssignmentPage(token):key==='accounting-documents'?(action==='statement'?accountStatementPage(token):action==='quick'?quickJournalPage(token):action==='defaults'?financialAccountsPage(token):action==='cheques'?chequePage(token):journalPage(token)):key==='dashboard'?dashboard(token):key==='companies'?companiesPage():key==='contracts'?contractsPage(token):key==='settings'?settingsPage():key==='reports'?reportsPage(token):key==='import'?importPage(token):key==='bale-payments'?balePaymentsPage(token):key==='school-statement'?schoolStatementPage(token):['payroll','finance-report','distances','monitoring','grouping','school-report'].includes(key)?operationPage(key,token):resourcePage(key==='previous-students'?'students':key==='agreements'?'services':key,token,{previous:key==='previous-students',agreements:key==='agreements'});
  Promise.resolve(task).then(()=>{if(token!==pageToken)return;if(action==='new'&&resources[key]&&!['accounting-documents','services','ledger','contracts'].includes(key))formResource(key,null);if(action==='fees')bulkFeeDialog();}).catch(e=>{if(token===pageToken)$('content').innerHTML='<div class="error">'+esc(e.message)+'</div>';});
 }
 function accountingTabs(active){const selected=active===true?'statement':active||'journal';return `<nav class="accounting-tabs" aria-label="حسابداری">${[['journal','ثبت سند',''],['statement','گزارش حساب','/statement'],['defaults','حساب‌های پیش‌فرض','/defaults'],['cheques','چک‌های دریافتی','/cheques'],...(can('accounting-documents','manage')?[['quick','سند سریع','/quick']]:[])].map(([key,title,path])=>`<a href="#accounting-documents${path}" ${selected===key?'aria-current="page"':''}>${title}</a>`).join('')}</nav>`;}
@@ -577,6 +577,31 @@ function dashboardSchoolMarker(map,point,sc){
  return marker;
 }
 
+async function portalVehicleRequestsPage(token=pageToken){
+ const items=await api(scoped('/api/v1/operations/portal-vehicle-requests'));
+ if(token!==pageToken)return;
+ const pending=items.filter(x=>x.status==='pending').length;
+ $('content').innerHTML='<section class="panel"><div class="page-intro"><div><h2>درخواست‌های اصلاح مشخصات خودرو</h2><p>راننده تغییر مدل یا پلاک را درخواست می‌کند؛ اعمال تغییر صرفاً پس از تأیید مدیر شرکت و ثبت رویداد انجام می‌شود.</p></div><b>'+number(pending)+' درخواست در انتظار</b></div>'+
+ simpleTable(['راننده','مدل فعلی','مدل درخواستی','پلاک فعلی','پلاک درخواستی','توضیحات','وضعیت','عملیات'],
+   items.map(r=>[
+     (r.first_name||'')+' '+(r.last_name||''),
+     r.current_model||'—',r.requested_model||'—',r.current_plate||'—',r.requested_plate||'—',
+     r.note||'—',r.status==='pending'?'در انتظار بررسی':r.status==='approved'?'تأییدشده':'ردشده',
+     r.status==='pending'?'در حال بررسی':'—'
+   ]))+
+ '<div class="sy-portal-review-actions">'+items.filter(x=>x.status==='pending').map(r=>
+ '<article class="panel" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:12px"><span><strong>'+esc((r.first_name||'')+' '+(r.last_name||''))+'</strong> · '+esc(r.current_plate||'—')+' ← '+esc(r.requested_plate||r.current_plate||'—')+'</span>'+
+ (can('drivers','manage')?'<div style="display:flex;gap:8px"><button class="primary" type="button" data-portal-review="'+r.id+'" data-action="approve">تأیید</button><button type="button" data-portal-review="'+r.id+'" data-action="reject">رد درخواست</button></div>':'')+'</article>').join('')+'</div></section>';
+ $('content').querySelectorAll('[data-portal-review]').forEach(button=>button.onclick=async()=>{
+   const action=button.dataset.action,id=Number(button.dataset.portalReview);
+   if(!Number.isInteger(id)||id<1)return;
+   if(!confirm(action==='approve'?'تغییرات پلاک یا مدل این راننده را پس از بررسی مدارک تأیید می‌کنید؟':'درخواست اصلاح خودرو رد شود؟'))return;
+   button.disabled=true;
+   try{await write('/api/v1/operations/portal-vehicle-requests/'+id+'/'+action,{},'POST');
+     notify('نتیجه بررسی ثبت شد.');await portalVehicleRequestsPage(token);
+   }catch(e){notify(e.message,true);if(button.isConnected)button.disabled=false;}
+ });
+}
 async function dashboard(token=pageToken){
  const agencyAtRequest=currentAgency?.id;
  const d=await api(scoped('/api/v1/operations/dashboard'));
