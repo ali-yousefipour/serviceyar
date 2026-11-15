@@ -28,7 +28,10 @@ final class UserService {
     FROM users u LEFT JOIN user_roles ur ON ur.user_id=u.id LEFT JOIN roles r ON r.id=ur.role_id
     WHERE '.$notDeleted.$where.' GROUP BY u.id ORDER BY u.id DESC';
   $q=$pdo->prepare($sql);$q->execute($a?[$a]:[]);
-  return $q->fetchAll();
+  $rows=$q->fetchAll();
+  foreach($rows as &$row)$row['has_photo']=UserPhotos::hasPhoto((int)$row['id']);
+  unset($row);
+  return $rows;
  }
  public static function find(int $u,int $a,int $id): array {self::scope($u,$a,'view');foreach(self::list($u,$a) as $r)if((int)$r['id']===$id)return $r;throw new AuthException(404,'کاربر پیدا نشد.','NOT_FOUND');}
  private static function editable(int $u,int $a,int $id): array {$r=self::find($u,$a,$id);$q=Connection::get()->prepare('SELECT COUNT(*) FROM agency_users WHERE user_id=?');$q->execute([$id]);if(!A::isSuperAdmin($u)&&((bool)array_intersect(['super_admin','agency_admin'],explode(',',(string)$r['role_names']))||(int)$q->fetchColumn()>1))throw new AuthException(403,'ویرایش حساب مشترک یا مدیر کل فقط توسط مدیر کل مجاز است.','PROTECTED_USER');return $r;}
@@ -37,6 +40,7 @@ final class UserService {
   $q=$p->prepare('SELECT id,username,first_name,last_name,mobile,national_code,email,address,postal_code,emergency_phone,photo_version FROM users WHERE id=? AND is_active=1');
   $q->execute([$userId]);$row=$q->fetch(\PDO::FETCH_ASSOC);
   if(!$row)throw new AuthException(404,'حساب کاربری پیدا نشد.','NOT_FOUND');
+  $row['has_photo']=UserPhotos::hasPhoto((int)$userId);
   return $row;
  }
  private static function profileFields(array $body): array {
