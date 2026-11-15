@@ -74,6 +74,16 @@ final class OperationsService
             ORDER BY unassigned DESC,students DESC,sc.name");
         $q->execute(['a'=>$aid]);$schools=$q->fetchAll();
         $unassigned=max(0,$counts['students']-$assigned);
+        // Count mismatching student records, not the absolute difference of
+        // two totals (which can cancel opposite discrepancies out).
+        $q=$p->prepare("SELECT COUNT(*) FROM students st
+            WHERE st.agency_id=:a AND st.is_active=1 AND
+              (COALESCE(st.service_status,'')='assigned') <>
+              EXISTS(SELECT 1 FROM service_students ss
+                JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=st.agency_id
+                  AND sv.is_active=1 AND sv.status<>'cancelled'
+                WHERE ss.student_id=st.id)");
+        $q->execute(['a'=>$aid]);$statusMismatch=(int)$q->fetchColumn();
         return [
           'counts'=>$counts,'statuses'=>$statuses,'schools'=>$schools,
           'metrics'=>[
@@ -83,8 +93,7 @@ final class OperationsService
             'servicesWithoutActiveDriver'=>max(0,$activeServices-$staffedServices),
             'servingDrivers'=>$servingDrivers,'serviceCapacity'=>$totalCapacity,
             'capacityUtilization'=>$totalCapacity>0?round(100*$assigned/$totalCapacity,1):0,
-            'statusMismatch'=>abs($assigned-(int)array_sum(array_map(
-                static fn($s)=>(string)($s['service_status']??'')==='assigned'?(int)$s['total']:0,$statuses))),
+            'statusMismatch'=>$statusMismatch,
           ],
           'generatedAt'=>gmdate('c'),'dataScope'=>'agency','financialDataIncluded'=>false
         ];
