@@ -116,13 +116,17 @@ final class BaleBotService {
    'walletConfigured'=>BaleClient::configured()];
  }
  private static function webhookUrl(): string {
-  $base=rtrim((string)config('APP_URL',''),'/');
-  if(!preg_match('#^https://[^/]+$#i',$base)){
-   // Fall back only when serving the known production hostname, never on localhost.
+  $base=rtrim((string)config('APP_URL','https://service-yar.ir'),'/');
+  $canonicalHosts=['service-yar.ir','www.service-yar.ir'];
+  if(!in_array(strtolower($base),['https://service-yar.ir','https://www.service-yar.ir'],true)){
+   // Ignore stale APP_URL values during the domain cutover, but never derive
+   // public webhook URLs from localhost or an unrelated Host header.
    $host=strtolower((string)($_SERVER['HTTP_HOST']??''));
-   if($host!=='challi.ir'&&$host!=='www.challi.ir')
-    throw new AuthException(503,'APP_URL باید روی نشانی HTTPS سامانه تنظیم شود.','BALE_APP_URL_REQUIRED');
-   $base='https://challi.ir';
+   if(!in_array($host,$canonicalHosts,true))
+    throw new AuthException(503,'APP_URL باید روی نشانی https://service-yar.ir تنظیم شود.','BALE_APP_URL_REQUIRED');
+   $base='https://service-yar.ir';
+  }else{
+   $base='https://service-yar.ir';
   }
   return $base.'/api/v1/bale/bot/webhook/'.self::setting('bale_auth_webhook_secret');
  }
