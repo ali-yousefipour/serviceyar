@@ -65,7 +65,7 @@ final class PasswordRecovery
 
     public static function request(string $username,string $channel): array
     {
-        self::requireChannel($channel);
+        self::requireChannel($channel,true);
         $username=self::digits($username);
         if($username===''||strlen($username)>100)throw new AuthException(422,'نام کاربری معتبر نیست.','VALIDATION_ERROR');
         $pdo=Connection::get();
