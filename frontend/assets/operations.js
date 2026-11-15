@@ -108,6 +108,30 @@ const todayISO=()=>{const p=new Intl.DateTimeFormat('en-US',{year:'numeric',mont
 const dateText=v=>{if(!v)return '—';const raw=String(v).slice(0,10);if(/^1[34]\d{2}[-/]\d{1,2}[-/]\d{1,2}$/.test(raw))return persianDigits(raw.replace(/-/g,'/'));const d=/^\d{4}-\d{2}-\d{2}$/.test(raw)?new Date(raw+'T12:00:00Z'):new Date(v);return Number.isNaN(d.getTime())?'—':new Intl.DateTimeFormat('fa-IR',{dateStyle:'medium',timeZone:'Asia/Tehran'}).format(d);};
 const person=r=>[r.first_name||r.firstName,r.last_name||r.lastName].filter(Boolean).join(' ')||r.name||r.title||r.plate||r.code||('#'+r.id);
 function notify(message,error=false){let box=$('notice');if(!box){box=document.createElement('div');box.id='notice';box.setAttribute('role','status');document.body.append(box);}box.textContent=message;box.className=error?'notice error':'notice';clearTimeout(notify.timer);notify.timer=setTimeout(()=>box.remove(),6500);}
+let sySidebarPhotoRequest=0;
+async function syRefreshSidebarAvatar(){
+ const avatar=document.getElementById('syAccountAvatar');
+ if(!avatar||!session?.user?.id)return;
+ const request=++sySidebarPhotoRequest;
+ const userId=String(session.user.id);
+ const name=[session.user.firstName,session.user.lastName].filter(Boolean).join(' ')||session.user.username||'کاربر';
+ const fallback=()=>{avatar.textContent=name.trim().charAt(0)||'ک';avatar.classList.remove('sy-account-avatar-has-photo');};
+ fallback();
+ try{
+  const profile=await api('/api/v1/auth/profile');
+  if(request!==sySidebarPhotoRequest||String(session?.user?.id)!==userId||!avatar.isConnected)return;
+  if(!Number(profile?.has_photo??profile?.hasPhoto))return;
+  const img=document.createElement('img');
+  img.className='sy-account-avatar-image';
+  img.alt='';
+  img.decoding='async';
+  img.referrerPolicy='same-origin';
+  img.onerror=()=>{if(request===sySidebarPhotoRequest)fallback();};
+  img.src='/api/v1/auth/profile/photo?v='+encodeURIComponent(profile.photo_version??profile.photoVersion??Date.now());
+  avatar.replaceChildren(img);
+  avatar.classList.add('sy-account-avatar-has-photo');
+ }catch(_){if(request===sySidebarPhotoRequest)fallback();}
+}
 function renderNav(){
  const accountMenu=document.getElementById('syAccountMenu');
  const ownPassword=document.getElementById('ownPassword');
@@ -222,7 +246,7 @@ function renderNav(){
   const sideName=document.getElementById('syAccountName');
   if(sideName)sideName.textContent=displayName;
   const avatar=document.getElementById('syAccountAvatar');
-  if(avatar)avatar.textContent=displayName.charAt(0);
+  if(avatar)void syRefreshSidebarAvatar();
   const role=document.getElementById('syAccountRole');
   if(role)role.textContent=(session?.roles||[]).includes('super_admin')?'مدیر کل سامانه':(session?.roles||[]).includes('agency_admin')?'مدیر شرکت':'حساب کاربری';
   if(sideName)sideName.textContent=[session?.user?.firstName,session?.user?.lastName].filter(Boolean).join(' ')||session?.user?.username||'کاربر سامانه';
