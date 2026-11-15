@@ -71,7 +71,7 @@ final class TaxiOrganizationTariffs
     public static function rates(PDO $pdo,int $district,string $class): array {
         return self::overrides($pdo,$district,$class)+self::defaults($district,$class);
     }
-    public static function quote(PDO $pdo,int $district,mixed $class,mixed $distance): array {
+    public static function quote(PDO $pdo,int $district,mixed $class,mixed $distance,array $options=[]): array {
         $class=self::vehicle($class);
         if(!is_numeric($distance)||!is_finite((float)$distance)||(float)$distance<=0||(float)$distance>200)
             throw new AuthException(422,'مسافت باید عدد مثبت و حداکثر ۲۰۰ کیلومتر باشد.','INVALID_TAXI_DISTANCE');
@@ -83,8 +83,13 @@ final class TaxiOrganizationTariffs
             if(!$last)throw new AuthException(422,'نرخ‌نامه برای این مسافت کامل نیست.','TAXI_TARIFF_UNAVAILABLE');
             $vehicle=null;foreach(self::data()['classes'] as $c)if($c['key']===$class){$vehicle=$c;break;}
             $extra=($km-20)*(int)$vehicle['extra_driver_riyal_per_km'];
+            $traffic=self::TRAFFIC[$district];
             $rate=['distanceKm'=>$km,'driverMonthly'=>$last['driverMonthly']+$extra,
-                'parentMonthly'=>(int)round($last['parentMonthly']+$extra*1.19658),'overridden'=>false];
+                // An extra kilometre raises driver pay including district traffic;
+                // the parent's 1.19658 factor covers the 11% parent-side shares
+                // and 7.8% insurance, not the district traffic itself.
+                'parentMonthly'=>(int)round($last['parentMonthly']+$extra*(1+$traffic)*1.19658),
+                'overridden'=>false];
         }
         // The published footnote adds the district traffic coefficient to
         // DRIVER remuneration, not only to the parents' invoice. Default
@@ -95,6 +100,25 @@ final class TaxiOrganizationTariffs
         $traffic=self::TRAFFIC[$district];
         $trafficAmount=empty($rate['overridden'])?(int)round($baseDriver*$traffic):0;
         $rate['driverMonthly']=$baseDriver+$trafficAmount;
+        // The worksheet contains 3%, 1%, 7%, certification and insurance
+        // on the PARENT side. They must never implicitly become driver
+        // payroll deductions. Metadata is read-only and does not book a debt.
+        $special=(string)($options['specialService']??'normal');
+        $licenseVerified=$options['licenseVerified']??null;
+        if($licenseVerified!==null&&!is_bool($licenseVerified))
+            throw new AuthException(422,'وضعیت پروانه راننده باید تأییدشده باشد.','INVALID_LICENSE_STATUS');
+        $specialOrDiscount=$special!=='normal'||$licenseVerified===true;
+        // Custom admin override amounts are final; calculating special fares
+        // on top of them without explicit contract approval is unsafe.
+        if($specialOrDiscount&&!empty($rate['overridden']))
+            throw new AuthException(422,'اعمال خدمت ویژه یا تخفیف روی نرخ سفارشی نیازمند تأیید و ثبت نرخ مستقل است.','SPECIAL_OVERRIDE_REQUIRES_APPROVAL');
+        $breakdown=TaxiFareComponents::breakdown(
+            (int)$rate['driverMonthly'],$licenseVerified,$special,
+            $specialOrDiscount?null:(int)$rate['parentMonthly']
+        );
+        $rate['parentMonthly']=$breakdown['parentMonthly'];
+        $rate['driverMonthly']=$breakdown['driverMonthly'];
+        $rate['parentComponents']=$breakdown;
         return $rate+[
             'driverBaseBeforeTraffic'=>$baseDriver,
             'driverTrafficSurcharge'=>$trafficAmount,
