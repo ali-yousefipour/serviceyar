@@ -47,7 +47,7 @@ final class PasswordRecovery
             ?(($policy['sms']??false)||($policy['mobile']??false))
             :($policy['bale']??false);
         $providerReady=$channel==='sms'
-            ?(NeginSms::configured()&&class_exists(\\SoapClient::class))
+            ?(NeginSms::configured()&&class_exists(\SoapClient::class))
             :BaleBotService::ready();
         if(!$enabled||!$schemaReady||($forDelivery&&!$providerReady))
             throw new AuthException(403,'این روش بازیابی رمز عبور فعال یا آماده نیست.','PASSWORD_RECOVERY_METHOD_DISABLED');
