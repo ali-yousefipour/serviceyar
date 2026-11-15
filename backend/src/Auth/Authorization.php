@@ -19,8 +19,9 @@ final class Authorization
         $s->execute(['uid'=>$userId]);
         $permissions=$s->fetchAll(\PDO::FETCH_COLUMN);
         // Legacy production databases may not yet have migration 0034.
-        // A valid agency_admin role can manage users only in its own agency scope.
-        $r=Connection::get()->prepare("SELECT 1 FROM user_roles ur JOIN roles r ON r.id=ur.role_id JOIN users u ON u.id=ur.user_id WHERE ur.user_id=? AND r.name='agency_admin' AND u.is_active=1 LIMIT 1");
+        // Agency administrators, including school-service company managers, can manage
+        // users only inside their own agency. The UserService scope enforces tenancy.
+        $r=Connection::get()->prepare("SELECT 1 FROM user_roles ur JOIN roles r ON r.id=ur.role_id JOIN users u ON u.id=ur.user_id WHERE ur.user_id=? AND r.name IN ('agency_admin','school_company_manager') AND u.is_active=1 LIMIT 1");
         $r->execute([$userId]);
         if($r->fetchColumn())$permissions=array_values(array_unique([...$permissions,'users.view','users.manage']));
         return $permissions;
