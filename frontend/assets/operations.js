@@ -1200,6 +1200,126 @@ async function selectSchoolFromCatalog(){
  const refresh=async()=>{const token=++version,term=$('catalogSearch')?.value||'';try{const rows=await api(scoped('/api/v1/school-catalog?search='+encodeURIComponent(term)));if(token!==version||!$('catalogResults'))return;$('catalogResults').innerHTML=rows.length?'<div class="table-wrap"><table><thead><tr><th>کد</th><th>مدرسه</th><th>ناحیه</th><th>وضعیت</th><th>عملیات</th></tr></thead><tbody>'+rows.map(r=>`<tr><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.region||'—')}</td><td>${Number(r.selected)?'انتخاب شده':'جدید'}</td><td><button type="button" data-catalog-id="${r.id}" ${Number(r.selected)?'disabled':''}>انتخاب مدرسه</button></td></tr>`).join('')+'</tbody></table></div>':'مدرسه‌ای یافت نشد.';$('catalogResults').querySelectorAll('[data-catalog-id]').forEach(button=>button.onclick=async()=>{button.disabled=true;try{await write('/api/v1/school-catalog/select',{catalogSchoolId:Number(button.dataset.catalogId)});closeDialog();lookupCache={};notify('مدرسه به شرکت اضافه شد.');if(gridState?.key==='schools')await loadResource('schools');}catch(e){notify(e.message,true);button.disabled=false;}});}catch(e){if(token===version&&$('catalogResults'))$('catalogResults').textContent=e.message;}};
  let timer;$('catalogSearch').oninput=()=>{clearTimeout(timer);timer=setTimeout(refresh,250);};await refresh();
 }
+
+/** Keep the driver wizard mounted while opening the secondary vehicle picker. */
+async function attachDriverVehiclePicker(form,row){
+ const select=form.elements.vehicleId;
+ if(!select)return;
+ const outer=select.closest('label');
+ if(!outer)return;
+ const label=document.createElement('div');
+ label.className='sy-driver-plate-control';
+ label.innerHTML='<span class="sy-driver-plate-caption">پلاک خودروی راننده</span><div class="sy-driver-plate-inline"><div class="sy-driver-plate-current" aria-live="polite"></div>'+
+  '<button type="button" class="sy-driver-plate-edit" aria-label="ویرایش یا جایگزینی خودروی راننده" title="جستجو و تغییر خودرو"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L9.5 16.5 5 18l1.5-4.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></button></div><small>پلاک به‌صورت معمول قابل ویرایش نیست؛ برای تغییر، آیکون مداد را انتخاب کنید.</small>';
+ outer.replaceWith(label);
+ select.hidden=true;select.removeAttribute('data-relation');
+ select.removeAttribute('required');
+ label.append(select);
+ const current=label.querySelector('.sy-driver-plate-current');
+ const plateCache=new Map();
+ const setVehicle=(vehicle)=>{
+  if(vehicle?.id){plateCache.set(String(vehicle.id),vehicle);select.replaceChildren(new Option(vehicle.plate||'خودرو',String(vehicle.id),true,true));}
+  else if(!select.value)select.replaceChildren(new Option('فاقد خودرو','',true,true));
+  current.innerHTML=vehicle?.plate?iranPlate(vehicle.plate):'<span class="sy-no-driver-vehicle">خودرویی انتخاب نشده است</span>';
+  select.dispatchEvent(new Event('change',{bubbles:true}));
+ };
+ let initial=null;
+ try{
+  if(select.value){initial=await api(scoped('/api/v1/vehicles/'+encodeURIComponent(select.value)));}
+ }catch(e){current.textContent='دریافت پلاک ناموفق بود: '+e.message;}
+ if(form.isConnected)setVehicle(initial|| (row.vehicle_id?{id:row.vehicle_id,plate:'پلاک نامشخص'}:null));
+ const launch=()=>{
+  if(!form.isConnected)return;
+  const parent=$('modal')?.querySelector('.modal');
+  if(!parent)return;
+  const shell=document.createElement('div');shell.className='sy-driver-vehicle-overlay';
+  shell.innerHTML='<section class="sy-driver-vehicle-dialog" role="dialog" aria-modal="true" aria-label="جستجو یا ثبت خودروی راننده" tabindex="-1">'+
+   '<header><div><span>مدیریت خودروی راننده</span><h3>جستجو و جایگزینی خودرو</h3></div><button type="button" data-vehicle-close aria-label="بستن پنجره">×</button></header>'+
+   '<div class="sy-driver-vehicle-content"><div class="sy-driver-vehicle-actions"><label>جستجوی پلاک در خودروهای شرکت و سوابق سپند<input type="search" data-vehicle-search autocomplete="off" placeholder="شماره یا بخش‌هایی از پلاک را وارد کنید"></label><button type="button" class="primary" data-vehicle-new>ثبت خودروی جدید</button></div>'+
+   '<div data-vehicle-status role="status" aria-live="polite"></div><div data-vehicle-results></div><div data-vehicle-registration hidden></div></div></section>';
+  parent.append(shell);
+  const popup=shell.querySelector('[role=dialog]'),status=shell.querySelector('[data-vehicle-status]'),results=shell.querySelector('[data-vehicle-results]'),search=shell.querySelector('[data-vehicle-search]'),registration=shell.querySelector('[data-vehicle-registration]');
+  const close=()=>{shell.removeEventListener('keydown',keyHandler);shell.remove();label.querySelector('.sy-driver-plate-edit')?.focus();};
+  const keyHandler=e=>{if(e.key==='Escape'){e.stopPropagation();e.preventDefault();close();}};
+  shell.addEventListener('keydown',keyHandler);
+  shell.querySelector('[data-vehicle-close]').onclick=close;
+  shell.addEventListener('click',e=>{if(e.target===shell)close();});
+  const normalize=v=>ServiceYarDates.digits(String(v??'')).replace(/[\s\-\/ـ]/g,'').replace(/ایران/g,'');
+  const toParts=v=>{
+   const raw=normalize(v),match=raw.match(/^(\d{2})([آ-یA-Za-z])(\d{3})(\d{2})$/u)||(()=>{const m=raw.match(/^(\d{2})(\d{3})([آ-یA-Za-z])(\d{2})$/u);return m?[m[0],m[1],m[3],m[2],m[4]]:null;})();
+   return match?[match[1],match[2],match[3],match[4]]:null;
+  };
+  let sequence=0,wait=0;
+  const find=async()=>{
+   const ticket=++sequence,term=normalize(search.value);
+   registration.hidden=true;results.hidden=false;
+   if(term.length<2){status.textContent='حداقل دو رقم یا حرف از پلاک را وارد کنید.';results.replaceChildren();return;}
+   status.textContent='در حال جستجو در سوابق خودروها…';
+   try{
+    const found=await api(scoped('/api/v1/vehicles/registry-search?search='+encodeURIComponent(term)));
+    if(ticket!==sequence||!shell.isConnected)return;
+    status.textContent=found.length?number(found.length)+' خودرو یافت شد.':'خودرویی یافت نشد؛ می‌توانید خودروی جدید ثبت کنید.';
+    results.innerHTML=found.length?'<div class="sy-driver-vehicle-list">'+found.map((vehicle,i)=>
+     '<article class="sy-driver-vehicle-item"><div>'+iranPlate(vehicle.plate)+'<p>'+esc(vehicle.model||vehicle.vehicleType||'مدل نامشخص')+
+     ' · '+(vehicle.inCurrentAgency?'ثبت‌شده در شرکت جاری':'موجود در سوابق سپند یا سایر شرکت‌ها')+'</p></div>'+
+     '<button type="button" data-vehicle-choice="'+i+'">'+(vehicle.inCurrentAgency?'انتخاب خودرو':'فراخوانی و ثبت برای شرکت')+'</button></article>').join('')+'</div>':'<p class="muted">نتیجه‌ای یافت نشد.</p>';
+    results.querySelectorAll('[data-vehicle-choice]').forEach(button=>button.onclick=()=>{
+     const v=found[Number(button.dataset.vehicleChoice)];
+     if(v.inCurrentAgency){setVehicle(v);close();return;}
+     registrationForm(v); 
+    });
+   }catch(e){if(ticket===sequence&&shell.isConnected){status.textContent='خطا در جستجوی خودرو: '+e.message;results.replaceChildren();}}
+  };
+  search.addEventListener('input',()=>{clearTimeout(wait);wait=setTimeout(find,300);});
+  const registrationForm=(prefill=null)=>{
+   results.hidden=true;registration.hidden=false;status.textContent=prefill?'اطلاعات خودرو از سوابق مشترک فراخوانی شد؛ برای اتصال به راننده باید یک نسخه در شرکت جاری ثبت شود.':'مشخصات خودروی جدید را تکمیل کنید.';
+   registration.innerHTML='<form class="sy-driver-vehicle-new"><h4>'+(prefill?'ثبت خودروی فراخوانی‌شده':'ثبت خودروی جدید')+'</h4>'+
+    '<fieldset class="vehicle-plate-filter sy-vehicle-plate-editor"><legend>پلاک ایران</legend>'+iranPlateInput('edit')+'</fieldset>'+
+    '<div class="form-grid">'+
+    '<label>نوع خودرو (جستجوی مدل)<input name="vehicleTrim" type="search" placeholder="نام مدل را جستجو کنید"></label>'+
+    '<label>کلاس خودرو<select name="tariffVehicleClass" required><option value="">انتخاب کلاس</option><option value="1">کلاس ۱</option><option value="2">کلاس ۲</option><option value="3">کلاس ۳</option></select></label>'+
+    '<label>ظرفیت<input name="capacity" type="number" min="1" max="50" value="4" required></label>'+
+    '<label>نام مالک<input name="ownerName" maxlength="200"></label>'+
+    '<label>شماره شاسی (VIN)<input name="vin" maxlength="100" dir="ltr"></label></div>'+
+    '<p data-new-vehicle-error role="alert" class="error" hidden></p>'+
+    '<footer><button type="button" data-register-back>بازگشت به جستجو</button><button class="primary" type="submit">ثبت خودرو و انتخاب برای راننده</button></footer></form>';
+   const newForm=registration.querySelector('form'),plate=registration.querySelector('fieldset');
+   const [first,letter,middle,region]=[plate.querySelector('[data-plate-first]'),plate.querySelector('[data-plate-letter]'),plate.querySelector('[data-plate-middle]'),plate.querySelector('[data-plate-region]')];
+   const original=toParts(prefill?.plate||search.value);
+   if(original){first.value=persianDigits(original[0]);letter.value=original[1];middle.value=persianDigits(original[2]);region.value=persianDigits(original[3]);}
+   if(prefill?.capacity)newForm.elements.capacity.value=prefill.capacity;
+   if(prefill?.tariffVehicleClass)newForm.elements.tariffVehicleClass.value=prefill.tariffVehicleClass;
+   const picker=window.ServiceYarVehicleModels?window.ServiceYarVehicleModels.attach(newForm.elements.vehicleTrim,newForm.elements.tariffVehicleClass,{initialValue:prefill?.model||''}):Promise.resolve(null);
+   newForm.querySelector('[data-register-back]').onclick=()=>{registration.hidden=true;results.hidden=false;status.textContent='خودرو را از نتایج انتخاب کنید یا پلاک جدید وارد کنید.';};
+   const digit=v=>normalize(v).replace(/\D/g,'');
+   newForm.onsubmit=async e=>{
+    e.preventDefault();
+    const parts=[digit(first.value),letter.value,digit(middle.value),digit(region.value)];
+    if(parts[0].length!==2||!parts[1]||parts[2].length!==3||parts[3].length!==2){registration.querySelector('[data-new-vehicle-error]').hidden=false;registration.querySelector('[data-new-vehicle-error]').textContent='پلاک ایران را کامل کنید.';return;}
+    const button=newForm.querySelector('[type=submit]');button.disabled=true;
+    const err=registration.querySelector('[data-new-vehicle-error]');err.hidden=true;
+    try{
+     const modelPicker=await picker;
+     if(newForm.elements.vehicleTrim.value.trim()&&modelPicker&&!newForm.elements.vehicleTrim.dataset.vehicleFamily)
+      throw Error('مدل خودرو را از فهرست جستجوی مدل‌های تأییدشده انتخاب کنید.');
+     const payload={plate:parts[0]+parts[1]+parts[2]+'-'+parts[3],
+      vehicleTrim:newForm.elements.vehicleTrim.value.trim(),model:newForm.elements.vehicleTrim.value.trim(),
+      tariffVehicleClass:newForm.elements.tariffVehicleClass.value,capacity:Number(newForm.elements.capacity.value),
+      ownerName:newForm.elements.ownerName.value.trim(),vin:newForm.elements.vin.value.trim()};
+     const saved=await write('/api/v1/vehicles',payload,'POST');
+     lookupCache={};
+     setVehicle({id:saved.id,plate:saved.plate||payload.plate});
+     close();
+     notify('خودرو ثبت شد و برای راننده انتخاب گردید. برای نهایی‌شدن ارتباط، اطلاعات راننده را ذخیره کنید.');
+    }catch(error){err.hidden=false;err.textContent='ثبت خودرو انجام نشد: '+error.message;button.disabled=false;}
+   };
+  };
+  shell.querySelector('[data-vehicle-new]').onclick=()=>registrationForm();
+  popup.focus();
+  if(search.value.trim().length>=2)void find();
+ };
+ label.querySelector('.sy-driver-plate-edit').onclick=launch;
+}
 async function formResource(key,id,onSaved){
  if(!can(key,'manage'))return;if(key==='schools'&&!id){await selectSchoolFromCatalog();return;}const token=pageToken;let row={};try{if(id)row=await api(scoped('/api/v1/'+key+'/'+id));if(token!==pageToken)return;
  let companyAccountOptions=[],bankOptions=[];
@@ -1221,6 +1341,7 @@ async function formResource(key,id,onSaved){
  const required={schools:['name'],students:['firstName','lastName','mobile','schoolId'],drivers:['firstName','lastName'],services:['title'],vehicles:['plate'],ledger:['partyType','partyId','direction','amount','entryDate'],'driver-work':['driverId','workDate','amount'],'driver-payments':['driverId','paymentDate','amount']};
  dialog((id?'ویرایش ':'ثبت ')+resourceName(key),`<form id="editForm" class="${key==='ledger'?'sy-ledger-editor':''}"><div class="form-grid">${resources[key][1].map(f=>{const defaults={academicYear:year(),nationality:'iranian',capacity:4,feeSource:'taxi',serviceStatus:'no_request',isRepresentative:0,direction:'receipt',channel:'internal',monthlyFee:0,agreedAmount:0};const original=val(row,f);const v=original!==''?original:(id?'':defaults[f]??''),options=f==='companyAccountId'&&key==='ledger'?companyAccountOptions:f==='bankName'&&key==='accounts'?bankOptions:f==='method'&&key==='ledger'&&id&&row.method&&!fieldOptions(key,f).some(([code])=>code===row.method)?[...fieldOptions(key,f),[row.method,methodLabel(row.method)+' (روش سابق)']]:fieldOptions(key,f),req=required[key]?.includes(f)||f==='companyAccountId'&&key==='ledger'&&!id?'required':'',text=/address|body|note|reason|description|response/i.test(f),relation=relations[f]||(['partyId','ownerId','recipientId'].includes(f)?'party':null),rialField=f==='amount'&&['invoices','payments','driver-payments','school-charges','service-charges','contracts'].includes(key);return `<label>${labels[f]||esc(f)}${req?' *':''}${f==='amount'&&key==='ledger'?`<div class="sy-money-field"><input type="text" name="amountDisplay" data-money-display inputmode="numeric" autocomplete="off" spellcheck="false" dir="ltr" placeholder="۰" aria-label="مبلغ به ریال" ${req} value="${esc(v!==''?number(v):'')}"><span class="sy-money-unit">ریال</span><input type="hidden" name="amount" value="${esc(v)}"></div><small class="sy-money-hint">مبلغ را بدون اعشار وارد کنید؛ ارقام به‌صورت سه‌رقمی جدا می‌شوند.</small>`:options?`<select name="${f}" ${req}><option value="">انتخاب کنید</option>${options.map(([value,title])=>`<option value="${esc(value)}" ${String(v)===String(value)?'selected':''}>${esc(title)}</option>`).join('')}</select>`:relation?`<input data-lookup-search="${f}" placeholder="جستجوی ${labels[f]}" aria-label="جستجوی ${labels[f]}"><select name="${f}" aria-label="${esc(labels[f]||f)}" data-relation="${relation}" ${req}><option value="">انتخاب کنید</option>${v?`<option value="${esc(v)}" selected>#${esc(v)}</option>`:''}</select>`:rialField?`<input type="text" name="${f}" data-rial-amount inputmode="numeric" autocomplete="off" dir="ltr" ${req} placeholder="۰" value="${esc(v!==''?number(v):'')}" aria-label="${esc(labels[f]||f)} به ریال"><small class="sy-money-hint">مبلغ به ریال؛ بدون اعشار و با جداکننده هزارگان</small>`:text?`<textarea name="${f}" maxlength="6000" ${req}>${esc(v)}</textarea>`:`<input name="${f}" ${req} ${/Date$/.test(f)?'type="date"':/distanceKm/i.test(f)?'type="number" min="0" step="1" inputmode="numeric"':/amount|fee|capacity|score|latitude|longitude|rating|balance/i.test(f)?'type="number" step="any"':/mobile|phone/i.test(f)?'inputmode="tel"':'maxlength="255"'} value="${esc(v)}">`}</label>`}).join('')}</div><p class="muted">مبالغ به ریال و تمام تاریخ‌های ورودی و نمایشی شمسی هستند.</p><button class="primary" id="saveRecord">ذخیره</button></form>`);
  const form=$('editForm');
+ if(key==='drivers'&&id)await attachDriverVehiclePicker(form,row);
  if(key==='services'){
   // The service controls the vehicle actually registered to its driver.
   // A selected model/class updates that registered vehicle transactionally.
