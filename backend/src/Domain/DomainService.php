@@ -771,7 +771,10 @@ final class DomainService {
    $linked->execute([$aid,$id]);
    foreach($linked->fetchAll(\PDO::FETCH_ASSOC) as $service)
     ServicePricing::synchronizeServiceVehicle($pdo,$aid,(int)$service['id'],(string)($service['fee_source']??'taxi'),true,true);
-   self::refreshServiceCapacity($pdo,$aid);
+   // Unlike routine capacity reconciliation, a vehicle replacement must
+   // also reduce service capacity when the new vehicle has fewer seats.
+   $pdo->prepare('UPDATE services SET capacity=? WHERE agency_id=? AND driver_id=? AND is_active=1')
+    ->execute([(int)$targetVehicle['capacity'],$aid,$id]);
   }
   // Vehicle seating capacity must be reflected by assigned services, including older unsynchronized records.
   // Both writes share the current transaction; existing assignments are untouched.
