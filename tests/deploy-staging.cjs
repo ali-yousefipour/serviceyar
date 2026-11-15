@@ -9,6 +9,7 @@ assert.match(source,/3 if name == "index.html"/,'HTML index must publish last');
 const workflow=readFileSync('.github/workflows/deploy-serviceyar.yml','utf8');
 const html=readFileSync('frontend/index.html','utf8');
 const productionDocs=readFileSync('docs/PHASE-17-PRODUCTION.md','utf8');
+const bootstrap=readFileSync('backend/src/bootstrap.php','utf8');
 for(const asset of ['public-site.js','public-site.css','public-site-content.html']){
  const {existsSync}=require('node:fs');
  assert.ok(existsSync('frontend/assets/'+asset),'Missing public asset: '+asset);
@@ -31,4 +32,5 @@ assert.match(html,/<link rel="canonical" href="https:\/\/service-yar\.ir\/">/,'T
 assert.match(html,/<meta property="og:url" content="https:\/\/service-yar\.ir\/">/,'Open Graph metadata must use the production URL');
 assert.match(productionDocs,/APP_URL=https:\/\/service-yar\.ir/,'Production environment docs must use the canonical URL');
 assert.match(productionDocs,/CORS_ALLOWED_ORIGINS=https:\/\/service-yar\.ir/,'Production CORS docs must use the canonical origin');
+assert.match(bootstrap,/\$allowedOrigins\[\]\s*=\s*'https:\/\/service-yar\.ir'/,'Production API must trust the canonical origin during the domain cutover');
 console.log('FTP staging isolation and service-yar.ir canonical-domain checks OK');
