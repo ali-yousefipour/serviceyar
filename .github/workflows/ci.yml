@@ -38,6 +38,7 @@ jobs:
           node tests/payroll-reconciliation-contract.cjs
           node tests/taxi-tariff-footnotes-contract.cjs
           php tests/taxi-fare-components.php
+          php tests/taxi-financial-integration.php
           node tests/admin-production-schema-contract.cjs
           node --check frontend/assets/bale-bot.js
           node --check frontend/assets/login-methods.js
