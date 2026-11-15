@@ -133,6 +133,7 @@ final class AuthService
         $pdo->prepare('UPDATE user_sessions SET revoked_at=UTC_TIMESTAMP() WHERE token_hash=:token')->execute(['token'=>$hash]);
         if ($uid) $this->audit((int)$uid,'auth.logout',null,null);
         setcookie('serviceyar_session','',['expires'=>1,'path'=>'/','secure'=>config('APP_SECURE_COOKIE','0') === '1','httponly'=>true,'samesite'=>'Lax']);
+        setcookie('serviceyar_admin_session','',['expires'=>1,'path'=>'/api/v1/admin/impersonation','secure'=>config('APP_SECURE_COOKIE','0') === '1','httponly'=>true,'samesite'=>'Strict']);
     }
 
     public function requireCsrf(array $session): void
