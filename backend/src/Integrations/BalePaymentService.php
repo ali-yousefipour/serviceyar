@@ -28,7 +28,7 @@ final class BalePaymentService
         if(isset($row['existing']))return ['intent'=>$row['existing'],'alreadyPending'=>true];
         $client??=new BaleClient();
         try{
-            $message=$client->request('sendInvoice',['chat_id'=>$chat,'title'=>'پرداخت فاکتور سرویسیار','description'=>'پرداخت فاکتور شماره '.$invoice,'payload'=>$row['payload'],'provider_token'=>(string)config('BALE_WALLET_PROVIDER_TOKEN'),'currency'=>'IRR','prices'=>[['label'=>'مانده فاکتور','amount'=>$row['amount']]]]);
+            $message=$client->request('sendInvoice',['chat_id'=>$chat,'title'=>'پرداخت فاکتور سرویسیار','description'=>'پرداخت فاکتور شماره '.$invoice,'payload'=>$row['payload'],'provider_token'=>BaleBotService::walletProviderToken(),'currency'=>'IRR','prices'=>[['label'=>'مانده فاکتور','amount'=>$row['amount']]]]);
             Connection::get()->prepare("UPDATE payment_intents SET status='pending' WHERE id=:id AND status='sending'")->execute(['id'=>$row['id']]);
             OperationsService::audit($uid,$aid,'bale_invoice_created','invoices',$invoice);return ['intent'=>['id'=>$row['id'],'uuid'=>$row['uuid'],'status'=>'pending'],'messageId'=>$message['message_id']??null];
         }catch(\Throwable $e){Connection::get()->prepare("UPDATE payment_intents SET status='uncertain' WHERE id=:id AND status='sending'")->execute(['id'=>$row['id']]);throw $e;}
