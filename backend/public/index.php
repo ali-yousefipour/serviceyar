@@ -265,6 +265,20 @@ try {
   $b=Request::json();$uid=\ServiceYar\Integrations\BaleBotService::verifyLogin((string)($b['username']??''),(string)($b['code']??''));
   Response::json(['ok'=>true,'data'=>$auth->loginTrustedUser($uid)]);
  }
+ if($method==='POST'&&$path==='/api/v1/portal/auth/password'){
+   header('Cache-Control: no-store, max-age=0');
+   $b=Request::json();$mobile=strtr(trim((string)($b['username']??'')),
+     ['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9']);
+   if(!preg_match('/^09[0-9]{9}$/D',$mobile))
+     throw new AuthException(401,'شماره همراه یا رمز عبور نامعتبر است.','INVALID_PORTAL_CREDENTIALS');
+   $q=Connection::get()->prepare("SELECT u.id FROM users u
+       JOIN portal_credentials c ON c.user_id=u.id AND c.password_set_at IS NOT NULL
+       JOIN portal_memberships m ON m.user_id=u.id
+       WHERE u.username=? AND u.mobile=? AND u.is_active=1 LIMIT 1");
+   $q->execute([$mobile,$mobile]);
+   if(!$q->fetchColumn())throw new AuthException(401,'شماره همراه یا رمز عبور نامعتبر است.','INVALID_PORTAL_CREDENTIALS');
+   Response::json(['ok'=>true,'data'=>$auth->login($mobile,(string)($b['password']??''))]);
+ }
  if($method==='POST'&&$path==='/api/v1/auth/login'){ \ServiceYar\Auth\LoginMethods::requireEnabled('password');$b=Request::json();Response::json(['ok'=>true,'data'=>$auth->login((string)($b['username']??''),(string)($b['password']??''))]); }
  if($method==='POST'&&$path==='/api/v1/auth/logout'){ $s=$auth->current();$auth->requireCsrf($s);if(!empty($s['impersonation']))Response::json(['ok'=>true,'data'=>\ServiceYar\Auth\AdminImpersonation::stop($s)]);$auth->logout();Response::json(['ok'=>true,'data'=>['loggedOut'=>true]]); }
  if($method==='GET'&&$path==='/api/v1/auth/me'){ header('Cache-Control: private, no-store, max-age=0'); $s=$auth->current();$rs=Connection::get()->prepare('SELECT r.name FROM roles r JOIN user_roles ur ON ur.role_id=r.id WHERE ur.user_id=:u ORDER BY r.id');$rs->execute(['u'=>$s['id']]);Response::json(['ok'=>true,'data'=>['user'=>['id'=>$s['id'],'uuid'=>$s['uuid'],'username'=>$s['username'],'firstName'=>$s['firstName'],'lastName'=>$s['lastName']],'roles'=>$rs->fetchAll(\PDO::FETCH_COLUMN),'permissions'=>Authorization::permissions($s['id']),'agencies'=>AgencyService::sessionList($s['id']),'csrfToken'=>$s['csrfToken'],'impersonation'=>$s['impersonation']??null]]); }
