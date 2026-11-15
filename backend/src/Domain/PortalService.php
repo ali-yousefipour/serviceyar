@@ -61,21 +61,23 @@ final class PortalService {
     public static function provisionVerifiedMobile(string $phone): ?int {
         $mobile=self::mobile($phone);if($mobile==='')return null;
         self::ensureSchema();$pdo=Connection::get();
+        $phones=[$mobile,'98'.substr($mobile,1),'+98'.substr($mobile,1)];
         $parent=self::rows($pdo,"SELECT DISTINCT s.agency_id,s.id party_id,'parent' party_type
           FROM students s LEFT JOIN guardians g ON g.student_id=s.id
           JOIN agencies a ON a.id=s.agency_id AND a.is_active=1
-          WHERE s.is_active=1 AND (g.mobile=? OR
-            (s.mobile=? AND (s.guardian_first_name IS NOT NULL OR s.guardian_last_name IS NOT NULL)))",
-            [$mobile,$mobile]);
+          WHERE s.is_active=1 AND (g.mobile IN (?,?,?) OR
+            (s.mobile IN (?,?,?) AND (s.guardian_first_name IS NOT NULL OR s.guardian_last_name IS NOT NULL)))",
+            [...$phones,...$phones]);
         $drivers=self::rows($pdo,"SELECT d.agency_id,d.id party_id,'driver' party_type
           FROM drivers d JOIN agencies a ON a.id=d.agency_id AND a.is_active=1
-          WHERE d.mobile=? AND d.is_active=1",[$mobile]);
+          WHERE d.mobile IN (?,?,?) AND d.is_active=1",$phones);
         $members=array_merge($parent,$drivers);
         if(!$members)return null;
         // Refuse account collisions and privileged existing identities. Portal
         // enrollment never silently changes a staff user's roles or username.
         $matches=self::rows($pdo,"SELECT u.id,u.username,u.mobile FROM users u WHERE
-          u.is_active=1 AND (u.username=? OR u.mobile=?) LIMIT 3",[$mobile,$mobile]);
+          u.is_active=1 AND (u.username=? OR u.mobile IN (?,?,?)) LIMIT 3",
+          [$mobile,...$phones]);
         if(count($matches)>1)return null;
         $userId=$matches?(int)$matches[0]['id']:null;
         if($matches && ((string)$matches[0]['username']!==$mobile ||
@@ -166,9 +168,10 @@ final class PortalService {
                 FROM students st JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id
                 WHERE st.id=? AND st.agency_id=? AND st.is_active=1",[$partyId,$agencyId])[0]??null;
             if(!$student)throw new AuthException(404,'دانش‌آموز فعال پیدا نشد.','PORTAL_NOT_FOUND');
+            $phone=(string)($profile['mobile']??'');
             $guardian=self::rows($pdo,"SELECT id,name,mobile,relation_title FROM guardians
-                WHERE student_id=? AND mobile=? ORDER BY is_primary DESC LIMIT 1",
-                [$partyId,(string)($profile['mobile']??'')])[0]??null;
+                WHERE student_id=? AND mobile IN (?,?,?) ORDER BY is_primary DESC LIMIT 1",
+                [$partyId,$phone,'98'.substr($phone,1),'+98'.substr($phone,1)])[0]??null;
             $services=self::rows($pdo,"SELECT sv.id,sv.title,sv.code,ss.pickup_address,ss.pickup_order,
                 d.first_name driverFirstName,d.last_name driverLastName,d.mobile driverMobile,
                 v.plate,v.model,v.capacity
@@ -279,8 +282,9 @@ final class PortalService {
                 if(array_key_exists('guardianName',$input)||array_key_exists('guardianRelation',$input)){
                     $mobile=self::rows($pdo,"SELECT mobile FROM users WHERE id=?",[$uid])[0]['mobile']??'';
                     $q=$pdo->prepare("UPDATE guardians SET name=COALESCE(?,name),relation_title=COALESCE(?,relation_title)
-                       WHERE student_id=? AND mobile=?");
-                    $q->execute([$input['guardianName']??null,$input['guardianRelation']??null,$partyId,$mobile]);
+                       WHERE student_id=? AND mobile IN (?,?,?)");
+                    $q->execute([$input['guardianName']??null,$input['guardianRelation']??null,$partyId,
+                        $mobile,'98'.substr($mobile,1),'+98'.substr($mobile,1)]);
                 }
             }else{
                 $q=$pdo->prepare("UPDATE drivers SET address=COALESCE(?,address),bank_name=COALESCE(?,bank_name),
