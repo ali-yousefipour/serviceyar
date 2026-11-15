@@ -107,7 +107,15 @@ def verify_live(base_url, build_id, expected_digests):
                     with urlopen(diagnostic, timeout=12, context=ssl._create_unverified_context()) as response:
                         body = response.read(400000).decode("utf-8", "replace")
                         title = body.split("<title>", 1)[1].split("</title>", 1)[0][:140] if "<title>" in body and "</title>" in body else "no-title"
-                        print(f"DIAGNOSTIC ONLY {candidate}: HTTP {response.status}; build={build_id in body}; title={title!r}; final={response.url}", flush=True)
+                        print(f"DIAGNOSTIC ONLY {candidate}: HTTP {response.status}; build={build_id in body}; title={title!r}; final={response.url}; server={response.headers.get('Server')}; x-cache={response.headers.get('X-LiteSpeed-Cache')}", flush=True)
+                        if candidate.startswith("https://www."):
+                            for asset in ("/assets/operations.js", "/assets/brand-theme.css"):
+                                asset_url = candidate.rstrip("/") + asset + "?v=" + build_id
+                                asset_request = Request(asset_url, headers={"Cache-Control":"no-cache","User-Agent":"ServiceYar-Deploy-Diagnostic/1.0"})
+                                with urlopen(asset_request, timeout=12, context=ssl._create_unverified_context()) as asset_response:
+                                    asset_body = asset_response.read()
+                                    asset_expected = "assets/operations.js" if asset.endswith(".js") else "assets/brand-theme.css"
+                                    print(f"DIAGNOSTIC ASSET {asset_url}: HTTP {asset_response.status}; sha_match={sha256(asset_body).hexdigest() == expected_digests[asset_expected]}; bytes={len(asset_body)}", flush=True)
                 except Exception as diagnostic_error:
                     print(f"DIAGNOSTIC ONLY {candidate}: {diagnostic_error}", flush=True)
             raise RuntimeError(
@@ -151,6 +159,7 @@ def main():
     # realistic limit without bypassing checksum verification.
     with FTP(timeout=120) as ftp:
         ftp.connect(os.environ["FTP_HOST"], 21)
+        print(f"FTP server peer IP: {ftp.sock.getpeername()[0]}", flush=True)
         ftp.login(os.environ["FTP_USER"], os.environ["FTP_PASS"])
         print(f"FTP login directory: {ftp.pwd()}", flush=True)
         try:
