@@ -130,7 +130,17 @@ final class OperationsService
           (SELECT COALESCE(SUM(w.amount),0) FROM driver_work w WHERE w.driver_id=d.id AND w.agency_id=d.agency_id AND w.work_date BETWEEN :wf AND :wt AND w.status<>\'cancelled\') earned,
           (SELECT COALESCE(SUM(dp.amount),0) FROM driver_payments dp WHERE dp.driver_id=d.id AND dp.agency_id=d.agency_id AND dp.payment_date BETWEEN :pf AND :pt) paid,
           (SELECT COALESCE(SUM(CASE WHEN le.direction=\'payment\' THEN le.amount ELSE -le.amount END),0) FROM ledger_entries le WHERE le.party_type=\'driver\' AND le.party_id=d.id AND le.agency_id=d.agency_id AND le.is_active=1 AND le.entry_date BETWEEN :lf AND :lt) ledger_paid,
-          (SELECT COALESCE(SUM(s.agreed_amount),0) FROM services s WHERE s.driver_id=d.id AND s.agency_id=d.agency_id AND s.is_active=1) agreed
+          (SELECT COALESCE(SUM(s.agreed_amount),0) FROM services s WHERE s.driver_id=d.id AND s.agency_id=d.agency_id AND s.is_active=1) agreed,
+          (SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0)
+             FROM services s
+             JOIN service_students ss ON ss.service_id=s.id
+             JOIN students st ON st.id=ss.student_id AND st.agency_id=s.agency_id
+             WHERE s.driver_id=d.id AND s.agency_id=d.agency_id AND s.is_active=1 AND st.is_active=1) assigned_monthly_base,
+          (SELECT COUNT(*)
+             FROM services s
+             JOIN service_students ss ON ss.service_id=s.id
+             JOIN students st ON st.id=ss.student_id AND st.agency_id=s.agency_id
+             WHERE s.driver_id=d.id AND s.agency_id=d.agency_id AND s.is_active=1 AND st.is_active=1) assigned_student_count
           FROM drivers d WHERE d.agency_id=:a AND d.is_active=1 ORDER BY d.last_name,d.first_name');
         $q->execute(['a'=>$aid,'wf'=>$from,'wt'=>$to,'pf'=>$from,'pt'=>$to,'lf'=>$from,'lt'=>$to]);$rows=$q->fetchAll();
         foreach($rows as &$r){
@@ -139,6 +149,14 @@ final class OperationsService
             $r=array_merge($r,$deductions);
             $r['paid']=(float)$r['paid']+(float)$r['ledger_paid'];
             $r['gross_earned']=$gross;
+            // Informational reconciliation ONLY: active assignments are a current
+            // monthly reference, not historical work performed in this date range.
+            // Never replace driver_work earnings or mutate approved payroll snapshots.
+            $assignedMonthly=(float)$r['assigned_monthly_base'];
+            $r['assigned_monthly_net']=self::driverDeductions($assignedMonthly,$aid)['net_earned'];
+            $r['work_vs_assigned_monthly_delta']=$gross-$assignedMonthly;
+            $r['reconciliation_basis']='current_active_assignments_monthly_vs_recorded_period_work';
+            $r['reconciliation_requires_review']=abs($gross-$assignedMonthly)>=1;
             $r['balance']=$deductions['net_earned']-$r['paid'];
         }unset($r);
         return ['items'=>$rows,'from'=>$from,'to'=>$to];
