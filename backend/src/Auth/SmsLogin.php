@@ -69,7 +69,7 @@ final class SmsLogin
     public static function request(string $username): array
     {
         LoginMethods::requireEnabled('sms');
-        if(!NeginSms::configured())throw new AuthException(503,'سرویس پیامک ورود تنظیم نشده است.','SMS_NOT_CONFIGURED');
+        if(!NeginSms::configured()||!class_exists(\SoapClient::class))throw new AuthException(503,'سرویس پیامک ورود تنظیم نشده است.','SMS_NOT_CONFIGURED');
         $username=self::digits($username);
         if($username===''||strlen($username)>100)throw new AuthException(422,'نام کاربری معتبر نیست.','VALIDATION_ERROR');
         self::schema();
@@ -87,18 +87,18 @@ final class SmsLogin
         // Identical public response regardless of whether the account/mobile exists.
         if(!$user)return ['requested'=>true,'expiresIn'=>300];
         $uid=$user['id'];
-        $q=$pdo->prepare('SELECT COUNT(*) FROM sms_login_challenges WHERE user_id=? AND created_at>DATE_SUB(UTC_TIMESTAMP(),INTERVAL 15 MINUTE)');
+        $q=$pdo->prepare("SELECT COUNT(*) FROM sms_login_challenges WHERE user_id=? AND purpose='login' AND created_at>DATE_SUB(UTC_TIMESTAMP(),INTERVAL 15 MINUTE)");
         $q->execute([$uid]);
         if((int)$q->fetchColumn()>=5)throw new AuthException(429,'تعداد درخواست‌های کد ورود زیاد است.','SMS_RATE_LIMITED');
         $code=(string)random_int(100000,999999);
         $hash=password_hash($code,PASSWORD_DEFAULT);
-        $pdo->prepare('UPDATE sms_login_challenges SET consumed_at=UTC_TIMESTAMP() WHERE user_id=? AND consumed_at IS NULL')->execute([$uid]);
-        $pdo->prepare('INSERT INTO sms_login_challenges(user_id,code_hash,expires_at) VALUES(?,?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 5 MINUTE))')->execute([$uid,$hash]);
+        $pdo->prepare("UPDATE sms_login_challenges SET consumed_at=UTC_TIMESTAMP() WHERE user_id=? AND purpose='login' AND consumed_at IS NULL")->execute([$uid]);
+        $pdo->prepare("INSERT INTO sms_login_challenges(user_id,purpose,code_hash,expires_at) VALUES(?,'login',?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 5 MINUTE))")->execute([$uid,$hash]);
         try{
             $result=(new NeginSms())->send($user['mobile'],'کد ورود سرویس‌یار: '.$code."\nاعتبار: ۵ دقیقه. کد را در اختیار دیگران قرار ندهید.");
             if(!($result['accepted']??false))throw new AuthException(502,'پیامک ورود توسط سرویس‌دهنده پذیرفته نشد.','SMS_PROVIDER_REJECTED');
         }catch(\Throwable $e){
-            $pdo->prepare('UPDATE sms_login_challenges SET consumed_at=UTC_TIMESTAMP() WHERE user_id=? AND code_hash=?')->execute([$uid,$hash]);
+            $pdo->prepare("UPDATE sms_login_challenges SET consumed_at=UTC_TIMESTAMP() WHERE user_id=? AND purpose='login' AND code_hash=?")->execute([$uid,$hash]);
             throw $e;
         }
         return ['requested'=>true,'expiresIn'=>300];
@@ -113,7 +113,7 @@ final class SmsLogin
         if(!$user)throw new AuthException(401,'کد ورود نامعتبر است.','SMS_OTP_INVALID');
         $pdo=Connection::get();$pdo->beginTransaction();
         try {
-            $q=$pdo->prepare('SELECT id,code_hash,attempt_count FROM sms_login_challenges WHERE user_id=? AND purpose='login' AND consumed_at IS NULL AND expires_at>UTC_TIMESTAMP() ORDER BY id DESC LIMIT 1 FOR UPDATE');
+            $q=$pdo->prepare("SELECT id,code_hash,attempt_count FROM sms_login_challenges WHERE user_id=? AND purpose='login' AND consumed_at IS NULL AND expires_at>UTC_TIMESTAMP() ORDER BY id DESC LIMIT 1 FOR UPDATE");
             $q->execute([$user['id']]);$row=$q->fetch(PDO::FETCH_ASSOC);
             if(!$row||(int)$row['attempt_count']>=5)throw new AuthException(401,'کد ورود نامعتبر یا منقضی است.','SMS_OTP_INVALID');
             $pdo->prepare('UPDATE sms_login_challenges SET attempt_count=attempt_count+1 WHERE id=?')->execute([$row['id']]);
