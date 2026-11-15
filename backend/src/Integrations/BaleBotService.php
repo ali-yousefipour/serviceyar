@@ -58,11 +58,24 @@ final class BaleBotService {
   $value=self::setting('bale_auth_token');
   return $value!==''?self::decrypt($value):'';
  }
+ /** Payments and account messaging may use the same bot/webhook. */
+ public static function botToken(): string {
+  $saved=self::token();
+  return $saved!==''?$saved:(string)config('BALE_BOT_TOKEN','');
+ }
+ public static function walletProviderToken(): string {
+  $saved=self::setting('bale_wallet_provider_token');
+  return $saved!==''?self::decrypt($saved):(string)config('BALE_WALLET_PROVIDER_TOKEN','');
+ }
+ public static function walletEnabled(): bool {
+  $flag=self::setting('bale_wallet_enabled');
+  return $flag!==''?$flag==='1':config('BALE_PAYMENTS_ENABLED','0')==='1';
+ }
  public static function ready(): bool {
   try{return self::setting('bale_auth_enabled')==='1'&&self::token()!=='';}catch(\Throwable){return false;}
  }
  private static function call(string $method,array $body=[],?string $override=null): array {
-  $token=$override??self::token();
+  $token=$override??self::botToken();
   if(!preg_match('/^[A-Za-z0-9:_-]{25,200}$/D',$token))throw new AuthException(503,'توکن ربات بله معتبر نیست.','BALE_TOKEN_INVALID');
   if(!in_array($method,['getMe','setWebhook','deleteWebhook','getWebhookInfo','sendMessage'],true))throw new \InvalidArgumentException('Unsupported Bale API method');
   $data=JsonHttp::post('https://tapi.bale.ai/bot'.$token.'/'.$method,$body,[],12);
@@ -72,7 +85,9 @@ final class BaleBotService {
  public static function overview(int $uid): array {
   if(!Authorization::isSuperAdmin($uid))throw new AuthException(403,'فقط ادمین کل به تنظیمات ربات دسترسی دارد.','FORBIDDEN');
   $configured=self::ready();
-  return ['configured'=>$configured,'tokenStored'=>self::setting('bale_auth_token')!=='','botUsername'=>self::setting('bale_auth_username'),'webhookUrl'=>$configured?self::webhookUrl():'','webhookRegistered'=>self::setting('bale_auth_webhook_registered')==='1'];
+  return ['configured'=>$configured,'tokenStored'=>self::setting('bale_auth_token')!==''||config('BALE_BOT_TOKEN','')!=='','botUsername'=>self::setting('bale_auth_username'),'webhookRegistered'=>self::setting('bale_auth_webhook_registered')==='1',
+   'walletEnabled'=>self::walletEnabled(),'walletTokenStored'=>self::setting('bale_wallet_provider_token')!==''||config('BALE_WALLET_PROVIDER_TOKEN','')!=='',
+   'walletConfigured'=>BaleClient::configured()];
  }
  private static function webhookUrl(): string {
   $base=rtrim((string)config('APP_URL',''),'/');
@@ -81,32 +96,36 @@ final class BaleBotService {
  }
  public static function configure(int $uid,array $data): array {
   if(!Authorization::isSuperAdmin($uid))throw new AuthException(403,'فقط ادمین کل مجاز است.','FORBIDDEN');
-  if(array_diff(array_keys($data),['token','enabled']))throw new AuthException(422,'ورودی تنظیمات بله معتبر نیست.','VALIDATION_ERROR');
+  if(array_diff(array_keys($data),['token','enabled','walletToken','walletEnabled']))throw new AuthException(422,'ورودی تنظیمات بله معتبر نیست.','VALIDATION_ERROR');
   self::ensureSchema();
   $token=trim((string)($data['token']??''));
-  if($token!==''&&!preg_match('/^[A-Za-z0-9:_-]{25,200}$/D',$token))throw new AuthException(422,'قالب توکن بله نامعتبر است.','VALIDATION_ERROR');
-  if($token!==''&&hash_equals((string)config('BALE_BOT_TOKEN',''),$token))throw new AuthException(422,'توکن ربات پیام‌رسانی باید با ربات پرداخت کیف پول بله متفاوت باشد تا وب‌هوک پرداخت مختل نشود.','BALE_PAYMENT_TOKEN_CONFLICT');
+  $wallet=trim((string)($data['walletToken']??''));
+  if($token!==''&&!preg_match('/^[A-Za-z0-9:_-]{25,200}$/D',$token))throw new AuthException(422,'قالب توکن ربات بله نامعتبر است.','VALIDATION_ERROR');
+  if($wallet!==''&&(!preg_match('/^WALLET-[A-Za-z0-9_-]{8,200}$/D',$wallet)||str_starts_with($wallet,'WALLET-TEST')))
+   throw new AuthException(422,'قالب توکن درگاه پرداخت بله معتبر نیست.','VALIDATION_ERROR');
+  // Validate a new bot token before replacing the working credential.
   if($token!==''){
    $me=self::call('getMe',[],$token);
-   $username=(string)($me['result']['username']??'');
    self::put('bale_auth_token',self::encrypt($token));
-   self::put('bale_auth_username',$username);
+   self::put('bale_auth_username',(string)($me['result']['username']??''));
   }
+  if($wallet!=='')self::put('bale_wallet_provider_token',self::encrypt($wallet));
   if(array_key_exists('enabled',$data))self::put('bale_auth_enabled',$data['enabled']===true||$data['enabled']==='1'?'1':'0');
-  if(self::ready()){
+  if(array_key_exists('walletEnabled',$data))self::put('bale_wallet_enabled',$data['walletEnabled']===true||$data['walletEnabled']==='1'?'1':'0');
+  if(self::ready()||BaleClient::configured()){
    if(self::setting('bale_auth_webhook_secret')==='')self::put('bale_auth_webhook_secret',bin2hex(random_bytes(32)));
    self::put('bale_auth_webhook_registered','0');
    self::call('setWebhook',['url'=>self::webhookUrl()]);
    self::put('bale_auth_webhook_registered','1');
   }else{
-   if(self::setting('bale_auth_token')!=='')self::call('deleteWebhook');
+   if(self::botToken()!=='')self::call('deleteWebhook');
    self::put('bale_auth_webhook_registered','0');
   }
   return self::overview($uid);
  }
  public static function health(int $uid): array {
   if(!Authorization::isSuperAdmin($uid))throw new AuthException(403,'فقط ادمین کل مجاز است.','FORBIDDEN');
-  if(!self::ready())return ['connected'=>false,'webhookCorrect'=>false,'message'=>'ربات فعال نیست.'];
+  if(!self::ready()&&!BaleClient::configured())return ['connected'=>false,'webhookCorrect'=>false,'message'=>'ربات و درگاه پرداخت فعال نیستند.'];
   $me=self::call('getMe');
   $hook=self::call('getWebhookInfo');
   $info=is_array($hook['result']??null)?$hook['result']:[];
@@ -136,7 +155,11 @@ final class BaleBotService {
  }
  public static function handleWebhook(string $secret,array $update): array {
   $saved=self::setting('bale_auth_webhook_secret');
-  if(!self::ready()||strlen($saved)<32||!hash_equals($saved,$secret))throw new AuthException(403,'وب‌هوک غیرمجاز است.','FORBIDDEN');
+  if((!self::ready()&&!BaleClient::configured())||strlen($saved)<32||!hash_equals($saved,$secret))throw new AuthException(403,'وب‌هوک غیرمجاز است.','FORBIDDEN');
+  // A bot has one webhook: payment events must be handled before text commands.
+  if(isset($update['pre_checkout_query'])||isset($update['message']['successful_payment']))
+   return BalePaymentService::webhook($update);
+  if(!self::ready())return ['accepted'=>true,'ignored'=>true];
   $chat=$update['message']['chat']??null;
   $text=trim((string)($update['message']['text']??''));
   if(!is_array($chat)||($chat['type']??'')!=='private'||!preg_match('/^[0-9]{1,30}$/D',(string)($chat['id']??'')))return ['accepted'=>true];
