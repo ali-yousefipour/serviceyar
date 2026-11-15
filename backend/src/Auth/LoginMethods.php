@@ -27,7 +27,7 @@ final class LoginMethods
     {
         $configured=self::policies();
         $available=['password'=>true,'sms'=>NeginSms::configured(),'bale'=>BaleBotService::ready()];
-        return ['methods'=>array_map(fn($key)=>$configured[$key]&&$available[$key],array_keys(self::KEYS)) === [] ? [] : [
+        return ['methods'=>[
             'password'=>$configured['password'],
             'sms'=>$configured['sms']&&$available['sms'],
             'bale'=>$configured['bale']&&$available['bale']
@@ -50,12 +50,15 @@ final class LoginMethods
     public static function save(int $actor,array $input): array
     {
         if(!Authorization::isSuperAdmin($actor))throw new AuthException(403,'فقط ادمین کل مجاز است.','FORBIDDEN');
-        if(array_keys($input)!==array_keys(self::KEYS))
+        if(count($input)!==3||array_diff(array_keys(self::KEYS),array_keys($input))||array_diff(array_keys($input),array_keys(self::KEYS)))
             throw new AuthException(422,'هر سه روش ورود باید تعیین شوند.','VALIDATION_ERROR');
         foreach($input as $name=>$enabled)
             if(!is_bool($enabled))throw new AuthException(422,'تنظیم روش ورود باید درست یا نادرست باشد.','VALIDATION_ERROR');
         if(!in_array(true,$input,true))
             throw new AuthException(422,'حداقل یک روش ورود باید فعال بماند.','LOGIN_METHOD_REQUIRED');
+        $available=self::publicStatus()['available'];
+        if(!$input['password']&&(!$input['sms']||!$available['sms'])&&(!$input['bale']||!$available['bale']))
+            throw new AuthException(422,'برای جلوگیری از مسدود شدن ورود، حداقل یک روش فعال و آماده لازم است.','LOGIN_METHOD_UNAVAILABLE');
         $pdo=Connection::get();
         $pdo->beginTransaction();
         try {
