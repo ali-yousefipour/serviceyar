@@ -66,6 +66,25 @@ final class AuthService
         return ['csrfToken'=>$csrf, 'expiresAt'=>$expires, 'user'=>$this->publicUser((int)$user['id'])];
     }
 
+    /** Session issuance only after a trusted, server-verified one-time Bale challenge. */
+    public function loginTrustedUser(int $userId): array
+    {
+        $pdo=Connection::get();
+        $q=$pdo->prepare('SELECT id FROM users WHERE id=? AND is_active=1');
+        $q->execute([$userId]);
+        if(!$q->fetchColumn())throw new AuthException(401,'حساب کاربری فعال نیست.','UNAUTHENTICATED');
+        $rawToken=bin2hex(random_bytes(32));
+        $csrf=bin2hex(random_bytes(32));
+        $lifetime=max(300,(int)config('SESSION_LIFETIME',self::DEFAULT_SESSION_LIFETIME));
+        $expires=(new \DateTimeImmutable('now',new \DateTimeZone('UTC')))->modify('+'.$lifetime.' seconds')->format('Y-m-d H:i:s');
+        $pdo->prepare('INSERT INTO user_sessions (user_id,token_hash,csrf_token,ip_address,user_agent,expires_at) VALUES (?,?,?,?,?,?)')
+            ->execute([$userId,hash('sha256',$rawToken),$csrf,substr((string)($_SERVER['REMOTE_ADDR']??''),0,45),substr((string)($_SERVER['HTTP_USER_AGENT']??''),0,500),$expires]);
+        $pdo->prepare('UPDATE users SET last_login_at=CURRENT_TIMESTAMP WHERE id=?')->execute([$userId]);
+        $this->audit($userId,'auth.bale_login','user',(string)$userId);
+        setcookie('serviceyar_session',$rawToken,['expires'=>strtotime($expires),'path'=>'/','secure'=>config('APP_SECURE_COOKIE','0')==='1','httponly'=>true,'samesite'=>'Lax']);
+        return ['csrfToken'=>$csrf,'expiresAt'=>$expires,'user'=>$this->publicUser($userId)];
+    }
+
     public function current(): array
     {
         $raw = $this->sessionToken();
