@@ -12,6 +12,9 @@ final class UserPhotos {
  private static function path(int $id): string {
   return dirname(__DIR__,3).'/storage/uploads/user-profiles/user-'.$id.'.jpg';
  }
+ public static function hasPhoto(int $id): bool {
+  return $id>0 && is_file(self::path($id));
+ }
  private static function access(int $actor,int $agency,int $target,bool $write): void {
   if($target<1)throw new AuthException(422,'کاربر نامعتبر است.','INVALID_USER');
   if($actor!==$target){
