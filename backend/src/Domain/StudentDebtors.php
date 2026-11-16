@@ -51,6 +51,7 @@ final class StudentDebtors
         $sql="WITH balances AS (
             SELECT students.id, students.school_id, COALESCE(sc.name,'مدرسه نامشخص') school,
                    CONCAT_WS(' ',students.first_name,students.last_name) student, students.mobile guardian_mobile,
+                   students.tariff_distance_km,
                    COALESCE(students.monthly_fee,0) monthly_fee,
                    ".DomainService::studentAnnualFeeSql()." annual_fee,
                    ".DomainService::studentInvoiceTotalSql()." invoice_total,

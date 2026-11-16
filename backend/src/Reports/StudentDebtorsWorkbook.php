@@ -47,7 +47,7 @@ final class StudentDebtorsWorkbook
             $title=$full || count($schools??[])===1?'گزارش مالی بدهکاران مدرسه '.$school:'گزارش مالی بدهکاران · '.$school;
             $label=static fn(string $v): string => htmlspecialchars(ExcelLocalization::digits($v),ENT_XML1|ENT_QUOTES,'UTF-8');
             $border=' border="thin#CDDED2"';
-            $head=['نام و نام خانوادگی دانش‌آموز','شماره تماس ولی','مبلغ ماهیانه سرویس (ریال)','مبلغ سالیانه سرویس (ریال)','مبلغ پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'];
+            $head=['نام و نام خانوادگی دانش‌آموز','شماره تماس ولی','مسافت','مبلغ ماهیانه سرویس (ریال)','مبلغ سالیانه سرویس (ریال)','مبلغ پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'];
             if (!$full) array_splice($head,2,0,['مدرسه']);
             $moneyHead=array_slice($head,-4);
             $rows=[
@@ -60,12 +60,15 @@ final class StudentDebtorsWorkbook
             foreach ($group['items'] as $item) {
                 $row=[$item['student'],(string)$item['guardian_mobile']];
                 if (!$full) $row[]=$item['school'];
+                $distance=$item['tariff_distance_km']??null;
+                $row[]=$distance===null?'—':(string)(int)round((float)$distance);
                 $values=array_map(static fn($field)=>(string)$item[$field],['monthly_fee','annual_fee','paid','debt']);
                 foreach ($values as $value) $row[]=self::persianMoney($value);
                 $background=count($rows)%2===0?'#FFFFFF':'#F3F8F4';
                 $style='<style bgcolor="'.$background.'"'.$border.'>';
-                $row=array_map(static fn(string $value): string =>
-                    $style.'<raw>'.$label(str_replace(["\r","\n"],' ',$value)).'</raw></style>',$row);
+                $row=array_map(static fn(string $value,int $index): string =>
+                    ($index===0?'<right>':'<center>').$style.'<raw>'.$label(str_replace(["\r","\n"],' ',$value))
+                    .'</raw></style>'.($index===0?'</right>':'</center>'),$row,array_keys($row));
                 $total+=(int)round((float)$item['debt']*100);
                 $rows[]=array_merge($row,$values);
             }
@@ -77,13 +80,13 @@ final class StudentDebtorsWorkbook
             $footer[0]=$footerStyle.'مجموع بدهی</style></b>';
             $debtColumn=chr(ord($end)+4);
             $formula=$last>4?"SUM({$debtColumn}5:{$debtColumn}{$last})":'0';
-            $footer[count($head)-1]=$footerStyle.self::persianMoney($number).'</style></b>';
+            $footer[count($head)-1]='<center>'.$footerStyle.self::persianMoney($number).'</style></b></center>';
             array_push($footer,'','','','<f v="'.$number.'">'.$formula.'</f>');
             $rows[]=$footer;
             $book->addSheet($rows,$name)->mergeCells("A1:{$end}1")->mergeCells("A2:{$end}2")->mergeCells("A3:{$end}3")
                 ->freezePanes('A5')->a4Landscape($last<=28);
             if ($last>4) $book->autoFilter("A4:$end$last");
-            $widths=$full?[32,19,22,22,22,23]:[28,17,24,20,20,20,21];
+            $widths=$full?[30,17,9,21,21,21,21]:[26,16,20,9,19,19,19,20];
             foreach ($widths as $i=>$width) $book->setColWidth($i+1,$width);
             for ($i=1;$i<=count($moneyHead);$i++) $book->hideColumn(chr(ord($end)+$i));
         }

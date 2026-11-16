@@ -2245,8 +2245,8 @@ async function downloadDebtorPdfs(report,onProgress){
  const amount=new Intl.NumberFormat('fa-IR',{maximumFractionDigits:2});
  const date=new Intl.DateTimeFormat('fa-IR',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  const persian=value=>String(value??'').replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);
- const headings=['نام و نام خانوادگی دانش‌آموز','شماره تماس ولی','مبلغ ماهیانه سرویس (ریال)','مبلغ سالیانه سرویس (ریال)','مبلغ پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'];
- const cell='border:1px solid #cdded2;padding:6px 5px;text-align:center;overflow-wrap:anywhere;';
+ const headings=['نام و نام خانوادگی دانش‌آموز','شماره تماس ولی','مسافت','مبلغ ماهیانه سرویس (ریال)','مبلغ سالیانه سرویس (ریال)','مبلغ پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'];
+ const cell='border:1px solid #cdded2;padding:6px 5px;overflow-wrap:anywhere;';
  const wrap=document.createElement('div');
  wrap.style.cssText='position:fixed;top:0;left:0;z-index:-1;pointer-events:none';
  const sheet=document.createElement('div');
@@ -2272,12 +2272,13 @@ async function downloadDebtorPdfs(report,onProgress){
     sheet.innerHTML='<h1 style="background:#005b35;color:white;text-align:center;margin:0;padding:12px;font-size:21px">گزارش مالی بدهکاران مدرسه '+esc(persian(school))+'</h1>'+
      '<p style="text-align:center;margin:7px 0 0">تاریخ گزارش‌گیری '+esc(date)+' · سال تحصیلی '+esc(persian(report.academicYear))+'</p>'+
      '<p style="text-align:center;margin:3px 0 10px;font-weight:bold">'+esc(persian(report.agencyName))+' - سامانه سرویس یار</p>'+
-     '<table style="width:100%;border-collapse:collapse;table-layout:fixed"><colgroup>'+[25,15,15,15,15,15].map(width=>'<col style="width:'+width+'%">').join('')+'</colgroup>'+
+     '<table style="width:100%;border-collapse:collapse;table-layout:fixed;text-align:center"><colgroup>'+[23,13,8,14,14,14,14].map(width=>'<col style="width:'+width+'%">').join('')+'</colgroup>'+
      '<thead><tr>'+headings.map(label=>'<th style="'+cell+'background:#087447;color:white">'+label+'</th>').join('')+'</tr></thead><tbody>'+
      page.map((row,index)=>{
-      const values=[persian(row.student),persian(row.guardian_mobile)||'—',...['monthly_fee','annual_fee','paid','debt'].map(key=>amount.format(row[key]))];
-      return '<tr style="background:'+(index%2?'#f3f8f4':'#fff')+'">'+values.map(value=>'<td style="'+cell+'">'+esc(value)+'</td>').join('')+'</tr>';
-     }).join('')+'</tbody>'+(last?'<tfoot><tr style="background:#e8f5ed;color:#005b35;font-weight:bold"><td colspan="5" style="'+cell+'">مجموع بدهی</td><td style="'+cell+'">'+amount.format(total)+'</td></tr></tfoot>':'')+'</table>'+
+      const distance=row.tariff_distance_km==null?'—':persian(Math.round(Number(row.tariff_distance_km)));
+      const values=[persian(row.student),persian(row.guardian_mobile)||'—',distance,...['monthly_fee','annual_fee','paid','debt'].map(key=>amount.format(row[key]))];
+      return '<tr style="background:'+(index%2?'#f3f8f4':'#fff')+'">'+values.map((value,column)=>'<td style="'+cell+(column===0?'text-align:right;':'text-align:center;')+'">'+esc(value)+'</td>').join('')+'</tr>';
+     }).join('')+'</tbody>'+(last?'<tfoot><tr style="background:#e8f5ed;color:#005b35;font-weight:bold"><td colspan="'+(headings.length-1)+'" style="'+cell+'">مجموع بدهی</td><td style="'+cell+'">'+amount.format(total)+'</td></tr></tfoot>':'')+'</table>'+
      '<p style="text-align:center;margin:7px 0 0">صفحه '+amount.format(start/pageSize+1)+' از '+amount.format(Math.ceil(rows.length/pageSize))+'</p>';
     await document.fonts?.ready;
     const worker=window.html2pdf().set({
