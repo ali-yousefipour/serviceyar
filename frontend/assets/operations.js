@@ -4293,7 +4293,7 @@ async function openAdminImpersonationDialog(panelType='company'){
    preview.hidden=false;userStep.hidden=true;preview.textContent='در حال بارگذاری پنل ولی دانش‌آموز…';
    try{
      const result=await api('/api/v1/admin/impersonation/parent-preview?agencyId='+
-       encodeURIComponent(agencyId)+'&studentId='+encodeURIComponent(guardian.studentId));
+       encodeURIComponent(agencyId)+'&studentId='+encodeURIComponent(guardian.studentId)+'&guardianId='+encodeURIComponent(guardian.guardianId));
      if(!overlay.isConnected||Number(selectedCompany?.id)!==agencyId)return;
      if(typeof window.serviceyarPortal?.mountAdminParentInspection!=='function')
        throw Error('ماژول پنل والدین بارگذاری نشده است.');
