@@ -24,7 +24,7 @@ assert.match(portal,/WHERE d\.id=\? AND d\.agency_id=\? AND d\.is_active=1/,'Pre
 assert.match(routes,/admin\/impersonation\/driver-preview/,'Preview has a GET-only route');
 assert.match(routes,/PortalService::adminDriverPreview/,'Route delegates scoped authorization');
 assert.match(ui,/userKey:\(panelType==='driver'\|\|panelType==='parent'\)\?Number\(panelType==='driver'\?u\.driverId:u\.guardianId\)\*-1/,'Driver and guardian candidate IDs are scoped to their entity IDs');
-assert.match(ui,/if\(panelType==='driver'&&!Number\(selectedUser\.portalReady\)\)/,'Unenrolled drivers never start a forged user session');
+assert.match(ui,/if\(panelType==='driver'\)\{await openDriverPreview\(selectedUser\);return;\}/,'All drivers use an authorized admin inspection without forging a user session');
 assert.match(ui,/openDriverPreview\(selectedUser\)/,'Unenrolled drivers have an accessible view');
 assert.match(ui,/sy-impersonation-driver-preview/,'Read-only view is present');
 assert.match(ui,/serviceyarPortal\.mountAdminDriverInspection\(/,'Admin opens the real full-screen portal shell');
