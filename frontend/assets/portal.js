@@ -112,7 +112,10 @@
    for(const key of ['academicYear','minDebt','maxDebt'])params.set(key,normal(params.get(key)).replace(/\s/g,'').replace(/[٬,]/g,''));
    status.textContent='در حال دریافت اطلاعات…';target.replaceChildren();
    try{
-     const report=await api('/api/v1/portal/'+current.portalType+'/'+current.agencyId+'/'+current.partyId+'/debtors?'+params);
+     const endpoint=window.serviceyarAdminDriverInspection&&current.portalType==='driver'
+      ?'/api/v1/admin/impersonation/representative-debtors?agencyId='+encodeURIComponent(current.agencyId)+'&driverId='+encodeURIComponent(current.partyId)+'&'+params
+      :'/api/v1/portal/'+current.portalType+'/'+current.agencyId+'/'+current.partyId+'/debtors?'+params;
+     const report=await api(endpoint);
      if(!form.isConnected)return;
      status.textContent=fa(report.items.length)+' بدهکار · مجموع بدهی '+money(report.total);
      target.innerHTML=table(['دانش‌آموز','مدرسه','تلفن ولی','شهریه ماهانه','شهریه سالانه','پرداخت‌شده','بدهی باقی‌مانده'],
@@ -138,6 +141,7 @@
      [['شرکت',data.agency?.name],['کد شرکت',data.agency?.code],['نام مدیر',data.agency?.managerName],['تلفن دفتر',data.agency?.phone],
        ['تلفن مدیر',data.agency?.managerMobile],['آدرس دفتر',data.agency?.address],
        ['نام کاربری',data.profile?.username],['شماره همراه تأییدشده',data.profile?.mobile],['نوع حساب',parent?'ولی دانش‌آموز':'راننده سرویس']].map(([k,v])=>'<div><span>'+esc(k)+'</span><b>'+esc(v||'—')+'</b></div>').join('')+'</div></section>'+
+   (parent?'':'<section class="portal-panel portal-photo-card"><div class="portal-photo-head"><div class="portal-avatar-frame"><img id="portalPortrait" src="/api/v1/auth/profile/photo?v='+Number(data.profile?.photo_version||0)+'" alt="تصویر پرسنلی راننده" loading="lazy"></div><div><h2>تصویر پرسنلی</h2><p class="muted">تصویر خود را از دوربین یا گالری انتخاب کنید؛ تصویر در فضای خصوصی ذخیره می‌شود.</p></div></div><form id="portalPhotoForm" class="portal-photo-form"><label>انتخاب تصویر<input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required></label><button class="primary" type="submit">ثبت تصویر پرسنلی</button></form><p id="portalPhotoStatus" role="status"></p></section>')+
    '<section class="portal-panel"><h2>ویرایش مشخصات</h2><form id="portalProfileForm" class="portal-profile-form">'+
       (parent?inputField('guardianName','نام ولی',p.name)+inputField('guardianRelation','نسبت با دانش‌آموز',p.relation_title):
        inputField('firstName','نام',p.first_name,'required maxlength="100"')+inputField('lastName','نام خانوادگی',p.last_name,'required maxlength="100"')+
@@ -173,6 +177,25 @@
      const button=profile.querySelector('button[type=submit]');button.disabled=true;
      try{data=await api('/api/v1/portal/'+current.portalType+'/'+current.agencyId+'/'+current.partyId,body,'PATCH');
        note('اطلاعات شما ذخیره شد.');selectSection('profile');}catch(err){note(err.message,true);}finally{button.disabled=false;}
+   });
+   const photoForm=el('portalPhotoForm');
+   if(photoForm)photoForm.addEventListener('submit',async e=>{
+     e.preventDefault();
+     const file=photoForm.elements.photo.files?.[0],status=el('portalPhotoStatus');
+     if(!file||file.size>5*1024*1024){status.textContent='تصویر باید کمتر از پنج مگابایت باشد.';return;}
+     const button=photoForm.querySelector('button[type=submit]');button.disabled=true;status.textContent='در حال ثبت تصویر…';
+     try{
+       const body=new FormData();body.append('photo',file);
+       const response=await fetch('/api/v1/auth/profile/photo',{method:'POST',body,
+         credentials:'same-origin',headers:{'X-CSRF-Token':csrf,Accept:'application/json'}});
+       const result=await response.json().catch(()=>({}));
+       if(!response.ok||!result.ok)throw Error(result.error?.message||'ثبت تصویر انجام نشد.');
+       const version=Number(result.data?.photoVersion||Date.now());
+       if(data.profile)data.profile.photo_version=version;
+       const image=el('portalPortrait');if(image)image.src='/api/v1/auth/profile/photo?v='+version;
+       const avatar=el('syAccountAvatar');if(avatar){avatar.style.backgroundImage="url('/api/v1/auth/profile/photo?v="+version+"')";avatar.classList.add('sy-account-avatar-has-photo');}
+       status.textContent='تصویر پرسنلی ثبت شد.';photoForm.reset();
+     }catch(error){status.textContent=error.message;}finally{button.disabled=false;}
    });
    const pass=el('portalSetPasswordForm');
    if(pass)pass.addEventListener('submit',async e=>{
@@ -228,7 +251,7 @@
    if(brand)brand.textContent='پنل '+name+' · '+m.agencyName;
    const sideName=el('syAccountName');if(sideName)sideName.textContent=data.profile?.username||'حساب شخصی';
    const role=el('syAccountRole');if(role)role.textContent=impersonated?'مشاهده نیابتی ادمین کل':('پنل '+name);
-   const avatar=el('syAccountAvatar');if(avatar){avatar.textContent=parent?'و':m.portalType==='representative'?'ن':'ر';avatar.classList.remove('sy-account-avatar-has-photo');}
+   const avatar=el('syAccountAvatar');if(avatar){avatar.textContent=parent?'و':m.portalType==='representative'?'ن':'ر';avatar.classList.remove('sy-account-avatar-has-photo');avatar.style.backgroundImage='';if(!parent&&m.portalType==='driver'&&data.profile?.id){avatar.style.backgroundImage="url('/api/v1/auth/profile/photo?v="+Number(data.profile.photo_version||0)+"')";avatar.classList.add('sy-account-avatar-has-photo');}}
    const account=el('syAccountMenu');if(account){account.open=false;account.hidden=true;}
    const agencyPicker=el('agencyPickerWrap');if(agencyPicker)agencyPicker.hidden=true;
    const returnButton=el('syAdminReturn');if(returnButton)returnButton.hidden=!impersonated;
