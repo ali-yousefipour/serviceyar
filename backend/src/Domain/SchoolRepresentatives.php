@@ -58,7 +58,9 @@ final class SchoolRepresentatives
                   WHERE a.agency_id=? AND a.driver_id=? ORDER BY sc.name,sc.id";
         }else{
             $sql="SELECT DISTINCT sc.id,sc.name FROM services sv
-                  JOIN schools sc ON sc.id=sv.school_id AND sc.agency_id=sv.agency_id AND sc.is_active=1
+                  JOIN service_students ss ON ss.service_id=sv.id
+                  JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id AND st.is_active=1
+                  JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=sv.agency_id AND sc.is_active=1
                   WHERE sv.agency_id=? AND sv.driver_id=? AND sv.is_active=1
                     AND sv.status<>'cancelled' ORDER BY sc.name,sc.id";
         }
@@ -71,14 +73,7 @@ final class SchoolRepresentatives
         $pdo=self::db();
         $driver=self::driver($pdo,$aid,$driverId);
         if((int)$driver['is_representative']!==1)return [];
-        $q=$pdo->prepare("SELECT 1 FROM portal_memberships m JOIN users u ON u.id=m.user_id
-          JOIN agencies a ON a.id=m.agency_id
-          WHERE m.user_id=? AND m.agency_id=? AND m.party_type='driver'
-            AND m.party_id=? AND u.is_active=1 AND a.is_active=1 AND
-            (SELECT mobile FROM drivers WHERE id=m.party_id AND agency_id=m.agency_id AND is_active=1)
-              IN (m.verified_mobile, CONCAT('0',SUBSTRING(m.verified_mobile,3))) LIMIT 1");
-        $q->execute([$uid,$aid,$driverId]);
-        if(!$q->fetchColumn())throw new AuthException(403,'عضویت تأییدشده راننده معتبر نیست.','PORTAL_FORBIDDEN');
+        PortalService::requireDriverMembership($uid,$aid,$driverId);
         return self::scopedSchools($pdo,$aid,$driverId);
     }
     public static function report(int $uid,int $aid,int $driverId,array $filters): array
