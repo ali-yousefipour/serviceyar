@@ -403,3 +403,34 @@
  }
  #app.sy-portal-mode .portal-panel:not(.portal-debtors-workspace) .portal-table-scroll td.empty::before{content:none}
 }
+
+/* Driver self-service and authorized admin editing: visible portrait states. */
+#app.sy-portal-mode .portal-photo-card{border:1px solid #dce9e2;border-radius:18px}
+#app.sy-portal-mode .portal-photo-head{display:flex;gap:18px;align-items:center}
+#app.sy-portal-mode .portal-avatar-frame{
+ width:112px;height:112px;border-radius:22px;border:2px solid #c6e1d1;
+ background:#e7f4ed;position:relative;overflow:hidden;flex:0 0 112px;
+}
+#app.sy-portal-mode .portal-avatar-frame.portrait-empty::before{
+ content:"بدون تصویر";position:absolute;inset:0;display:flex;align-items:center;
+ justify-content:center;color:#27765b;font-size:12px;font-weight:750;
+}
+#app.sy-portal-mode .portal-avatar-frame img{display:block;width:100%;height:100%;object-fit:cover}
+#app.sy-portal-mode .portal-avatar-frame img[hidden]{display:none!important}
+#app.sy-portal-mode .portal-photo-form{display:flex;flex-wrap:wrap;align-items:end;gap:12px}
+#app.sy-portal-mode .portal-photo-form label{display:grid;gap:8px;flex:1 1 240px;min-width:0}
+#app.sy-portal-mode .portal-photo-form input[type=file]{
+ width:100%;min-width:0;padding:10px;border:1px solid #d1e4da;
+ background:#f7fbf8;border-radius:12px;
+}
+#app.sy-portal-mode .portal-profile-form button.primary,
+#app.sy-portal-mode .portal-photo-form button.primary{
+ min-height:46px;border-radius:12px;font-size:13px;font-weight:800;
+}
+#app.sy-portal-mode .portal-photo-card #portalPhotoStatus{font-size:12px;line-height:1.8}
+@media(max-width:640px){
+ #app.sy-portal-mode .portal-photo-head{align-items:flex-start;gap:12px}
+ #app.sy-portal-mode .portal-avatar-frame{width:80px;height:80px;flex-basis:80px;border-radius:16px}
+ #app.sy-portal-mode .portal-photo-form{display:grid;grid-template-columns:minmax(0,1fr)}
+ #app.sy-portal-mode .portal-photo-form button{width:100%}
+}
