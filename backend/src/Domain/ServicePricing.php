@@ -111,9 +111,8 @@ final class ServicePricing {
             if($reprice)StudentServiceBilling::sync($pdo,$agencyId,$studentId);
             $updated++;
         }
-        $gross=$pdo->prepare('SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
-        $gross->execute([$agencyId,$serviceId]);
-        $net=OperationsService::driverDeductions((float)$gross->fetchColumn(),$agencyId)['net_earned'];
+        $gross=ServiceFinancialBasis::grossOfService($pdo,$agencyId,$serviceId);
+        $net=ServiceFinancialBasis::netOfGross($gross,$agencyId)['net_earned'];
         if($reprice && $source!=='agreed')$pdo->prepare('UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?')
             ->execute([$net,$serviceId,$agencyId]);
         return ['updatedStudents'=>$updated,'vehicleClass'=>(int)$class];
