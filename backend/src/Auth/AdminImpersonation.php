@@ -91,10 +91,12 @@ final class AdminImpersonation
             throw new AuthException(403,'فقط ادمین کل مجاز به ورود نیابتی است.','SUPER_ADMIN_REQUIRED');
     }
 
-    public static function users(int $adminId,int $agencyId): array
+    public static function users(int $adminId,int $agencyId,string $panelType='all'): array
     {
         self::requireAdmin($adminId);
         if($agencyId<1)throw new AuthException(422,'شرکت انتخاب‌شده معتبر نیست.','INVALID_AGENCY');
+        if(!in_array($panelType,['all','company','parent','driver'],true))
+            throw new AuthException(422,'نوع پنل ورود نیابتی نامعتبر است.','INVALID_IMPERSONATION_PANEL');
         $pdo=Connection::get();
         // FTP-hosted installations may not have installed the portal migration yet.
         // Checking memberships prepares its idempotent schema before we query it.
@@ -105,6 +107,12 @@ final class AdminImpersonation
         $company=$agency->fetch(PDO::FETCH_ASSOC);
         if(!$company)throw new AuthException(404,'شرکت فعال موردنظر پیدا نشد.','AGENCY_NOT_FOUND');
 
+        $roleConstraint=match($panelType){
+            'company'=>" AND EXISTS(SELECT 1 FROM agency_users cm WHERE cm.user_id=u.id AND cm.agency_id=a.id)",
+            'parent'=>" AND EXISTS(SELECT 1 FROM portal_memberships pm WHERE pm.user_id=u.id AND pm.agency_id=a.id AND pm.party_type='parent')",
+            'driver'=>" AND EXISTS(SELECT 1 FROM portal_memberships pm WHERE pm.user_id=u.id AND pm.agency_id=a.id AND pm.party_type='driver')",
+            default=>''
+        };
         $sql="SELECT u.id,u.username,u.first_name,u.last_name,u.last_login_at,
             GROUP_CONCAT(DISTINCT r.title ORDER BY r.id SEPARATOR ', ') AS roles
             FROM users u
@@ -119,6 +127,7 @@ final class AdminImpersonation
                 SELECT 1 FROM user_roles sur JOIN roles sr ON sr.id=sur.role_id
                 WHERE sur.user_id=u.id AND sr.name='super_admin'
               )
+              $roleConstraint
             GROUP BY u.id
             ORDER BY u.first_name,u.last_name,u.username";
         $q=$pdo->prepare($sql);
@@ -135,6 +144,9 @@ final class AdminImpersonation
         self::requireAdmin($adminId);
         $agencyId=filter_var($input['agencyId']??null,FILTER_VALIDATE_INT);
         $targetId=filter_var($input['userId']??null,FILTER_VALIDATE_INT);
+        $panelType=(string)($input['panelType']??'all');
+        if(!in_array($panelType,['all','company','parent','driver'],true))
+            throw new AuthException(422,'نوع پنل ورود نیابتی نامعتبر است.','INVALID_IMPERSONATION_PANEL');
         if(!$agencyId||$agencyId<1||!$targetId||$targetId<1)
             throw new AuthException(422,'شرکت و کاربر برای ورود نیابتی باید انتخاب شوند.','VALIDATION_ERROR');
 
@@ -161,6 +173,12 @@ final class AdminImpersonation
             throw new AuthException(409,'این نشست مدیر کل هم‌اکنون در حالت ورود نیابتی است.','IMPERSONATION_ALREADY_ACTIVE');
 
         $filter=self::activeUserFilter($pdo);
+        $roleConstraint=match($panelType){
+            'company'=>" AND EXISTS(SELECT 1 FROM agency_users cm WHERE cm.user_id=u.id AND cm.agency_id=a.id)",
+            'parent'=>" AND EXISTS(SELECT 1 FROM portal_memberships pm WHERE pm.user_id=u.id AND pm.agency_id=a.id AND pm.party_type='parent')",
+            'driver'=>" AND EXISTS(SELECT 1 FROM portal_memberships pm WHERE pm.user_id=u.id AND pm.agency_id=a.id AND pm.party_type='driver')",
+            default=>''
+        };
         $targetQuery=$pdo->prepare(
             "SELECT u.id,u.username,u.first_name,u.last_name,a.name AS agency_name
              FROM users u
@@ -173,6 +191,7 @@ final class AdminImpersonation
                  SELECT 1 FROM user_roles sur JOIN roles sr ON sr.id=sur.role_id
                  WHERE sur.user_id=u.id AND sr.name='super_admin'
                )
+               $roleConstraint
              LIMIT 1"
         );
         $targetQuery->execute([$agencyId,$targetId]);
