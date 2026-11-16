@@ -21,8 +21,13 @@ assert.match(rates,/StudentServiceBilling::sync/,'Billing is reconciled through 
 assert.match(service,/WHERE sv\.agency_id=\? AND sv\.driver_id=\?/,'Driver batch is agency-scoped');
 assert.match(ui,/attachOfficialTaxiTariffActions\(form,key,id\)/,'Service and driver edit wizard exposes explicit tariff application');
 assert.match(ui,/data-official-preview/,'Tariff preview control exists');
-assert.match(ui,/data-official-apply disabled/,'Tariff apply is unavailable before successful preview');
-assert.match(ui,/if\(unsaved\)/,'Unsaved edits block applying a stale server quote');
+assert.match(ui,/apply\.disabled=busy\|\|!isTaxi\(\)\|\|\(!unsaved&&!verified\)/,'Apply requires a verified saved quote, or explicit save-and-apply of pending edits');
+assert.match(ui,/if\(unsaved\)/,'Unsaved edits are routed to reviewed save-and-apply rather than a stale quote');
+assert.match(ui,/form\.dataset\.applyTaxiAfterSave='1'/,'Dirty service form can explicitly request a post-save tariff application');
+assert.match(ui,/if\(key==='services'&&id&&form\.dataset\.applyTaxiAfterSave==='1'\)/,'Saved service applies confirmed tariff');
+assert.match(ui,/if\(!verified&&!\(await previewRequest\(\)\)\)return/,'Saved application requires fresh preview');
+assert.match(ui,/if\(isTaxi\(\)\)void previewRequest\(\)/,'Opening an existing taxi service automatically refreshes apply eligibility');
+assert.match(ui,/sy-official-tariff-confirmation/,'Wizard review shows explicit pending rate application');
 assert.ok(!/\s(onerror|onclick|onchange|oninput)\s*=\s*["']/i.test(ui),'Dynamic markup has no inline CSP-blocked event handler');
 assert.match(ui,/addEventListener\('error',event=>/,'Image fallback uses delegated CSP-safe listener');
 assert.ok(workflow.includes('Stage, publish and verify hosting payload'),'Existing FTP publication verification stays enabled');
