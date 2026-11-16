@@ -49,18 +49,17 @@ final class StudentDebtors
             $params[$key]='%'.strtr($normalize($value),['!'=>'!!','%'=>'!%','_'=>'!_']).'%';
         }
         $sql="WITH balances AS (
-            SELECT st.id, st.school_id, COALESCE(sc.name,'مدرسه نامشخص') school,
-                   CONCAT_WS(' ',st.first_name,st.last_name) student, st.mobile guardian_mobile,
-                   i.amount annual_fee,
-                   COALESCE((SELECT SUM(p.amount) FROM payments p
-                             WHERE p.agency_id=i.agency_id AND p.invoice_id=i.id),0) paid
-            FROM student_service_debt_invoices m
-            JOIN invoices i ON i.id=m.invoice_id AND i.agency_id=m.agency_id
-                           AND i.party_type='student' AND i.party_id=m.student_id
-            JOIN students st ON st.id=m.student_id AND st.agency_id=m.agency_id
-            LEFT JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id
-            WHERE m.agency_id=:agency AND m.academic_year=:year AND i.status IN ('open','paid','overdue')
-        ), debtors AS (SELECT balances.*, annual_fee-paid debt FROM balances)
+            SELECT students.id, students.school_id, COALESCE(sc.name,'مدرسه نامشخص') school,
+                   CONCAT_WS(' ',students.first_name,students.last_name) student, students.mobile guardian_mobile,
+                   COALESCE(students.monthly_fee,0) monthly_fee,
+                   ".DomainService::studentAnnualFeeSql()." annual_fee,
+                   ".DomainService::studentInvoiceTotalSql()." invoice_total,
+                   ".DomainService::studentPaidTotalSql()." paid
+            FROM students
+            LEFT JOIN schools sc ON sc.id=students.school_id AND sc.agency_id=students.agency_id
+            WHERE students.agency_id=:agency AND students.is_active=1
+              AND REPLACE(students.academic_year,'/','-')=:year
+        ), debtors AS (SELECT balances.*, GREATEST(0,ROUND(invoice_total-paid)) debt FROM balances)
         SELECT debtors.*, SUM(debt) OVER () total_debt FROM debtors WHERE ".implode(' AND ',$where)
             .' ORDER BY school,school_id,debt DESC,student,id';
         $query=Connection::get()->prepare($sql);

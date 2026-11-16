@@ -2178,7 +2178,7 @@ async function studentAccountPanel(panel,studentId){
 function studentDebtorsPage(token){
  if(!can('students'))throw new Error('مشاهده گزارش بدهکاران به مجوز دانش‌آموزان نیاز دارد.');
  $('content').innerHTML=`<section class="panel sy-operation-page">
-  <header class="sy-operation-header"><div><h2>گزارش بدهکاران</h2><p>مانده فاکتور سالیانه سرویس پس از کسر پرداخت‌های ثبت‌شده برای همان فاکتور.</p></div>
+  <header class="sy-operation-header"><div><h2>گزارش بدهکاران</h2><p>مانده حساب دانش‌آموز بر اساس فاکتورها و پرداخت‌های ثبت‌شده در فهرست دانش‌آموزان.</p></div>
    ${can('reports')?'<div class="sy-operation-actions"><button type="button" id="debtorFiltered" disabled>اکسل نتایج</button><button type="button" id="debtorFull">اکسل کامل مدارس</button></div>':''}</header>
   <form id="debtorFilters" class="filters sy-operation-filters" aria-label="فیلتر گزارش بدهکاران">
    <label>سال تحصیلی<input name="academicYear" value="${esc(year())}" maxlength="9" required></label>
@@ -2209,8 +2209,8 @@ function studentDebtorsPage(token){
    if(token!==pageToken||current!==revision)return;
    applied=params;
    status.textContent=number(data.items.length)+' بدهکار · مجموع بدهی '+amount.format(data.total)+' ریال';
-   results.innerHTML=simpleTable(['نام و نام خانوادگی دانش‌آموز','مدرسه','شماره تماس ولی','مبلغ سالیانه سرویس (ریال)','پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'],
-    data.items.map(row=>[row.student,row.school,String(row.guardian_mobile||'—').replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]),amount.format(row.annual_fee),amount.format(row.paid),amount.format(row.debt)]));
+   results.innerHTML=simpleTable(['نام و نام خانوادگی دانش‌آموز','مدرسه','شماره تماس ولی','مبلغ ماهیانه سرویس (ریال)','مبلغ سالیانه سرویس (ریال)','پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'],
+    data.items.map(row=>[row.student,row.school,String(row.guardian_mobile||'—').replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]),amount.format(row.monthly_fee),amount.format(row.annual_fee),amount.format(row.paid),amount.format(row.debt)]));
    if(filtered)filtered.disabled=false;
   }catch(err){if(token===pageToken&&current===revision)status.textContent=err.message;}
  };

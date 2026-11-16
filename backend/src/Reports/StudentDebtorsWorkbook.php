@@ -47,7 +47,7 @@ final class StudentDebtorsWorkbook
             $title=$full || count($schools??[])===1?'گزارش مالی بدهکاران مدرسه '.$school:'گزارش مالی بدهکاران · '.$school;
             $label=static fn(string $v): string => htmlspecialchars(ExcelLocalization::digits($v),ENT_XML1|ENT_QUOTES,'UTF-8');
             $money=static fn(string $v): string => '<style nf="[$-0429]#,##0.##">'.$v.'</style>';
-            $head=['نام و نام خانوادگی دانش‌آموز','شماره تماس ولی','مبلغ سالیانه سرویس (ریال)','مبلغ پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'];
+            $head=['نام و نام خانوادگی دانش‌آموز','شماره تماس ولی','مبلغ ماهیانه سرویس (ریال)','مبلغ سالیانه سرویس (ریال)','مبلغ پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'];
             if (!$full) array_splice($head,2,0,['مدرسه']);
             $rows=[
                 ['<b><style font-size="16" bgcolor="#005B35" color="#FFFFFF">'.$label($title).'</style></b>'],
@@ -58,12 +58,12 @@ final class StudentDebtorsWorkbook
             foreach ($group['items'] as $item) {
                 $row=[SimpleXLSXGen::raw(ExcelLocalization::digits($item['student'])),SimpleXLSXGen::raw(ExcelLocalization::digits((string)$item['guardian_mobile']))];
                 if (!$full) $row[]=SimpleXLSXGen::raw(ExcelLocalization::digits($item['school']));
-                foreach (['annual_fee','paid','debt'] as $field) $row[]=$money((string)$item[$field]);
+                foreach (['monthly_fee','annual_fee','paid','debt'] as $field) $row[]=$money((string)$item[$field]);
                 $total+=(int)round((float)$item['debt']*100);
                 $rows[]=$row;
             }
             $last=count($rows);
-            $end=$full?'E':'F';
+            $end=chr(64+count($head));
             $footer=array_fill(0,count($head),'');
             $footer[0]='<b><style bgcolor="#E8F5ED" color="#005B35">مجموع بدهی</style></b>';
             $formula=$last>3?"SUM({$end}4:{$end}{$last})":'0';

@@ -356,7 +356,7 @@ final class DomainService {
   if($resource==='vehicles')$select="vehicles.*, (SELECT GROUP_CONCAT(CONCAT_WS(' ',vd.first_name,vd.last_name) ORDER BY vd.id DESC SEPARATOR '، ') FROM drivers vd WHERE vd.vehicle_id=vehicles.id AND vd.agency_id=vehicles.agency_id AND vd.is_active=1) AS driver_name, COALESCE(NULLIF(TRIM(vehicles.owner_name),''),(SELECT NULLIF(TRIM(CONCAT_WS(' ',vd.first_name,vd.last_name)),'') FROM drivers vd WHERE vd.vehicle_id=vehicles.id AND vd.agency_id=vehicles.agency_id AND vd.is_active=1 ORDER BY vd.id DESC LIMIT 1)) AS effective_owner_name";
   if($resource==='students')$select="students.*,
    (CASE WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'ابتدایی|دبستان|primary|elementary' THEN 8.5 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR TRIM(COALESCE(students.grade,'')) IN ('1','2','3','4','5','6','۱','۲','۳','۴','۵','۶') THEN 8.5 ELSE 9 END) AS annual_months,
-   ROUND(COALESCE(students.monthly_fee,0) * (CASE WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'ابتدایی|دبستان|primary|elementary' THEN 8.5 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR TRIM(COALESCE(students.grade,'')) IN ('1','2','3','4','5','6','۱','۲','۳','۴','۵','۶') THEN 8.5 ELSE 9 END),0) AS annual_fee,
+   ".self::studentAnnualFeeSql()." AS annual_fee,
    (SELECT CONCAT(d.first_name,' ',d.last_name) FROM service_students ss JOIN services sv ON sv.id=ss.service_id JOIN drivers d ON d.id=sv.driver_id AND d.agency_id=students.agency_id WHERE ss.student_id=students.id AND sv.agency_id=students.agency_id AND sv.is_active=1 LIMIT 1) driver_name,
    (SELECT CONCAT(d.first_name,' ',d.last_name) FROM school_service_import_fees f JOIN drivers d ON d.id=f.driver_id AND d.agency_id=f.agency_id
     WHERE f.agency_id=students.agency_id AND f.student_national_code=students.national_code AND f.period='Mehr'
@@ -364,11 +364,20 @@ final class DomainService {
    (SELECT f.driver_id FROM school_service_import_fees f
     WHERE f.agency_id=students.agency_id AND f.student_national_code=students.national_code AND f.period='Mehr'
       AND f.academic_year=COALESCE(NULLIF(REPLACE(students.academic_year,'/','-'),''),'1405-1406') LIMIT 1) mehr_driver_id,
-   (SELECT COALESCE(SUM(i.amount),0) FROM invoices i WHERE i.party_type='student' AND i.party_id=students.id AND i.agency_id=students.agency_id AND i.status<>'cancelled') invoice_total,
-   ((SELECT COALESCE(SUM(p.amount),0) FROM payments p JOIN invoices i ON i.id=p.invoice_id AND i.agency_id=p.agency_id WHERE i.party_type='student' AND i.party_id=students.id AND p.agency_id=students.agency_id) + (SELECT COALESCE(SUM(CASE WHEN le.direction='receipt' THEN le.amount ELSE -le.amount END),0) FROM ledger_entries le WHERE le.agency_id=students.agency_id AND le.party_type='student' AND le.party_id=students.id AND le.is_active=1)) paid_total";
+   ".self::studentInvoiceTotalSql()." invoice_total,
+   ".self::studentPaidTotalSql()." paid_total";
   $ordering=self::listOrdering($resource,$q);
   $s=$pdo->prepare("SELECT $select FROM {$c['table']} WHERE $where ORDER BY $ordering LIMIT $limit OFFSET $off");$s->execute($params);
    $total=(int)$count->fetchColumn();$items=$s->fetchAll();if($resource==='services')foreach($items as &$item)self::attachServicePayable($item);if($resource==='students')foreach($items as &$item)self::attachStudentBalance($item);unset($item);return ['items'=>$items,'pagination'=>['page'=>$page,'limit'=>$limit,'total'=>$total,'pages'=>(int)ceil($total/$limit)]];
+ }
+ public static function studentAnnualFeeSql(): string {
+  return "ROUND(COALESCE(students.monthly_fee,0) * (CASE WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'ابتدایی|دبستان|primary|elementary' THEN 8.5 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR TRIM(COALESCE(students.grade,'')) IN ('1','2','3','4','5','6','۱','۲','۳','۴','۵','۶') THEN 8.5 ELSE 9 END),0)";
+ }
+ public static function studentInvoiceTotalSql(): string {
+  return "(SELECT COALESCE(SUM(i.amount),0) FROM invoices i WHERE i.party_type='student' AND i.party_id=students.id AND i.agency_id=students.agency_id AND i.status<>'cancelled')";
+ }
+ public static function studentPaidTotalSql(): string {
+  return "((SELECT COALESCE(SUM(p.amount),0) FROM payments p JOIN invoices i ON i.id=p.invoice_id AND i.agency_id=p.agency_id WHERE i.party_type='student' AND i.party_id=students.id AND p.agency_id=students.agency_id) + (SELECT COALESCE(SUM(CASE WHEN le.direction='receipt' THEN le.amount ELSE -le.amount END),0) FROM ledger_entries le WHERE le.agency_id=students.agency_id AND le.party_type='student' AND le.party_id=students.id AND le.is_active=1))";
  }
  private static function attachStudentBalance(array &$row): void {
   $invoiced=(float)($row['invoice_total']??0);
