@@ -39,7 +39,7 @@ assert.match(ui,/\/api\/v1\/portal\/memberships/,'Portal loads server-verified i
 assert.ok(login.includes('/api/v1/auth/bale/request'),'Unified login requests real Bale OTP');
 assert.ok(login.includes('/api/v1/portal/auth/password'),'Unified login supports independent portal password sign-in');
 assert.match(ui,/\/api\/v1\/portal\/password/,'First password setup available');
-assert.ok(ui.includes('window.serviceyarPortal={mount,selectPortalRoute}')&&ui.includes("el('nav')"),'Portal navigation uses original app sidebar');
+assert.ok(ui.includes('window.serviceyarPortal={mount,selectPortalRoute,')&&ui.includes("el('nav')"),'Portal navigation uses original app sidebar');
 assert.ok(app.includes('await window.serviceyarPortal.mount(session)')&&!app.includes('location.replace(\'/portal.html'),'Main application renders portal roles locally');
 assert.ok(admin.includes('portal_memberships pm'),'Admin can impersonate verified parent and driver accounts');
 assert.ok(routes.includes('IMPERSONATION_READ_ONLY'),'Impersonated portal session blocks profile and password mutations');
