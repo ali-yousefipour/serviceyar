@@ -153,7 +153,19 @@ final class PortalService {
         return array_merge($members,StandaloneRepresentatives::memberships($uid));
     }
     public static function dashboard(int $uid,string $type,int $agencyId,int $partyId): array {
-        self::authorized($uid,$type,$agencyId,$partyId);
+        return self::dashboardData($uid,$type,$agencyId,$partyId,false);
+    }
+    /** Super-admin read-only inspection without granting a driver portal membership. */
+    public static function adminDriverPreview(int $adminId,int $agencyId,int $driverId): array {
+        if(!\ServiceYar\Auth\Authorization::isSuperAdmin($adminId))
+            throw new AuthException(403,'فقط مدیر کل می‌تواند پنل راننده را مشاهده کند.','FORBIDDEN');
+        if($agencyId<1||$driverId<1)
+            throw new AuthException(422,'شرکت یا راننده معتبر نیست.','VALIDATION_ERROR');
+        return self::dashboardData($adminId,'driver',$agencyId,$driverId,true);
+    }
+    private static function dashboardData(int $uid,string $type,int $agencyId,int $partyId,bool $preview): array {
+        if(!$preview)self::authorized($uid,$type,$agencyId,$partyId);
+        else self::ensureSchema();
         $pdo=Connection::get();
         $agency=self::rows($pdo,"SELECT a.id,a.name,a.code,a.sepand_national_id,
              (SELECT setting_value FROM agency_settings WHERE agency_id=a.id AND setting_key='company_manager_name') managerName,
@@ -227,6 +239,14 @@ final class PortalService {
             FROM drivers d LEFT JOIN vehicles v ON v.id=d.vehicle_id AND v.agency_id=d.agency_id
             WHERE d.id=? AND d.agency_id=? AND d.is_active=1",[$partyId,$agencyId])[0]??null;
         if(!$driver)throw new AuthException(404,'راننده فعال پیدا نشد.','PORTAL_NOT_FOUND');
+        if($preview){
+            $base['profile']=['username'=>(string)($driver['mobile']??''),
+                'first_name'=>$driver['first_name'],'last_name'=>$driver['last_name'],
+                'mobile'=>$driver['mobile']];
+            $base['readonly']=true;
+            $base['hasPassword']=false;
+            $base['previewOnly']=true;
+        }
         $services=self::rows($pdo,"SELECT sv.id,sv.title,sv.code,sv.monthly_fee,sv.capacity,
             sc.id schoolId,sc.name schoolName,sc.address schoolAddress,
             st.id studentId,st.first_name,st.last_name,st.address,st.return_address,
