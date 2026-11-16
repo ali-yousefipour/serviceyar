@@ -11,7 +11,7 @@ const payroll=operations.slice(start,end);
 assert.match(payroll,/driver_work w[\s\S]*?work_date BETWEEN :wf AND :wt/,'Earnings remain period-bound driver_work');
 assert.match(payroll,/JOIN service_students ss ON ss.service_id=s.id/,'Reference uses service assignments');
 assert.match(payroll,/JOIN students st ON st.id=ss.student_id AND st.agency_id=s.agency_id/,'Assignments are tenant-scoped');
-assert.match(payroll,/s.is_active=1 AND st.is_active=1/,'Reference excludes inactive students and services');
+assert.match(payroll,/s.is_active=1 AND s.status=\\'active\\' AND st.is_active=1/,'Reference excludes inactive, draft or cancelled services and students');
 assert.match(payroll,/COALESCE\(st.driver_base_monthly,st.monthly_fee\)/,'Use driver base, not parent tuition alone');
 assert.match(payroll,/\$gross=\(float\)\$r\['earned'\]/,'Payroll continues from recorded work');
 assert.match(payroll,/\$r\['assigned_monthly_net'\]/,'Monthly reference net exposed');
