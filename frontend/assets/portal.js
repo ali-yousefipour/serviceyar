@@ -305,7 +305,7 @@
      });
    }
    const side=document.querySelector('.sy-command-sidebar');
-   if(side){
+   if(side&&!el('sySidebarCollapse')){
      // Company rail uses the same sy-collapsed class. Keep a separate persisted
      // preference so a driver never changes the company's menu preference.
      let button=el('syPortalSidebarCollapse');
