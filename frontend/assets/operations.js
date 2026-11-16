@@ -4234,7 +4234,7 @@ async function openAdminImpersonationDialog(panelType='company'){
  const panelInfo={
   company:{title:'ورود نیابتی به پنل شرکت',description:'ابتدا شرکت را انتخاب کنید؛ سپس یکی از کاربران مدیریتی همان شرکت را برای ورود نیابتی برگزینید.',userTitle:'کاربر شرکت',placeholder:'نام، نام خانوادگی یا نام کاربری مدیر شرکت…',empty:'کاربر مدیریتی فعالی در این شرکت پیدا نشد.',button:'ورود به پنل شرکت'},
   parent:{title:'ورود نیابتی به پنل والدین',description:'شرکت ارائه‌دهنده سرویس را انتخاب کنید؛ سپس از میان حساب‌های تأییدشده والدین آن شرکت، ولی موردنظر را جستجو کنید. دسترسی صرفاً مشاهده‌ای است.',userTitle:'ولی دانش‌آموز',placeholder:'نام ولی، شماره همراه یا نام کاربری…',empty:'حساب والد تأییدشده‌ای برای این شرکت یافت نشد.',button:'مشاهده پنل ولی'},
-  driver:{title:'ورود نیابتی به پنل رانندگان',description:'شرکت را انتخاب کنید؛ سپس راننده دارای حساب تأییدشده همان شرکت را جستجو کنید. دسترسی صرفاً مشاهده‌ای است.',userTitle:'راننده',placeholder:'نام راننده، شماره همراه یا نام کاربری…',empty:'حساب راننده تأییدشده‌ای برای این شرکت یافت نشد.',button:'مشاهده پنل راننده'}
+  driver:{title:'ورود نیابتی به پنل رانندگان',description:'همه رانندگان فعال شرکت نمایش داده می‌شوند. برای رانندگان فاقد حساب تأییدشده، پیش‌نمایش امن و فقط‌خواندنی ارائه می‌شود.',userTitle:'راننده',placeholder:'نام راننده یا شماره همراه…',empty:'راننده فعالی برای این شرکت یافت نشد.',button:'مشاهده پنل راننده'}
  }[panelType];
  if(!session?.roles?.includes('super_admin')||session?.impersonation)return;
  const returnFocus=document.activeElement instanceof HTMLElement?document.activeElement:null;
@@ -4269,6 +4269,40 @@ async function openAdminImpersonationDialog(panelType='company'){
   userSearch=overlay.querySelector('#syImpersonationUserSearch'),usersBox=overlay.querySelector('#syImpersonationUsers'),
   errorBox=overlay.querySelector('#syImpersonationError'),confirmBox=overlay.querySelector('#syImpersonationConfirm'),
   startButton=overlay.querySelector('#syImpersonationStart');
+ const preview=document.createElement('section');
+ preview.id='syDriverImpersonationPreview';preview.hidden=true;preview.className='sy-impersonation-driver-preview';
+ overlay.querySelector('.sy-impersonation-body').append(preview);
+ const money=value=>Number(value||0).toLocaleString('fa-IR',{maximumFractionDigits:0})+' ریال';
+ const previewTable=(headers,items)=>'<div class="table-wrap" style="max-height:340px;overflow:auto"><table><thead><tr>'+
+  headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+
+  (items.length?items.map(row=>'<tr>'+row.map(v=>'<td>'+esc(v??'—')+'</td>').join('')+'</tr>').join(''):
+  '<tr><td colspan="'+headers.length+'">موردی ثبت نشده است.</td></tr>')+'</tbody></table></div>';
+ const openDriverPreview=async driver=>{
+   preview.hidden=false;userStep.hidden=true;preview.textContent='در حال دریافت نمای امن اطلاعات راننده…';
+   try{
+     const result=await api('/api/v1/admin/impersonation/driver-preview?agencyId='+encodeURIComponent(selectedCompany.id)+'&driverId='+encodeURIComponent(driver.driverId));
+     if(!overlay.isConnected||!selectedCompany||Number(result.agency?.id)!==Number(selectedCompany.id))return;
+     const d=result.driver||{},finance=result.finance||{},students=result.students||[];
+     preview.innerHTML='<button type="button" class="secondary" data-preview-back>بازگشت به فهرست رانندگان</button>'+
+      '<h3>پیش‌نمایش پنل راننده · فقط مشاهده</h3>'+
+      '<p>راننده: '+esc([d.first_name,d.last_name].filter(Boolean).join(' '))+' · تلفن: '+esc(d.mobile||'—')+
+      ' · شرکت: '+esc(result.agency?.name||'')+'</p>'+
+      '<p>این پیش‌نمایش بدون ایجاد حساب یا تأیید شماره همراه است. هیچ تغییری در داده‌ها یا نشست راننده ایجاد نمی‌شود.</p>'+
+      '<div class="sy-operation-result-head"><strong>درآمد ماهانه سرویس‌ها: '+money(finance.monthlyServicesTotal)+'</strong>'+
+      '<strong>مانده کارکرد: '+money(finance.balance)+'</strong></div>'+
+      '<h4>مدارس و دانش‌آموزان سرویس</h4>'+
+      previewTable(['مدرسه','سرویس','دانش‌آموز','محل سوارشدن'],students.map(x=>[x.schoolName,x.title||x.code,
+       [x.first_name,x.last_name].filter(Boolean).join(' '),x.pickup_address]))+
+      '<h4>کارکردهای ثبت‌شده</h4>'+
+      previewTable(['تاریخ','مبلغ','وضعیت'],(finance.earnings||[]).map(x=>[x.work_date,money(x.amount),x.status]))+
+      '<h4>پرداخت‌ها</h4>'+
+      previewTable(['تاریخ','مبلغ','شماره پیگیری'],(finance.payments||[]).map(x=>[x.payment_date,money(x.amount),x.reference_no]));
+     preview.querySelector('[data-preview-back]').onclick=()=>{preview.hidden=true;userStep.hidden=false;};
+   }catch(error){
+     preview.innerHTML='<button type="button" class="secondary" data-preview-back>بازگشت</button><p role="alert">'+esc(error.message||'دریافت اطلاعات راننده ناموفق بود.')+'</p>';
+     preview.querySelector('[data-preview-back]').onclick=()=>{preview.hidden=true;userStep.hidden=false;};
+   }
+ };
  const normalize=value=>String(value||'').replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').replace(/[\u200c\s]+/g,' ').trim().toLocaleLowerCase('fa');
  const fa=value=>Number(value||0).toLocaleString('fa-IR');
  let companies=[],selectedCompany=null,users=[],selectedUser=null,companyLoadSequence=0;
@@ -4284,7 +4318,7 @@ async function openAdminImpersonationDialog(panelType='company'){
   // The server already restricts results to the selected agency and panelType.
   // Do not re-classify users by translated role titles, which may vary.
   const list=users.filter(u=>normalize([u.username,u.first_name,u.last_name,u.roles].join(' ')).includes(term));
-  usersBox.innerHTML=list.length?list.map(u=>'<button type="button" class="sy-impersonation-result" data-user="'+Number(u.id)+'"><span class="sy-impersonation-result-avatar sy-user-avatar">'+esc((u.first_name||u.username||'ک').trim().slice(0,1))+'</span><span><b>'+esc(((u.first_name||'')+' '+(u.last_name||'')).trim()||u.username)+'</b><small>'+esc(u.username)+' · '+esc(u.roles||'بدون نقش')+'</small></span><em>فعال</em><i aria-hidden="true">←</i></button>').join(''):'<div class="sy-impersonation-empty">'+esc(panelInfo.empty)+'</div>';
+  usersBox.innerHTML=list.length?list.map(u=>'<button type="button" class="sy-impersonation-result" data-user="'+Number(u.userKey??u.id)+'"><span class="sy-impersonation-result-avatar sy-user-avatar">'+esc((u.first_name||u.username||'ک').trim().slice(0,1))+'</span><span><b>'+esc(((u.first_name||'')+' '+(u.last_name||'')).trim()||u.username)+'</b><small>'+esc(u.username)+' · '+esc(u.roles||'بدون نقش')+'</small></span><em>'+(panelType==='driver'&&!Number(u.portalReady)?'پیش‌نمایش':'فعال')+'</em><i aria-hidden="true">←</i></button>').join(''):'<div class="sy-impersonation-empty">'+esc(panelInfo.empty)+'</div>';
   usersBox.querySelectorAll('[data-user]').forEach(button=>button.onclick=()=>chooseUser(Number(button.dataset.user)));
  };
  const selectCompany=async id=>{
@@ -4298,16 +4332,17 @@ async function openAdminImpersonationDialog(panelType='company'){
   try{
    const data=await api('/api/v1/admin/impersonation/users?agencyId='+encodeURIComponent(id)+'&panelType='+encodeURIComponent(panelType));
    if(!overlay.isConnected||requestSequence!==companyLoadSequence||Number(selectedCompany?.id)!==id)return;
-   users=data.users||[];renderUsers();userSearch.focus();
+   users=(data.users||[]).map(u=>({...u,userKey:panelType==='driver'&&!Number(u.portalReady)?-Number(u.driverId):Number(u.id)}));renderUsers();userSearch.focus();
   }catch(error){
    if(!overlay.isConnected||requestSequence!==companyLoadSequence)return;
    usersBox.textContent='دریافت کاربران ناموفق بود.';showError(error.message);
   }
  };
  const chooseUser=id=>{
-  selectedUser=users.find(u=>Number(u.id)===id);if(!selectedUser)return;
+  selectedUser=users.find(u=>Number(u.userKey??u.id)===id);if(!selectedUser)return;
   overlay.querySelector('#syImpersonationChosenName').textContent=((selectedUser.first_name||'')+' '+(selectedUser.last_name||'')).trim()||selectedUser.username;
   overlay.querySelector('#syImpersonationChosenDetails').textContent='نام کاربری: '+selectedUser.username+' · نقش: '+(selectedUser.roles||'بدون نقش')+' · شرکت: '+selectedCompany.name;
+  startButton.textContent=panelType==='driver'&&!Number(selectedUser.portalReady)?'پیش‌نمایش امن پنل راننده':panelInfo.button;
   confirmBox.hidden=false;showError('');
   confirmBox.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'nearest'});
  };
@@ -4321,6 +4356,7 @@ async function openAdminImpersonationDialog(panelType='company'){
  companySearch.focus();
  startButton.onclick=async()=>{
   if(!selectedCompany||!selectedUser)return;
+  if(panelType==='driver'&&!Number(selectedUser.portalReady)){await openDriverPreview(selectedUser);return;}
   startButton.disabled=true;startButton.textContent='در حال ورود امن به پنل کاربر…';showError('');
   try{
    await api('/api/v1/admin/impersonation/start',{method:'POST',headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify({agencyId:Number(selectedCompany.id),userId:Number(selectedUser.id),panelType})});
