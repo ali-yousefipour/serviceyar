@@ -163,14 +163,14 @@ final class PortalService {
             throw new AuthException(422,'شرکت یا راننده معتبر نیست.','VALIDATION_ERROR');
         return self::dashboardData($adminId,'driver',$agencyId,$driverId,true);
     }
-    public static function adminParentPreview(int $adminId,int $agencyId,int $studentId): array {
+    public static function adminParentPreview(int $adminId,int $agencyId,int $studentId,int $guardianId): array {
         if(!\ServiceYar\Auth\Authorization::isSuperAdmin($adminId))
             throw new AuthException(403,'مشاهده پنل ولی فقط برای مدیر کل مجاز است.','FORBIDDEN');
-        if($agencyId<1||$studentId<1)
-            throw new AuthException(422,'شرکت یا دانش‌آموز معتبر نیست.','VALIDATION_ERROR');
-        return self::dashboardData($adminId,'parent',$agencyId,$studentId,true);
+        if($agencyId<1||$studentId<1||$guardianId<1)
+            throw new AuthException(422,'شرکت، ولی یا دانش‌آموز معتبر نیست.','VALIDATION_ERROR');
+        return self::dashboardData($adminId,'parent',$agencyId,$studentId,true,$guardianId);
     }
-    private static function dashboardData(int $uid,string $type,int $agencyId,int $partyId,bool $preview): array {
+    private static function dashboardData(int $uid,string $type,int $agencyId,int $partyId,bool $preview,int $guardianId=0): array {
         if(!$preview)self::authorized($uid,$type,$agencyId,$partyId);
         else self::ensureSchema();
         $pdo=Connection::get();
@@ -192,8 +192,10 @@ final class PortalService {
                 WHERE st.id=? AND st.agency_id=? AND st.is_active=1",[$partyId,$agencyId])[0]??null;
             if(!$student)throw new AuthException(404,'دانش‌آموز فعال پیدا نشد.','PORTAL_NOT_FOUND');
             if($preview){
-                $guardianRow=self::rows($pdo,"SELECT id,name,mobile,relation_title FROM guardians
-                   WHERE student_id=? ORDER BY is_primary DESC,id ASC LIMIT 1",[$partyId])[0]??null;
+                $guardianRow=self::rows($pdo,"SELECT g.id,g.name,g.mobile,g.relation_title FROM guardians g
+                   JOIN students st ON st.id=g.student_id AND st.agency_id=? AND st.is_active=1
+                   WHERE g.student_id=? AND g.id=? LIMIT 1",[$agencyId,$partyId,$guardianId])[0]??null;
+                if(!$guardianRow)throw new AuthException(404,'ولی دانش‌آموز در این شرکت یافت نشد.','PORTAL_NOT_FOUND');
                 $base['profile']=['username'=>$guardianRow['mobile']??'','mobile'=>$guardianRow['mobile']??'',
                    'first_name'=>$guardianRow['name']??'ولی دانش‌آموز','last_name'=>''];
                 $base['readonly']=true;$base['previewOnly']=true;$base['hasPassword']=false;
