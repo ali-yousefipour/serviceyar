@@ -3157,3 +3157,9 @@ body.sy-menu-palette-open{overflow:hidden}
  .sy-official-tariff-apply [data-official-apply],
  .sy-official-tariff-apply [data-official-preview]{width:100%}
 }
+
+.sy-mgmt-dashboard .sy-dashboard-stat{min-height:44px;color:inherit;background:transparent;border:1px solid transparent;text-align:start}
+.sy-mgmt-dashboard .sy-dashboard-stat:hover{text-decoration:underline}
+.sy-dashboard-details{width:min(720px,calc(100vw - 24px));max-height:calc(100dvh - 24px);padding:0;overflow:auto;border:1px solid var(--line,#d9e3db);border-radius:16px;background:var(--surface,#fff);color:var(--text,#172b21)}
+.sy-dashboard-details::backdrop{background:#12251f80}
+.sy-dashboard-details .modal-head form{margin:0}

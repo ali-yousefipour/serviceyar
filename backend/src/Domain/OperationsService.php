@@ -99,6 +99,54 @@ final class OperationsService
         ];
     }
 
+    public static function dashboardDetails(int $uid,int $aid,array $filter): array
+    {
+        $p=self::scope($uid,$aid,'dashboard.view');
+        $metric=$filter['metric']??'';
+        $activeService="sv.is_active=1 AND sv.status<>'cancelled'";
+        $assignment="EXISTS(SELECT 1 FROM service_students ss JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=st.agency_id AND $activeService WHERE ss.student_id=st.id)";
+        $activeDriver="EXISTS(SELECT 1 FROM drivers d WHERE d.id=sv.driver_id AND d.agency_id=sv.agency_id AND d.is_active=1 AND d.status='active')";
+        $params=['agency'=>$aid];
+        if(in_array($metric,['students','assigned','unassigned','mismatch','student-status'],true)){
+            Authorization::requirePermission($uid,'students.view');
+            $condition=match($metric){
+                'assigned'=>$assignment,
+                'unassigned'=>"NOT $assignment",
+                'mismatch'=>"(COALESCE(st.service_status,'')='assigned') <> $assignment",
+                'student-status'=>"COALESCE(st.service_status,'')=:status",
+                default=>'1=1',
+            };
+            if($metric==='student-status')$params['status']=(string)($filter['status']??'');
+            if(isset($filter['schoolId'])){
+                $params['school']=filter_var($filter['schoolId'],FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
+                if(!$params['school'])throw new AuthException(422,'مدرسه معتبر نیست.','INVALID_SCHOOL');
+                $condition.=' AND st.school_id=:school';
+            }
+            $sql="SELECT st.id, CONCAT_WS(' ',st.first_name,st.last_name) name, sc.name detail, st.service_status state
+                  FROM students st LEFT JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id
+                  WHERE st.agency_id=:agency AND st.is_active=1 AND $condition";
+        }elseif(in_array($metric,['services','staffed','unstaffed'],true)){
+            Authorization::requirePermission($uid,'services.view');
+            $condition=match($metric){'staffed'=>$activeDriver,'unstaffed'=>"NOT $activeDriver",default=>'1=1'};
+            $sql="SELECT sv.id,sv.title name,CONCAT_WS(' ',d.first_name,d.last_name) detail,sv.capacity state
+                  FROM services sv LEFT JOIN drivers d ON d.id=sv.driver_id AND d.agency_id=sv.agency_id
+                  WHERE sv.agency_id=:agency AND $activeService AND $condition";
+        }elseif($metric==='drivers'){
+            Authorization::requirePermission($uid,'drivers.view');
+            $sql="SELECT d.id,CONCAT_WS(' ',d.first_name,d.last_name) name,COUNT(*) detail,NULL state
+                  FROM drivers d JOIN services sv ON sv.driver_id=d.id AND sv.agency_id=d.agency_id AND $activeService
+                  WHERE d.agency_id=:agency AND d.is_active=1 AND d.status='active' GROUP BY d.id,d.first_name,d.last_name";
+        }else{
+            throw new AuthException(422,'شاخص داشبورد معتبر نیست.','INVALID_DASHBOARD_METRIC');
+        }
+        $page=max(1,min(100000,(int)($filter['page']??1)));
+        $offset=($page-1)*25;
+        $stmt=$p->prepare("SELECT details.*,COUNT(*) OVER() total FROM ($sql) details ORDER BY name,id LIMIT 25 OFFSET $offset");
+        $stmt->execute($params);
+        $rows=$stmt->fetchAll(PDO::FETCH_ASSOC);
+        return ['items'=>$rows,'total'=>(int)($rows[0]['total']??0)];
+    }
+
     public static function assign(int $uid,int $aid,int $serviceId,int $studentId,?string $address=null,?int $order=null): void
     {
         self::scope($uid,$aid,'services.manage');

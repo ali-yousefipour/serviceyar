@@ -14,6 +14,16 @@ final class ServicePricing {
         if(!in_array($mode,self::SOURCES,true))throw new AuthException(422,'روش محاسبه هزینه باید تاکسیرانی، تعرفه شرکت یا توافقی باشد.','INVALID_FEE_SOURCE');
         return $mode;
     }
+    public static function assignedVehicleClass(PDO $pdo,int $aid,int $studentId): ?int {
+        $stmt=$pdo->prepare("SELECT v.tariff_vehicle_class FROM service_students ss
+          JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=? AND sv.is_active=1 AND sv.status<>'cancelled'
+          JOIN drivers dr ON dr.id=sv.driver_id AND dr.agency_id=sv.agency_id
+          JOIN vehicles v ON v.id=dr.vehicle_id AND v.agency_id=sv.agency_id AND v.is_active=1
+          WHERE ss.student_id=? AND v.tariff_vehicle_class IN (1,2,3) ORDER BY sv.id LIMIT 1");
+        $stmt->execute([$aid,$studentId]);
+        $class=$stmt->fetchColumn();
+        return $class===false?null:(int)$class;
+    }
     public static function quote(PDO $pdo,int $aid,array $student,string $source,array $options=[]): array {
         $source=self::source($source);
         $school=(int)($student['school_id']??0);
@@ -88,7 +98,7 @@ final class ServicePricing {
         $q->execute([$serviceId,$agencyId]);$service=$q->fetch(PDO::FETCH_ASSOC);
         if(!$service)throw new AuthException(404,'سرویس پیدا نشد.','NOT_FOUND');
         $members=$pdo->prepare("SELECT st.id FROM service_students ss
-            JOIN students st ON st.id=ss.student_id AND st.agency_id=?
+            JOIN students st ON st.id=ss.student_id AND st.agency_id=? AND st.is_active=1
             WHERE ss.service_id=? ORDER BY st.id FOR UPDATE");
         $members->execute([$agencyId,$serviceId]);
         $ids=array_map('intval',$members->fetchAll(PDO::FETCH_COLUMN));

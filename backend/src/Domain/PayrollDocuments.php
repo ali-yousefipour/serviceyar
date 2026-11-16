@@ -23,8 +23,35 @@ final class PayrollDocuments
     }
     public static function list(int $uid,int $aid,array $filter): array
     {
-        Authorization::requirePermission($uid,'finance.view');Authorization::requireAgencyAccess($uid,$aid);[$from,$to]=OperationsService::range($filter);
-        $q=Connection::get()->prepare('SELECT id,document_no,date_from,date_to,status,total_amount,created_at,(SELECT COUNT(*) FROM payroll_document_lines l WHERE l.document_id=payroll_documents.id) AS driver_count FROM payroll_documents WHERE agency_id=:a AND date_from=:f AND date_to=:t ORDER BY id DESC');$q->execute(['a'=>$aid,'f'=>$from,'t'=>$to]);return $q->fetchAll();
+        Authorization::requirePermission($uid,'finance.view');Authorization::requireAgencyAccess($uid,$aid);
+        $params=['a'=>$aid];
+        if(($filter['scope']??'')==='archive'){
+            $scope="status='approved'";
+        }else{
+            [$params['f'],$params['t']]=OperationsService::range($filter);
+            $scope='date_from=:f AND date_to=:t';
+        }
+        $q=Connection::get()->prepare("SELECT id,document_no,date_from,date_to,status,total_amount,created_at,(SELECT COUNT(*) FROM payroll_document_lines l WHERE l.document_id=payroll_documents.id) AS driver_count FROM payroll_documents WHERE agency_id=:a AND $scope ORDER BY date_from DESC,id DESC");
+        $q->execute($params);return $q->fetchAll();
+    }
+
+    public static function revise(int $uid,int $aid,int $id,bool $delete): array
+    {
+        Authorization::requirePermission($uid,'finance.manage');
+        Authorization::requireAgencyAccess($uid,$aid);
+        return OperationsService::transaction(function(PDO $pdo)use($uid,$aid,$id,$delete){
+            $params=['id'=>$id,'agency'=>$aid];
+            $stmt=$pdo->prepare('SELECT status FROM payroll_documents WHERE id=:id AND agency_id=:agency FOR UPDATE');
+            $stmt->execute($params);
+            $status=$stmt->fetchColumn();
+            if($status===false)throw new AuthException(404,'سند حقوق پیدا نشد.','NOT_FOUND');
+            if($status!==($delete?'draft':'approved'))
+                throw new AuthException(409,$delete?'سند ابتدا باید به پیش‌نویس برگردد.':'فقط سند تأییدشده قابل بازگشایی است.','PAYROLL_LOCKED');
+            OperationsService::audit($uid,$aid,$delete?'delete_payroll':'reopen_payroll','payroll_documents',$id);
+            $sql=$delete?'DELETE FROM payroll_documents':"UPDATE payroll_documents SET status='draft'";
+            $pdo->prepare($sql.' WHERE id=:id AND agency_id=:agency')->execute($params);
+            return ['status'=>$delete?'deleted':'draft'];
+        });
     }
 
     public static function get(int $uid,int $aid,int $id, bool $forWorkbook = false): array

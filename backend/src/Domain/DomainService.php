@@ -631,13 +631,8 @@ final class DomainService {
    // For an assigned student, the DRIVER'S registered vehicle is the only
    // authoritative source for tariff class, not the student's old dropdown.
    if($id){
-    $actual=$pdo->prepare("SELECT v.tariff_vehicle_class FROM service_students ss
-      JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=? AND sv.is_active=1 AND sv.status<>'cancelled'
-      JOIN drivers dr ON dr.id=sv.driver_id AND dr.agency_id=sv.agency_id
-      JOIN vehicles v ON v.id=dr.vehicle_id AND v.agency_id=sv.agency_id AND v.is_active=1
-      WHERE ss.student_id=? LIMIT 1");
-    $actual->execute([$aid,$id]);$assignedClass=$actual->fetchColumn();
-    if($assignedClass!==false&&in_array((int)$assignedClass,[1,2,3],true)){
+    $assignedClass=ServicePricing::assignedVehicleClass($pdo,$aid,(int)$id);
+    if($assignedClass!==null){
      $merged['tariff_vehicle_class']=(int)$assignedClass;
      $data['tariff_vehicle_class']=(int)$assignedClass;
     }
@@ -882,7 +877,7 @@ final class DomainService {
   OperationsService::transaction(function(\PDO $pdo)use($aid,$serviceId,$studentId){$q=$pdo->prepare('DELETE ss FROM service_students ss JOIN services s ON s.id=ss.service_id WHERE ss.service_id=:s AND ss.student_id=:st AND s.agency_id=:a');$q->execute(['s'=>$serviceId,'st'=>$studentId,'a'=>$aid]);if($q->rowCount()<1)throw new AuthException(404,'تخصیص سرویس پیدا نشد.','NOT_FOUND');$q=$pdo->prepare("UPDATE students SET service_status='waiting' WHERE id=:id AND agency_id=:a AND NOT EXISTS(SELECT 1 FROM service_students ss JOIN services sv ON sv.id=ss.service_id WHERE ss.student_id=:st AND sv.agency_id=:agency AND sv.is_active=1)");$q->execute(['id'=>$studentId,'a'=>$aid,'st'=>$studentId,'agency'=>$aid]);});self::activity($pdo,$aid,$uid,'remove_student','services',$serviceId);
  }
  public static function serviceStudents(int $uid,int $aid,int $serviceId): array {
-  Authorization::requirePermission($uid,'services.view');Authorization::requireAgencyAccess($uid,$aid);$q=Connection::get()->prepare('SELECT st.id,st.uuid,st.first_name,st.last_name,st.grade,st.national_code,st.tariff_distance_km,st.tariff_vehicle_class,st.monthly_fee,st.grade AS student_grade,sc.school_type AS school_type,ss.pickup_address,ss.pickup_order FROM service_students ss JOIN students st ON st.id=ss.student_id LEFT JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id JOIN services s ON s.id=ss.service_id WHERE ss.service_id=:s AND s.agency_id=:a ORDER BY ss.pickup_order,st.last_name,st.first_name');$q->execute(['s'=>$serviceId,'a'=>$aid]);return $q->fetchAll();
+  Authorization::requirePermission($uid,'services.view');Authorization::requireAgencyAccess($uid,$aid);$q=Connection::get()->prepare('SELECT st.id,st.uuid,st.first_name,st.last_name,st.grade,st.national_code,st.is_active,st.tariff_distance_km,st.tariff_vehicle_class,st.monthly_fee,st.grade AS student_grade,sc.school_type AS school_type,ss.pickup_address,ss.pickup_order FROM service_students ss JOIN students st ON st.id=ss.student_id LEFT JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id JOIN services s ON s.id=ss.service_id WHERE ss.service_id=:s AND s.agency_id=:a ORDER BY ss.pickup_order,st.last_name,st.first_name');$q->execute(['s'=>$serviceId,'a'=>$aid]);return $q->fetchAll();
  }
  public static function delete(int $uid,int $aid,string $resource,int $id): void {
   $c=self::cfg($resource);Authorization::requirePermission($uid,$c['permission'].'.manage');Authorization::requireAgencyAccess($uid,$aid);self::get($uid,$aid,$resource,$id);$pdo=Connection::get();$columns=thisColumns($c['table'],$pdo);

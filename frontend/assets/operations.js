@@ -50,11 +50,11 @@ const menus=[
  ['students','دانش‌آموزان',[['students/new','دانش‌آموز جدید'],['import','ثبت دانش‌آموز از اکسل'],['previous-students','دانش‌آموزان سال قبل'],['students','لیست دانش‌آموزان']]],
  ['drivers','رانندگان',[['drivers','مدیریت راننده‌ها'],['representatives','مدیریت نمایندگان'],['driver-ratings','امتیاز و گزارش'],['portal-vehicle-requests','درخواست‌های اصلاح خودرو'],['driver-work','گزارش عملکرد راننده'],['finance-report','دریافتی پرداختی رانندگان']]],
  ['services','سرویس‌ها',[['services/new','سرویس جدید'],['grouping','دسته‌بندی هوشمند'],['packs','پک‌های سرویس'],['services','عملیات سرویس‌ها'],['students/fees','تغییر سریع هزینه سرویس'],['service-charges','حق‌السرویس']]],
- ['accounts','مالی',[['accounts','تعاریف حسابداری'],['accounting-documents','اسناد حسابداری'],['agreements','ثبت مبلغ توافقی راننده'],['payroll','فیش حقوق راننده'],['driver-payments','سند پرداخت حقوق راننده'],['finance-report','گزارش دریافتی پرداختی'],['invoices','گزارش وضعیت کلی پرداخت'],['debtors','گزارش بدهکاران'],['wallets','کیف پول'],['installments','پیش‌پرداخت و اقساط']]],
+ ['accounts','مالی',[['accounts','تعاریف حسابداری'],['accounting-documents','اسناد حسابداری'],['agreements','ثبت مبلغ توافقی راننده'],['payroll','حقوق رانندگان'],['driver-payments','سند پرداخت حقوق راننده'],['finance-report','گزارش دریافتی پرداختی'],['invoices','گزارش وضعیت کلی پرداخت'],['debtors','گزارش بدهکاران'],['wallets','کیف پول'],['installments','پیش‌پرداخت و اقساط']]],
  ['reports','امکانات',[['messages','پیام‌رسانی'],['monitoring','مانیتورینگ'],['distances','بررسی فاصله‌های ناجور'],['reports','خروجی گزارشات'],['settings','تنظیمات'],['vehicles','خودروها'],['driver-assignment','تخصیص پیشنهادی راننده'],['daily-schedule','برنامه روزانه و تداخل شیفت‌ها'],['driver-changes','تغییر راننده'],['contracts','قراردادها'],['accounting-documents/statement','گزارش حساب'],['accounting-documents/quick','سند سریع'],['accounting-documents/defaults','حساب‌های پیش‌فرض'],['accounting-documents/cheques','چک‌های دریافتی و عملیات چک'],['ledger','دریافت و پرداخت'],['school-statement','صورت‌وضعیت سرویس مدارس'],['bale-payments','پرداخت کیف پول بله'],['school-charges','بدهی مدارس'],['payments','پرداخت‌ها'],['parent-reports','گزارشات والدین']]]
 ];
 for(const [k,v] of Object.entries(resources))titles[k]=v[0];
-Object.assign(titles,{'debtors':'گزارش بدهکاران','representatives':'مدیریت نمایندگان','installments':'برنامه پیش‌پرداخت و اقساط','school-statement':'صورت‌وضعیت سرویس مدارس','daily-schedule':'برنامه روزانه سرویس‌ها','driver-assignment':'تخصیص پیشنهادی راننده','school-report':'گزارش مدارس','portal-vehicle-requests':'درخواست‌های اصلاح خودرو','bale-payments':'پرداخت کیف پول بله',import:'ثبت دانش‌آموز از اکسل','previous-students':'دانش‌آموزان سال قبل',grouping:'دسته‌بندی هوشمند',payroll:'فیش حقوق راننده','finance-report':'گزارش دریافتی پرداختی',monitoring:'مانیتورینگ',distances:'بررسی فاصله‌های ناجور',agreements:'ثبت مبلغ توافقی راننده'});
+Object.assign(titles,{'debtors':'گزارش بدهکاران','representatives':'مدیریت نمایندگان','installments':'برنامه پیش‌پرداخت و اقساط','school-statement':'صورت‌وضعیت سرویس مدارس','daily-schedule':'برنامه روزانه سرویس‌ها','driver-assignment':'تخصیص پیشنهادی راننده','school-report':'گزارش مدارس','portal-vehicle-requests':'درخواست‌های اصلاح خودرو','bale-payments':'پرداخت کیف پول بله',import:'ثبت دانش‌آموز از اکسل','previous-students':'دانش‌آموزان سال قبل',grouping:'دسته‌بندی هوشمند',payroll:'حقوق رانندگان','finance-report':'گزارش دریافتی پرداختی',monitoring:'مانیتورینگ',distances:'بررسی فاصله‌های ناجور',agreements:'ثبت مبلغ توافقی راننده'});
 let pageToken=0,gridState=null,lookupCache={};
 let chequeSearchSequence=0;
 let journalRequestSequence=0,initialSearch='',initialStudentStatus='',returnFocus=null;
@@ -635,12 +635,12 @@ async function dashboard(token=pageToken){
  const chartRows=statusBreakdown.slice().sort((a,b)=>b.value-a.value);
  const studentsSection=can('students'),driversSection=can('drivers'),schoolsSection=can('schools'),servicesSection=can('services');
  const kpis=[
-  {permission:studentsSection,label:'دانش‌آموزان فعال',value:fmt(total),detail:'دانش‌آموزان ثبت‌شده شرکت',icon:'students',href:'#students',tone:'blue'},
-  {permission:studentsSection,label:'تخصیص‌یافته واقعی',value:fmt(assigned),detail:fmt(percentage)+'٪ از دانش‌آموزان',icon:'services',href:'#students',tone:'green'},
-  {permission:studentsSection,label:'نیازمند تخصیص',value:fmt(unassigned),detail:'بدون سرویس فعال',icon:'students',href:'#students',tone:unassigned?'amber':'green'},
-  {permission:servicesSection,label:'سرویس فعال',value:fmt(activeServices),detail:fmt(metrics.staffedServices)+' دارای راننده فعال',icon:'services',href:'#services',tone:'blue'},
-  {permission:driversSection,label:'راننده فعال در سرویس',value:fmt(employed),detail:'از '+fmt(counts.drivers)+' راننده فعال',icon:'drivers',href:'#drivers',tone:'green'},
-  {permission:schoolsSection,label:'مدارس فعال',value:fmt(counts.schools),detail:'مدارس تحت پوشش شرکت',icon:'schools',href:'#schools',tone:'blue'}
+  {permission:studentsSection,label:'دانش‌آموزان فعال',metric:'students',value:fmt(total),detail:'دانش‌آموزان ثبت‌شده شرکت',icon:'students',href:'#students',tone:'blue'},
+  {permission:studentsSection,label:'تخصیص‌یافته واقعی',metric:'assigned',value:fmt(assigned),detail:fmt(percentage)+'٪ از دانش‌آموزان',icon:'services',href:'#students',tone:'green'},
+  {permission:studentsSection,label:'نیازمند تخصیص',metric:'unassigned',value:fmt(unassigned),detail:'بدون سرویس فعال',icon:'students',href:'#students',tone:unassigned?'amber':'green'},
+  {permission:servicesSection,label:'سرویس فعال',metric:'services',value:fmt(activeServices),detail:fmt(metrics.staffedServices)+' دارای راننده فعال',icon:'services',href:'#services',tone:'blue'},
+  {permission:driversSection,label:'راننده فعال در سرویس',metric:'drivers',value:fmt(employed),detail:'از '+fmt(counts.drivers)+' راننده فعال',icon:'drivers',href:'#drivers',tone:'green'},
+  {permission:schoolsSection,label:'مدارس فعال',metric:'schools',value:fmt(counts.schools),detail:'مدارس تحت پوشش شرکت',icon:'schools',href:'#schools',tone:'blue'}
  ].filter(k=>k.permission);
  const schoolBars=schools.slice().sort((a,b)=>Number(b.unassigned||0)-Number(a.unassigned||0)).slice(0,8);
  const schoolRows=schools.map(sc=>[sc.name,fmt(sc.students),fmt(sc.assigned),fmt(sc.unassigned)]);
@@ -656,34 +656,34 @@ async function dashboard(token=pageToken){
    ${[['students','ثبت دانش‌آموز'],['services','تعریف سرویس']].filter(([k])=>can(k,'manage')).map(([k,t])=>`<a href="#${k}/new">${navIcon(k)}${t}</a>`).join('')}</div>
   </section>
   <section class="sy-mgmt-summary" aria-label="شاخص‌های کلیدی عملکرد">
-   ${kpis.map(k=>`<a href="${k.href}" class="sy-mgmt-kpi sy-mgmt-tone-${k.tone}"><div class="sy-mgmt-kpi-head"><span>${esc(k.label)}</span>${navIcon(k.icon)}</div><strong>${k.value}</strong><small>${esc(k.detail)}</small></a>`).join('')}
+   ${kpis.map(k=>`<a href="${k.href}" data-dashboard-metric="${k.metric}" class="sy-mgmt-kpi sy-mgmt-tone-${k.tone}"><div class="sy-mgmt-kpi-head"><span>${esc(k.label)}</span>${navIcon(k.icon)}</div><strong>${k.value}</strong><small>${esc(k.detail)}</small></a>`).join('')}
   </section>
   <section class="sy-mgmt-grid">
    <article class="panel sy-mgmt-panel sy-mgmt-overview">
-    <header class="sy-mgmt-panel-head"><div><h3>پوشش دانش‌آموزان</h3><p>بر اساس تخصیص واقعی به سرویس‌های فعال</p></div><span class="sy-mgmt-inline-stat">${fmt(percentage)}٪ پوشش</span></header>
+    <header class="sy-mgmt-panel-head"><div><h3>پوشش دانش‌آموزان</h3><p>بر اساس تخصیص واقعی به سرویس‌های فعال</p></div><button type="button" class="sy-mgmt-inline-stat sy-dashboard-stat" data-dashboard-metric="assigned">${fmt(percentage)}٪ پوشش</button></header>
     <div class="sy-mgmt-donut-wrap"><div class="sy-mgmt-ring" style="--sy-coverage:${percentage}%" role="img" aria-label="درصد تخصیص واقعی دانش‌آموزان: ${fmt(percentage)} درصد"><div><strong>${fmt(percentage)}٪</strong><small>دارای سرویس</small></div></div>
-     <div class="sy-mgmt-legend"><div><i style="background:#168660"></i><span>دارای سرویس فعال</span><strong>${fmt(assigned)}</strong></div><div><i style="background:#dba557"></i><span>بدون سرویس فعال</span><strong>${fmt(unassigned)}</strong></div><p class="muted">اطلاعات این بخش از ارتباط واقعی دانش‌آموز و سرویس محاسبه می‌شود.</p></div></div>
+     <div class="sy-mgmt-legend"><div><i style="background:#168660"></i><span>دارای سرویس فعال</span><button type="button" class="sy-dashboard-stat" data-dashboard-metric="assigned">${fmt(assigned)}</button></div><div><i style="background:#dba557"></i><span>بدون سرویس فعال</span><button type="button" class="sy-dashboard-stat" data-dashboard-metric="unassigned">${fmt(unassigned)}</button></div><p class="muted">اطلاعات این بخش از ارتباط واقعی دانش‌آموز و سرویس محاسبه می‌شود.</p></div></div>
    </article>
    <article class="panel sy-mgmt-panel">
     <header class="sy-mgmt-panel-head"><div><h3>ظرفیت و آمادگی سرویس‌ها</h3><p>شاخص‌های عملیاتی بدون تخمین مالی</p></div></header>
-    ${[{label:'سرویس‌های دارای راننده فعال',value:serviceCoverage,part:Number(metrics.staffedServices)||0,whole:activeServices},{label:'استفاده از ظرفیت صندلی‌ها',value:coverage,part:assigned,whole:capacity}].map(k=>`<div class="sy-mgmt-progress-row"><div><span>${esc(k.label)}</span><strong>${fmt(k.part)} از ${fmt(k.whole)}</strong></div><div class="sy-mgmt-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${k.value}" aria-label="${esc(k.label)}"><span style="width:${k.value}%"></span></div><small>${fmt(k.value)}٪</small></div>`).join('')}
-    <div class="sy-mgmt-alerts">${Number(metrics.servicesWithoutActiveDriver)>0?`<a href="#services" class="sy-mgmt-alert">⚠ ${fmt(metrics.servicesWithoutActiveDriver)} سرویس بدون راننده فعال</a>`:''}${staleStatuses>0?`<a href="#students" class="sy-mgmt-alert">⚠ اختلاف ${fmt(staleStatuses)} مورد بین وضعیت ثبت‌شده و تخصیص واقعی</a>`:''}${!(Number(metrics.servicesWithoutActiveDriver)>0||staleStatuses>0)?'<p class="sy-mgmt-ok">مغایرت مشخصی در شاخص‌های اصلی شناسایی نشد.</p>':''}</div>
+    ${[{label:'سرویس‌های دارای راننده فعال',metric:'staffed',value:serviceCoverage,part:Number(metrics.staffedServices)||0,whole:activeServices},{label:'استفاده از ظرفیت صندلی‌ها',metric:'services',value:coverage,part:assigned,whole:capacity}].map(k=>`<div class="sy-mgmt-progress-row"><div><span>${esc(k.label)}</span><button type="button" class="sy-dashboard-stat" data-dashboard-metric="${k.metric}">${fmt(k.part)} از ${fmt(k.whole)}</button></div><div class="sy-mgmt-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${k.value}" aria-label="${esc(k.label)}"><span style="width:${k.value}%"></span></div><small>${fmt(k.value)}٪</small></div>`).join('')}
+    <div class="sy-mgmt-alerts">${Number(metrics.servicesWithoutActiveDriver)>0?`<a href="#services" data-dashboard-metric="unstaffed" class="sy-mgmt-alert">⚠ ${fmt(metrics.servicesWithoutActiveDriver)} سرویس بدون راننده فعال</a>`:''}${staleStatuses>0?`<a href="#students" data-dashboard-metric="mismatch" class="sy-mgmt-alert">⚠ اختلاف ${fmt(staleStatuses)} مورد بین وضعیت ثبت‌شده و تخصیص واقعی</a>`:''}${!(Number(metrics.servicesWithoutActiveDriver)>0||staleStatuses>0)?'<p class="sy-mgmt-ok">مغایرت مشخصی در شاخص‌های اصلی شناسایی نشد.</p>':''}</div>
    </article>
    <article class="panel sy-mgmt-panel">
     <header class="sy-mgmt-panel-head"><div><h3>وضعیت‌های ثبت‌شده دانش‌آموزان</h3><p>تفکیک بر اساس آخرین وضعیت ذخیره‌شده</p></div></header>
-    <div class="sy-mgmt-status-bars">${chartRows.map(item=>`<a href="#students" data-status="${esc(item.key)}"><span>${esc(statuses[item.key]||item.key||'نامشخص')}</span><div class="sy-mgmt-status-track"><i style="width:${ratio(item.value,total)}%;background:${statusColor[item.key]||'#8296ac'}"></i></div><strong>${fmt(item.value)}</strong></a>`).join('')||'<p class="empty">داده‌ای ثبت نشده است.</p>'}</div>
+    <div class="sy-mgmt-status-bars">${chartRows.map(item=>`<a href="#students" data-dashboard-metric="student-status" data-status="${esc(item.key)}"><span>${esc(statuses[item.key]||item.key||'نامشخص')}</span><div class="sy-mgmt-status-track"><i style="width:${ratio(item.value,total)}%;background:${statusColor[item.key]||'#8296ac'}"></i></div><strong>${fmt(item.value)}</strong></a>`).join('')||'<p class="empty">داده‌ای ثبت نشده است.</p>'}</div>
     ${staleStatuses?'<p class="muted">وضعیت‌های ذخیره‌شده ممکن است با تخصیص واقعی تفاوت داشته باشند؛ هشدار بالا مقدار اختلاف را مشخص می‌کند.</p>':''}
    </article>
    <article class="panel sy-mgmt-panel sy-mgmt-school-chart">
     <header class="sy-mgmt-panel-head"><div><h3>مدارس نیازمند پیگیری</h3><p>۸ مدرسه با بیشترین دانش‌آموز بدون سرویس</p></div><span>${fmt(schools.length)} مدرسه</span></header>
-    <div class="sy-mgmt-school-bars">${schoolBars.map(sc=>`<div class="sy-mgmt-school-row"><div><span title="${esc(sc.name)}">${esc(sc.name)}</span><strong>${fmt(sc.unassigned)} بدون سرویس</strong></div><div class="sy-mgmt-school-track"><i style="width:${ratio(Number(sc.unassigned)||0,Number(sc.students)||0)}%"></i></div></div>`).join('')||'<p class="empty">مدرسه‌ای برای نمایش وجود ندارد.</p>'}</div>
+    <div class="sy-mgmt-school-bars">${schoolBars.map(sc=>`<div class="sy-mgmt-school-row"><div><button type="button" class="sy-dashboard-stat" data-dashboard-metric="unassigned" data-school-id="${Number(sc.id)}">${esc(sc.name)}</button><strong>${fmt(sc.unassigned)} بدون سرویس</strong></div><div class="sy-mgmt-school-track"><i style="width:${ratio(Number(sc.unassigned)||0,Number(sc.students)||0)}%"></i></div></div>`).join('')||'<p class="empty">مدرسه‌ای برای نمایش وجود ندارد.</p>'}</div>
    </article>
    ${schoolsSection?`<article class="panel sy-mgmt-panel sy-mgmt-wide"><header class="sy-mgmt-panel-head"><div><h3>جزئیات پوشش مدارس</h3><p>تعدادهای واقعی، فقط برای مدارس فعال شرکت</p></div></header>${simpleTable(['مدرسه','دانش‌آموز فعال','دارای سرویس','بدون سرویس'],schoolRows)}</article>`:''}
    <article class="panel sy-mgmt-panel sy-mgmt-map-panel"><header class="sy-mgmt-panel-head"><div><h3>پراکندگی جغرافیایی مدارس</h3><p>فقط نقاط دارای مختصات معتبر</p></div></header><div id="dashboardSchoolMap" class="dashboard-school-map" aria-label="نقشه مدارس و دفتر شرکت"></div></article>
    <article class="panel sy-mgmt-panel sy-mgmt-side">
      <header class="sy-mgmt-panel-head"><div><h3>جستجو و دسترسی سریع</h3><p>دسترسی به اطلاعات مدیریتی</p></div></header>
      <form id="quickSearch" class="sy-mgmt-search"><input name="q" placeholder="نام، شماره یا شناسه را وارد کنید" aria-label="جستجوی سریع"><select name="resource" aria-label="بخش مورد جستجو">${['students','drivers','schools','services'].filter(k=>can(k)).map(k=>`<option value="${k}">${titles[k]}</option>`).join('')}</select><button class="primary">جستجو</button></form>
-     <div class="quick-links">${[['students','دانش‌آموزان'],['drivers','رانندگان'],['schools','مدارس'],['services','سرویس‌ها'],['payroll','فیش حقوق'],['monitoring','پایش کاربران']].filter(([k])=>can(k)).map(([k,t])=>`<a href="#${k}">${navIcon(k)}${t}</a>`).join('')}</div>
+     <div class="quick-links">${[['students','دانش‌آموزان'],['drivers','رانندگان'],['schools','مدارس'],['services','سرویس‌ها'],['payroll','حقوق رانندگان'],['monitoring','پایش کاربران']].filter(([k])=>can(k)).map(([k,t])=>`<a href="#${k}">${navIcon(k)}${t}</a>`).join('')}</div>
      ${can('wallets')?'<div class="sy-mgmt-wallet wallet-card"><span>موجودی کیف پول · ریال</span><button id="showWallet" type="button" aria-expanded="false">نمایش موجودی</button><strong id="walletValue">******</strong></div>':''}
    </article>
    ${can('monitoring')?'<article class="panel sy-mgmt-panel"><header class="sy-mgmt-panel-head"><div><h3>وضعیت کاربران شرکت</h3><p>آنلاین و آفلاین، بر اساس پایش سرور</p></div></header><div id="dashboardUsers" role="status" aria-live="polite"><p class="muted">دریافت وضعیت کاربران…</p></div></article>':''}
@@ -691,7 +691,63 @@ async function dashboard(token=pageToken){
   </section>
   <p class="sy-mgmt-footnote">آمار، نمای لحظه‌ای اطلاعات ثبت‌شده در شرکت است؛ نمودار روند تاریخی و شاخص‌های درآمدی بدون داده دوره‌ای قابل اتکا نمایش داده نمی‌شوند.</p>
  </div>`;
- $('content').querySelectorAll('[data-status]').forEach(a=>a.onclick=()=>{initialStudentStatus=a.dataset.status;});$('dashboardRefresh').onclick=()=>dashboard(token).catch(e=>notify(e.message,true));
+ const dashboardRoot=$('content').querySelector('.sy-mgmt-dashboard');
+ const coverageTable=dashboardRoot.querySelector('.sy-mgmt-wide tbody');
+ if(schools.length&&coverageTable){
+  [...coverageTable.rows].forEach((row,index)=>{
+   const school=schools[index];
+   [...row.cells].forEach((cell,column)=>{
+    const action=document.createElement('button');
+    action.type='button';action.className='sy-dashboard-stat';
+    action.dataset.dashboardMetric=['students','students','assigned','unassigned'][column];
+    action.dataset.schoolId=String(school.id);
+    action.textContent=cell.textContent;
+    action.setAttribute('aria-label',[school.name,cell.dataset.label,cell.textContent].filter(Boolean).join(' · '));
+    cell.replaceChildren(action);
+   });
+  });
+ }
+ dashboardRoot.addEventListener('click',event=>{
+  const button=event.target.closest('[data-dashboard-metric]');
+  if(!button)return;
+  event.preventDefault();
+  const {dashboardMetric:metric,status='',schoolId}=button.dataset;
+  const selectedSchool=schools.find(row=>String(row.id)===schoolId);
+  const labels={students:'دانش‌آموزان فعال',assigned:'دانش‌آموزان دارای سرویس',unassigned:'دانش‌آموزان بدون سرویس',services:'سرویس‌ها و ظرفیت',drivers:'رانندگان فعال در سرویس',schools:'مدارس فعال',staffed:'سرویس‌های دارای راننده فعال',unstaffed:'سرویس‌های بدون راننده فعال',mismatch:'مغایرت وضعیت تخصیص','student-status':statuses[status]||status||'وضعیت نامشخص'};
+  const resource=['services','staffed','unstaffed'].includes(metric)?'services':['schools','drivers'].includes(metric)?metric:'students';
+  if(!can(resource)){notify('برای مشاهده جزئیات این شاخص دسترسی ندارید.',true);return;}
+  const modal=document.createElement('dialog');
+  modal.className='sy-dashboard-details';
+  modal.setAttribute('aria-labelledby','dashboardDetailsTitle');
+  modal.innerHTML='<header class="modal-head"><h3 id="dashboardDetailsTitle">'+esc(labels[metric]+(selectedSchool?' · '+selectedSchool.name:''))+'</h3><form method="dialog"><button aria-label="بستن جزئیات">×</button></form></header><div class="modal-body"><p data-dashboard-message role="status"></p><div data-dashboard-results></div><div class="member-actions"><button type="button" data-dashboard-prev hidden>صفحه قبل</button><button type="button" data-dashboard-next hidden>صفحه بعد</button><a href="#'+resource+'">مشاهده فهرست کامل</a></div></div>';
+  const message=modal.querySelector('[data-dashboard-message]'),results=modal.querySelector('[data-dashboard-results]');
+  const previous=modal.querySelector('[data-dashboard-prev]'),next=modal.querySelector('[data-dashboard-next]');
+  let page=1;
+  modal.addEventListener('close',()=>{modal.remove();if(button.isConnected)button.focus();},{once:true});
+  modal.querySelector('a').onclick=()=>{if(metric==='student-status')initialStudentStatus=status;modal.close();};
+  dashboardRoot.append(modal);modal.showModal();
+  const load=async()=>{
+   previous.hidden=next.hidden=true;
+   if(metric==='schools'){
+    results.innerHTML=simpleTable(['مدرسه','دانش‌آموز فعال','دارای سرویس','بدون سرویس'],schoolRows);
+    return;
+   }
+   message.textContent='در حال دریافت جزئیات…';
+   const query=new URLSearchParams({metric,status,page:String(page)});
+   if(schoolId)query.set('schoolId',schoolId);
+   try{
+    const detail=await api(scoped('/api/v1/operations/dashboard/details?'+query));
+    if(!modal.open)return;
+    const headers=resource==='services'?['سرویس','راننده','ظرفیت']:resource==='drivers'?['راننده','تعداد سرویس فعال']:['نام دانش‌آموز','مدرسه','وضعیت ثبت‌شده'];
+    results.innerHTML=simpleTable(headers,detail.items.map(item=>resource==='services'?[item.name,item.detail||'—',fmt(item.state)]:resource==='drivers'?[item.name,fmt(item.detail)]:[item.name,item.detail,statuses[item.state]||item.state]));
+    message.textContent=fmt(detail.total)+' مورد · صفحه '+fmt(page);
+    previous.hidden=page<=1;next.hidden=page*25>=detail.total;
+   }catch(error){if(modal.open)message.textContent=error.message;}
+  };
+  previous.onclick=()=>{page--;void load();};next.onclick=()=>{page++;void load();};
+  void load();
+ });
+ $('dashboardRefresh').onclick=()=>dashboard(token).catch(e=>notify(e.message,true));
  $('quickSearch').onsubmit=e=>{e.preventDefault();initialSearch=e.target.q.value;location.hash=e.target.resource.value;};
  if($('showWallet')){$('showWallet').setAttribute('aria-expanded','false');$('walletValue').setAttribute('aria-live','polite');$('showWallet').onclick=async()=>{const button=$('showWallet');if(button.getAttribute('aria-expanded')==='true'){$('walletValue').textContent='******';button.textContent='نمایش موجودی';button.setAttribute('aria-expanded','false');return;}button.disabled=true;try{delete lookupCache[currentAgency.id+':wallets'];const w={items:await lookup('wallets')};if(token!==pageToken)return;$('walletValue').textContent=number(w.items.reduce((sum,x)=>sum+Number(x.balance),0));button.textContent='پنهان کردن موجودی';button.setAttribute('aria-expanded','true');}catch(e){notify(e.message,true);}finally{if(button.isConnected)button.disabled=false;}};
  } if(can('monitoring'))api(scoped('/api/v1/monitoring/users')).then(users=>{if(token===pageToken&&currentAgency?.id===agencyAtRequest&&$('dashboardUsers'))$('dashboardUsers').innerHTML=users.length?simpleTable(['کاربر','وضعیت'],users.map(u=>[person(u),Number(u.online)?'آنلاین':'آفلاین'])):'<p class="empty">کاربری برای نمایش وجود ندارد.</p>';}).catch(e=>{if(token===pageToken&&$('dashboardUsers'))$('dashboardUsers').textContent=e.message;});calendar(new Date());let map;try{map=await makeMap($('dashboardSchoolMap'));}catch(e){if(token===pageToken&&$('dashboardSchoolMap'))$('dashboardSchoolMap').textContent='نقشه موقتاً در دسترس نیست.';return;}if(!map)return;const points=[];let config;try{config=await api(scoped('/api/v1/maps/config'));}catch(e){if(token===pageToken)$('dashboardSchoolMap').insertAdjacentHTML('afterend','<p class="muted">تنظیمات نقشه دریافت نشد.</p>');return;}if(token!==pageToken||currentAgency?.id!==agencyAtRequest)return;const office=config.companyLocation;if(office&&Number.isFinite(Number(office.latitude))&&Number.isFinite(Number(office.longitude))){const point=[Number(office.latitude),Number(office.longitude)];points.push(point);dashboardCompanyMarker(map,point,config.hasCustomLogo);}else{const hint=document.createElement('p');hint.className='muted';hint.textContent='موقعیت دفتر شرکت هنوز ثبت نشده است؛ از تنظیمات، موقعیت را روی نشان انتخاب کنید.';$('dashboardSchoolMap').after(hint);}d.schools.forEach(sc=>{if(sc.latitude!==null&&sc.longitude!==null){const point=[Number(sc.latitude),Number(sc.longitude)];points.push(point);dashboardSchoolMarker(map,point,sc);}});if(points.length)map.fitBounds(L.latLngBounds(points).pad(.3),{maxZoom:14});
@@ -1681,7 +1737,7 @@ async function formResource(key,id,onSaved){
     if(!driver)return;
     let vehicles=await lookup('vehicles'),vehicle=vehicles.find(v=>String(v.id)===String(driver.vehicle_id));
     if(!vehicle&&driver.vehicle_id)vehicle=await api(scoped('/api/v1/vehicles/'+driver.vehicle_id));
-    if(serviceModelPicker&&form.isConnected)serviceModelPicker.setVehicle(vehicle);
+    if(serviceModelPicker&&form.isConnected){serviceModelPicker.setVehicle(vehicle);void refresh();}
    }catch(e){if(form.isConnected)notify('مشخصات خودروی راننده دریافت نشد: '+e.message,true);}
   };
   if(window.ServiceYarVehicleModels)
@@ -1701,13 +1757,22 @@ async function formResource(key,id,onSaved){
    if(mode==='agreed'){status.textContent='مبلغ توافقی راننده را وارد کنید.';return;}
    if(!id){status.textContent='پس از انتخاب دانش‌آموزان مبلغ تعرفه محاسبه می‌شود.';return;}
    status.textContent='در حال دریافت محاسبه بر اساس '+(mode==='taxi'?'نرخ سازمان':'تعرفه شرکت')+'…';
-   try{const members=await api(scoped('/api/v1/services/'+id+'/students'));let total=0;
-    for(const student of members){const result=await write('/api/v1/operations/tariffs/quote',{studentId:student.id,driverId:form.elements.driverId?.value||row.driver_id,vehicleClass:form.elements.vehicleClass?.value||undefined,feeSource:mode});if(result.monthlyFee===null)throw Error('تعرفه یکی از دانش‌آموزان موجود نیست.');total+=Number(result.monthlyFee);}
+   try{const [members,rates]=await Promise.all([api(scoped('/api/v1/services/'+id+'/students')),api(scoped('/api/v1/operations/driver-deduction-rates'))]);let total=0,officialDriver=0;
+    const activeMembers=members.filter(student=>Number(student.is_active)===1);
+    if(!activeMembers.length){if(version===priceRequest)status.textContent='دانش‌آموز فعالی به این سرویس متصل نیست.';return;}
+    for(const student of activeMembers){
+     if(version!==priceRequest||!form.isConnected)return;
+     const result=await write('/api/v1/operations/tariffs/quote',{studentId:student.id,driverId:form.elements.driverId?.value||row.driver_id,vehicleClass:form.elements.vehicleClass?.value||undefined,feeSource:mode});
+     total+=Number(result.monthlyFee);officialDriver+=Number(result.driverBaseMonthly);
+    }
     if(version!==priceRequest||!form.isConnected)return;
-    status.textContent='جمع شهریه ماهانه اولیا: '+number(total)+' ریال · مبلغ نهایی پس از ذخیره روی سرویس اعمال می‌شود.';
+    const net=driverFeeBreakdown(total,rates).net;
+    status.textContent='شهریه ماهانه اولیا: '+number(total)+' ریال · حق‌الزحمه مرجع راننده: '+number(officialDriver)+' ریال · خالص بر اساس کسورات شرکت: '+number(net)+' ریال';
    }catch(e){if(version===priceRequest&&form.isConnected)status.textContent='محاسبه ناموفق: '+e.message;}
   };
-  source?.addEventListener('change',refresh);void refresh();
+  source?.addEventListener('change',refresh);
+  form.elements.vehicleClass.addEventListener('change',refresh);
+  void refresh();
  }
  if(key==='vehicles'){
   form.classList.add('sy-vehicle-edit-form');
@@ -1944,7 +2009,7 @@ if(form.elements.mobile){const mobile=form.elements.mobile;mobile.pattern='09[0-
   validateContract();
  }
  if(key==='students'){
-  attachStudentTariff(form);
+  attachStudentTariff(form,id);
   const feeField=form.elements.monthlyFee,schoolField=form.elements.schoolId,gradeField=form.elements.grade;
   if(feeField){
    const preview=document.createElement('div');preview.className='sy-student-annual-preview';preview.setAttribute('role','status');preview.setAttribute('aria-live','polite');
@@ -3569,8 +3634,8 @@ async function renderPayroll(data,token){
   [['نظارت',r.supervision_deduction],['هماهنگی',r.coordination_deduction],['بالاسری شرکت',r.overhead_deduction],['بیمه',r.insurance_deduction],['مبلغ توافقی سرویس‌ها',r.agreed],['مبنای ناخالص ماهانه تخصیص‌های فعال (صرفاً مقایسه)',r.assigned_monthly_base],['خالص ماهانه تخصیص‌های فعال (صرفاً مقایسه)',r.assigned_monthly_net],['اختلاف کارکرد ثبت‌شده دوره با مبنای ماهانه (نیازمند بررسی)',r.work_vs_assigned_monthly_delta],['تعداد دانش‌آموز تخصیص‌یافته فعال',r.assigned_student_count],['پرداخت ثبت‌شده',r.paid],['مانده',r.balance]].map(item=>'<span>'+item[0]+': <b>'+number(item[1])+'</b></span>').join('')+
   '<span>مبنای ردیف: <b>'+(r.estimate_requires_confirmation?'برآورد از تخصیص فعلی':'کارکرد ثبت‌شده')+'</b></span><span>حساب: <b>'+esc(r.bank_account||'—')+'</b></span><span>شبا: <b>'+esc(r.iban||'—')+'</b></span></div></td></tr>';
  }).join('');
- result.innerHTML='<div class="sy-payroll-workspace"><header class="sy-payroll-overview"><div><span class="sy-operation-kicker">مدیریت حقوق و کارکرد رانندگان</span><h3>فیش حقوق رانندگان</h3><p>مبنای پیش‌فرض فیش، مجموع شهریه دانش‌آموزان سرویس‌های فعال با ۳۰ روز خدمت و کسورات شرکت است. از «جزئیات سرویس‌ها» روزهای هر سرویس را از ۰ تا ۳۰ تغییر دهید. تغییرات تاریخی راننده و تخصیص دانش‌آموز باید پیش از تأیید توسط حسابدار کنترل شود. مبنای ماهانه فعلی مربوط به وضعیت فعلی است، الزاماً متعلق به بازه انتخابی نیست. اختلاف آن بدهی قطعی محسوب نمی‌شود.</p></div><div class="sy-payroll-summary"><div><span>تعداد رانندگان</span><strong>'+number(drivers.length)+'</strong></div><div><span>کارکرد ناخالص</span><strong>'+number(gross)+' ریال</strong></div><div><span>خالص کارکرد</span><strong>'+number(netTotal)+' ریال</strong></div><div><span>خالص ماهانه فعلی (برآوردی)</span><strong>'+number(referenceTotal)+' ریال</strong></div></div></header>'+
- '<nav class="sy-payroll-tabs" role="tablist" aria-label="مدیریت حقوق"><button type="button" id="payrollDriversTab" role="tab" aria-controls="payrollDriversPane" aria-selected="true">فیش رانندگان</button><button type="button" id="payrollDocsTab" role="tab" aria-controls="payrollDocsPane" aria-selected="false">اسناد حقوق ثبت‌شده</button></nav>'+
+ result.innerHTML='<div class="sy-payroll-workspace"><header class="sy-payroll-overview"><div><span class="sy-operation-kicker">مدیریت حقوق و کارکرد رانندگان</span><h3>حقوق رانندگان</h3><p>مبنای پیش‌فرض فیش، مجموع شهریه دانش‌آموزان سرویس‌های فعال با ۳۰ روز خدمت و کسورات شرکت است. از «جزئیات سرویس‌ها» روزهای هر سرویس را از ۰ تا ۳۰ تغییر دهید. تغییرات تاریخی راننده و تخصیص دانش‌آموز باید پیش از تأیید توسط حسابدار کنترل شود. مبنای ماهانه فعلی مربوط به وضعیت فعلی است، الزاماً متعلق به بازه انتخابی نیست. اختلاف آن بدهی قطعی محسوب نمی‌شود.</p></div><div class="sy-payroll-summary"><div><span>تعداد رانندگان</span><strong>'+number(drivers.length)+'</strong></div><div><span>کارکرد ناخالص</span><strong>'+number(gross)+' ریال</strong></div><div><span>خالص کارکرد</span><strong>'+number(netTotal)+' ریال</strong></div><div><span>خالص ماهانه فعلی (برآوردی)</span><strong>'+number(referenceTotal)+' ریال</strong></div></div></header>'+
+ '<nav class="sy-payroll-tabs" role="tablist" aria-label="مدیریت حقوق"><button type="button" id="payrollDriversTab" role="tab" aria-controls="payrollDriversPane" aria-selected="true">فیش رانندگان</button><button type="button" id="payrollDocsTab" role="tab" aria-controls="payrollDocsPane" aria-selected="false">اسناد حقوق ثبت‌شده</button><button type="button" id="payrollArchiveTab" role="tab" aria-controls="payrollDocsPane" aria-selected="false">آرشیو</button></nav>'+
  '<section id="payrollDriversPane" role="tabpanel" aria-labelledby="payrollDriversTab"><div class="sy-payroll-filterbar"><label>جست‌وجوی راننده<input id="payrollSearch" type="search" placeholder="نام راننده" autocomplete="off"></label><p>برای بررسی کسورات و بانک، «جزئیات» را انتخاب کنید.</p></div>'+
  (estimatedRows?'<p class="sy-payroll-legacy-warning" role="status">تعداد '+number(estimatedRows)+' راننده به دلیل نداشتن کارکرد ثبت‌شده با نرخ دانش‌آموزان فعال به‌صورت برآوردی محاسبه شدند. این مبالغ فقط برای یک ماه انتخابی هستند و بدون تاریخچه حضور، تغییر راننده و تخصیص، حقوق قطعی محسوب نمی‌شوند. پیش از تأیید مالی صحت اطلاعات باید بررسی شود.</p>':'')+
  (noRecordedWork&&!estimatedRows?'<p class="sy-payroll-legacy-warning" role="status">'+(hasAssignedRates?'برای بازه انتخابی کارکرد ثبت‌شده‌ای پیدا نشد. مبنای ماهانه فعلی در ستون جداگانه فقط برای مقایسه نمایش داده می‌شود و نباید بدون بررسی دوره و کارکرد به‌عنوان حقوق قطعی ثبت شود.':'برای بازه انتخابی کارکرد ثبت‌شده و نرخ پایه ماهانه تخصیص‌یافته یافت نشد. تخصیص دانش‌آموزان، نرخ پایه راننده و ثبت کارکرد را بررسی کنید.')+'</p>':'')+
@@ -3588,12 +3653,18 @@ async function renderPayroll(data,token){
    if(token===pageToken)await renderPayroll(fresh,token);
   }catch(e){notify('محاسبه روزهای سرویس: '+e.message,true);input.disabled=false;}
  }));
+ let payrollTab='drivers',listRevision=0;
  const selectTab=tab=>{
+  payrollTab=tab;
   const show=tab==='drivers';$('payrollDriversPane').hidden=!show;$('payrollDocsPane').hidden=show;
-  $('payrollDriversTab').setAttribute('aria-selected',String(show));$('payrollDocsTab').setAttribute('aria-selected',String(!show));
+  const tabs={drivers:'payrollDriversTab',docs:'payrollDocsTab',archive:'payrollArchiveTab'};
+  for(const [key,id] of Object.entries(tabs))$(id).setAttribute('aria-selected',String(tab===key));
+  if(!show){$('payrollDocsPane').setAttribute('aria-labelledby',tabs[tab]);list().catch(e=>notify(e.message,true));}
  };
- $('payrollDriversTab').onclick=()=>selectTab('drivers');$('payrollDocsTab').onclick=()=>selectTab('docs');
- let storedDocs=[];
+ $('payrollDriversTab').onclick=()=>selectTab('drivers');
+ $('payrollDocsTab').onclick=()=>selectTab('docs');
+ $('payrollArchiveTab').onclick=()=>selectTab('archive');
+
  result.querySelectorAll('[data-details-driver]').forEach(button=>button.onclick=()=>{
   const detail=result.querySelector('[data-detail-for="'+button.dataset.detailsDriver+'"]');
   detail.hidden=!detail.hidden;button.setAttribute('aria-expanded',String(!detail.hidden));
@@ -3602,12 +3673,6 @@ async function renderPayroll(data,token){
   const driverId=Number(button.dataset.previewDriver),row=drivers.find(d=>Number(d.id)===driverId);
   if(!row)return;button.disabled=true;
   try{
-   for(const item of storedDocs){
-    const doc=await api(scoped('/api/v1/operations/payroll-documents/'+item.id));
-    if(token!==pageToken)return;
-    const line=doc.lines?.find(r=>Number(r.driver_id)===driverId);
-    if(line){showDriverPayslip(doc,line);return;}
-   }
    const input=result.querySelector('[data-salary="'+driverId+'"]'),amount=Number(input?.value);
    const preview={...row,salary:Number.isFinite(amount)&&amount>=0?amount:Number(row.net_earned||0),expected_net_salary:Number(row.net_earned||0),deductions_historical:false};
    showDriverPayslip({status:'preview',preview_only:true,document_no:'پیش‌نمایش',date_from:data.from,date_to:data.to,agency_name:currentAgency?.name},preview);
@@ -3623,8 +3688,13 @@ async function renderPayroll(data,token){
    if(show)visible++;
   });$('payrollNoDrivers').hidden=visible!==0;total();
  };
- const documentBox=$('payrollDocuments');const list=async()=>{const docs=await api(scoped('/api/v1/operations/payroll-documents?from='+data.from+'&to='+data.to));if(token!==pageToken||!documentBox.isConnected)return;storedDocs=docs;
- $('payrollDocuments').innerHTML='<section class="sy-payroll-documents"><header class="sy-payroll-list-heading"><div><h4>اسناد حقوق و فیش‌های رانندگان</h4><p>مشاهده فیش انفرادی، وضعیت سند و خروجی‌های حقوقی</p></div><strong>'+number(docs.length)+' سند</strong></header><div class="sy-payroll-list-controls"><label>جست‌وجوی شماره سند<input id="payrollDocumentSearch" type="search" placeholder="شماره سند…" autocomplete="off"></label><label>وضعیت سند<select id="payrollDocumentStatus"><option value="">همه وضعیت‌ها</option><option value="draft">پیش‌نویس</option><option value="approved">تأییدشده</option></select></label></div>'+(docs.length?'<div class="table-wrap sy-payroll-list-wrap" tabindex="0" role="region" aria-label="فهرست اسناد حقوق"><table class="sy-payroll-list-table"><thead><tr><th>شماره سند</th><th>وضعیت</th><th>تعداد رانندگان</th><th>مبلغ سند (ریال)</th><th>عملیات</th></tr></thead><tbody>'+docs.map(d=>'<tr data-payroll-doc-row data-status="'+esc(d.status)+'" data-doc-number="'+esc(d.document_no)+'"><td data-label="شماره سند"><strong>'+esc(d.document_no)+'</strong></td><td data-label="وضعیت"><span class="sy-payroll-status '+(d.status==='approved'?'is-approved':'is-draft')+'">'+(d.status==='approved'?'تأییدشده':'پیش‌نویس')+'</span></td><td data-label="تعداد رانندگان">'+number(d.driver_count||0)+'</td><td data-label="مبلغ سند (ریال)">'+number(d.total_amount)+'</td><td data-label="عملیات" class="sy-payroll-list-actions"><button data-document-view="'+Number(d.id)+'">فیش رانندگان</button>'+(d.status==='draft'&&can('payroll','manage')?'<button data-document-approve="'+Number(d.id)+'">تأیید سند</button>':'')+(d.status==='approved'?'<button data-document-bank="'+Number(d.id)+'">CSV بانک</button>':'')+(d.status==='approved'&&can('drivers')?'<button data-document-xlsx="'+Number(d.id)+'">اکسل قالب مرجع</button><button data-document-standard-xlsx="'+Number(d.id)+'">اکسل استاندارد</button>':'')+'</td></tr>').join('')+'</tbody></table></div><p class="sy-payroll-empty" id="payrollDocumentNoMatches" hidden>سندی مطابق جست‌وجو یافت نشد.</p>':'<p class="sy-payroll-empty">هنوز سند حقوقی برای این بازه ثبت نشده است.</p>')+'</section>';
+ const documentBox=$('payrollDocuments');const list=async()=>{
+ const revision=++listRevision,archive=payrollTab==='archive';
+ documentBox.textContent='در حال دریافت اسناد حقوق…';
+ const query=archive?'scope=archive':new URLSearchParams({from:data.from,to:data.to}).toString();
+ const docs=await api(scoped('/api/v1/operations/payroll-documents?'+query));
+ if(token!==pageToken||revision!==listRevision||!documentBox.isConnected)return;
+ $('payrollDocuments').innerHTML='<section class="sy-payroll-documents"><header class="sy-payroll-list-heading"><div><h4>'+(archive?'آرشیو حقوق تأییدشده':'اسناد حقوق دوره')+'</h4><p>مشاهده فیش انفرادی، وضعیت سند و خروجی‌های حقوقی</p></div><strong>'+number(docs.length)+' سند</strong></header><div class="sy-payroll-list-controls"><label>جست‌وجوی شماره سند<input id="payrollDocumentSearch" type="search" placeholder="شماره سند…" autocomplete="off"></label><label>وضعیت سند<select id="payrollDocumentStatus"><option value="">همه وضعیت‌ها</option><option value="draft">پیش‌نویس</option><option value="approved">تأییدشده</option></select></label></div>'+(docs.length?'<div class="table-wrap sy-payroll-list-wrap" tabindex="0" role="region" aria-label="فهرست اسناد حقوق"><table class="sy-payroll-list-table"><thead><tr><th>شماره سند</th><th>دوره</th><th>وضعیت</th><th>تعداد رانندگان</th><th>مبلغ سند (ریال)</th><th>عملیات</th></tr></thead><tbody>'+docs.map(d=>'<tr data-payroll-doc-row data-status="'+esc(d.status)+'" data-doc-number="'+esc(d.document_no)+'"><td data-label="شماره سند"><strong>'+esc(d.document_no)+'</strong></td><td data-label="دوره">'+esc(dateText(d.date_from)+' تا '+dateText(d.date_to))+'</td><td data-label="وضعیت"><span class="sy-payroll-status '+(d.status==='approved'?'is-approved':'is-draft')+'">'+(d.status==='approved'?'تأییدشده':'پیش‌نویس')+'</span></td><td data-label="تعداد رانندگان">'+number(d.driver_count||0)+'</td><td data-label="مبلغ سند (ریال)">'+number(d.total_amount)+'</td><td data-label="عملیات" class="sy-payroll-list-actions"><button data-document-view="'+Number(d.id)+'">فیش رانندگان</button>'+(d.status==='draft'&&can('payroll','manage')?'<button data-document-approve="'+Number(d.id)+'">تأیید سند</button>':'')+(d.status==='approved'?'<button data-document-bank="'+Number(d.id)+'">CSV واریز گروهی</button>':'')+(d.status==='approved'&&can('drivers')?'<button data-document-xlsx="'+Number(d.id)+'">اکسل قالب مرجع</button><button data-document-standard-xlsx="'+Number(d.id)+'">اکسل استاندارد</button>':'')+(can('payroll','manage')?(d.status==='approved'?'<button data-document-reopen="'+Number(d.id)+'">بازگشایی برای ویرایش</button>':'<button data-document-delete="'+Number(d.id)+'">حذف پیش‌نویس</button>'):'')+'</td></tr>').join('')+'</tbody></table></div><p class="sy-payroll-empty" id="payrollDocumentNoMatches" hidden>سندی مطابق جست‌وجو یافت نشد.</p>':'<p class="sy-payroll-empty">هنوز سند حقوقی برای این بازه ثبت نشده است.</p>')+'</section>';
  const applyListFilters=()=>{
   const q=String($('payrollDocumentSearch')?.value||'').trim().toLocaleLowerCase('fa'),status=$('payrollDocumentStatus')?.value||'';
   let visible=0;
@@ -3633,15 +3703,24 @@ async function renderPayroll(data,token){
  };
  $('payrollDocumentSearch')?.addEventListener('input',applyListFilters);$('payrollDocumentStatus')?.addEventListener('change',applyListFilters);
  $('payrollDocuments').querySelectorAll('[data-document-view]').forEach(b=>b.onclick=()=>payrollDocument(Number(b.dataset.documentView)));
- $('payrollDocuments').querySelectorAll('[data-document-approve]').forEach(b=>b.onclick=async()=>{if(!confirm(String(d.document_no||'').startsWith('EST-')?'این سند حاوی برآورد براساس تخصیص‌های فعلی است. تأیید شما به معنای راستی‌آزمایی دستی روزهای خدمت، نرخ و تاریخچه رانندگان است. پس از تأیید سند قفل می‌شود. ادامه می‌دهید؟':'مبالغ سند بررسی شده‌اند و سند تأیید شود؟ پس از تأیید، مبالغ قابل تغییر نیستند.'))return;b.disabled=true;try{await write('/api/v1/operations/payroll-documents/'+b.dataset.documentApprove+'/approve',{confirmEstimate:String(d.document_no||'').startsWith('EST-')});await list();}catch(e){notify(e.message,true);b.disabled=false;}});
+ $('payrollDocuments').querySelectorAll('[data-document-approve]').forEach(b=>b.onclick=async()=>{const d=docs.find(row=>String(row.id)===b.dataset.documentApprove);if(!d)return;if(!confirm(String(d.document_no||'').startsWith('EST-')?'این سند حاوی برآورد براساس تخصیص‌های فعلی است. تأیید شما به معنای راستی‌آزمایی دستی روزهای خدمت، نرخ و تاریخچه رانندگان است. پس از تأیید سند قفل می‌شود. ادامه می‌دهید؟':'مبالغ سند بررسی شده‌اند و سند تأیید شود؟ پس از تأیید، مبالغ قابل تغییر نیستند.'))return;b.disabled=true;try{await write('/api/v1/operations/payroll-documents/'+b.dataset.documentApprove+'/approve',{confirmEstimate:String(d.document_no||'').startsWith('EST-')});await list();}catch(e){notify(e.message,true);b.disabled=false;}});
+ documentBox.querySelectorAll('[data-document-reopen],[data-document-delete]').forEach(button=>button.onclick=async()=>{
+  const deleting=Boolean(button.dataset.documentDelete),id=Number(button.dataset.documentDelete||button.dataset.documentReopen);
+  if(!confirm(deleting?'پیش‌نویس و ردیف‌های آن حذف شوند؟':'سند به پیش‌نویس برگردد؟ اگر فایل بانکی قبلاً ارسال شده، وضعیت پرداخت آن را بررسی کنید.'))return;
+  button.disabled=true;
+  try{
+   await write('/api/v1/operations/payroll-documents/'+id+(deleting?'':'/reopen'),{},deleting?'DELETE':'POST');
+   await list();
+   if(!deleting)await payrollDocument(id);
+  }catch(e){notify(e.message,true);button.disabled=false;}
+ });
  $('payrollDocuments').querySelectorAll('[data-document-xlsx]').forEach(b=>b.onclick=()=>downloadFile('/api/v1/operations/payroll-documents/'+b.dataset.documentXlsx+'/xlsx','payroll.xlsx'));
  $('payrollDocuments').querySelectorAll('[data-document-standard-xlsx]').forEach(b=>b.onclick=()=>downloadFile('/api/v1/operations/payroll-documents/'+b.dataset.documentStandardXlsx+'/xlsx?workbookFormat=standard','payroll-standard.xlsx'));
  $('payrollDocuments').querySelectorAll('[data-document-bank]').forEach(b=>b.onclick=()=>downloadFile('/api/v1/operations/payroll-documents/'+b.dataset.documentBank+'/bank','payroll-bank.csv'));
  };
  $('createPayrollDocument')?.addEventListener('click',async()=>{const lines=[...result.querySelectorAll('input[name="payrollSelected"]:checked')].map(c=>({driverId:Number(c.value),amount:result.querySelector(`[data-salary="${c.value}"]`).value}));if(!lines.length){notify('رانندگان را انتخاب کنید.',true);return;}if(lines.some(line=>line.amount.trim()===''||!Number.isSafeInteger(Number(line.amount))||Number(line.amount)<0||Number(line.amount)>1000000000000)){notify('مبلغ حقوق باید عدد صحیح و غیرمنفی به ریال باشد.',true);return;}const selectedEstimated=lines.some(line=>drivers.find(r=>Number(r.id)===line.driverId)?.estimate_requires_confirmation);
  if(selectedEstimated&&!confirm('بخشی از حقوق از تخصیص‌های فعلی دانش‌آموزان برآورد شده است؛ تاریخ شروع/پایان و تغییرات تاریخی تخصیص و تعداد روزهای حضور مشخص نیست. آیا مبالغ را شخصاً بررسی کرده‌اید و مایلید سند پیش‌نویس برآوردی ایجاد شود؟'))return;
- $('createPayrollDocument').disabled=true;try{await write('/api/v1/operations/payroll-documents',{from:data.from,to:data.to,lines,serviceDays:payrollServiceDays,calculationMode:data.calculationMode,confirmEstimate:selectedEstimated});await list();selectTab('docs');notify('سند پیش‌نویس حقوق ذخیره شد؛ هیچ انتقال وجهی انجام نشد.');}catch(e){notify(e.message,true);}finally{if($('createPayrollDocument'))$('createPayrollDocument').disabled=false;}});
- await list();
+ $('createPayrollDocument').disabled=true;try{await write('/api/v1/operations/payroll-documents',{from:data.from,to:data.to,lines,serviceDays:payrollServiceDays,calculationMode:data.calculationMode,confirmEstimate:selectedEstimated});selectTab('docs');notify('سند پیش‌نویس حقوق ذخیره شد؛ هیچ انتقال وجهی انجام نشد.');}catch(e){notify(e.message,true);}finally{if($('createPayrollDocument'))$('createPayrollDocument').disabled=false;}});
 }
 function showDriverPayslip(doc,line){
  const amount=v=>number(v);
@@ -3736,7 +3815,7 @@ async function payrollDocument(id){
   const editable=doc.status==='draft'&&can('payroll','manage');
   const lineHtml=doc.lines.map(r=>{
    const id=Number(r.driver_id),name=esc(person(r));
-   return '<tr data-doc-driver="'+id+'" data-driver-name="'+name+'"><td data-label="راننده"><strong>'+name+'</strong></td><td data-label="ناخالص">'+number(r.earned)+'</td><td data-label="کسورات">'+number(r.total_deductions)+'</td><td data-label="خالص محاسباتی">'+number(r.expected_net_salary)+'</td><td data-label="حقوق سند"><input data-doc-salary="'+id+'" type="number" min="0" step="0.01" value="'+esc(r.salary)+'" '+(editable?'':'readonly')+' aria-label="حقوق '+name+'"></td><td data-label="عملیات"><button type="button" data-driver-payslip="'+id+'" class="primary">فیش انفرادی / PDF</button><button type="button" data-expand-payroll="'+id+'" aria-expanded="false">ریز کسورات</button></td></tr>'+
+   return '<tr data-doc-driver="'+id+'" data-driver-name="'+name+'"><td data-label="راننده"><strong>'+name+'</strong></td><td data-label="ناخالص">'+number(r.earned)+'</td><td data-label="کسورات">'+number(r.total_deductions)+'</td><td data-label="خالص محاسباتی">'+number(r.expected_net_salary)+'</td><td data-label="حقوق سند"><input data-doc-salary="'+id+'" type="number" min="0" step="0.01" value="'+esc(r.salary)+'" '+(editable?'':'readonly')+' aria-label="حقوق '+name+'"></td><td data-label="عملیات"><button type="button" data-driver-payslip="'+id+'" class="primary">فیش انفرادی / PDF</button><button type="button" data-expand-payroll="'+id+'" aria-expanded="false">جزئیات حقوق</button></td></tr>'+
    '<tr class="sy-payroll-detail-row" data-doc-details="'+id+'" hidden><td colspan="6"><div class="sy-payroll-detail-grid">'+
    [['نظارت',r.supervision_deduction],['هماهنگی',r.coordination_deduction],['بالاسری',r.overhead_deduction],['بیمه',r.insurance_deduction],['پرداخت ثبت‌شده',r.paid],['ماهیانه توافق‌شده',r.agreed]].map(item=>'<span>'+item[0]+': <b>'+number(item[1])+'</b></span>').join('')+
    '<div class="sy-payroll-services">'+(doc.service_details?.[id]||[]).map(s=>'<p>'+esc(s.title)+' · '+number(s.days)+' روز · مبلغ '+number(s.earnedGross)+' ریال</p>').join('')+'</div><span>بانک: <b>'+esc(r.bank_name||'—')+'</b></span><span>حساب: <b>'+esc(r.bank_account||'—')+'</b></span></div></td></tr>';
@@ -3977,14 +4056,14 @@ async function installmentPage(){
  };
 }
 
-function attachStudentTariff(form){
+function attachStudentTariff(form,id){
  const box=document.createElement('section');box.className='financial-calculator sy-fee-source-preview';
  box.innerHTML='<div class="sy-fee-preview-header"><strong>محاسبه هزینه سرویس</strong><button type="button" data-tariff-quote>محاسبه مجدد</button></div><p role="status" aria-live="polite">مبنای پیش‌فرض: تعرفه سازمان تاکسیرانی</p>';
  form.querySelector('.form-grid').after(box);
  const button=box.querySelector('button'),status=box.querySelector('p');
  const fee=form.elements.monthlyFee,source=form.elements.feeSource;
  if(!fee||!source)return;
- const input=()=>({schoolId:form.elements.schoolId?.value||'',academicYear:form.elements.academicYear?.value||'1405-1406',
+ const input=()=>({linkedStudentId:id||undefined,schoolId:form.elements.schoolId?.value||'',academicYear:form.elements.academicYear?.value||'1405-1406',
   distanceKm:form.elements.tariffDistanceKm?.value||'',vehicleClass:form.elements.tariffVehicleClass?.value||'',
   feeSource:source.value||'taxi',monthlyFee:fee.value||'0'});
  let request=0,timer;
@@ -3996,13 +4075,17 @@ function attachStudentTariff(form){
  const calculate=async()=>{
   const current=++request,data=input();
   sync();if(data.feeSource==='agreed')return;
-  if(!data.schoolId||!data.vehicleClass||!data.distanceKm){
+  if(!data.schoolId||(!data.vehicleClass&&!id)||!data.distanceKm){
    status.textContent='برای محاسبه خودکار، مدرسه، مسافت و کلاس خودرو را مشخص کنید.';return;
   }
   button.disabled=true;status.textContent='در حال محاسبه '+(data.feeSource==='taxi'?'تعرفه تاکسیرانی':'تعرفه شرکت')+'…';
   try{
    const result=await write('/api/v1/operations/tariffs/quote',data);
    if(current!==request||!form.isConnected)return;
+   if(result.assignedVehicleClass!=null){
+    form.elements.tariffVehicleClass.value=String(result.assignedVehicleClass);
+    form.elements.tariffVehicleClass.disabled=true;
+   }
    fee.value=String(result.monthlyFee);fee.dispatchEvent(new Event('input',{bubbles:true}));
    const shares=result.parentFareComponents;
    status.textContent='مبلغ ماهانه اولیا: '+number(result.monthlyFee)+' ریال · مبنای راننده: '+number(result.driverBaseMonthly)+' ریال'
@@ -4015,13 +4098,14 @@ function attachStudentTariff(form){
   }catch(e){if(current===request&&form.isConnected)status.textContent=e.message;}
   finally{if(current===request&&form.isConnected)button.disabled=false;}
  };
- const schedule=()=>{clearTimeout(timer);timer=setTimeout(calculate,320);};
+ const schedule=()=>{request++;button.disabled=false;clearTimeout(timer);timer=setTimeout(calculate,320);};
  for(const name of ['schoolId','academicYear','tariffDistanceKm','tariffVehicleClass','feeSource']){
   form.elements[name]?.addEventListener('change',schedule);
  }
  source.addEventListener('change',sync);
+ form.elements.tariffDistanceKm?.addEventListener('input',schedule);
  button.onclick=calculate;
- sync();if(!fee.value||Number(fee.value)===0)schedule();
+ sync();schedule();
 }
 function canConfigureDriverService(){
  return can('services','manage')&&can('services')&&can('students')&&can('schools')&&can('drivers');
@@ -4069,7 +4153,7 @@ function driverServiceDialog(driver){
 async function newServicePage(token,initialDriverId){
  if(!canConfigureDriverService())throw new Error('برای ثبت سرویس به مجوز مدرسه، راننده و دانش‌آموز نیاز است.');
  $('pageTitle').textContent='ثبت سرویس';
- const [schools,drivers,students,vehicles,feeSettings]=await Promise.all([lookup('schools'),lookup('drivers'),lookup('students',true),lookup('vehicles'),api(scoped('/api/v1/operations/driver-deduction-rates')).catch(()=>({...defaultDriverRates}))]);if(token!==pageToken)return;
+ const [schools,drivers,students,vehicles,feeSettings]=await Promise.all([lookup('schools'),lookup('drivers'),lookup('students',true),lookup('vehicles'),api(scoped('/api/v1/operations/driver-deduction-rates'))]);if(token!==pageToken)return;
  const driverRates={...defaultDriverRates,...feeSettings};
  $('content').innerHTML=`<form id="newServiceSetup" class="sy-new-service"><div class="sy-new-service-heading"><div><span class="sy-operation-kicker">راه‌اندازی سرویس</span><h2>تعریف سرویس جدید</h2><p>مدرسه و راننده را تعیین کنید، دانش‌آموزان واجد شرایط را انتخاب کنید و پس از کنترل ظرفیت و مبالغ، سرویس را ثبت کنید.</p></div><span id="serviceSetupProgress" class="sy-new-service-progress" role="status" aria-live="polite">مرحله ۱ از ۳ · انتخاب مدرسه و راننده</span></div><div class="toolbar sy-new-service-toolbar"><button type="button" id="showServiceStudents" disabled>انتخاب دانش‌آموزان</button><button type="button" id="quoteServiceStudents" disabled>دریافت قیمت و مسیر</button></div><div class="dashboard-grid sy-new-service-cards"><section class="panel"><h2>۱. مدرسه سرویس</h2><p id="serviceSchoolSummary">برای شروع، مدرسه یا مدارس سرویس را انتخاب کنید.</p><button type="button" id="pickServiceSchools">انتخاب مدرسه</button></section><section class="panel"><h2>۲. راننده سرویس</h2><p id="serviceDriverSummary">راننده را انتخاب کنید تا قیمت‌ها محاسبه شوند.</p><button type="button" id="pickServiceDriver">انتخاب راننده</button></section></div><section class="panel sy-new-service-students" id="serviceStudentSelection" hidden><div class="sy-new-service-section-heading"><h2>۳. دانش‌آموزان سرویس</h2><span id="serviceStudentsCount" role="status"></span></div><p id="selectedServiceStudents"></p><p id="serviceCapacityWarning" role="alert" hidden></p><button type="button" id="changeServiceStudents">ویرایش انتخاب دانش‌آموزان</button></section><section class="panel sy-new-service-details" id="serviceSetupDetails" hidden><h2>۴. مشخصات و هزینه سرویس</h2><div class="form-grid"><label class="sy-service-pricing-source">مبنای محاسبه هزینه سرویس<select name="feeSource"><option value="taxi" selected>نرخ سازمان تاکسیرانی (پیش‌فرض)</option><option value="agency">تعرفه اختصاصی شرکت</option><option value="agreed">مبالغ توافقی ثبت‌شده دانش‌آموزان</option></select><small>مبلغ اولیا و مبنای پرداخت راننده مطابق روش انتخابی محاسبه می‌شوند.</small></label><label>نوع خودروی سرویس (جستجوی لحظه‌ای)<input type="search" name="vehicleModel" placeholder="نام مدل خودرو را جستجو کنید" required></label><label>کلاس تعرفه خودرو (قابل تغییر)<select name="vehicleClass" required><option value="">ابتدا خودرو را انتخاب کنید</option><option value="1">کلاس ۱</option><option value="2">کلاس ۲</option><option value="3">کلاس ۳</option></select><small>کلاس پیشنهادی از نوع خودرو تعیین می‌شود و می‌توانید آن را اصلاح کنید. تغییر کلاس روی خودروی ثبت‌شده راننده ذخیره می‌شود.</small></label><label>عنوان سرویس<input name="title" maxlength="200" required></label><label>ظرفیت<input name="capacity" type="number" min="1" max="200" value="4" required></label><label>شیفت<input name="shift" maxlength="50"></label><label>مبلغ توافقی راننده (ریال)<input name="agreedAmountDisplay" type="text" inputmode="numeric" dir="ltr" autocomplete="off" value="۰" aria-describedby="serviceAgreedHelp"><input name="agreedAmount" type="hidden" value="0"><small id="serviceAgreedHelp">مبلغ ریالی بدون اعشار، با جداکننده هزارگان</small></label><p class="sy-service-year-policy">مبلغ سالانه بر اساس مقطع هر دانش‌آموز محاسبه می‌شود: ابتدایی ۸٫۵ ماه، متوسطه و دبیرستان ۹ ماه.</p></div><div id="serviceQuoteResult" role="status" aria-live="polite"></div><div class="sy-new-service-actions"><span>اطلاعات مدرسه، راننده، دانش‌آموزان و ظرفیت پیش از ثبت کنترل می‌شوند.</span><button type="submit" class="primary" id="createService" disabled>تأیید و ثبت سرویس</button></div></section></form>`;
  if(initialDriverId){const back=document.createElement('a');back.href='#drivers';back.className='route-link';back.textContent='بازگشت به مدیریت رانندگان';$('newServiceSetup').before(back);}
@@ -4237,12 +4321,12 @@ async function newServicePage(token,initialDriverId){
     lines.push([person(s),km(distance),routeText,rate.monthlyFee===null?'نرخ ثبت نشده':number(rate.monthlyFee),rate.monthlyFee===null?'—':number(Math.round(Number(rate.monthlyFee)*months)),rate.saved?'مبلغ ثبت‌شده':rate.monthlyFee===null?'—':can('students','manage')?'نرخ‌نامه · ذخیره با ثبت سرویس':'نرخ‌نامه · پیش‌نمایش']);
    }
    if(!current())return;
-   const breakdown=driverFeeBreakdown(driverBaseTotal,driverRates);
+   const breakdown=driverFeeBreakdown(total,driverRates);
    result.innerHTML=
-    '<section class="sy-service-quote-head"><h3>برآورد مالی سرویس</h3><span>بر اساس نرخ‌های ثبت‌شده دانش‌آموزان انتخابی</span></section>'+
+    '<section class="sy-service-quote-head"><h3>برآورد مالی سرویس</h3><span>بر اساس تعرفهٔ جاری مدرسه، مسافت و کلاس خودرو</span></section>'+
     '<div class="sy-service-quote-metrics">'+
-    '<div><span>جمع ماهانه اولیا</span><strong>'+number(total)+' ریال</strong></div><div><span>مبنای ناخالص راننده</span><strong>'+number(driverBaseTotal)+' ریال</strong></div>'+
-    '<div><span>کسورات راننده ('+percent(breakdown.rate)+'٪)</span><strong>'+number(breakdown.deducted)+' ریال</strong></div>'+
+    '<div><span>جمع ماهانه اولیا</span><strong>'+number(total)+' ریال</strong></div><div><span>حق‌الزحمه مرجع راننده در نرخ‌نامه</span><strong>'+number(driverBaseTotal)+' ریال</strong></div>'+
+    '<div><span>کسورات شرکت از شهریه اولیا ('+percent(breakdown.rate)+'٪)</span><strong>'+number(breakdown.deducted)+' ریال</strong></div>'+
     '<div class="sy-service-quote-net"><span>خالص ماهانه راننده</span><strong>'+number(breakdown.net)+' ریال</strong></div>'+
     '<div><span>برآورد مبلغ سالانه</span><strong>'+number(annualTotal)+' ریال</strong></div>'+
     '</div>'+

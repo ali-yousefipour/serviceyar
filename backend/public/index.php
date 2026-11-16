@@ -571,6 +571,7 @@ try {
    }
  }
  if($method==='GET'&&$path==='/api/v1/operations/debtors')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\StudentDebtors::report($s['id'],$aid,$_GET)]);
+ if($method==='GET'&&$path==='/api/v1/operations/dashboard/details')Response::json(['ok'=>true,'data'=>OperationsService::dashboardDetails($s['id'],$aid,$_GET)]);
  if($method==='GET'&&$path==='/api/v1/reports/debtors.xlsx')\ServiceYar\Reports\StudentDebtorsWorkbook::download($s['id'],$aid,$_GET,($_GET['scope']??'')==='all');
  if($method==='GET'&&preg_match('#^/api/v1/students/(\d+)/service-finance$#',$path,$m))Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ServiceFinanceReport::report($s['id'],$aid,$_GET,(int)$m[1])]);
  if($method==='GET'&&$path==='/api/v1/operations/school-statement/rules'){Authorization::requirePermission($s['id'],'finance.view');Response::json(['ok'=>true,'data'=>json_decode(file_get_contents(__DIR__.'/../src/Domain/school-statement-template-1405.json'),true,512,JSON_THROW_ON_ERROR)]);}
@@ -651,14 +652,21 @@ try {
    }
    $source=\ServiceYar\Domain\ServicePricing::source($b['feeSource']??$student['fee_source']??'taxi');
    $quote=\ServiceYar\Domain\ServicePricing::quote($pdo,$aid,$student,$source);
-   $quote['saved']=(float)$student['monthly_fee']>0&&$source===($student['fee_source']??'taxi');
+   $quote['saved']=(int)$student['monthly_fee']===(int)$quote['monthlyFee']&&$source===($student['fee_source']??'taxi');
    Response::json(['ok'=>true,'data'=>$quote]);
   }
   $source=\ServiceYar\Domain\ServicePricing::source($b['feeSource']??'taxi');
   $student=['school_id'=>$b['schoolId']??0,'academic_year'=>$b['academicYear']??\ServiceYar\Domain\AgencySchoolTariffs::YEAR,
    'tariff_distance_km'=>$b['distanceKm']??null,'tariff_vehicle_class'=>$b['vehicleClass']??null,
    'monthly_fee'=>$b['monthlyFee']??null];
+  $assignedClass=null;
+  if(!empty($b['linkedStudentId'])){
+   DomainService::get($s['id'],$aid,'students',(int)$b['linkedStudentId']);
+   $assignedClass=\ServiceYar\Domain\ServicePricing::assignedVehicleClass($pdo,$aid,(int)$b['linkedStudentId']);
+   if($assignedClass!==null)$student['tariff_vehicle_class']=$assignedClass;
+  }
   $quote=\ServiceYar\Domain\ServicePricing::quote($pdo,$aid,$student,$source);
+  $quote['assignedVehicleClass']=$assignedClass;
   Response::json(['ok'=>true,'data'=>$quote]);
  }
  // Explicit application of the Taxi Organization rate never runs merely by
@@ -703,11 +711,13 @@ try {
  }
  if($method==='GET'&&$path==='/api/v1/operations/payroll-documents')Response::json(['ok'=>true,'data'=>PayrollDocuments::list($s['id'],$aid,$_GET)]);
  if($method==='POST'&&$path==='/api/v1/operations/payroll-documents'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>PayrollDocuments::create($s['id'],$aid,Request::json())],201);}
- if(preg_match('#^/api/v1/operations/payroll-documents/(\d+)(?:/(approve|bank|xlsx))?$#',$path,$m)){
+ if(preg_match('#^/api/v1/operations/payroll-documents/(\d+)(?:/(approve|reopen|bank|xlsx))?$#',$path,$m)){
   if($method==='GET'&&($m[2]??'')==='bank')PayrollDocuments::bankCsv($s['id'],$aid,(int)$m[1]);
   if($method==='GET'&&($m[2]??'')==='xlsx')\ServiceYar\Reports\PayrollWorkbook::download($s['id'],$aid,(int)$m[1]);
   if($method==='GET')Response::json(['ok'=>true,'data'=>PayrollDocuments::get($s['id'],$aid,(int)$m[1])]);
   if($method==='PUT'&&empty($m[2])){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>PayrollDocuments::update($s['id'],$aid,(int)$m[1],Request::json())]);}
+  if($method==='DELETE'&&empty($m[2])){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>PayrollDocuments::revise($s['id'],$aid,(int)$m[1],true)]);}
+  if($method==='POST'&&($m[2]??'')==='reopen'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>PayrollDocuments::revise($s['id'],$aid,(int)$m[1],false)]);}
   if($method==='POST'&&($m[2]??'')==='approve'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>PayrollDocuments::approve($s['id'],$aid,(int)$m[1],Request::json())]);}
  }
  if($method==='POST'&&$path==='/api/v1/operations/installments'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\InstallmentPlan::create($s['id'],$aid,Request::json())],201);}
