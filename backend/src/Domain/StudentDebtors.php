@@ -68,6 +68,8 @@ final class StudentDebtors
         $total=$rows[0]['total_debt']??'0.00';
         foreach ($rows as &$row) unset($row['total_debt']);
         unset($row);
-        return ['items'=>$rows,'total'=>$total,'academicYear'=>$year];
+        $agency=Connection::get()->prepare('SELECT name FROM agencies WHERE id=?');
+        $agency->execute([$aid]);
+        return ['items'=>$rows,'total'=>$total,'academicYear'=>$year,'agencyName'=>$agency->fetchColumn()?:'شرکت'];
     }
 }

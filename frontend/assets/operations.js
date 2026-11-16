@@ -2175,6 +2175,134 @@ async function studentAccountPanel(panel,studentId){
    (data.payments.length?simpleTable(['تاریخ','نوع ثبت','مبلغ · ریال','روش پرداخت','شماره پیگیری'],data.payments.map(p=>[dateText(p.payment_date),p.source==='ledger'?'دریافت و پرداخت':'پرداخت فاکتور',number(p.amount),methodLabel(p.method),p.reference_no||'—'])):'<p class="muted">دریافتی ثبت‌شده‌ای وجود ندارد.</p>')+'</section>';
  }catch(error){if(panel.isConnected)panel.innerHTML='<h3>حساب مالی دانش‌آموز</h3><p class="error" role="alert">'+esc(error.message)+'</p>';}
 }
+async function loadHtml2Pdf(){
+ if(typeof window.html2pdf==='function')return;
+ await new Promise((resolve,reject)=>{
+  let script=document.querySelector('script[data-sy-html2pdf]');
+  const pending=Boolean(script);
+  if(!script){
+   script=document.createElement('script');
+   script.dataset.syHtml2pdf='true';
+   script.src='/assets/html2pdf.bundle.min.js';
+  }
+  script.addEventListener('load',resolve,{once:true});
+  script.addEventListener('error',()=>{
+   script.remove();
+   reject(new Error('کتابخانه ساخت PDF بارگذاری نشد.'));
+  },{once:true});
+  if(!pending)document.head.appendChild(script);
+ });
+ if(typeof window.html2pdf!=='function')throw new Error('امکان ایجاد PDF در حال حاضر فراهم نیست.');
+}
+
+function debtorPdfArchive(files){
+ // PDF images are already compressed. Store each PDF with its UTF-8 name.
+ const crcTable=Uint32Array.from({length:256},(_,index)=>{
+  for(let bit=0;bit<8;bit++)index=(index>>>1)^((index&1)?0xedb88320:0);
+  return index;
+ });
+ const local=[],central=[],encoder=new TextEncoder();
+ let offset=0,directorySize=0;
+ for(const {name,bytes} of files){
+  const filename=encoder.encode(name);
+  let crc=0xffffffff;
+  for(const byte of new Uint8Array(bytes))crc=(crc>>>8)^crcTable[(crc^byte)&255];
+  const header=new DataView(new ArrayBuffer(30));
+  header.setUint32(0,0x04034b50,true);
+  header.setUint16(4,20,true);
+  header.setUint16(6,0x0800,true);
+  header.setUint16(12,0x21,true);
+  header.setUint32(14,crc^0xffffffff,true);
+  header.setUint32(18,bytes.byteLength,true);
+  header.setUint32(22,bytes.byteLength,true);
+  header.setUint16(26,filename.length,true);
+  const entry=new DataView(new ArrayBuffer(46));
+  entry.setUint32(0,0x02014b50,true);
+  entry.setUint16(4,20,true);
+  new Uint8Array(entry.buffer).set(new Uint8Array(header.buffer,4,26),6);
+  entry.setUint32(42,offset,true);
+  local.push(header.buffer,filename,bytes);
+  central.push(entry.buffer,filename);
+  offset+=30+filename.length+bytes.byteLength;
+  directorySize+=46+filename.length;
+ }
+ const end=new DataView(new ArrayBuffer(22));
+ end.setUint32(0,0x06054b50,true);
+ end.setUint16(8,files.length,true);
+ end.setUint16(10,files.length,true);
+ end.setUint32(12,directorySize,true);
+ end.setUint32(16,offset,true);
+ return new Blob([...local,...central,end.buffer],{type:'application/zip'});
+}
+
+async function downloadDebtorPdfs(report,onProgress){
+ await loadHtml2Pdf();
+ const groups=new Map();
+ for(const row of report.items){
+  if(!groups.has(row.school_id))groups.set(row.school_id,[]);
+  groups.get(row.school_id).push(row);
+ }
+ const amount=new Intl.NumberFormat('fa-IR',{maximumFractionDigits:2});
+ const date=new Intl.DateTimeFormat('fa-IR',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const persian=value=>String(value??'').replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);
+ const headings=['نام و نام خانوادگی دانش‌آموز','شماره تماس ولی','مبلغ ماهیانه سرویس (ریال)','مبلغ سالیانه سرویس (ریال)','مبلغ پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'];
+ const cell='border:1px solid #cdded2;padding:6px 5px;text-align:center;overflow-wrap:anywhere;';
+ const wrap=document.createElement('div');
+ wrap.style.cssText='position:fixed;top:0;left:0;z-index:-1;pointer-events:none';
+ const sheet=document.createElement('div');
+ sheet.dir='rtl';
+ sheet.style.cssText='box-sizing:border-box;width:1046px;background:white;color:#182820;font:13px/1.45 Vazirmatn,Tahoma,sans-serif;direction:rtl';
+ wrap.appendChild(sheet);
+ document.body.appendChild(wrap);
+ const files=[],names=new Set();
+ try{
+  for(const rows of groups.values()){
+   const school=rows[0].school;
+   const total=rows.reduce((sum,row)=>sum+Number(row.debt),0);
+   const base=persian(school).replace(/[\\/:*?"<>|\u0000-\u001f]/g,'-').trim().slice(0,120)||'مدرسه';
+   let name=base;
+   for(let suffix=2;names.has(name.toLowerCase());suffix++)name=base+' ('+persian(suffix)+')';
+   names.add(name.toLowerCase());
+   onProgress(files.length+1,groups.size);
+   let pdf;
+   const pageSize=14;
+   for(let start=0;start<rows.length;start+=pageSize){
+    const page=rows.slice(start,start+pageSize);
+    const last=start+pageSize>=rows.length;
+    sheet.innerHTML='<h1 style="background:#005b35;color:white;text-align:center;margin:0;padding:12px;font-size:21px">گزارش مالی بدهکاران مدرسه '+esc(persian(school))+'</h1>'+
+     '<p style="text-align:center;margin:7px 0 0">تاریخ گزارش‌گیری '+esc(date)+' · سال تحصیلی '+esc(persian(report.academicYear))+'</p>'+
+     '<p style="text-align:center;margin:3px 0 10px;font-weight:bold">'+esc(persian(report.agencyName))+' - سامانه سرویس یار</p>'+
+     '<table style="width:100%;border-collapse:collapse;table-layout:fixed"><colgroup>'+[25,15,15,15,15,15].map(width=>'<col style="width:'+width+'%">').join('')+'</colgroup>'+
+     '<thead><tr>'+headings.map(label=>'<th style="'+cell+'background:#087447;color:white">'+label+'</th>').join('')+'</tr></thead><tbody>'+
+     page.map((row,index)=>{
+      const values=[persian(row.student),persian(row.guardian_mobile)||'—',...['monthly_fee','annual_fee','paid','debt'].map(key=>amount.format(row[key]))];
+      return '<tr style="background:'+(index%2?'#f3f8f4':'#fff')+'">'+values.map(value=>'<td style="'+cell+'">'+esc(value)+'</td>').join('')+'</tr>';
+     }).join('')+'</tbody>'+(last?'<tfoot><tr style="background:#e8f5ed;color:#005b35;font-weight:bold"><td colspan="5" style="'+cell+'">مجموع بدهی</td><td style="'+cell+'">'+amount.format(total)+'</td></tr></tfoot>':'')+'</table>'+
+     '<p style="text-align:center;margin:7px 0 0">صفحه '+amount.format(start/pageSize+1)+' از '+amount.format(Math.ceil(rows.length/pageSize))+'</p>';
+    await document.fonts?.ready;
+    const worker=window.html2pdf().set({
+     margin:8,image:{type:'jpeg',quality:0.94},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},
+     html2canvas:{scale:2,backgroundColor:'#fff',scrollX:0,scrollY:0},pagebreak:{mode:[]}
+    }).from(sheet);
+    if(!pdf){
+     pdf=await worker.toPdf().get('pdf');
+    }else{
+     const canvas=await worker.toCanvas().get('canvas');
+     const width=Math.min(281,194*canvas.width/canvas.height);
+     pdf.addPage('a4','landscape');
+     pdf.addImage(canvas.toDataURL('image/jpeg',0.94),'JPEG',(297-width)/2,8,width,width*canvas.height/canvas.width);
+    }
+   }
+   files.push({name:name+'.pdf',bytes:pdf.output('arraybuffer')});
+  }
+ }finally{wrap.remove();}
+ const link=document.createElement('a');
+ link.href=URL.createObjectURL(debtorPdfArchive(files));
+ link.download='بدهکاران-همه-مدارس.zip';
+ link.click();
+ setTimeout(()=>URL.revokeObjectURL(link.href),60000);
+}
+
 function studentDebtorsPage(token){
  if(!can('students'))throw new Error('مشاهده گزارش بدهکاران به مجوز دانش‌آموزان نیاز دارد.');
  $('content').innerHTML=`<section class="panel sy-operation-page">
@@ -2218,6 +2346,25 @@ function studentDebtorsPage(token){
  form.onreset=()=>setTimeout(()=>{if(form.isConnected)load();},0);
  if(filtered)filtered.onclick=()=>downloadFile('/api/v1/reports/debtors.xlsx?'+applied,'بدهکاران-نتایج.xlsx');
  if(full)full.onclick=()=>downloadFile('/api/v1/reports/debtors.xlsx?'+new URLSearchParams({scope:'all',academicYear:request().get('academicYear')}),'بدهکاران-همه-مدارس.xlsx');
+ if(full){
+  const pdf=document.createElement('button'),pdfStatus=document.createElement('span');
+  pdf.type='button';
+  pdf.textContent='خروجی کامل PDF';
+  pdfStatus.setAttribute('role','status');
+  full.after(pdf,pdfStatus);
+  pdf.onclick=async()=>{
+   pdf.disabled=true;
+   pdfStatus.textContent='در حال دریافت بدهکاران مدارس…';
+   try{
+    const params=new URLSearchParams({academicYear:request().get('academicYear')});
+    const report=await api(scoped('/api/v1/operations/debtors?'+params));
+    if(!report.items.length){pdfStatus.textContent='در این سال تحصیلی بدهکاری یافت نشد.';return;}
+    await downloadDebtorPdfs(report,(index,count)=>{pdfStatus.textContent='در حال آماده‌سازی مدرسه '+number(index)+' از '+number(count)+'…';});
+    pdfStatus.textContent='فایل ZIP آماده شد.';
+   }catch(error){pdfStatus.textContent=error.message||'خطا در ساخت خروجی PDF.';}
+   finally{pdf.disabled=false;}
+  };
+ }
  return load();
 }
 function serviceFinanceRange(academicYear){
@@ -3341,19 +3488,7 @@ function showDriverPayslip(doc,line){
   button.textContent='در حال ساخت PDF…';
   let wrap;
   try{
-   if(typeof window.html2pdf!=='function'){
-    await new Promise((resolve,reject)=>{
-     const existing=document.querySelector('script[data-sy-html2pdf]');
-     if(existing){if(existing.dataset.ready==='true'){resolve();return;}existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true});return;}
-     const script=document.createElement('script');
-     script.dataset.syHtml2pdf='true';
-     script.src='/assets/html2pdf.bundle.min.js';
-     script.onload=()=>{script.dataset.ready='true';resolve();};
-     script.onerror=()=>{script.remove();reject(new Error('کتابخانه ساخت PDF از فایل‌های سامانه بارگذاری نشد. صفحه را تازه‌سازی کنید و دوباره تلاش کنید.'));};
-     document.head.appendChild(script);
-    });
-   }
-   if(typeof window.html2pdf!=='function')throw new Error('امکان ایجاد PDF در حال حاضر فراهم نیست.');
+   await loadHtml2Pdf();
    wrap=document.createElement('div');
    wrap.dir='rtl';
    wrap.className='sy-payslip-pdf-render';

@@ -196,8 +196,8 @@ class SimpleXLSXGen
                 . ' xmlns:x15="http://schemas.microsoft.com/office/spreadsheetml/2010/11/main"' . "\r\n"
                 . ' xmlns:x14ac="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac"' . "\r\n"
                 . ' xmlns:xm="http://schemas.microsoft.com/office/excel/2006/main">' . "\r\n"
-                .'<dimension ref="{REF}"/>'."\r\n"
-                ."{SHEETVIEWS}\r\n{COLS}\r\n{ROWS}\r\n{AUTOFILTER}{MERGECELLS}{HYPERLINKS}{VML}</worksheet>",
+                .'{SHEETPROPERTIES}<dimension ref="{REF}"/>'."\r\n"
+                ."{SHEETVIEWS}\r\n{COLS}\r\n{ROWS}\r\n{AUTOFILTER}{MERGECELLS}{HYPERLINKS}{PRINTSETUP}{VML}</worksheet>",
             'xl/worksheets/_rels/sheet1.xml.rels' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'."\r\n"
                 .'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">{RELS}</Relationships>',
             'xl/sharedStrings.xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'."\r\n"
@@ -1084,7 +1084,8 @@ class SimpleXLSXGen
                     continue;
                 }
                 $w = isset($this->sheets[$idx]['colwidth'][$k]) ? $this->sheets[$idx]['colwidth'][$k] : min($max + 1, 60);
-                $COLS[] = '<col min="' . $k . '" max="' . $k . '" width="' . $w . '" customWidth="1" />';
+                $hidden = empty($this->sheets[$idx]['hiddenColumns'][$k]) ? '' : ' hidden="1"';
+                $COLS[] = '<col min="' . $k . '" max="' . $k . '" width="' . $w . '" customWidth="1"' . $hidden . ' />';
             }
             $COLS[] = '</cols>';
             if (count($COLS) === 2) {
@@ -1129,7 +1130,7 @@ class SimpleXLSXGen
         setlocale(LC_NUMERIC, $_loc);
 
         return str_replace(
-            ['{REF}', '{COLS}', '{ROWS}', '{AUTOFILTER}', '{MERGECELLS}', '{HYPERLINKS}', '{SHEETVIEWS}', '{VML}'],
+            ['{REF}', '{COLS}', '{ROWS}', '{AUTOFILTER}', '{MERGECELLS}', '{HYPERLINKS}', '{SHEETVIEWS}', '{VML}', '{SHEETPROPERTIES}', '{PRINTSETUP}'],
             [
                 $REF,
                 implode("\r\n", $COLS),
@@ -1138,7 +1139,12 @@ class SimpleXLSXGen
                 implode("\r\n", $MERGECELLS),
                 implode("\r\n", $HYPERLINKS),
                 $SHEETVIEWS,
-                implode("\r\n", $VML)
+                implode("\r\n", $VML),
+                isset($this->sheets[$idx]['a4landscape']) ? '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>' : '',
+                isset($this->sheets[$idx]['a4landscape'])
+                    ? '<printOptions horizontalCentered="1"/><pageMargins left="0.3" right="0.3" top="0.35" bottom="0.35" header="0.15" footer="0.15"/>'
+                        . '<pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="' . ($this->sheets[$idx]['a4landscape'] ? '1' : '0') . '"/>'
+                    : '',
             ],
             $template
         );
@@ -1247,6 +1253,16 @@ class SimpleXLSXGen
             return $this;
         }
         $this->sheets[$this->curSheet]['colwidth'][self::col2index($col)] = $width;
+        return $this;
+    }
+    public function hideColumn($col)
+    {
+        $this->sheets[$this->curSheet]['hiddenColumns'][self::col2index($col)] = true;
+        return $this;
+    }
+    public function a4Landscape($singlePage = true)
+    {
+        $this->sheets[$this->curSheet]['a4landscape'] = $singlePage ? '1' : '0';
         return $this;
     }
     public function rightToLeft($value = true)
