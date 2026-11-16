@@ -34,6 +34,7 @@ jobs:
           node tests/sepand-schema-ui.cjs
           node --check frontend/assets/operations.js
           node tests/admin-impersonation-contract.cjs
+          node tests/admin-driver-preview-contract.cjs
           node tests/api-route-guard-contract.cjs
           node tests/payroll-reconciliation-contract.cjs
           node tests/taxi-tariff-footnotes-contract.cjs
