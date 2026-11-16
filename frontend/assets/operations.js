@@ -3955,7 +3955,7 @@ async function openAdminImpersonationDialog(panelType='company'){
   overlay.querySelector('#syImpersonationSelectedCompany').textContent='شرکت انتخاب‌شده: '+selectedCompany.name;
   users=[];usersBox.textContent='در حال دریافت '+panelInfo.userTitle+'…';userSearch.value='';confirmBox.hidden=true;selectedUser=null;
   try{
-   const data=await api('/api/v1/admin/impersonation/users?agencyId='+encodeURIComponent(id));
+   const data=await api('/api/v1/admin/impersonation/users?agencyId='+encodeURIComponent(id)+'&panelType='+encodeURIComponent(panelType));
    if(!overlay.isConnected||requestSequence!==companyLoadSequence||Number(selectedCompany?.id)!==id)return;
    users=data.users||[];renderUsers();userSearch.focus();
   }catch(error){
