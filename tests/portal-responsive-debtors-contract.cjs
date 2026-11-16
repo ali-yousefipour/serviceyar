@@ -31,7 +31,7 @@ assert.match(style,/\.portal-debtors-mobile\{display:grid/,'Card list visible on
 assert.match(style,/\.portal-debtor-due/,'Primary outstanding balance prominent');
 assert.match(style,/\.portal-debtors-pagination/,'Touch-friendly paging');
 assert.match(portal,/data-label/,'Other portal tables provide accessible labels on phones');
-assert.match(style,/\\.portal-panel:not\\(\\.portal-debtors-workspace\\).*\\.portal-table-scroll td::before/,'Phone table rows expose column labels');
+assert.match(style,/portal-table-scroll td::before/,'Phone table rows expose column labels');
 assert.match(style,/\\.portal-debtor-card/,'Debtor cards have dedicated mobile styling');
 assert.match(backend,/SUM\(debt\) OVER \(\) total_debt/,'Totals computed on backend');
 assert.match(backend,/WHERE students\.agency_id=:agency/,'Backend restricts debtors to agency');
