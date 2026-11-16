@@ -44,7 +44,7 @@ final class LegacyServiceTariffMigration {
     $changes[]=['id'=>(int)$row['id'],'schoolId'=>(int)$row['school_id'],
      'oldFee'=>(int)$row['monthly_fee'],'newFee'=>(int)$quote['parentMonthly'],
      'oldDriverBase'=>(int)($row['driver_base_monthly']??0),'newDriverBase'=>(int)$quote['driverMonthly'],
-     'oldSource'=>(string)$row['fee_source'],'vehicleClass'=>(int)$row['current_vehicle_class']];
+     'oldSource'=>(string)$row['fee_source'],'oldVehicleClass'=>(int)$row['tariff_vehicle_class'],'vehicleClass'=>(int)$row['current_vehicle_class']];
    }catch(\Throwable $e){$issues[]=['studentId'=>(int)$row['id'],'reason'=>$e->getMessage()];}
   }
   // Cover ALL services, including drafts, cancelled and assignments without students.
@@ -87,7 +87,7 @@ final class LegacyServiceTariffMigration {
    }else $servicesAlreadyCurrent++;
   }
   $differentStudents=array_values(array_filter($changes,static fn($c)=>
-   $c['oldFee']!==$c['newFee']||$c['oldDriverBase']!==$c['newDriverBase']||$c['oldSource']!=='taxi'));
+   $c['oldFee']!==$c['newFee']||$c['oldDriverBase']!==$c['newDriverBase']||$c['oldSource']!=='taxi'||$c['oldVehicleClass']!==$c['vehicleClass']));
   $response=['agencyId'=>$aid,'studentsChecked'=>count($changes)+count($issues),'studentsReady'=>count($changes),
    'studentsToChange'=>count($differentStudents),'studentsAlreadyCurrent'=>count($changes)-count($differentStudents),
    'studentChanges'=>$differentStudents,
@@ -123,18 +123,18 @@ final class LegacyServiceTariffMigration {
    $updateStudent=$pdo->prepare("UPDATE students SET fee_source='taxi',monthly_fee=?,driver_base_monthly=?,tariff_vehicle_class=?,tariff_calculated_at=NOW() WHERE id=? AND agency_id=?");
    $successStudents=[];$updatedStudents=0;$unchangedStudents=0;$invoicesSynced=0;$verifiedStudents=0;
    $studentAmountsChanged=0;$studentSourcesOnly=0;
-   $verifyStudent=$pdo->prepare('SELECT monthly_fee,driver_base_monthly,fee_source FROM students WHERE id=? AND agency_id=?');
+   $verifyStudent=$pdo->prepare('SELECT monthly_fee,driver_base_monthly,fee_source,tariff_vehicle_class FROM students WHERE id=? AND agency_id=?');
    foreach($changes as $c){
     $pdo->exec('SAVEPOINT sy_reprice_student');
     try{
-     $changed=$c['oldFee']!==$c['newFee']||$c['oldDriverBase']!==$c['newDriverBase']||$c['oldSource']!=='taxi';
+     $changed=$c['oldFee']!==$c['newFee']||$c['oldDriverBase']!==$c['newDriverBase']||$c['oldSource']!=='taxi'||$c['oldVehicleClass']!==$c['vehicleClass'];
      if($changed){
-      $audit->execute([$run,$aid,'student',$c['id'],json_encode(['monthlyFee'=>$c['oldFee'],'driverBaseMonthly'=>$c['oldDriverBase'],'feeSource'=>$c['oldSource']]),json_encode(['monthlyFee'=>$c['newFee'],'driverBaseMonthly'=>$c['newDriverBase'],'feeSource'=>'taxi']),$uid]);
+      $audit->execute([$run,$aid,'student',$c['id'],json_encode(['monthlyFee'=>$c['oldFee'],'driverBaseMonthly'=>$c['oldDriverBase'],'feeSource'=>$c['oldSource'],'vehicleClass'=>$c['oldVehicleClass']]),json_encode(['monthlyFee'=>$c['newFee'],'driverBaseMonthly'=>$c['newDriverBase'],'feeSource'=>'taxi','vehicleClass'=>$c['vehicleClass']]),$uid]);
       $updateStudent->execute([$c['newFee'],$c['newDriverBase'],$c['vehicleClass'],$c['id'],$aid]);
      }
      if(StudentServiceBilling::sync($pdo,$aid,(int)$c['id'])!==null)$invoicesSynced++;
      $verifyStudent->execute([$c['id'],$aid]);$saved=$verifyStudent->fetch(PDO::FETCH_ASSOC);
-     if(!$saved||(int)$saved['monthly_fee']!==$c['newFee']||(int)$saved['driver_base_monthly']!==$c['newDriverBase']||$saved['fee_source']!=='taxi')
+     if(!$saved||(int)$saved['monthly_fee']!==$c['newFee']||(int)$saved['driver_base_monthly']!==$c['newDriverBase']||$saved['fee_source']!=='taxi'||(int)$saved['tariff_vehicle_class']!==$c['vehicleClass'])
       throw new \RuntimeException('تأیید ذخیره شهریه دانش‌آموز ناموفق بود.');
      $pdo->exec('RELEASE SAVEPOINT sy_reprice_student');
      $successStudents[(int)$c['id']]=true;$verifiedStudents++;
