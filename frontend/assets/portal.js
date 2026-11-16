@@ -232,21 +232,7 @@
       };
       sidebar.append(button);
    });
-   // Use the same responsive navigation drawer as the company dashboard.
-   if(!el('navigationToggle')){
-     const button=document.createElement('button');button.type='button';button.id='navigationToggle';
-     button.setAttribute('aria-label','باز کردن منوی اصلی');button.setAttribute('aria-expanded','false');
-     button.textContent='☰';document.querySelector('.header')?.prepend(button);
-     const shade=document.createElement('button');shade.type='button';shade.id='navigationShade';
-     shade.setAttribute('aria-label','بستن منوی اصلی');shade.hidden=true;el('app').append(shade);
-     const toggle=open=>{
-       document.querySelector('.sidebar')?.classList.toggle('nav-open',open);
-       shade.hidden=!open;button.setAttribute('aria-expanded',String(open));
-     };
-     button.onclick=()=>toggle(button.getAttribute('aria-expanded')!=='true');
-     shade.onclick=()=>toggle(false);
-     document.addEventListener('keydown',e=>{if(e.key==='Escape'&&button.getAttribute('aria-expanded')==='true')toggle(false);});
-   }
+   ensurePortalDrawer();
    const brand=document.querySelector('.sy-sidebar-brand-copy small');
    if(brand)brand.textContent='پنل '+name+' · '+m.agencyName;
    const sideName=el('syAccountName');if(sideName)sideName.textContent=data.profile?.username||'حساب شخصی';
@@ -270,6 +256,22 @@
    if(impersonated&&section==='password')section='overview';
    selectSection(section);
    if(!data.hasPassword&&m.portalType!=='representative'&&!impersonated)note('می‌توانید از بخش «تنظیم رمز عبور» رمز اختصاصی برای شماره همراه خود تعریف کنید.');
+ }
+ function ensurePortalDrawer(){
+   if(!el('navigationToggle')){
+     const button=document.createElement('button');button.type='button';button.id='navigationToggle';
+     button.setAttribute('aria-label','باز کردن منوی اصلی');button.setAttribute('aria-expanded','false');
+     button.textContent='☰';document.querySelector('.header')?.prepend(button);
+     const shade=document.createElement('button');shade.type='button';shade.id='navigationShade';
+     shade.setAttribute('aria-label','بستن منوی اصلی');shade.hidden=true;el('app').append(shade);
+     const toggle=open=>{
+       document.querySelector('.sidebar')?.classList.toggle('nav-open',open);
+       shade.hidden=!open;button.setAttribute('aria-expanded',String(open));
+     };
+     button.onclick=()=>toggle(button.getAttribute('aria-expanded')!=='true');
+     shade.onclick=()=>toggle(false);
+     document.addEventListener('keydown',e=>{if(e.key==='Escape'&&button.getAttribute('aria-expanded')==='true')toggle(false);});
+   }
  }
  function selectPortalRoute(raw){
    const pages={'portal-debtors':'debtors',dashboard:'overview','portal-dashboard':'overview','portal-services':'services','portal-finance':'finance','portal-profile':'profile','portal-password':'password'};
@@ -301,6 +303,7 @@
    window.serviceyarAdminDriverInspection=true;
    const app=el('app');app.classList.add('sy-portal-mode','sy-admin-driver-inspection-mode');
    const nav=el('nav');nav.replaceChildren();
+   ensurePortalDrawer();
    const account=el('syAccountMenu');if(account){account.open=false;account.hidden=true;}
    const picker=el('agencyPickerWrap');if(picker)picker.hidden=true;
    const brand=document.querySelector('.sy-sidebar-brand-copy small');
