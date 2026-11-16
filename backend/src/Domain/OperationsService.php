@@ -120,17 +120,38 @@ final class OperationsService
             // are preserved as opt-outs and never silently converted to taxi.
             $vehicle=ServiceFinancialBasis::service($p,$aid,$serviceId);
             $class=(int)($vehicle['tariff_vehicle_class']??0);
-            if(!in_array($class,[1,2,3],true))
-                throw new AuthException(422,'کلاس خودروی راننده این سرویس مشخص نیست.','VEHICLE_TARIFF_CLASS_REQUIRED');
+            // Legacy services sometimes have no driver/vehicle assigned yet.
+            // A missing driver cannot supply an authoritative vehicle class;
+            // retain a pre-existing fee, or quote provisionally from the
+            // student's saved class until a classified vehicle is assigned.
+            $vehicleClassKnown=in_array($class,[1,2,3],true);
+            if(!$vehicleClassKnown)$class=(int)($student['tariff_vehicle_class']??0);
+            if(!in_array($class,[1,2,3],true)&&
+                (float)($student['monthly_fee']??0)<=0&&
+                (float)($student['tariff_distance_km']??0)>0)
+                throw new AuthException(422,'کلاس خودروی راننده یا دانش‌آموز مشخص نیست.','VEHICLE_TARIFF_CLASS_REQUIRED');
             $source=(string)($student['fee_source']??'taxi');
             if($source==='taxi' && in_array($service['fee_source'],['agency','agreed'],true))
                 $source=(string)$service['fee_source'];
-            if($source!=='agreed'){
-                $quote=ServiceFinancialBasis::quoteStudent($p,$aid,$student,$source,$class);
+            if($source!=='agreed'&&in_array($class,[1,2,3],true)
+               && (float)($student['tariff_distance_km']??0)>0){
+                try{
+                    $quote=ServiceFinancialBasis::quoteStudent($p,$aid,$student,$source,$class);
+                }catch(AuthException $e){
+                    // Legacy schools without a valid district may retain their
+                    // pre-existing agency rate ONLY until a district is fixed.
+                    if($e->codeName!=='TAXI_DISTRICT_REQUIRED'||$vehicleClassKnown)throw $e;
+                    $legacyFee=AgencySchoolTariffs::quote($p,$aid,(int)$student['school_id'],
+                        (string)(($student['academic_year']??null)?:AgencySchoolTariffs::YEAR),
+                        $student['tariff_distance_km'],$class);
+                    if($legacyFee===null)throw $e;
+                    $source='agency';
+                    $quote=['monthlyFee'=>$legacyFee,'driverBaseMonthly'=>$legacyFee];
+                }
                 $p->prepare("UPDATE students SET tariff_vehicle_class=?,fee_source=?,monthly_fee=?,
                   driver_base_monthly=?,tariff_calculated_at=NOW() WHERE id=? AND agency_id=?")
                   ->execute([$class,$source,(int)$quote['monthlyFee'],(int)$quote['driverBaseMonthly'],$studentId,$aid]);
-            }else{
+            }elseif($vehicleClassKnown){
                 $p->prepare('UPDATE students SET tariff_vehicle_class=? WHERE id=? AND agency_id=?')
                     ->execute([$class,$studentId,$aid]);
             }
