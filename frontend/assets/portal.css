@@ -314,3 +314,55 @@
  #app.sy-portal-mode .portal-debtors-stats{grid-template-columns:1fr}
  #app.sy-portal-mode .portal-debtor-card-body{grid-template-columns:1fr}
 }
+
+/* Company/admin-style grouped navigation; same SVG assets and accordion affordance. */
+#app.sy-portal-mode .sy-command-sidebar #nav{display:flex;flex-direction:column;gap:5px}
+#app.sy-portal-mode #nav>.sy-portal-nav,
+#app.sy-portal-mode #nav>.sy-portal-nav-group>summary{
+ display:flex;align-items:center;gap:11px;min-height:46px;padding:10px 12px;border-radius:12px;
+ border:1px solid transparent;color:#e7f8ec;background:transparent;
+ text-decoration:none;font-size:13px;font-weight:750;line-height:1.65;cursor:pointer;
+}
+#app.sy-portal-mode #nav>.sy-portal-nav svg,
+#app.sy-portal-mode #nav>.sy-portal-nav-group>summary svg{
+ width:20px;height:20px;flex:0 0 20px;fill:currentColor;
+}
+#app.sy-portal-mode #nav>.sy-portal-nav-group{border:0;min-width:0}
+#app.sy-portal-mode #nav>.sy-portal-nav-group>summary:hover,
+#app.sy-portal-mode #nav>.sy-portal-nav-group.current-group>summary,
+#app.sy-portal-mode #nav>.sy-portal-nav-group[open]>summary{
+ background:#ffffff1a;color:#fff;border-color:#ffffff2d;
+}
+#app.sy-portal-mode #nav>.sy-portal-nav-group>summary::marker{content:''}
+#app.sy-portal-mode #nav>.sy-portal-nav-group>.nav-popup{
+ display:grid;position:static;inset:auto;visibility:visible;opacity:1;transform:none;
+ width:auto;min-width:0;margin:5px 13px 7px 0;padding:5px 8px 5px 0;
+ border:0;border-right:2px solid #ffffff28;border-radius:0;background:transparent;
+ box-shadow:none;max-height:none;overflow:visible;
+}
+#app.sy-portal-mode #nav>.sy-portal-nav-group:not([open])>.nav-popup{display:none}
+#app.sy-portal-mode #nav>.sy-portal-nav-group>.nav-popup>a{
+ display:flex;align-items:center;gap:11px;min-height:42px;padding:8px 11px;
+ border:1px solid transparent;border-radius:10px;background:transparent;color:#d7eee2;
+ font-size:12px;line-height:1.7;text-decoration:none;font-weight:650;
+}
+#app.sy-portal-mode #nav>.sy-portal-nav-group>.nav-popup>a svg{
+ width:18px;height:18px;flex:0 0 18px;fill:currentColor;
+}
+#app.sy-portal-mode #nav>.sy-portal-nav-group>.nav-popup>a:hover,
+#app.sy-portal-mode #nav>.sy-portal-nav-group>.nav-popup>a:focus-visible{
+ color:#fff;background:#ffffff20;border-color:#ffffff20;
+}
+#app.sy-portal-mode #nav>.sy-portal-nav-group>.nav-popup>a.active,
+#app.sy-portal-mode #nav>.sy-portal-nav-group>.nav-popup>a[aria-current=page],
+#app.sy-portal-mode #nav>.sy-portal-nav.active{
+ background:linear-gradient(110deg,#f5da95,#e6b858);color:#23483a;border-color:#f1d592;font-weight:850;
+}
+#app.sy-portal-mode #nav>.sy-portal-nav-group[hidden],
+#app.sy-portal-mode #nav>.sy-portal-nav-group>.nav-popup>a[hidden]{display:none!important}
+@media(max-width:920px){
+ #app.sy-portal-mode .sy-command-sidebar #nav>.sy-portal-nav-group>.nav-popup{margin-right:8px}
+ #app.sy-portal-mode .sy-command-sidebar #nav>.sy-portal-nav-group>.nav-popup>a{min-height:48px;font-size:13px}
+ #app.sy-portal-mode .sidebar.nav-open{z-index:180}
+ #app.sy-portal-mode #navigationShade:not([hidden]){z-index:175}
+}
