@@ -291,7 +291,9 @@ try {
    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\PortalService::memberships((int)$s['id'])]);
  }
  if($path==='/api/v1/portal/password'&&$method==='POST'){
-   $auth->requireCsrf($s);$b=Request::json();
+   $auth->requireCsrf($s);
+   if(!empty($s['impersonation']))throw new AuthException(403,'تعیین یا تغییر رمز در حالت ورود نیابتی مجاز نیست.','IMPERSONATION_READ_ONLY');
+   $b=Request::json();
    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\PortalService::setPassword(
      (int)$s['id'],(string)($b['password']??''),(string)($b['confirm']??''),(string)($b['currentPassword']??''))]);
  }
@@ -302,6 +304,7 @@ try {
      (int)$s['id'],$type,$company,$person)]);
    if($method==='PATCH'){
      $auth->requireCsrf($s);
+     if(!empty($s['impersonation']))throw new AuthException(403,'ویرایش اطلاعات شخصی در حالت ورود نیابتی مجاز نیست.','IMPERSONATION_READ_ONLY');
      Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\PortalService::updateProfile(
        (int)$s['id'],$type,$company,$person,Request::json())]);
    }
@@ -309,6 +312,7 @@ try {
  if(preg_match('#^/api/v1/portal/driver/([0-9]+)/([0-9]+)/vehicle-request$#D',$path,$portal)
      &&$method==='POST'){
    $auth->requireCsrf($s);
+   if(!empty($s['impersonation']))throw new AuthException(403,'ثبت درخواست خودرو در حالت ورود نیابتی مجاز نیست.','IMPERSONATION_READ_ONLY');
    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\PortalService::requestVehicleChange(
       (int)$s['id'],(int)$portal[1],(int)$portal[2],Request::json())]);
  }
