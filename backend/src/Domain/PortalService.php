@@ -144,12 +144,13 @@ final class PortalService {
     }
     public static function memberships(int $uid): array {
         self::ensureSchema();
-        return self::rows(Connection::get(),"SELECT m.party_type portalType,m.party_id partyId,
+        $members=self::rows(Connection::get(),"SELECT m.party_type portalType,m.party_id partyId,
           m.agency_id agencyId,a.name agencyName FROM portal_memberships m
           JOIN agencies a ON a.id=m.agency_id AND a.is_active=1
           JOIN users u ON u.id=m.user_id AND u.is_active=1
           WHERE m.user_id=? AND ".self::liveMembershipPredicate()."
           ORDER BY m.party_type,m.agency_id,m.party_id",[$uid]);
+        return array_merge($members,StandaloneRepresentatives::memberships($uid));
     }
     public static function dashboard(int $uid,string $type,int $agencyId,int $partyId): array {
         self::authorized($uid,$type,$agencyId,$partyId);
