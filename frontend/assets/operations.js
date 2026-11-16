@@ -3938,11 +3938,9 @@ async function openAdminImpersonationDialog(panelType='company'){
  };
  const renderUsers=()=>{
   const term=normalize(userSearch.value);
-  const list=users.filter(u=>{
-   const roles=normalize(u.roles),parent=roles.includes('ولی دانش‌آموز'),driver=roles.includes('راننده سرویس مدارس');
-   const isRole=panelType==='parent'?parent:panelType==='driver'?driver:!parent&&!driver;
-   return isRole&&normalize([u.username,u.first_name,u.last_name,u.roles].join(' ')).includes(term);
-  });
+  // The server already restricts results to the selected agency and panelType.
+  // Do not re-classify users by translated role titles, which may vary.
+  const list=users.filter(u=>normalize([u.username,u.first_name,u.last_name,u.roles].join(' ')).includes(term));
   usersBox.innerHTML=list.length?list.map(u=>'<button type="button" class="sy-impersonation-result" data-user="'+Number(u.id)+'"><span class="sy-impersonation-result-avatar sy-user-avatar">'+esc((u.first_name||u.username||'ک').trim().slice(0,1))+'</span><span><b>'+esc(((u.first_name||'')+' '+(u.last_name||'')).trim()||u.username)+'</b><small>'+esc(u.username)+' · '+esc(u.roles||'بدون نقش')+'</small></span><em>فعال</em><i aria-hidden="true">←</i></button>').join(''):'<div class="sy-impersonation-empty">'+esc(panelInfo.empty)+'</div>';
   usersBox.querySelectorAll('[data-user]').forEach(button=>button.onclick=()=>chooseUser(Number(button.dataset.user)));
  };
