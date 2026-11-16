@@ -76,13 +76,14 @@ final class TaxiTariffApplication
             if(!$list){$entry['errors'][]='دانش‌آموزی به این سرویس متصل نیست.';$blocking++;}
             foreach($list as $st){
                 try{
+                    $previousClass=(int)($st['tariff_vehicle_class']??0);
                     $st['tariff_vehicle_class']=(int)$class;
                     $quote=ServicePricing::quote($pdo,$aid,$st,'taxi');
                     $old=(int)$st['monthly_fee'];$new=(int)$quote['monthlyFee'];
                     $entry['students'][]=['studentId'=>(int)$st['id'],'name'=>trim($st['first_name'].' '.$st['last_name']),
                       'oldFee'=>$old,'newFee'=>$new,'driverBaseMonthly'=>(int)$quote['driverBaseMonthly'],
-                      'changed'=>$old!==$new||$st['fee_source']!=='taxi'||(int)$st['tariff_vehicle_class']!==(int)$class];
-                    if($old!==$new||$st['fee_source']!=='taxi'){$changes++;$entry['changeCount']++;}
+                      'changed'=>$old!==$new||$st['fee_source']!=='taxi'||$previousClass!==(int)$class];
+                    if($old!==$new||$st['fee_source']!=='taxi'||$previousClass!==(int)$class){$changes++;$entry['changeCount']++;}
                 }catch(\Throwable $error){
                     $entry['errors'][]='دانش‌آموز '.(int)$st['id'].': '.$error->getMessage();
                     $blocking++;
