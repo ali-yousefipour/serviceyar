@@ -3121,3 +3121,39 @@ body.sy-menu-palette-open{overflow:hidden}
  .sy-admin-driver-portal .portal-kpis{grid-template-columns:1fr 1fr}
  .sy-admin-driver-portal .portal-kpi{padding:12px}
 }
+
+/* Service wizard: confirmed official tariff application is a separate, visible
+   action. Never make a valid pre-save request look permanently disabled. */
+.sy-official-tariff-apply{
+ display:grid;gap:12px;margin-top:16px;padding:18px;
+ background:linear-gradient(135deg,#f6fbf7,#edf7f2);
+ border:1px solid #c9e2d5;border-radius:16px;
+}
+.sy-official-tariff-apply h4{margin:0;color:#155a43}
+.sy-official-tariff-apply p{line-height:1.85;margin:0}
+.sy-official-tariff-apply .member-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.sy-official-tariff-apply [data-official-apply]{
+ min-height:46px;background:#08774e;color:#fff;border-radius:11px;
+ padding:9px 16px;font-weight:800;flex:1 1 230px;
+}
+.sy-official-tariff-apply [data-official-apply]:disabled{opacity:.48;cursor:not-allowed}
+.sy-official-tariff-apply [data-official-preview]{
+ min-height:46px;border:1px solid #b8d3c5;border-radius:11px;
+ background:#fff;color:#125a43;flex:1 1 175px;
+}
+.sy-official-tariff-apply [data-official-status]{
+ font-size:12px;color:#235441;min-height:20px;overflow-wrap:anywhere;
+}
+.sy-official-tariff-apply .sy-official-ready{
+ color:#117147;font-weight:800;
+}
+.sy-official-tariff-confirmation{
+ background:#e9f8ef;color:#135d3b;border:1px solid #a8dabe;
+ border-radius:12px;padding:13px 16px;line-height:1.8;font-weight:800;
+}
+@media(max-width:600px){
+ .sy-official-tariff-apply{padding:13px;border-radius:12px}
+ .sy-official-tariff-apply .member-actions{display:grid;grid-template-columns:1fr}
+ .sy-official-tariff-apply [data-official-apply],
+ .sy-official-tariff-apply [data-official-preview]{width:100%}
+}
