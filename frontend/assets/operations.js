@@ -188,8 +188,12 @@ function renderNav(){
    `<a class="nav" href="#admin-dashboard" title="داشبورد مدیریتی">${samarMenuIcon('dashboard')}<span>داشبورد مدیریتی</span></a>`+
    `<details class="nav-group"><summary title="مدیریت سامانه">${samarMenuIcon('company')}<span>مدیریت سامانه</span></summary><div class="nav-popup" aria-label="مدیریت سامانه"><a href="#admin-agencies">${samarMenuIcon('company')}<span>مدیریت شرکت‌ها</span></a><a href="#admin-users">${samarMenuIcon('students')}<span>مدیریت کاربران</span></a></div></details>`+
    `<details class="nav-group"><summary title="تنظیمات سامانه">${navIcon('settings')}<span>تنظیمات سامانه</span></summary><div class="nav-popup" aria-label="تنظیمات سامانه"><a href="#admin-platform">${navIcon('settings')}<span>کلیدهای سامانه و نقشه</span></a><a href="#admin-sms">${navIcon('messages')}<span>سرویس پیامک نگین</span></a><a href="#admin-bale">${navIcon('messages')}<span>ربات پیام‌رسان بله</span></a><a href="#admin-login">${navIcon('settings')}<span>روش‌های ورود کاربران</span></a><a href="#admin-taxi-tariffs">${navIcon('accounts')}<span>نرخ‌نامه سازمان تاکسیرانی</span></a><a href="#admin-vehicle-classes">${navIcon('vehicles')}<span>کلاس‌های تعرفه خودرو</span></a><a href="#admin-sepand">${navIcon('drivers')}<span>ورود اطلاعات سپند</span></a></div></details>`+
-   `<button type="button" class="nav sy-admin-impersonation-trigger" id="syOpenImpersonation" title="ورود نیابت">${navIcon('drivers')}<span>ورود نیابت</span><span class="sy-nav-action-arrow" aria-hidden="true">↗</span></button>`;
-  $('syOpenImpersonation').onclick=()=>{document.querySelector('.sidebar')?.classList.remove('nav-open');if($('navigationShade'))$('navigationShade').hidden=true;openAdminImpersonationDialog();};
+   `<button type="button" class="nav sy-admin-impersonation-trigger" id="syOpenImpersonation" title="ورود نیابتی به پنل شرکت">${navIcon('company')}<span>ورود نیابتی به پنل شرکت</span><span class="sy-nav-action-arrow" aria-hidden="true">↗</span></button>`+
+   `<button type="button" class="nav sy-admin-impersonation-trigger" id="syOpenParentImpersonation" title="ورود نیابتی به پنل والدین">${navIcon('students')}<span>ورود نیابتی به پنل والدین</span><span class="sy-nav-action-arrow" aria-hidden="true">↗</span></button>`+
+   `<button type="button" class="nav sy-admin-impersonation-trigger" id="syOpenDriverImpersonation" title="ورود نیابتی به پنل رانندگان">${navIcon('drivers')}<span>ورود نیابتی به پنل رانندگان</span><span class="sy-nav-action-arrow" aria-hidden="true">↗</span></button>`;
+  [['syOpenImpersonation','company'],['syOpenParentImpersonation','parent'],['syOpenDriverImpersonation','driver']].forEach(([id,type])=>{
+   $(id).onclick=()=>{document.querySelector('.sidebar')?.classList.remove('nav-open');if($('navigationShade'))$('navigationShade').hidden=true;openAdminImpersonationDialog(type);};
+  });
  }else{
   $('nav').innerHTML=`<a class="nav" href="#dashboard" title="داشبورد">${samarMenuIcon('dashboard')}<span>داشبورد</span></a>`+menus.map(([icon,title,items])=>{const visible=items.filter(([key])=>can(key.split('/')[0],(key.endsWith('/new')||key.endsWith('/quick')||key.endsWith('/fees')||key==='driver-assignment')?'manage':'view'));return visible.length?`<details class="nav-group"><summary title="${esc(title)}">${samarMenuIcon(icon)}<span>${esc(title)}</span></summary><div class="nav-popup" aria-label="${esc(title)}">${visible.map(([key,text])=>`<a href="#${key}" aria-label="${esc(text)}">${samarMenuIcon(key)}<span>${esc(text)}</span></a>`).join('')}</div></details>`:''}).join('');
   document.getElementById('quickReceipt')?.remove();
@@ -3882,12 +3886,18 @@ async function adminSectionPage(key,token){
  content.classList.add('sy-super-admin-workspace');
 }
 
-async function openAdminImpersonationDialog(){
+async function openAdminImpersonationDialog(panelType='company'){
+ if(!['company','parent','driver'].includes(panelType))return;
+ const panelInfo={
+  company:{title:'ورود نیابتی به پنل شرکت',description:'ابتدا شرکت را انتخاب کنید؛ سپس یکی از کاربران مدیریتی همان شرکت را برای ورود نیابتی برگزینید.',userTitle:'کاربر شرکت',placeholder:'نام، نام خانوادگی یا نام کاربری مدیر شرکت…',empty:'کاربر مدیریتی فعالی در این شرکت پیدا نشد.',button:'ورود به پنل شرکت'},
+  parent:{title:'ورود نیابتی به پنل والدین',description:'شرکت ارائه‌دهنده سرویس را انتخاب کنید؛ سپس از میان حساب‌های تأییدشده والدین آن شرکت، ولی موردنظر را جستجو کنید. دسترسی صرفاً مشاهده‌ای است.',userTitle:'ولی دانش‌آموز',placeholder:'نام ولی، شماره همراه یا نام کاربری…',empty:'حساب والد تأییدشده‌ای برای این شرکت یافت نشد.',button:'مشاهده پنل ولی'},
+  driver:{title:'ورود نیابتی به پنل رانندگان',description:'شرکت را انتخاب کنید؛ سپس راننده دارای حساب تأییدشده همان شرکت را جستجو کنید. دسترسی صرفاً مشاهده‌ای است.',userTitle:'راننده',placeholder:'نام راننده، شماره همراه یا نام کاربری…',empty:'حساب راننده تأییدشده‌ای برای این شرکت یافت نشد.',button:'مشاهده پنل راننده'}
+ }[panelType];
  if(!session?.roles?.includes('super_admin')||session?.impersonation)return;
  const returnFocus=document.activeElement instanceof HTMLElement?document.activeElement:null;
  const previous=document.getElementById('syAdminImpersonationModal');previous?.__syClose?.();previous?.remove();
- const overlay=document.createElement('div');overlay.id='syAdminImpersonationModal';overlay.className='sy-admin-impersonation-overlay';
- overlay.innerHTML='<section class="sy-admin-impersonation-dialog" role="dialog" aria-modal="true" tabindex="-1" aria-labelledby="syImpersonationTitle" aria-describedby="syImpersonationDescription"><header><div><span class="sy-admin-eyebrow">دسترسی مدیریتی امن</span><h2 id="syImpersonationTitle">ورود نیابت به پنل شرکت، والدین و رانندگان</h2><p id="syImpersonationDescription">شرکت را انتخاب کنید؛ سپس با فیلتر نقش، مدیران شرکت، والدین یا رانندگان را پیدا کنید. ورود نیابتی والدین و رانندگان فقط برای مشاهده است.</p></div><button type="button" class="sy-admin-modal-close" aria-label="بستن پنجره">×</button></header><div class="sy-impersonation-steps"><span class="active" data-step-indicator="company">۱. انتخاب شرکت</span><i></i><span data-step-indicator="user">۲. انتخاب کاربر</span></div><div class="sy-impersonation-body"><div data-company-step><label class="sy-impersonation-search"><span>جستجوی شرکت</span><input type="search" id="syImpersonationCompanySearch" placeholder="نام شرکت، کد یا شناسه را وارد کنید…" autocomplete="off"></label><div id="syImpersonationCompanies" class="sy-impersonation-results" aria-live="polite">در حال دریافت فهرست شرکت‌ها…</div></div><div data-user-step hidden><button type="button" id="syImpersonationBack" class="sy-impersonation-back">→ انتخاب شرکت دیگر</button><div class="sy-impersonation-selected-company" id="syImpersonationSelectedCompany"></div><label class="sy-impersonation-search"><span>جستجوی کاربر</span><input type="search" id="syImpersonationUserSearch" placeholder="نام، نام خانوادگی یا نام کاربری…" autocomplete="off"></label><label class="sy-impersonation-search"><span>نوع پنل</span><select id="syImpersonationRoleFilter" aria-label="فیلتر پنل ورود نیابتی"><option value="all">همه کاربران شرکت</option><option value="parent">والدین دانش‌آموزان</option><option value="driver">رانندگان سرویس مدارس</option><option value="staff">کاربران مدیریتی شرکت</option></select></label><div id="syImpersonationUsers" class="sy-impersonation-results" aria-live="polite"></div><div id="syImpersonationConfirm" class="sy-impersonation-confirm" hidden><div><b id="syImpersonationChosenName"></b><p id="syImpersonationChosenDetails"></p><small>تمام عملیات بعدی با مجوزهای این کاربر و در محدوده همین شرکت انجام می‌شود. ورود نیابتی در سوابق مدیریتی ثبت خواهد شد.</small></div><button type="button" class="primary" id="syImpersonationStart">ورود به پنل کاربر</button></div></div><p class="sy-impersonation-error" id="syImpersonationError" role="alert" hidden></p></div><footer><span>نشست اصلی ادمین کل حفظ می‌شود و هر زمان می‌توانید بازگردید.</span><button type="button" class="secondary" data-close>انصراف</button></footer></section>';
+ const overlay=document.createElement('div');overlay.id='syAdminImpersonationModal';overlay.className='sy-admin-impersonation-overlay sy-admin-impersonation-'+panelType;overlay.dataset.panelType=panelType;
+ overlay.innerHTML=`<section class="sy-admin-impersonation-dialog" role="dialog" aria-modal="true" tabindex="-1" aria-labelledby="syImpersonationTitle" aria-describedby="syImpersonationDescription"><header><div><span class="sy-admin-eyebrow">دسترسی مدیریتی امن</span><h2 id="syImpersonationTitle">${esc(panelInfo.title)}</h2><p id="syImpersonationDescription">${esc(panelInfo.description)}</p></div><button type="button" class="sy-admin-modal-close" aria-label="بستن پنجره">×</button></header><div class="sy-impersonation-steps"><span class="active" data-step-indicator="company">۱. انتخاب شرکت</span><i></i><span data-step-indicator="user">۲. انتخاب کاربر</span></div><div class="sy-impersonation-body"><div data-company-step><label class="sy-impersonation-search"><span>جستجوی شرکت</span><input type="search" id="syImpersonationCompanySearch" placeholder="نام شرکت، کد یا شناسه را وارد کنید…" autocomplete="off"></label><div id="syImpersonationCompanies" class="sy-impersonation-results" aria-live="polite">در حال دریافت فهرست شرکت‌ها…</div></div><div data-user-step hidden><button type="button" id="syImpersonationBack" class="sy-impersonation-back">→ انتخاب شرکت دیگر</button><div class="sy-impersonation-selected-company" id="syImpersonationSelectedCompany"></div><label class="sy-impersonation-search"><span>جستجوی ${esc(panelInfo.userTitle)}</span><input type="search" id="syImpersonationUserSearch" placeholder="${esc(panelInfo.placeholder)}" autocomplete="off"></label><div class="sy-impersonation-fixed-role" role="note">${esc(panelInfo.userTitle)} · فهرست محدود به همین نقش</div><div id="syImpersonationUsers" class="sy-impersonation-results" aria-live="polite"></div><div id="syImpersonationConfirm" class="sy-impersonation-confirm" hidden><div><b id="syImpersonationChosenName"></b><p id="syImpersonationChosenDetails"></p><small>${panelType==='company'?'عملیات بر اساس مجوزهای کاربر شرکت انجام می‌شود.':'پنل صرفاً برای مشاهده است و امکان ویرایش یا انجام تراکنش وجود ندارد.'} ورود نیابتی ثبت و قابل پیگیری است.</small></div><button type="button" class="primary" id="syImpersonationStart">${esc(panelInfo.button)}</button></div></div><p class="sy-impersonation-error" id="syImpersonationError" role="alert" hidden></p></div><footer><span>نشست اصلی ادمین کل حفظ می‌شود و هر زمان می‌توانید بازگردید.</span><button type="button" class="secondary" data-close>انصراف</button></footer></section>`;
  document.body.append(overlay);document.body.classList.add('sy-admin-modal-open');
  const dialog=overlay.querySelector('.sy-admin-impersonation-dialog');
  const focusableSelector='button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])';
@@ -3913,7 +3923,7 @@ async function openAdminImpersonationDialog(){
  overlay.addEventListener('click',event=>{if(event.target===overlay)close();});
  const companyStep=overlay.querySelector('[data-company-step]'),userStep=overlay.querySelector('[data-user-step]'),
   companySearch=overlay.querySelector('#syImpersonationCompanySearch'),companiesBox=overlay.querySelector('#syImpersonationCompanies'),
-  userSearch=overlay.querySelector('#syImpersonationUserSearch'),roleFilter=overlay.querySelector('#syImpersonationRoleFilter'),usersBox=overlay.querySelector('#syImpersonationUsers'),
+  userSearch=overlay.querySelector('#syImpersonationUserSearch'),usersBox=overlay.querySelector('#syImpersonationUsers'),
   errorBox=overlay.querySelector('#syImpersonationError'),confirmBox=overlay.querySelector('#syImpersonationConfirm'),
   startButton=overlay.querySelector('#syImpersonationStart');
  const normalize=value=>String(value||'').replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').replace(/[\u200c\s]+/g,' ').trim().toLocaleLowerCase('fa');
@@ -3930,11 +3940,10 @@ async function openAdminImpersonationDialog(){
   const term=normalize(userSearch.value);
   const list=users.filter(u=>{
    const roles=normalize(u.roles),parent=roles.includes('ولی دانش‌آموز'),driver=roles.includes('راننده سرویس مدارس');
-   const selected=roleFilter.value;
-   return (selected==='all'||(selected==='parent'&&parent)||(selected==='driver'&&driver)||(selected==='staff'&&!parent&&!driver))
-     &&normalize([u.username,u.first_name,u.last_name,u.roles].join(' ')).includes(term);
+   const isRole=panelType==='parent'?parent:panelType==='driver'?driver:!parent&&!driver;
+   return isRole&&normalize([u.username,u.first_name,u.last_name,u.roles].join(' ')).includes(term);
   });
-  usersBox.innerHTML=list.length?list.map(u=>'<button type="button" class="sy-impersonation-result" data-user="'+Number(u.id)+'"><span class="sy-impersonation-result-avatar sy-user-avatar">'+esc((u.first_name||u.username||'ک').trim().slice(0,1))+'</span><span><b>'+esc(((u.first_name||'')+' '+(u.last_name||'')).trim()||u.username)+'</b><small>'+esc(u.username)+' · '+esc(u.roles||'بدون نقش')+'</small></span><em>فعال</em><i aria-hidden="true">←</i></button>').join(''):'<div class="sy-impersonation-empty">کاربر فعالی برای این شرکت یا جستجوی شما پیدا نشد.</div>';
+  usersBox.innerHTML=list.length?list.map(u=>'<button type="button" class="sy-impersonation-result" data-user="'+Number(u.id)+'"><span class="sy-impersonation-result-avatar sy-user-avatar">'+esc((u.first_name||u.username||'ک').trim().slice(0,1))+'</span><span><b>'+esc(((u.first_name||'')+' '+(u.last_name||'')).trim()||u.username)+'</b><small>'+esc(u.username)+' · '+esc(u.roles||'بدون نقش')+'</small></span><em>فعال</em><i aria-hidden="true">←</i></button>').join(''):'<div class="sy-impersonation-empty">'+esc(panelInfo.empty)+'</div>';
   usersBox.querySelectorAll('[data-user]').forEach(button=>button.onclick=()=>chooseUser(Number(button.dataset.user)));
  };
  const selectCompany=async id=>{
@@ -3944,7 +3953,7 @@ async function openAdminImpersonationDialog(){
   overlay.querySelector('[data-step-indicator="company"]').classList.remove('active');
   overlay.querySelector('[data-step-indicator="user"]').classList.add('active');
   overlay.querySelector('#syImpersonationSelectedCompany').textContent='شرکت انتخاب‌شده: '+selectedCompany.name;
-  users=[];usersBox.textContent='در حال دریافت کاربران شرکت، والدین و رانندگان…';userSearch.value='';roleFilter.value='all';confirmBox.hidden=true;selectedUser=null;
+  users=[];usersBox.textContent='در حال دریافت '+panelInfo.userTitle+'…';userSearch.value='';confirmBox.hidden=true;selectedUser=null;
   try{
    const data=await api('/api/v1/admin/impersonation/users?agencyId='+encodeURIComponent(id));
    if(!overlay.isConnected||requestSequence!==companyLoadSequence||Number(selectedCompany?.id)!==id)return;
@@ -3967,15 +3976,15 @@ async function openAdminImpersonationDialog(){
   overlay.querySelector('[data-step-indicator="user"]').classList.remove('active');
   confirmBox.hidden=true;showError('');renderCompanies();companySearch.focus();
  };
- companySearch.addEventListener('input',renderCompanies);userSearch.addEventListener('input',()=>{confirmBox.hidden=true;selectedUser=null;renderUsers();});roleFilter.addEventListener('change',()=>{selectedUser=null;confirmBox.hidden=true;renderUsers();});
+ companySearch.addEventListener('input',renderCompanies);userSearch.addEventListener('input',()=>{confirmBox.hidden=true;selectedUser=null;renderUsers();});
  companySearch.focus();
  startButton.onclick=async()=>{
   if(!selectedCompany||!selectedUser)return;
   startButton.disabled=true;startButton.textContent='در حال ورود امن به پنل کاربر…';showError('');
   try{
-   await api('/api/v1/admin/impersonation/start',{method:'POST',headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify({agencyId:Number(selectedCompany.id),userId:Number(selectedUser.id)})});
+   await api('/api/v1/admin/impersonation/start',{method:'POST',headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify({agencyId:Number(selectedCompany.id),userId:Number(selectedUser.id),panelType})});
    close();history.replaceState(history.state,'',location.pathname+location.search+'#dashboard');await boot();
-  }catch(error){showError(error.message||'ورود نیابتی ناموفق بود.');startButton.disabled=false;startButton.textContent='ورود به پنل کاربر';}
+  }catch(error){showError(error.message||'ورود نیابتی ناموفق بود.');startButton.disabled=false;startButton.textContent=panelInfo.button;}
  };
  try{
   const data=await api('/api/v1/admin/overview');
