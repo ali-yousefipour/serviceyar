@@ -306,5 +306,51 @@
    };
    render();
  }
- window.serviceyarPortal={mount,selectPortalRoute,renderDriverInspection};
+ /**
+  * Full application-shell inspection: the main sidebar, dashboard, routes and
+  * page content are the exact same renderers as the driver portal. The browser
+  * stays authenticated as the platform admin and never impersonates an
+  * unverified user. Exiting reloads the original super-admin workspace.
+  */
+ function mountAdminDriverInspection(payload){
+   if(payload?.portalType!=='driver'||!payload?.previewOnly||
+      !Number(payload.agency?.id)||!Number(payload.driver?.id))
+     throw Error('اطلاعات پنل راننده معتبر نیست.');
+   // A valid admin response is obtained separately from a restricted GET API.
+   current={portalType:'driver',agencyId:Number(payload.agency.id),partyId:Number(payload.driver.id)};
+   data=payload;impersonated=true;representativeSchools=[];
+   window.serviceyarAdminDriverInspection=true;
+   const app=el('app');app.classList.add('sy-portal-mode','sy-admin-driver-inspection-mode');
+   const nav=el('nav');nav.replaceChildren();
+   const account=el('syAccountMenu');if(account){account.open=false;account.hidden=true;}
+   const picker=el('agencyPickerWrap');if(picker)picker.hidden=true;
+   const brand=document.querySelector('.sy-sidebar-brand-copy small');
+   if(brand)brand.textContent='پنل راننده · '+(payload.agency?.name||'سرویس‌یار');
+   const name=el('syAccountName');if(name)name.textContent=person(payload.driver);
+   const role=el('syAccountRole');if(role)role.textContent='مشاهده نیابتی توسط مدیر کل';
+   const avatar=el('syAccountAvatar');if(avatar)avatar.textContent='ر';
+   const headReturn=el('syAdminReturn');
+   const restore=()=>{window.location.replace(window.location.pathname+window.location.search+'#admin-dashboard');window.location.reload();};
+   if(headReturn){headReturn.hidden=false;headReturn.textContent='بازگشت به پنل مدیر کل';headReturn.onclick=restore;}
+   const logout=el('logout');if(logout){logout.textContent='بازگشت به پنل مدیر کل';logout.onclick=restore;}
+   el('content').innerHTML='<div class="sy-portal-content"><div class="sy-portal-impersonation-notice">'+
+      'مشاهده پنل واقعی راننده توسط مدیر کل · فقط خواندنی؛ نشست راننده تغییر نمی‌کند.'+
+      '</div><div id="portalContent"></div></div>';
+   for(const [key,title,symbol] of menuLinks()){
+     const button=document.createElement('button');
+     button.type='button';button.className='nav sy-portal-nav';button.dataset.page=key;
+     button.innerHTML='<span class="sy-portal-nav-icon">'+esc(symbol)+'</span><span>'+esc(title)+'</span>';
+     button.onclick=()=>{
+       history.replaceState(history.state,'',location.pathname+location.search+'#portal-'+key);
+       selectSection(key);
+       document.querySelector('.sidebar')?.classList.remove('nav-open');
+       if(el('navigationShade'))el('navigationShade').hidden=true;
+       if(el('navigationToggle'))el('navigationToggle').setAttribute('aria-expanded','false');
+     };
+     nav.append(button);
+   }
+   section='overview';history.replaceState(history.state,'',location.pathname+location.search+'#portal-overview');
+   selectSection('overview');
+ }
+ window.serviceyarPortal={mount,selectPortalRoute,renderDriverInspection,mountAdminDriverInspection};
 })();
