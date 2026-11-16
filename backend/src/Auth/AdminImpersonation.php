@@ -107,6 +107,32 @@ final class AdminImpersonation
         $company=$agency->fetch(PDO::FETCH_ASSOC);
         if(!$company)throw new AuthException(404,'شرکت فعال موردنظر پیدا نشد.','AGENCY_NOT_FOUND');
 
+        if($panelType==='parent'){
+            // Student-scoped parent candidates, including guardians without a
+            // verified portal account. Never create memberships on inspection.
+            $q=$pdo->prepare("SELECT st.id studentId,st.first_name studentFirstName,
+              st.last_name studentLastName,g.id guardianId,g.name guardianName,
+              g.mobile username,g.mobile,
+              u.id id,u.last_login_at,
+              CASE WHEN u.id IS NULL THEN 0 ELSE 1 END portalReady,
+              CASE WHEN u.id IS NULL THEN 'ولی · بدون حساب تأییدشده'
+                ELSE 'ولی · حساب فعال' END roles,
+              g.name first_name,CONCAT('ولی ',st.first_name,' ',st.last_name) last_name
+              FROM students st JOIN agencies a ON a.id=st.agency_id AND a.is_active=1
+              JOIN guardians g ON g.student_id=st.id
+              LEFT JOIN portal_memberships pm ON pm.agency_id=st.agency_id
+                AND pm.party_type='parent' AND pm.party_id=st.id
+              LEFT JOIN users u ON u.id=pm.user_id AND u.is_active=1
+                AND (u.mobile=g.mobile OR u.mobile=CONCAT('0',SUBSTRING(g.mobile,3))
+                     OR g.mobile=CONCAT('98',SUBSTRING(u.mobile,2)))
+                AND NOT EXISTS(SELECT 1 FROM user_roles ur JOIN roles r ON r.id=ur.role_id
+                  WHERE ur.user_id=u.id AND r.name='super_admin')
+              WHERE st.agency_id=? AND st.is_active=1
+              ORDER BY st.last_name,st.first_name,g.is_primary DESC,g.id");
+            $q->execute([$agencyId]);
+            return ['agency'=>['id'=>(int)$company['id'],'name'=>$company['name']],
+               'users'=>$q->fetchAll(PDO::FETCH_ASSOC)];
+        }
         if($panelType==='driver'){
             // List actual active company drivers, even if Bale portal enrollment has
             // not happened yet. Never fabricate a verified account or membership.
