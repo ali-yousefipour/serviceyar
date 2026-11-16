@@ -56,7 +56,7 @@ final class PayrollDocuments
     {
         Authorization::requirePermission($uid,'finance.manage');Authorization::requireAgencyAccess($uid,$aid);[$from,$to]=OperationsService::range($body);$lines=$body['lines']??null;
         if(!is_array($lines)||!count($lines)||count($lines)>200)throw new AuthException(422,'بین ۱ تا ۲۰۰ راننده انتخاب کنید.','VALIDATION_ERROR');
-        return OperationsService::transaction(function(PDO $p)use($uid,$aid,$from,$to,$lines){
+        return OperationsService::transaction(function(PDO $p)use($uid,$aid,$from,$to,$lines,$body){
             $q=$p->prepare('SELECT id FROM agencies WHERE id=:a FOR UPDATE');$q->execute(['a'=>$aid]);
             $q=$p->prepare('SELECT id FROM payroll_documents WHERE agency_id=:a AND date_from=:f AND date_to=:t');$q->execute(['a'=>$aid,'f'=>$from,'t'=>$to]);if($q->fetchColumn())throw new AuthException(409,'برای این بازه سند حقوق ثبت شده است.','PAYROLL_EXISTS');
             $mode=$body['calculationMode']??'recorded';
