@@ -33,7 +33,7 @@ assert.match(routes,/admin\/impersonation\/representative-debtors/,'Scoped debto
 assert.match(reps,/function adminSchools\(/,'Representative school authorization');
 assert.match(reps,/function adminReport\(/,'Representative debtors authorization');
 assert.match(operations,/openParentInspection/,'Parent choice opens correct panel');
-assert.match(operations,/guardianId=\+encodeURIComponent\(guardian\.guardianId\)/,'Correct selected guardian is sent');
+assert.match(operations,/guardianId='\+encodeURIComponent\(guardian\.guardianId\)/,'Correct selected guardian is sent');
 assert.match(app,/serviceyarAdminDriverInspection/,'Admin session protected during return');
 new Function(portal);new Function(operations);
 console.log('Portal mobile UX, representative reports, parent inspection and portrait contracts: OK');
