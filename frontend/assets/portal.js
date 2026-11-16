@@ -20,7 +20,7 @@
  }
  function menuLinks(){
    if(current.portalType==='representative')return [['overview','نمای کلی','◈'],['debtors','گزارش بدهکاران','▦']];
-   return [['overview','نمای کلی','◈'],['services',current.portalType==='parent'?'سرویس فرزند':'مدارس و دانش‌آموزان','▤'],...(current.portalType==='driver'&&representativeSchools.length?[['debtors','گزارش بدهکاران','▦']]:[]),['finance','امور مالی','﷼'],['profile',impersonated?'مشاهده مشخصات':'اطلاعات و ویرایش','♧'],...(!impersonated?[['password','تنظیم رمز عبور','◇']]:[])];
+   return [['overview','نمای کلی','◈'],['services',current.portalType==='parent'?'سرویس فرزند':'مدارس و دانش‌آموزان','▤'],...(current.portalType==='driver'&&(data?.representative||representativeSchools.length)?[['debtors','گزارش بدهکاران','▦']]:[]),['finance','امور مالی','﷼'],['profile',impersonated?'مشاهده مشخصات':'اطلاعات و ویرایش','♧'],...(!impersonated?[['password','تنظیم رمز عبور','◇']]:[])];
  }
  function portalNavIcon(key){
    const paths={
@@ -105,7 +105,8 @@
      table(['تاریخ','مبلغ','روش','شماره پیگیری'],(f.payments||[]).map(x=>[date(x.payment_date),money(x.amount),x.method||'—',x.reference_no||'—']))+'</section>';
  }
  function renderDebtors(){
-   if(!['driver','representative'].includes(current.portalType)||!representativeSchools.length)return '<section class="portal-panel">دسترسی نمایندگی فعال نیست.</section>';
+   if(!['driver','representative'].includes(current.portalType))return '<section class="portal-panel">این قسمت مخصوص نمایندگان مدارس است.</section>';
+   if(!representativeSchools.length)return '<section class="portal-panel"><h2>گزارش بدهکاران</h2><p>هنوز مدرسه‌ای برای این نماینده تعریف نشده است. مدیر شرکت می‌تواند دسترسی مدارس را از بخش مدیریت نمایندگان تنظیم کند.</p></section>';
    const yr=Number(normal(new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',timeZone:'Asia/Tehran'}).format(new Date())));
    return '<div class="portal-section-title"><h1>گزارش بدهکاران</h1><p>صرفاً مدارس مجاز در شرکت انتخاب‌شده</p></div>'+
      '<section class="portal-panel"><form id="representativeDebtorsForm" class="portal-profile-form">'+
