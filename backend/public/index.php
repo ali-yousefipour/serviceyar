@@ -284,6 +284,18 @@ try {
  if($method==='GET'&&$path==='/api/v1/auth/me'){ header('Cache-Control: private, no-store, max-age=0'); $s=$auth->current();$rs=Connection::get()->prepare('SELECT r.name FROM roles r JOIN user_roles ur ON ur.role_id=r.id WHERE ur.user_id=:u ORDER BY r.id');$rs->execute(['u'=>$s['id']]);Response::json(['ok'=>true,'data'=>['user'=>['id'=>$s['id'],'uuid'=>$s['uuid'],'username'=>$s['username'],'firstName'=>$s['firstName'],'lastName'=>$s['lastName']],'roles'=>$rs->fetchAll(\PDO::FETCH_COLUMN),'permissions'=>Authorization::permissions($s['id']),'agencies'=>AgencyService::sessionList($s['id']),'csrfToken'=>$s['csrfToken'],'impersonation'=>$s['impersonation']??null]]); }
  if($method==='GET'&&$path==='/api/v1/auth/csrf'){ $s=$auth->current();Response::json(['ok'=>true,'data'=>['csrfToken'=>$s['csrfToken']]]); }
  $s=$auth->current(); $aid=null;
+ // Portal impersonation is observation-only across the *entire* API, including
+ // generic /auth/profile, photo, payment, password and accounting endpoints.
+ // Existing staff impersonation continues to use its normal authorized scope.
+ if(!empty($s['impersonation'])&&!in_array($method,['GET','HEAD','OPTIONS'],true)
+    &&$path!=='/api/v1/admin/impersonation/stop'){
+   $rq=Connection::get()->prepare('SELECT r.name FROM roles r
+      JOIN user_roles ur ON ur.role_id=r.id WHERE ur.user_id=?');
+   $rq->execute([(int)$s['id']]);$roles=$rq->fetchAll(\PDO::FETCH_COLUMN);
+   if($roles&&!array_diff($roles,['parent_portal','driver_portal']))
+     throw new AuthException(403,'ورود نیابتی والدین و رانندگان فقط برای مشاهده است؛ هیچ تغییری در اطلاعات، حساب یا امور مالی مجاز نیست.','IMPERSONATION_READ_ONLY');
+ }
+
  // Separate, capability-scoped parent/driver portal. Party IDs are always
  // authorized against the authenticated Bale-verified membership server-side.
  if($path==='/api/v1/portal/memberships'&&$method==='GET'){
