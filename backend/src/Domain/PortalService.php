@@ -292,6 +292,8 @@ final class PortalService {
         foreach($services as $r)$monthlyServices[(int)$r['id']]=['id'=>(int)$r['id'],
             'title'=>$r['title'],'code'=>$r['code'],'monthlyFee'=>$r['monthly_fee']];
         $base['representative']=((int)($driver['is_representative']??0)===1);
+        $base['representativeSchools']=((int)($driver['is_representative']??0)===1 && $preview)
+          ?SchoolRepresentatives::adminSchools($uid,$agencyId,$partyId):[];
         return $base+['driver'=>$driver,'students'=>$services,'services'=>array_values($monthlyServices),
             'finance'=>['earnings'=>$earnings,'payments'=>$payments,'recordedGross'=>$gross,
                'recordedNet'=>$net,'paid'=>$paid,'balance'=>max(0,$net-$paid),
