@@ -368,8 +368,9 @@ try {
    header('Cache-Control: private, no-store');
    $agencyId=filter_var($_GET['agencyId']??null,FILTER_VALIDATE_INT);
    $studentId=filter_var($_GET['studentId']??null,FILTER_VALIDATE_INT);
-   if(!$agencyId||!$studentId)throw new AuthException(422,'شرکت یا دانش‌آموز معتبر نیست.','VALIDATION_ERROR');
-   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\PortalService::adminParentPreview((int)$s['id'],(int)$agencyId,(int)$studentId)]);
+   $guardianId=filter_var($_GET['guardianId']??null,FILTER_VALIDATE_INT);
+   if(!$agencyId||!$studentId||!$guardianId)throw new AuthException(422,'شرکت، ولی یا دانش‌آموز معتبر نیست.','VALIDATION_ERROR');
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\PortalService::adminParentPreview((int)$s['id'],(int)$agencyId,(int)$studentId,(int)$guardianId)]);
  }
  if($path==='/api/v1/admin/impersonation/driver-preview'&&$method==='GET'){
    header('Cache-Control: private, no-store');
