@@ -364,6 +364,39 @@ try {
    if(!$aid||!$did)throw new AuthException(422,'راننده یا شرکت معتبر نیست.','VALIDATION_ERROR');
    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolRepresentatives::adminReport((int)$s['id'],(int)$aid,(int)$did,$_GET)]);
  }
+ if($path==='/api/v1/admin/impersonation/driver-profile'&&$method==='PATCH'){
+   $auth->requireCsrf($s);
+   $aid=filter_var($_GET['agencyId']??null,FILTER_VALIDATE_INT);
+   $did=filter_var($_GET['driverId']??null,FILTER_VALIDATE_INT);
+   if(!$aid||!$did)throw new AuthException(422,'شرکت یا راننده نامعتبر است.','VALIDATION_ERROR');
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\PortalService::adminUpdateDriverProfile(
+     (int)$s['id'],(int)$aid,(int)$did,Request::json())]);
+ }
+ if($path==='/api/v1/admin/impersonation/driver-vehicle'&&$method==='PATCH'){
+   $auth->requireCsrf($s);
+   $aid=filter_var($_GET['agencyId']??null,FILTER_VALIDATE_INT);
+   $did=filter_var($_GET['driverId']??null,FILTER_VALIDATE_INT);
+   if(!$aid||!$did)throw new AuthException(422,'شرکت یا راننده نامعتبر است.','VALIDATION_ERROR');
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\PortalService::adminUpdateDriverVehicle(
+     (int)$s['id'],(int)$aid,(int)$did,Request::json())]);
+ }
+ if($path==='/api/v1/admin/impersonation/driver-portrait'||
+    preg_match('#^/api/v1/portal/driver/([0-9]+)/([0-9]+)/portrait$#D',$path,$dp)){
+   $admin=$path==='/api/v1/admin/impersonation/driver-portrait';
+   $aid=$admin?filter_var($_GET['agencyId']??null,FILTER_VALIDATE_INT):(int)$dp[1];
+   $did=$admin?filter_var($_GET['driverId']??null,FILTER_VALIDATE_INT):(int)$dp[2];
+   if(!$aid||!$did)throw new AuthException(422,'شرکت یا راننده نامعتبر است.','VALIDATION_ERROR');
+   if($method==='GET'&&isset($_GET['info'])){
+     header('Cache-Control: private, no-store');
+     Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\DriverPortraits::info((int)$s['id'],(int)$aid,(int)$did,$admin)]);
+   }
+   if($method==='GET')\ServiceYar\Domain\DriverPortraits::stream((int)$s['id'],(int)$aid,(int)$did,$admin);
+   if($method==='POST'){
+     $auth->requireCsrf($s);
+     Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\DriverPortraits::upload(
+       (int)$s['id'],(int)$aid,(int)$did,$admin,$_FILES['photo']??[])]);
+   }
+ }
  if($path==='/api/v1/admin/impersonation/parent-preview'&&$method==='GET'){
    header('Cache-Control: private, no-store');
    $agencyId=filter_var($_GET['agencyId']??null,FILTER_VALIDATE_INT);
