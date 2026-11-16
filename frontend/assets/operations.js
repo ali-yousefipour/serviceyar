@@ -3412,16 +3412,6 @@ $('transportSettings').onsubmit=async e=>{e.preventDefault();try{await write('/a
   if(child===nav||child===deductionPanel||child===tariffPanel||child.id==='modal')return;
   child.dataset.settingsTab=child.classList.contains('sy-payment-method-settings')?'methods':child.querySelector('#financialRulesForm')?'finance':child.querySelector('#companyUserRows,#holidayRows')?'people':'general';
  });
- result.querySelectorAll('[data-payroll-service-days]').forEach(input=>input.addEventListener('change',async()=>{
-  const id=String(input.dataset.payrollServiceDays),days=Number(input.value);
-  if(!Number.isInteger(days)||days<0||days>30){notify('روزهای خدمت باید از صفر تا ۳۰ باشد.',true);return;}
-  payrollServiceDays[id]=days;input.disabled=true;
-  try{
-   const query='?from='+encodeURIComponent(data.from)+'&to='+encodeURIComponent(data.to)+'&calculationMode='+encodeURIComponent(data.calculationMode)+'&serviceDays='+encodeURIComponent(JSON.stringify(payrollServiceDays));
-   const fresh=await api(scoped('/api/v1/operations/payroll'+query));
-   if(token===pageToken)await renderPayroll(fresh,token);
-  }catch(e){notify('محاسبه روزهای سرویس: '+e.message,true);input.disabled=false;}
- }));
  const selectTab=tab=>{nav.querySelectorAll('button').forEach(btn=>{const selected=btn.dataset.settingsSwitch===tab;btn.classList.toggle('active',selected);btn.setAttribute('aria-selected',String(selected));});$('content').querySelectorAll('[data-settings-tab]').forEach(panel=>panel.hidden=panel.dataset.settingsTab!==tab);};
  nav.querySelectorAll('button').forEach(btn=>btn.onclick=()=>selectTab(btn.dataset.settingsSwitch));
  selectTab('general');
@@ -3563,6 +3553,16 @@ async function renderPayroll(data,token){
  (rowHtml||'<tr><td colspan="8" class="sy-payroll-empty">راننده‌ای در بازه انتخابی یافت نشد.</td></tr>')+'</tbody></table></div><p id="payrollNoDrivers" class="sy-payroll-empty" hidden>راننده‌ای مطابق جست‌وجو یافت نشد.</p>'+
  '<footer class="sy-payroll-selection"><p id="payrollTotal" role="status" aria-live="polite"></p>'+(can('payroll','manage')?'<button class="primary" type="button" id="createPayrollDocument">ثبت سند حقوق انتخاب‌شده</button>':'')+'</footer></section>'+
  '<section id="payrollDocsPane" role="tabpanel" aria-labelledby="payrollDocsTab" hidden><div id="payrollDocuments" aria-live="polite"></div></section></div>';
+ result.querySelectorAll('[data-payroll-service-days]').forEach(input=>input.addEventListener('change',async()=>{
+  const id=String(input.dataset.payrollServiceDays),days=Number(input.value);
+  if(!Number.isInteger(days)||days<0||days>30){notify('روزهای خدمت باید از صفر تا ۳۰ باشد.',true);return;}
+  payrollServiceDays[id]=days;input.disabled=true;
+  try{
+   const query='?from='+encodeURIComponent(data.from)+'&to='+encodeURIComponent(data.to)+'&calculationMode='+encodeURIComponent(data.calculationMode)+'&serviceDays='+encodeURIComponent(JSON.stringify(payrollServiceDays));
+   const fresh=await api(scoped('/api/v1/operations/payroll'+query));
+   if(token===pageToken)await renderPayroll(fresh,token);
+  }catch(e){notify('محاسبه روزهای سرویس: '+e.message,true);input.disabled=false;}
+ }));
  const selectTab=tab=>{
   const show=tab==='drivers';$('payrollDriversPane').hidden=!show;$('payrollDocsPane').hidden=show;
   $('payrollDriversTab').setAttribute('aria-selected',String(show));$('payrollDocsTab').setAttribute('aria-selected',String(!show));
