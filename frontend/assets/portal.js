@@ -101,14 +101,15 @@
      '<label>انتخاب مدرسه<select name="schoolId" required>'+representativeSchools.map(s=>'<option value="'+Number(s.id)+'">'+esc(s.name)+'</option>').join('')+'</select></label>'+
      '<label>سال تحصیلی<input name="academicYear" required value="'+esc(String(yr)+'/'+String(yr+1))+'" placeholder="۱۴۰۵/۱۴۰۶"></label>'+
      '<label>نام دانش‌آموز<input name="student" type="search"></label>'+
-     '<label>حداقل بدهی (ریال)<input name="minDebt" inputmode="numeric"></label>'+
+     '<label>حداقل بدهی (ریال)<input name="minDebt" inputmode="numeric"></label>'+ 
+     '<label>حداکثر بدهی (ریال)<input name="maxDebt" inputmode="numeric"></label>'+
      '<button type="submit" class="primary">نمایش بدهکاران</button></form><div id="repDebtorsSummary" role="status"></div><div id="repDebtorsTable"></div></section>';
  }
  async function loadDebtors(){
    const form=el('representativeDebtorsForm');if(!form)return;
    const status=el('repDebtorsSummary'),target=el('repDebtorsTable');
    const params=new URLSearchParams(new FormData(form));
-   for(const key of ['academicYear','minDebt'])params.set(key,normal(params.get(key)).replace(/\\s/g,'').replace(/[٬,]/g,''));
+   for(const key of ['academicYear','minDebt','maxDebt'])params.set(key,normal(params.get(key)).replace(/\s/g,'').replace(/[٬,]/g,''));
    status.textContent='در حال دریافت اطلاعات…';target.replaceChildren();
    try{
      const report=await api('/api/v1/portal/'+current.portalType+'/'+current.agencyId+'/'+current.partyId+'/debtors?'+params);
