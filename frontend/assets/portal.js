@@ -6,9 +6,12 @@
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const normal=v=>String(v||'').trim().replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-1776)).replace(/[٠-٩]/g,c=>String(c.charCodeAt(0)-1632));
  const date=v=>{if(!v)return '—';const d=new Date(String(v).substring(0,10)+'T12:00:00Z');return Number.isNaN(d.getTime())?esc(v):new Intl.DateTimeFormat('fa-IR-u-ca-persian',{dateStyle:'medium',timeZone:'Asia/Tehran'}).format(d)};
- let csrf='',members=[],current=null,data=null,section='overview',method='bale';
- const loginHtml=el('portalRoot').innerHTML;
- const note=(msg,error=false)=>{const target=el('portalToast');target.textContent=msg;target.className=msg?(error?'visible error':'visible'):'';};
+ let csrf='',members=[],current=null,data=null,section='overview',impersonated=false;
+ const note=(msg,error=false)=>{
+   let target=el('portalToast');
+   if(!target){target=document.createElement('div');target.id='portalToast';target.setAttribute('role','status');document.body.append(target);}
+   target.textContent=msg;target.className=msg?(error?'visible error':'visible'):'';
+ };
  async function api(path,body,verb='GET'){
    const r=await fetch(path,{method:verb,credentials:'same-origin',headers:{Accept:'application/json',...(body?{'Content-Type':'application/json'}:{}),...(csrf&&verb!=='GET'?{'X-CSRF-Token':csrf}:{})},...(body?{body:JSON.stringify(body)}:{})});
    const j=await r.json().catch(()=>({}));
@@ -16,7 +19,7 @@
    return j.data;
  }
  function menuLinks(){
-   return [['overview','نمای کلی','◈'],['services',current.portalType==='parent'?'سرویس فرزند':'مدارس و دانش‌آموزان','▤'],['finance','امور مالی','﷼'],['profile','اطلاعات و ویرایش','♧'],['password','تنظیم رمز عبور','◇']];
+   return [['overview','نمای کلی','◈'],['services',current.portalType==='parent'?'سرویس فرزند':'مدارس و دانش‌آموزان','▤'],['finance','امور مالی','﷼'],['profile',impersonated?'مشاهده مشخصات':'اطلاعات و ویرایش','♧'],...(!impersonated?[['password','تنظیم رمز عبور','◇']]:[])];
  }
  function widget(title,value,hint,link=''){
    return '<article class="portal-kpi"><small>'+esc(title)+'</small><strong>'+esc(value)+'</strong><span>'+esc(hint||'')+'</span></article>';
@@ -90,6 +93,7 @@
    return '<label>'+esc(label)+'<input name="'+name+'" value="'+esc(value||'')+'" '+extra+'></label>';
  }
  function renderProfile(){
+   if(impersonated)return '<section class="portal-panel"><h2>مشاهده اطلاعات در حالت ورود نیابتی</h2><p class="muted">ورود نیابتی ادمین کل فقط برای مشاهده است. تغییر نشانی، اطلاعات بانکی، خودرو یا رمز عبور غیرفعال است.</p></section>';
    const parent=current.portalType==='parent',p=parent?(data.guardian||{}):(data.driver||{});
    const address=parent?data.student?.address:p.address;
    return '<div class="portal-section-title"><h1>اطلاعات حساب و پروفایل</h1><p>ویرایش فقط روی اطلاعات مرتبط با حساب تأییدشده شما انجام می‌شود.</p></div>'+
@@ -142,57 +146,54 @@
        note(r.message);vehicle.reset();}catch(err){note(err.message,true);}finally{button.disabled=false;}
    });
  }
+
  async function openMembership(m){
-   current=m;data=await api('/api/v1/portal/'+m.portalType+'/'+m.agencyId+'/'+m.partyId);
-   const portalName=m.portalType==='parent'?'والدین':'رانندگان';
-   el('portalIdentity').textContent='پنل '+portalName;
-   el('portalRoot').innerHTML='<div class="portal-workspace"><aside class="portal-nav"><div class="portal-user"><img src="/assets/logo.png" alt="" width="48" height="48"><b>'+esc(data.profile?.username||'')+'</b><span>'+esc(m.agencyName)+'</span></div>'+
-    '<nav>'+menuLinks().map(x=>'<button type="button" data-page="'+x[0]+'"><i>'+x[2]+'</i>'+esc(x[1])+'</button>').join('')+'</nav>'+
-    (members.length>1?'<label class="portal-switch-label">تغییر پنل<select id="portalSwitch">'+members.map((x,i)=>'<option value="'+i+'"'+(x===m?' selected':'')+'>'+(x.portalType==='parent'?'والدین':'رانندگان')+' · '+esc(x.agencyName)+' #'+fa(x.partyId)+'</option>').join('')+'</select></label>':'')+
-    '<a class="portal-home-link" href="/">بازگشت به سایت</a></aside><section class="portal-body"><div id="portalContent"></div></section></div>';
-   el('portalRoot').querySelectorAll('[data-page]').forEach(x=>x.addEventListener('click',()=>selectSection(x.dataset.page)));
+   current=m;
+   data=await api('/api/v1/portal/'+m.portalType+'/'+m.agencyId+'/'+m.partyId);
+   const parent=m.portalType==='parent',name=parent?'والدین':'رانندگان';
+   const sidebar=el('nav');sidebar.replaceChildren();
+   const links=menuLinks();
+   links.forEach(([key,title,icon])=>{
+      const button=document.createElement('button');button.type='button';
+      button.className='nav sy-portal-nav';button.dataset.page=key;
+      const symbol=document.createElement('span');symbol.className='sy-portal-nav-icon';symbol.textContent=icon;
+      const caption=document.createElement('span');caption.textContent=title;
+      button.append(symbol,caption);
+      button.onclick=()=>{selectSection(key);document.querySelector('.sidebar')?.classList.remove('nav-open');};
+      sidebar.append(button);
+   });
+   const brand=document.querySelector('.sy-sidebar-brand-copy small');
+   if(brand)brand.textContent='پنل '+name+' · '+m.agencyName;
+   const sideName=el('syAccountName');if(sideName)sideName.textContent=data.profile?.username||'حساب شخصی';
+   const role=el('syAccountRole');if(role)role.textContent=impersonated?'مشاهده نیابتی ادمین کل':('پنل '+name);
+   const avatar=el('syAccountAvatar');if(avatar){avatar.textContent=parent?'و':'ر';avatar.classList.remove('sy-account-avatar-has-photo');}
+   const account=el('syAccountMenu');if(account){account.open=false;account.hidden=true;}
+   const agencyPicker=el('agencyPickerWrap');if(agencyPicker)agencyPicker.hidden=true;
+   const returnButton=el('syAdminReturn');if(returnButton)returnButton.hidden=!impersonated;
+   const logout=el('logout');if(logout)logout.textContent=impersonated?'بازگشت به پنل ادمین کل':'خروج از حساب';
+   el('app').classList.add('sy-portal-mode');
+   const content=el('content');
+   const selector=members.length>1?'<label class="sy-portal-identity-switch">انتخاب فرزند، شرکت یا نقش<select id="portalSwitch">'+members.map((x,i)=>'<option value="'+i+'"'+(x===m?' selected':'')+'>'+(x.portalType==='parent'?'والدین':'رانندگان')+' · '+esc(x.agencyName)+' · '+fa(x.partyId)+'</option>').join('')+'</select></label>':'';
+   content.innerHTML='<div class="sy-portal-content">'+
+     (impersonated?'<div class="sy-portal-impersonation-notice">در حال مشاهده نیابتی پنل '+name+' هستید؛ ویرایش اطلاعات و تغییر رمز غیرفعال است.</div>':'')+
+     selector+'<div id="portalContent"></div></div>';
    if(el('portalSwitch'))el('portalSwitch').onchange=e=>openMembership(members[Number(e.target.value)]).catch(err=>note(err.message,true));
-   el('portalLogout').hidden=false;section='overview';selectSection(section);
-   if(!data.hasPassword)note('برای ورود بعدی می‌توانید از بخش «تنظیم رمز عبور» رمز اختصاصی تعریف کنید.');
+   section='overview';selectSection(section);
+   if(!data.hasPassword&&!impersonated)note('می‌توانید از بخش «تنظیم رمز عبور» رمز اختصاصی برای شماره همراه خود تعریف کنید.');
  }
- async function loadPortal(){
-   const auth=await api('/api/v1/auth/me');csrf=auth.csrfToken;members=await api('/api/v1/portal/memberships');
-   if(!members.length)throw Error('برای این شماره همراه عضویت تأییدشده والدین یا رانندگان یافت نشد. شماره ثبت‌شده در شرکت را بررسی کنید.');
-   const prefer=location.hash.replace('#','');
-   await openMembership(members.find(m=>m.portalType===prefer)||members[0]);
+ function selectPortalRoute(raw){
+   const pages={dashboard:'overview','portal-dashboard':'overview','portal-services':'services','portal-finance':'finance','portal-profile':'profile','portal-password':'password'};
+   if(pages[raw])selectSection(pages[raw]);
  }
- function chooseMethod(next){
-   method=next;const otp=next==='bale';
-   el('methodBale').classList.toggle('active',otp);el('methodPassword').classList.toggle('active',!otp);
-   el('portalCodeLabel').hidden=!otp;el('portalPasswordLabel').hidden=otp;
-   el('portalSend').hidden=!otp;el('portalVerify').disabled=otp;
-   el('portalVerify').textContent=otp?'تأیید کد و ورود':'ورود با رمز';
+ async function mount(authSession){
+   impersonated=Boolean(authSession?.impersonation);
+   const auth=authSession||await api('/api/v1/auth/me');
+   csrf=auth.csrfToken;members=await api('/api/v1/portal/memberships');
+   if(!members.length)throw Error('برای این کاربر عضویت معتبر والدین یا رانندگان ثبت نشده است.');
+   const agency=Number(auth.impersonation?.agencyId||0);
+   const chosen=members.find(x=>agency>0&&Number(x.agencyId)===agency)||
+      members.find(x=>x.portalType==='parent')||members[0];
+   await openMembership(chosen);
  }
- function wireLogin(){
-   el('methodBale').onclick=()=>chooseMethod('bale');
-   el('methodPassword').onclick=()=>chooseMethod('password');
-   el('portalSend').onclick=async()=>{
-     const mobile=normal(el('portalMobile').value);
-     if(!/^09[0-9]{9}$/.test(mobile)){note('شماره همراه باید ۱۱ رقم و با ۰۹ آغاز شود.',true);return;}
-     const button=el('portalSend');button.disabled=true;note('در حال درخواست کد ورود…');
-     try{await api('/api/v1/auth/bale/request',{username:mobile},'POST');
-       el('portalCode').disabled=false;el('portalVerify').disabled=false;
-       note('در صورت تأیید حساب و اتصال بله، کد برای شما ارسال شده است. کد ۵ دقیقه اعتبار دارد.');
-     }catch(e){note(e.message,true);}finally{button.disabled=false;}
-   };
-   el('portalLoginForm').onsubmit=async e=>{
-     e.preventDefault();const mobile=normal(el('portalMobile').value);
-     if(!/^09[0-9]{9}$/.test(mobile)){note('شماره همراه معتبر نیست.',true);return;}
-     const body=method==='bale'?{username:mobile,code:normal(el('portalCode').value)}:{username:mobile,password:el('portalPasswordInput').value};
-     if(method==='bale'&&!/^[0-9]{6}$/.test(body.code)){note('کد ۶ رقمی را وارد کنید.',true);return;}
-     const button=el('portalVerify');button.disabled=true;
-     try{await api((method==='bale'?'/api/v1/auth/bale/verify':'/api/v1/portal/auth/password'),body,'POST');
-       await loadPortal();note('');
-     }catch(err){note(err.message,true);button.disabled=false;}
-   };
- }
- el('portalLogout').onclick=async()=>{try{await api('/api/v1/auth/logout',{},'POST')}catch(e){note(e.message,true)}
-   csrf='';members=[];current=null;data=null;el('portalRoot').innerHTML=loginHtml;el('portalLogout').hidden=true;el('portalIdentity').textContent='';wireLogin();};
- wireLogin();
- api('/api/v1/auth/status').then(s=>s.authenticated?loadPortal():null).catch(()=>{});
+ window.serviceyarPortal={mount,selectPortalRoute};
 })();
