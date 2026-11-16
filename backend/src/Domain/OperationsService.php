@@ -185,8 +185,13 @@ final class OperationsService
     public static function payroll(int $uid,int $aid,array $filter): array
     {
         $p=self::scope($uid,$aid,'finance.view');[$from,$to]=self::range($filter);
+        $estimateRequested=($filter['calculationMode']??'recorded')==='assignment_estimate';
+        if(!in_array(($filter['calculationMode']??'recorded'),['recorded','assignment_estimate'],true))throw new AuthException(422,'روش محاسبه حقوق نامعتبر است.','VALIDATION_ERROR');
+        $periodDays=(new \DateTimeImmutable($from))->diff(new \DateTimeImmutable($to))->days+1;
+        if($estimateRequested&&($periodDays<28||$periodDays>31))throw new AuthException(422,'برآورد ماهانه فقط برای بازه کامل ۲۸ تا ۳۱ روزه مجاز است.','INVALID_ESTIMATE_PERIOD');
         $q=$p->prepare('SELECT d.id,d.first_name,d.last_name,d.mobile,d.iban,d.bank_account,
           (SELECT COALESCE(SUM(w.amount),0) FROM driver_work w WHERE w.driver_id=d.id AND w.agency_id=d.agency_id AND w.work_date BETWEEN :wf AND :wt AND w.status<>\'cancelled\') earned,
+          (SELECT COUNT(*) FROM driver_work w WHERE w.driver_id=d.id AND w.agency_id=d.agency_id AND w.work_date BETWEEN :cf AND :ct AND w.status<>'cancelled') recorded_work_count,
           (SELECT COALESCE(SUM(dp.amount),0) FROM driver_payments dp WHERE dp.driver_id=d.id AND dp.agency_id=d.agency_id AND dp.payment_date BETWEEN :pf AND :pt) paid,
           (SELECT COALESCE(SUM(CASE WHEN le.direction=\'payment\' THEN le.amount ELSE -le.amount END),0) FROM ledger_entries le WHERE le.party_type=\'driver\' AND le.party_id=d.id AND le.agency_id=d.agency_id AND le.is_active=1 AND le.entry_date BETWEEN :lf AND :lt) ledger_paid,
           (SELECT COALESCE(SUM(s.agreed_amount),0) FROM services s WHERE s.driver_id=d.id AND s.agency_id=d.agency_id AND s.is_active=1) agreed,
@@ -201,9 +206,22 @@ final class OperationsService
              JOIN students st ON st.id=ss.student_id AND st.agency_id=s.agency_id
              WHERE s.driver_id=d.id AND s.agency_id=d.agency_id AND s.is_active=1 AND st.is_active=1) assigned_student_count
           FROM drivers d WHERE d.agency_id=:a AND d.is_active=1 ORDER BY d.last_name,d.first_name');
-        $q->execute(['a'=>$aid,'wf'=>$from,'wt'=>$to,'pf'=>$from,'pt'=>$to,'lf'=>$from,'lt'=>$to]);$rows=$q->fetchAll();
+        $q->execute(['a'=>$aid,'wf'=>$from,'wt'=>$to,'cf'=>$from,'ct'=>$to,'pf'=>$from,'pt'=>$to,'lf'=>$from,'lt'=>$to]);$rows=$q->fetchAll();
         foreach($rows as &$r){
             $gross=(float)$r['earned'];
+            $r['recorded_earned']=$gross;
+            // Current assignments do not describe historical service dates. This
+            // explicit, single-month estimate is never written to driver_work.
+            $canEstimate=$estimateRequested && (int)$r['recorded_work_count']===0
+                && (float)$r['assigned_monthly_base']>0;
+            if($canEstimate){
+                $gross=(float)$r['assigned_monthly_base'];
+                $r['earned']=$gross;
+            }
+            $r['calculation_basis']=$canEstimate?'current_assignments_estimate':'recorded_driver_work';
+            $r['estimate_requires_confirmation']=$canEstimate;
+            $r['missing_work_records']=(int)$r['recorded_work_count']===0;
+            $r['estimated_monthly_gross']=(float)$r['assigned_monthly_base'];
             $deductions=self::driverDeductions($gross,$aid);
             $r=array_merge($r,$deductions);
             $r['paid']=(float)$r['paid']+(float)$r['ledger_paid'];
@@ -218,7 +236,7 @@ final class OperationsService
             $r['reconciliation_requires_review']=abs($gross-$assignedMonthly)>=1;
             $r['balance']=$deductions['net_earned']-$r['paid'];
         }unset($r);
-        return ['items'=>$rows,'from'=>$from,'to'=>$to];
+        return ['items'=>$rows,'from'=>$from,'to'=>$to,'calculationMode'=>$estimateRequested?'assignment_estimate':'recorded','estimatedOnly'=>true,'estimatedWarning'=>'برآورد بر اساس تخصیص‌های فعلی است؛ بدون تاریخچه تغییر راننده و روزهای خدمت، حقوق قطعی ماه‌های گذشته محسوب نمی‌شود.'];
     }
 
     /** Rates are agency-specific; defaults apply when no policy has been saved. */
