@@ -50,7 +50,7 @@
    ];
    const percent=parent?(Number(f.total)>0?Math.min(100,Math.max(0,Number(f.paid)/Number(f.total)*100)):0):
        (Number(f.recordedNet)>0?Math.min(100,Math.max(0,Number(f.paid)/Number(f.recordedNet)*100)):0);
-   return '<section class="portal-welcome"><div><small>داشبورد اختصاصی '+(parent?'والدین':'رانندگان')+'</small><h1>سلام، '+esc(who)+'</h1><p>'+esc(data.agency?.name||'سرویس‌یار')+' · اطلاعات ثبت‌شده در سامانه</p></div><span class="portal-welcome-ornament">✦</span></section>'+
+   return '<section class="portal-welcome"><div><small>داشبورد اختصاصی '+(parent?'والدین':'رانندگان')+'</small><h1>سلام، '+esc(who)+'</h1><p>'+esc(data.agency?.name||'سرویس‌یار')+' · اطلاعات ثبت‌شده در سامانه</p></div></section>'+
    '<div class="portal-kpis">'+cards.map(x=>widget(...x)).join('')+'</div>'+
    '<div class="portal-panels"><section class="portal-panel"><h2>خلاصه مالی</h2><p class="muted">نسبت مبالغ پرداخت‌شده به مبالغ ثبت‌شده</p><div class="portal-ring-wrap"><div class="portal-ring" style="--pct:'+percent+'%"><div><strong>'+fa(percent)+'٪</strong><small>پرداخت‌شده</small></div></div><div class="portal-ring-legend"><div><b>ثبت‌شده</b><span>'+money(parent?f.total:f.recordedNet)+'</span></div><div><b>پرداخت‌شده</b><span>'+money(f.paid)+'</span></div><div><b>باقی‌مانده</b><span>'+money(f.balance)+'</span></div></div></div></section>'+
    '<section class="portal-panel"><h2>دسترسی‌های سریع</h2><div class="portal-shortcuts">'+menuLinks().filter(x=>x[0]!=='overview').map(x=>'<button type="button" data-go="'+x[0]+'"><b>'+x[2]+'</b>'+esc(x[1])+'<span>‹</span></button>').join('')+'</div></section></div>';
@@ -268,29 +268,29 @@
   * stays authenticated as the platform admin and never impersonates an
   * unverified user. Exiting reloads the original super-admin workspace.
   */
- function mountAdminDriverInspection(payload){
-   if(payload?.portalType!=='driver'||!payload?.previewOnly||
-      !Number(payload.agency?.id)||!Number(payload.driver?.id))
+ function mountAdminInspection(payload){
+   if(!['driver','parent'].includes(payload?.portalType)||!payload?.previewOnly||
+      !Number(payload.agency?.id)||!Number((payload.portalType==='parent'?payload.student:payload.driver)?.id))
      throw Error('اطلاعات پنل راننده معتبر نیست.');
    // A valid admin response is obtained separately from a restricted GET API.
-   current={portalType:'driver',agencyId:Number(payload.agency.id),partyId:Number(payload.driver.id)};
-   data=payload;impersonated=true;representativeSchools=[];
+   current={portalType:payload.portalType,agencyId:Number(payload.agency.id),partyId:Number((payload.portalType==='parent'?payload.student:payload.driver).id)};
+   data=payload;impersonated=true;representativeSchools=Array.isArray(payload.representativeSchools)?payload.representativeSchools:[];
    window.serviceyarAdminDriverInspection=true;
    const app=el('app');app.classList.add('sy-portal-mode','sy-admin-driver-inspection-mode');
    const nav=el('nav');nav.replaceChildren();
    const account=el('syAccountMenu');if(account){account.open=false;account.hidden=true;}
    const picker=el('agencyPickerWrap');if(picker)picker.hidden=true;
    const brand=document.querySelector('.sy-sidebar-brand-copy small');
-   if(brand)brand.textContent='پنل راننده · '+(payload.agency?.name||'سرویس‌یار');
-   const name=el('syAccountName');if(name)name.textContent=person(payload.driver);
+   if(brand)brand.textContent='پنل '+(payload.portalType==='parent'?'والدین':'راننده')+' · '+(payload.agency?.name||'سرویس‌یار');
+   const name=el('syAccountName');if(name)name.textContent=payload.portalType==='parent'?(payload.guardian?.name||person(payload.student)):person(payload.driver);
    const role=el('syAccountRole');if(role)role.textContent='مشاهده نیابتی توسط مدیر کل';
-   const avatar=el('syAccountAvatar');if(avatar)avatar.textContent='ر';
+   const avatar=el('syAccountAvatar');if(avatar)avatar.textContent=payload.portalType==='parent'?'و':'ر';
    const headReturn=el('syAdminReturn');
    // Existing app.js listeners handle return without revoking the admin session.
    if(headReturn){headReturn.hidden=false;headReturn.textContent='بازگشت به پنل مدیر کل';}
    const logout=el('logout');if(logout)logout.textContent='بازگشت به پنل مدیر کل';
    el('content').innerHTML='<div class="sy-portal-content"><div class="sy-portal-impersonation-notice">'+
-      'مشاهده پنل واقعی راننده توسط مدیر کل · فقط خواندنی؛ نشست راننده تغییر نمی‌کند.'+
+      'مشاهده نیابتی پنل '+(payload.portalType==='parent'?'ولی دانش‌آموز':'راننده')+' · فقط خواندنی؛ نشست کاربر تغییر نمی‌کند.'+
       '</div><div id="portalContent"></div></div>';
    for(const [key,title,symbol] of menuLinks()){
      const button=document.createElement('button');
@@ -308,5 +308,7 @@
    section='overview';history.replaceState(history.state,'',location.pathname+location.search+'#portal-overview');
    selectSection('overview');
  }
- window.serviceyarPortal={mount,selectPortalRoute,mountAdminDriverInspection};
+ function mountAdminDriverInspection(payload){return mountAdminInspection(payload);}
+ function mountAdminParentInspection(payload){return mountAdminInspection(payload);}
+ window.serviceyarPortal={mount,selectPortalRoute,mountAdminDriverInspection,mountAdminParentInspection};
 })();
