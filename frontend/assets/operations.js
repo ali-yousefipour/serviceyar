@@ -2460,7 +2460,8 @@ function studentDebtorsPage(token){
   <form id="debtorFilters" class="filters sy-operation-filters" aria-label="فیلتر گزارش بدهکاران">
    <label>سال تحصیلی<input name="academicYear" value="${esc(year())}" maxlength="9" required></label>
    <label>نام دانش‌آموز<input type="search" name="student" maxlength="200"></label>
-   <label>نام مدرسه<input type="search" name="schoolName" maxlength="200"></label>
+   <label>جست‌وجوی مدرسه<input type="search" name="schoolName" placeholder="بخشی از نام مدرسه" autocomplete="off" maxlength="200"></label>
+   <label>انتخاب مدرسه<select name="schoolId" aria-describedby="debtorSchoolStatus" disabled><option value="">مدرسه را انتخاب کنید</option></select><small id="debtorSchoolStatus" role="status">در حال دریافت مدارس شرکت…</small></label>
    <label>حداقل بدهی (ریال)<input name="minDebt" inputmode="decimal" maxlength="19"></label>
    <label>حداکثر بدهی (ریال)<input name="maxDebt" inputmode="decimal" maxlength="19"></label>
    <button class="primary">نمایش بدهکاران</button>
@@ -2471,9 +2472,33 @@ function studentDebtorsPage(token){
  </section>`;
  const form=$('debtorFilters'),status=$('debtorStatus'),results=$('debtorResults'),filtered=$('debtorFiltered'),full=$('debtorFull');
  const amount=new Intl.NumberFormat('fa-IR',{maximumFractionDigits:2});
+ const kilometers=new Intl.NumberFormat('fa-IR',{maximumFractionDigits:0});
+ const schoolSearch=form.elements.schoolName,schoolSelect=form.elements.schoolId,schoolStatus=$('debtorSchoolStatus');
+ let schools=null;
+ const renderSchools=()=>{
+  if(!schools)return;
+  const term=normalizeServiceSearch(schoolSearch.value);
+  const matches=schools.filter(school=>normalizeServiceSearch(school.name).includes(term));
+  schoolSelect.replaceChildren(new Option(term?'انتخاب از نتایج':'همه مدارس',''));
+  for(const school of matches){
+   const label=[school.name,school.code||school.address].filter(Boolean).join(' · ');
+   schoolSelect.add(new Option(label,String(school.id)));
+  }
+  schoolSelect.disabled=matches.length===0;
+  schoolStatus.textContent=matches.length?number(matches.length)+' مدرسه':'مدرسه‌ای یافت نشد.';
+ };
+ schoolSearch.addEventListener('input',renderSchools);
+ lookup('schools',true).then(rows=>{
+  if(token!==pageToken||!form.isConnected)return;
+  schools=rows.slice().sort((a,b)=>a.name.localeCompare(b.name,'fa'));
+  renderSchools();
+ }).catch(()=>{
+  if(token===pageToken&&form.isConnected)schoolStatus.textContent='فهرست مدارس در دسترس نیست. می‌توانید با وارد کردن نام مدرسه گزارش بگیرید.';
+ });
  let applied=null,revision=0;
  const request=()=>{
   const params=new URLSearchParams(new FormData(form));
+  if(params.get('schoolId'))params.delete('schoolName');
   for(const key of ['academicYear','minDebt','maxDebt'])params.set(key,ServiceYarDates.digits(params.get(key).trim()).replace(/[٬,]/g,'').replace('٫','.'));
   return params;
  };
@@ -2486,13 +2511,13 @@ function studentDebtorsPage(token){
    if(token!==pageToken||current!==revision)return;
    applied=params;
    status.textContent=number(data.items.length)+' بدهکار · مجموع بدهی '+amount.format(data.total)+' ریال';
-   results.innerHTML=simpleTable(['نام و نام خانوادگی دانش‌آموز','مدرسه','شماره تماس ولی','مبلغ ماهیانه سرویس (ریال)','مبلغ سالیانه سرویس (ریال)','پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'],
-    data.items.map(row=>[row.student,row.school,String(row.guardian_mobile||'—').replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]),amount.format(row.monthly_fee),amount.format(row.annual_fee),amount.format(row.paid),amount.format(row.debt)]));
+   results.innerHTML=simpleTable(['نام و نام خانوادگی دانش‌آموز','مدرسه','شماره تماس ولی','مسافت (کیلومتر)','مبلغ ماهیانه سرویس (ریال)','مبلغ سالیانه سرویس (ریال)','پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'],
+    data.items.map(row=>[row.student,row.school,String(row.guardian_mobile||'—').replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]),row.tariff_distance_km==null?'—':kilometers.format(row.tariff_distance_km),amount.format(row.monthly_fee),amount.format(row.annual_fee),amount.format(row.paid),amount.format(row.debt)]));
    if(filtered)filtered.disabled=false;
   }catch(err){if(token===pageToken&&current===revision)status.textContent=err.message;}
  };
  form.onsubmit=e=>{e.preventDefault();load();};
- form.onreset=()=>setTimeout(()=>{if(form.isConnected)load();},0);
+ form.onreset=()=>setTimeout(()=>{if(form.isConnected){renderSchools();load();}},0);
  if(filtered)filtered.onclick=()=>downloadFile('/api/v1/reports/debtors.xlsx?'+applied,'بدهکاران-نتایج.xlsx');
  if(full)full.onclick=()=>downloadFile('/api/v1/reports/debtors.xlsx?'+new URLSearchParams({scope:'all',academicYear:request().get('academicYear')}),'بدهکاران-همه-مدارس.xlsx');
  if(full){
