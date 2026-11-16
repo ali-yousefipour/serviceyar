@@ -1516,6 +1516,70 @@ async function attachDriverVehiclePicker(form,row){
  };
  label.querySelector('.sy-driver-plate-edit').onclick=launch;
 }
+/**
+ * Explicitly apply official Taxi Organization prices to a saved service or
+ * every active service of a driver. A calculated quote is not a mutation.
+ */
+function attachOfficialTaxiTariffActions(form,key,id){
+ if(!id||!['services','drivers'].includes(key))return;
+ const kind=key==='services'?'service':'driver';
+ const box=document.createElement('section');box.className='sy-official-tariff-apply';
+ const intro=kind==='service'?'دانش‌آموزان متصل به این سرویس':'تمام سرویس‌های فعال متعلق به این راننده';
+ box.innerHTML='<h4>اعمال نرخ‌نامه مصوب سازمان تاکسیرانی</h4>'+
+  '<p>ابتدا پیش‌نمایش مبلغ قبلی و مبلغ جدید '+intro+' را بررسی کنید. <strong>محاسبه به‌تنهایی مبلغ ثبت‌شده را تغییر نمی‌دهد.</strong> اعمال فقط پس از تأیید شما انجام می‌شود؛ دریافت‌ها و اسناد نهایی گذشته محفوظ می‌مانند.</p>'+
+  '<div class="member-actions"><button type="button" data-official-preview>پیش‌نمایش و بررسی تعرفه</button>'+
+  '<button type="button" class="primary" data-official-apply disabled>تأیید و اعمال نرخ‌نامه به '+(kind==='service'?'این سرویس':'سرویس‌های راننده')+'</button></div>'+
+  '<div data-official-status role="status" aria-live="polite"></div>';
+ const steps=[...form.querySelectorAll('.wizard-step:not(.wizard-review)')];
+ (steps.at(-1)||form).append(box);
+ const preview=box.querySelector('[data-official-preview]'),apply=box.querySelector('[data-official-apply]'),status=box.querySelector('[data-official-status]');
+ let verified=false,busy=false,unsaved=false;
+ const invalidate=()=>{
+  if(busy)return;unsaved=true;verified=false;apply.disabled=true;
+  status.textContent='تغییرات فرم هنوز ذخیره نشده‌اند. ابتدا «ذخیره» را بزنید، سپس پیش‌نمایش و اعمال نرخ‌نامه را انجام دهید.';
+ };
+ form.addEventListener('input',event=>{if(event.isTrusted&&!box.contains(event.target))invalidate();});
+ form.addEventListener('change',event=>{if(event.isTrusted&&!box.contains(event.target))invalidate();});
+ const endpoint='/api/v1/operations/tariffs/apply-'+kind+'/'+encodeURIComponent(id);
+ const previewRequest=async()=>{
+  verified=false;apply.disabled=true;
+  if(unsaved){status.textContent='ابتدا تغییرات فرم را ذخیره کنید تا محاسبه بر اساس اطلاعات قطعی راننده، خودرو و کلاس تعرفه انجام شود.';return;}
+  busy=true;preview.disabled=true;status.textContent='در حال محاسبه تعرفه و بررسی سرویس‌ها…';
+  try{
+   const result=await api(scoped(endpoint));
+   if(!box.isConnected)return;
+   const rows=result.services||[];
+   status.innerHTML='<p>سرویس‌ها: '+number(result.serviceCount)+' | دانش‌آموزان: '+number(result.studentCount)+
+    ' | مبالغ یا مبنای قابل اصلاح: '+number(result.changes)+' | ایرادات: '+number(result.blocking)+'</p>'+
+    rows.map(item=>'<details class="sy-taxi-apply-service"><summary>'+esc(item.serviceTitle||('سرویس '+number(item.serviceId)))+
+     ' · '+number(item.studentCount)+' دانش‌آموز'+(item.errors?.length?' · دارای خطا':'')+'</summary>'+
+     (item.students?.length?simpleTable(['دانش‌آموز','مبلغ قبلی (ریال)','تعرفه سازمان (ریال)'],
+       item.students.map(st=>[st.name,number(st.oldFee),number(st.newFee)])):'')+
+     (item.errors?.length?'<ul class="sy-official-tariff-errors">'+item.errors.map(err=>'<li>'+esc(err)+'</li>').join('')+'</ul>':'')+'</details>').join('')+
+    (result.canApply?'<p>اطلاعات معتبر است؛ برای ثبت واقعی، دکمه «تأیید و اعمال نرخ‌نامه» را بزنید.</p>':
+      '<p class="error">تا رفع ایرادات تعرفه، هیچ مبلغی تغییر نخواهد کرد.</p>');
+   verified=Boolean(result.canApply);apply.disabled=!verified;
+  }catch(error){status.textContent='دریافت پیش‌نمایش ناموفق بود: '+error.message;notify(error.message,true);}
+  finally{busy=false;if(preview.isConnected)preview.disabled=false;}
+ };
+ preview.addEventListener('click',previewRequest);
+ apply.addEventListener('click',async()=>{
+  if(!verified||busy||unsaved)return;
+  if(!confirm('نرخ‌نامه رسمی تاکسیرانی برای '+(kind==='service'?'این سرویس':'تمام سرویس‌های فعال راننده')+
+   ' اعمال شود؟ مبالغ دانش‌آموزان و بدهی‌های قابل بروزرسانی تغییر می‌کند؛ دریافتی‌ها و اسناد قطعی قبلی نباید بازنویسی شوند.'))return;
+  busy=true;apply.disabled=true;preview.disabled=true;
+  status.textContent='در حال اعمال تعرفه و کنترل یکپارچگی صورتحساب‌ها…';
+  try{
+   const result=await write(endpoint,{confirm:'APPLY_OFFICIAL_TAXI_TARIFF'});
+   verified=false;
+   status.innerHTML='<p role="status">نرخ سازمان ثبت شد: '+number(result.servicesUpdated)+' سرویس و '+
+     number(result.studentsUpdated)+' دانش‌آموز بروزرسانی شد. برای مشاهده مبالغ فعلی فرم را مجدداً باز کنید.</p>';
+   if(kind==='service'&&form.elements.feeSource)form.elements.feeSource.value='taxi';
+   notify('اعمال تعرفه سازمان تاکسیرانی با موفقیت ثبت شد.');
+  }catch(error){status.textContent='اعمال نرخ‌نامه انجام نشد: '+error.message;notify(error.message,true);}
+  finally{busy=false;if(preview.isConnected)preview.disabled=false;}
+ });
+}
 async function formResource(key,id,onSaved){
  if(!can(key,'manage'))return;if(key==='schools'&&!id){await selectSchoolFromCatalog();return;}const token=pageToken;let row={};try{if(id)row=await api(scoped('/api/v1/'+key+'/'+id));if(token!==pageToken)return;
  let companyAccountOptions=[],bankOptions=[];
@@ -1888,6 +1952,7 @@ if(form.elements.mobile){const mobile=form.elements.mobile;mobile.pattern='09[0-
  });
  if(form.elements.latitude&&form.elements.longitude)await locationPicker(form,key);if(typeKey){const type=form.elements.partyType||form.elements.ownerType||form.elements.recipientType;type.onchange=()=>{const select=form.elements[typeKey],search=form.querySelector(`[data-lookup-search="${typeKey}"]`);select.value='';if(search)search.value='';populate(select);};}
  resourceWizard(form,key);
+ attachOfficialTaxiTariffActions(form,key,id);
  form.onsubmit=async e=>{e.preventDefault();const button=$('saveRecord');button.disabled=true;$('formError').hidden=true;try{const body=Object.fromEntries(new FormData(form));for(const input of rialInputs){if(!formatRialInput(input)){input.reportValidity();button.disabled=false;return;}body[input.name]=normalizeRialInput(input.value);}if(key==='students'&&body.tariffDistanceKm!==undefined&&body.tariffDistanceKm!=='')body.tariffDistanceKm=Math.round(Number(body.tariffDistanceKm));if(key==='ledger')delete body.amountDisplay;
   if(key==='vehicles'){
    const typeField=form.elements.vehicleTrim;
