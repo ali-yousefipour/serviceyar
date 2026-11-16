@@ -10,9 +10,24 @@ final class StudentDebtors
 {
     public static function report(int $uid, int $aid, array $filter): array
     {
-        Authorization::requireAgencyAccess($uid,$aid);
-        Authorization::requirePermission($uid,'finance.view');
-        Authorization::requirePermission($uid,'students.view');
+        return self::build($uid,$aid,$filter,false);
+    }
+
+    /** The representative endpoint validates the driver membership and school scope first. */
+    public static function reportForRepresentative(int $uid,int $aid,array $filter): array
+    {
+        if(!filter_var($filter['schoolId']??null,FILTER_VALIDATE_INT))
+            throw new AuthException(422,'مدرسه موردنظر را انتخاب کنید.','SCHOOL_REQUIRED');
+        return self::build($uid,$aid,$filter,true);
+    }
+
+    private static function build(int $uid,int $aid,array $filter,bool $representative): array
+    {
+        if(!$representative){
+            Authorization::requireAgencyAccess($uid,$aid);
+            Authorization::requirePermission($uid,'finance.view');
+            Authorization::requirePermission($uid,'students.view');
+        }
 
         $year = is_string($filter['academicYear'] ?? null) ? str_replace('/','-',$filter['academicYear']) : '';
         if (!preg_match('/\A(1[34]\d{2})-(1[34]\d{2})\z/', $year, $parts) || (int)$parts[1]+1 !== (int)$parts[2]) {
