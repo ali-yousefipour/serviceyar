@@ -3887,7 +3887,7 @@ async function openAdminImpersonationDialog(){
  const returnFocus=document.activeElement instanceof HTMLElement?document.activeElement:null;
  const previous=document.getElementById('syAdminImpersonationModal');previous?.__syClose?.();previous?.remove();
  const overlay=document.createElement('div');overlay.id='syAdminImpersonationModal';overlay.className='sy-admin-impersonation-overlay';
- overlay.innerHTML='<section class="sy-admin-impersonation-dialog" role="dialog" aria-modal="true" tabindex="-1" aria-labelledby="syImpersonationTitle" aria-describedby="syImpersonationDescription"><header><div><span class="sy-admin-eyebrow">دسترسی مدیریتی امن</span><h2 id="syImpersonationTitle">ورود نیابت به پنل شرکت</h2><p id="syImpersonationDescription">ابتدا شرکت و سپس کاربر موردنظر را انتخاب کنید. پنل دقیقاً با نقش و سطح دسترسی همان کاربر باز می‌شود.</p></div><button type="button" class="sy-admin-modal-close" aria-label="بستن پنجره">×</button></header><div class="sy-impersonation-steps"><span class="active" data-step-indicator="company">۱. انتخاب شرکت</span><i></i><span data-step-indicator="user">۲. انتخاب کاربر</span></div><div class="sy-impersonation-body"><div data-company-step><label class="sy-impersonation-search"><span>جستجوی شرکت</span><input type="search" id="syImpersonationCompanySearch" placeholder="نام شرکت، کد یا شناسه را وارد کنید…" autocomplete="off"></label><div id="syImpersonationCompanies" class="sy-impersonation-results" aria-live="polite">در حال دریافت فهرست شرکت‌ها…</div></div><div data-user-step hidden><button type="button" id="syImpersonationBack" class="sy-impersonation-back">→ انتخاب شرکت دیگر</button><div class="sy-impersonation-selected-company" id="syImpersonationSelectedCompany"></div><label class="sy-impersonation-search"><span>جستجوی کاربر</span><input type="search" id="syImpersonationUserSearch" placeholder="نام، نام خانوادگی یا نام کاربری…" autocomplete="off"></label><div id="syImpersonationUsers" class="sy-impersonation-results" aria-live="polite"></div><div id="syImpersonationConfirm" class="sy-impersonation-confirm" hidden><div><b id="syImpersonationChosenName"></b><p id="syImpersonationChosenDetails"></p><small>تمام عملیات بعدی با مجوزهای این کاربر و در محدوده همین شرکت انجام می‌شود. ورود نیابتی در سوابق مدیریتی ثبت خواهد شد.</small></div><button type="button" class="primary" id="syImpersonationStart">ورود به پنل کاربر</button></div></div><p class="sy-impersonation-error" id="syImpersonationError" role="alert" hidden></p></div><footer><span>نشست اصلی ادمین کل حفظ می‌شود و هر زمان می‌توانید بازگردید.</span><button type="button" class="secondary" data-close>انصراف</button></footer></section>';
+ overlay.innerHTML='<section class="sy-admin-impersonation-dialog" role="dialog" aria-modal="true" tabindex="-1" aria-labelledby="syImpersonationTitle" aria-describedby="syImpersonationDescription"><header><div><span class="sy-admin-eyebrow">دسترسی مدیریتی امن</span><h2 id="syImpersonationTitle">ورود نیابت به پنل شرکت، والدین و رانندگان</h2><p id="syImpersonationDescription">شرکت را انتخاب کنید؛ سپس با فیلتر نقش، مدیران شرکت، والدین یا رانندگان را پیدا کنید. ورود نیابتی والدین و رانندگان فقط برای مشاهده است.</p></div><button type="button" class="sy-admin-modal-close" aria-label="بستن پنجره">×</button></header><div class="sy-impersonation-steps"><span class="active" data-step-indicator="company">۱. انتخاب شرکت</span><i></i><span data-step-indicator="user">۲. انتخاب کاربر</span></div><div class="sy-impersonation-body"><div data-company-step><label class="sy-impersonation-search"><span>جستجوی شرکت</span><input type="search" id="syImpersonationCompanySearch" placeholder="نام شرکت، کد یا شناسه را وارد کنید…" autocomplete="off"></label><div id="syImpersonationCompanies" class="sy-impersonation-results" aria-live="polite">در حال دریافت فهرست شرکت‌ها…</div></div><div data-user-step hidden><button type="button" id="syImpersonationBack" class="sy-impersonation-back">→ انتخاب شرکت دیگر</button><div class="sy-impersonation-selected-company" id="syImpersonationSelectedCompany"></div><label class="sy-impersonation-search"><span>جستجوی کاربر</span><input type="search" id="syImpersonationUserSearch" placeholder="نام، نام خانوادگی یا نام کاربری…" autocomplete="off"></label><label class="sy-impersonation-search"><span>نوع پنل</span><select id="syImpersonationRoleFilter" aria-label="فیلتر پنل ورود نیابتی"><option value="all">همه کاربران شرکت</option><option value="parent">والدین دانش‌آموزان</option><option value="driver">رانندگان سرویس مدارس</option><option value="staff">کاربران مدیریتی شرکت</option></select></label><div id="syImpersonationUsers" class="sy-impersonation-results" aria-live="polite"></div><div id="syImpersonationConfirm" class="sy-impersonation-confirm" hidden><div><b id="syImpersonationChosenName"></b><p id="syImpersonationChosenDetails"></p><small>تمام عملیات بعدی با مجوزهای این کاربر و در محدوده همین شرکت انجام می‌شود. ورود نیابتی در سوابق مدیریتی ثبت خواهد شد.</small></div><button type="button" class="primary" id="syImpersonationStart">ورود به پنل کاربر</button></div></div><p class="sy-impersonation-error" id="syImpersonationError" role="alert" hidden></p></div><footer><span>نشست اصلی ادمین کل حفظ می‌شود و هر زمان می‌توانید بازگردید.</span><button type="button" class="secondary" data-close>انصراف</button></footer></section>';
  document.body.append(overlay);document.body.classList.add('sy-admin-modal-open');
  const dialog=overlay.querySelector('.sy-admin-impersonation-dialog');
  const focusableSelector='button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])';
@@ -3913,7 +3913,7 @@ async function openAdminImpersonationDialog(){
  overlay.addEventListener('click',event=>{if(event.target===overlay)close();});
  const companyStep=overlay.querySelector('[data-company-step]'),userStep=overlay.querySelector('[data-user-step]'),
   companySearch=overlay.querySelector('#syImpersonationCompanySearch'),companiesBox=overlay.querySelector('#syImpersonationCompanies'),
-  userSearch=overlay.querySelector('#syImpersonationUserSearch'),usersBox=overlay.querySelector('#syImpersonationUsers'),
+  userSearch=overlay.querySelector('#syImpersonationUserSearch'),roleFilter=overlay.querySelector('#syImpersonationRoleFilter'),usersBox=overlay.querySelector('#syImpersonationUsers'),
   errorBox=overlay.querySelector('#syImpersonationError'),confirmBox=overlay.querySelector('#syImpersonationConfirm'),
   startButton=overlay.querySelector('#syImpersonationStart');
  const normalize=value=>String(value||'').replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').replace(/[\u200c\s]+/g,' ').trim().toLocaleLowerCase('fa');
@@ -3928,7 +3928,12 @@ async function openAdminImpersonationDialog(){
  };
  const renderUsers=()=>{
   const term=normalize(userSearch.value);
-  const list=users.filter(u=>normalize([u.username,u.first_name,u.last_name,u.roles].join(' ')).includes(term));
+  const list=users.filter(u=>{
+   const roles=normalize(u.roles),parent=roles.includes('ولی دانش‌آموز'),driver=roles.includes('راننده سرویس مدارس');
+   const selected=roleFilter.value;
+   return (selected==='all'||(selected==='parent'&&parent)||(selected==='driver'&&driver)||(selected==='staff'&&!parent&&!driver))
+     &&normalize([u.username,u.first_name,u.last_name,u.roles].join(' ')).includes(term);
+  });
   usersBox.innerHTML=list.length?list.map(u=>'<button type="button" class="sy-impersonation-result" data-user="'+Number(u.id)+'"><span class="sy-impersonation-result-avatar sy-user-avatar">'+esc((u.first_name||u.username||'ک').trim().slice(0,1))+'</span><span><b>'+esc(((u.first_name||'')+' '+(u.last_name||'')).trim()||u.username)+'</b><small>'+esc(u.username)+' · '+esc(u.roles||'بدون نقش')+'</small></span><em>فعال</em><i aria-hidden="true">←</i></button>').join(''):'<div class="sy-impersonation-empty">کاربر فعالی برای این شرکت یا جستجوی شما پیدا نشد.</div>';
   usersBox.querySelectorAll('[data-user]').forEach(button=>button.onclick=()=>chooseUser(Number(button.dataset.user)));
  };
@@ -3939,7 +3944,7 @@ async function openAdminImpersonationDialog(){
   overlay.querySelector('[data-step-indicator="company"]').classList.remove('active');
   overlay.querySelector('[data-step-indicator="user"]').classList.add('active');
   overlay.querySelector('#syImpersonationSelectedCompany').textContent='شرکت انتخاب‌شده: '+selectedCompany.name;
-  users=[];usersBox.textContent='در حال دریافت کاربران تخصیص‌یافته به شرکت…';userSearch.value='';confirmBox.hidden=true;selectedUser=null;
+  users=[];usersBox.textContent='در حال دریافت کاربران شرکت، والدین و رانندگان…';userSearch.value='';roleFilter.value='all';confirmBox.hidden=true;selectedUser=null;
   try{
    const data=await api('/api/v1/admin/impersonation/users?agencyId='+encodeURIComponent(id));
    if(!overlay.isConnected||requestSequence!==companyLoadSequence||Number(selectedCompany?.id)!==id)return;
@@ -3962,7 +3967,7 @@ async function openAdminImpersonationDialog(){
   overlay.querySelector('[data-step-indicator="user"]').classList.remove('active');
   confirmBox.hidden=true;showError('');renderCompanies();companySearch.focus();
  };
- companySearch.addEventListener('input',renderCompanies);userSearch.addEventListener('input',()=>{confirmBox.hidden=true;selectedUser=null;renderUsers();});
+ companySearch.addEventListener('input',renderCompanies);userSearch.addEventListener('input',()=>{confirmBox.hidden=true;selectedUser=null;renderUsers();});roleFilter.addEventListener('change',()=>{selectedUser=null;confirmBox.hidden=true;renderUsers();});
  companySearch.focus();
  startButton.onclick=async()=>{
   if(!selectedCompany||!selectedUser)return;
