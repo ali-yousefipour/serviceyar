@@ -36,7 +36,7 @@ assert.match(driverUI,/menuLinks\(\)/,'Real sidebar shows the original driver pa
 assert.match(portalCss,/#app\.sy-portal-mode #content/,'The real portal uses the standard responsive shell');
 assert.doesNotMatch(ui,/previewTable\(/,'Duplicated simplified table rendering is removed');
 assert.doesNotMatch(ui,/renderDriverInspection\(preview/,'Old embedded modal renderer is no longer used');
-assert.match(ui,/close\(\);\s*window\.serviceyarPortal\.mountAdminDriverInspection\(result\)/,'Selection modal closes before mounting portal');
+assert.match(ui,/await window\.serviceyarPortal\.mountAdminDriverInspection\(result\);close\(\);/,'Selection modal closes only after CSRF-ready portal mount');
 const app=read('frontend/assets/app.js');
 assert.match(app,/if\(window\.serviceyarAdminDriverInspection\)/,'Admin return and logout are intercepted');
 new Function(driverUI);
