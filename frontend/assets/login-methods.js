@@ -104,6 +104,65 @@
  };
  panels.sms=createOtp('sms');panels.bale=createOtp('bale');panels.mobile=createOtp('mobile');
  panelsHost.append(panels.sms,panels.bale,panels.mobile);
+ // Parent/driver sign-in shares this exact login card and the same session cookie.
+ // Staff login policies remain configured independently of the portal role.
+ const portalForm=make('form','sy-login-otp-form sy-login-method-panel sy-portal-signin');
+ portalForm.id='syLoginPanelPortal';portalForm.hidden=true;portalForm.setAttribute('role','tabpanel');
+ const portalIntro=make('p','sy-login-otp-intro','والدین و رانندگان با شماره همراه ثبت‌شده در شرکت وارد می‌شوند. برای اولین ورود، ربات بله را آغاز و شماره خود را در همان گفتگو به اشتراک بگذارید.');
+ const portalBot=make('a','sy-login-bot-link','شروع ربات syarbot در بله');portalBot.href='https://ble.ir/syarbot';portalBot.target='_blank';portalBot.rel='noopener noreferrer';
+ const portalMobileLabel=make('label','sy-login-field','شماره همراه ثبت‌شده');
+ const portalMobile=make('input');portalMobile.name='mobile';portalMobile.type='tel';portalMobile.inputMode='tel';portalMobile.placeholder='09123456789';portalMobile.maxLength=15;portalMobile.required=true;portalMobile.autocomplete='username';portalMobile.dir='ltr';portalMobileLabel.append(portalMobile);
+ const portalModeRow=make('div','sy-portal-login-options');
+ const portalBaleButton=make('button','sy-portal-login-option active','کد ورود بله'),portalPasswordButton=make('button','sy-portal-login-option','رمز عبور');
+ portalBaleButton.type='button';portalPasswordButton.type='button';portalModeRow.append(portalBaleButton,portalPasswordButton);
+ const portalCodeLabel=make('label','sy-login-field','کد ۶ رقمی بله');
+ const portalCode=make('input');portalCode.name='code';portalCode.inputMode='numeric';portalCode.autocomplete='one-time-code';portalCode.maxLength=6;portalCode.disabled=true;portalCode.dir='ltr';portalCodeLabel.append(portalCode);
+ const portalPasswordLabel=make('label','sy-login-field','رمز عبور');portalPasswordLabel.hidden=true;
+ const portalPassword=make('input');portalPassword.type='password';portalPassword.autocomplete='current-password';portalPassword.minLength=10;portalPasswordLabel.append(portalPassword);
+ const portalSend=make('button','sy-login-otp-send','دریافت کد ورود بله');portalSend.type='button';
+ const portalVerify=make('button','sy-login-otp-confirm','تأیید کد و ورود');portalVerify.type='submit';portalVerify.disabled=true;
+ const portalTimerHost=make('div','sy-login-otp-timer-host');
+ const portalInfo=make('p','sy-login-otp-message');portalInfo.setAttribute('role','status');portalInfo.setAttribute('aria-live','polite');
+ portalForm.append(portalIntro,portalBot,portalMobileLabel,portalModeRow,portalCodeLabel,portalPasswordLabel,portalSend,portalTimerHost,portalVerify,portalInfo);
+ panelsHost.append(portalForm);panels.portal=portalForm;
+ const portalTimer=makeTimer(portalTimerHost,portalSend,portalVerify,portalCode,portalInfo);
+ let portalMode='bale',portalBaleAvailable=false;
+ const switchPortalMode=value=>{
+   portalMode=value;const byBale=value==='bale';
+   portalBaleButton.classList.toggle('active',byBale);portalPasswordButton.classList.toggle('active',!byBale);
+   portalCodeLabel.hidden=!byBale;portalPasswordLabel.hidden=byBale;
+   portalSend.hidden=!byBale;portalBot.hidden=!byBale;
+   portalVerify.disabled=byBale;portalVerify.textContent=byBale?'تأیید کد و ورود':'ورود با رمز عبور';
+   if(!byBale)portalTimer.stop();
+   if(byBale&&!portalBaleAvailable)note(portalInfo,'ورود با کد بله در حال حاضر فعال نیست. در صورت تعیین رمز اختصاصی، از ورود با رمز استفاده کنید.',true);
+   else note(portalInfo,'');
+ };
+ portalBaleButton.onclick=()=>switchPortalMode('bale');
+ portalPasswordButton.onclick=()=>switchPortalMode('password');
+ portalSend.onclick=async()=>{
+   const mobile=normalize(portalMobile.value);
+   if(!/^09[0-9]{9}$/.test(mobile)){note(portalInfo,'شماره همراه را با ۰۹ و ۱۱ رقم وارد کنید.',true);return;}
+   portalSend.disabled=true;portalCode.value='';note(portalInfo,'در حال دریافت کد از ربات بله…');
+   try{
+     await api('/api/v1/auth/bale/request',{method:'POST',body:JSON.stringify({username:mobile})});
+     portalTimer.start(300);note(portalInfo,'در صورت ثبت شماره و اتصال ربات بله، کد ورود در همان گفتگو ارسال می‌شود.');
+     portalCode.focus();
+   }catch(error){portalSend.disabled=false;note(portalInfo,error.message||'دریافت کد ناموفق بود.',true);}
+ };
+ portalForm.onsubmit=async event=>{
+   event.preventDefault();const mobile=normalize(portalMobile.value);
+   if(!/^09[0-9]{9}$/.test(mobile)){note(portalInfo,'شماره همراه معتبر نیست.',true);return;}
+   const isBale=portalMode==='bale';
+   const payload=isBale?{username:mobile,code:normalize(portalCode.value)}:{username:mobile,password:portalPassword.value};
+   if(isBale&&!/^[0-9]{6}$/.test(payload.code)){note(portalInfo,'کد ۶ رقمی را وارد کنید.',true);return;}
+   if(!isBale&&!payload.password){note(portalInfo,'رمز عبور را وارد کنید.',true);return;}
+   portalVerify.disabled=true;note(portalInfo,'در حال بررسی حساب…');
+   try{
+     await api(isBale?'/api/v1/auth/bale/verify':'/api/v1/portal/auth/password',{method:'POST',body:JSON.stringify(payload)});
+     portalTimer.stop();portalPassword.value='';portalCode.value='';await boot();
+   }catch(error){note(portalInfo,error.message||'ورود به پنل ناموفق بود.',true);portalVerify.disabled=false;}
+ };
+
 
  // Password recovery is a sub-flow inside the password tab, not a separate login method.
  const recoveryLink=make('button','sy-password-forgot','فراموشی رمز عبور؟');recoveryLink.type='button';recoveryLink.hidden=true;
@@ -197,6 +256,8 @@
  };
  const render=(enabled)=>{
   available=Object.keys(labels).filter(key=>enabled&&enabled[key]===true);
+  available.push('portal');portalBaleAvailable=Boolean(enabled?.bale);
+  if(!portalBaleAvailable)switchPortalMode('password');
   tabs.replaceChildren();Object.keys(tabButtons).forEach(key=>delete tabButtons[key]);
   state.hidden=available.length>0;
   if(!available.length){
@@ -206,8 +267,8 @@
   tabs.hidden=false;
   for(const method of available){
    const button=make('button','sy-login-method-tab');button.type='button';button.id='sy-login-tab-'+method;button.setAttribute('role','tab');button.setAttribute('aria-controls',panels[method].id);
-   const icon=make('span','sy-login-method-icon',icons[method]);icon.setAttribute('aria-hidden','true');
-   const title=make('span','sy-login-method-label',labels[method]);button.append(icon,title);
+   const icon=make('span','sy-login-method-icon',method==='portal'?'♧':icons[method]);icon.setAttribute('aria-hidden','true');
+   const title=make('span','sy-login-method-label',method==='portal'?'والدین و رانندگان':labels[method]);button.append(icon,title);
    button.onclick=()=>activate(method,true);
    button.onkeydown=e=>{
     if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
@@ -233,6 +294,8 @@
   }
  }
  void reload();
+ document.querySelectorAll('[data-portal-login]').forEach(link=>link.addEventListener('click',()=>{selected='portal';activate('portal');}));
+ if(location.hash==='#portal-parent'||location.hash==='#portal-driver'){selected='portal';history.replaceState(history.state,'',location.pathname+location.search+'#login');}
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!window.serviceyarSessionActive)void reload();});
 
  const oldCompaniesPage=companiesPage;
