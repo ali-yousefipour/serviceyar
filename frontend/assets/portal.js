@@ -22,6 +22,17 @@
    if(current.portalType==='representative')return [['overview','نمای کلی','◈'],['debtors','گزارش بدهکاران','▦']];
    return [['overview','نمای کلی','◈'],['services',current.portalType==='parent'?'سرویس فرزند':'مدارس و دانش‌آموزان','▤'],...(current.portalType==='driver'&&representativeSchools.length?[['debtors','گزارش بدهکاران','▦']]:[]),['finance','امور مالی','﷼'],['profile',impersonated?'مشاهده مشخصات':'اطلاعات و ویرایش','♧'],...(!impersonated?[['password','تنظیم رمز عبور','◇']]:[])];
  }
+ function portalNavIcon(key){
+   const paths={
+     overview:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+     services:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/>',
+     debtors:'<path d="M4 3h16v18l-3-2-3 2-3-2-3 2-4-2z"/><path d="M8 8h8M8 12h8"/>',
+     finance:'<rect x="2" y="5" width="20" height="15" rx="2"/><path d="M2 10h20M16 15h3"/>',
+     profile:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-5 3.4-8 8-8s8 3 8 8"/>',
+     password:'<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3"/>'
+   };
+   return '<svg class="sy-portal-item-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(paths[key]||paths.overview)+'</svg>';
+ }
  function widget(title,value,hint,link=''){
    return '<article class="portal-kpi"><small>'+esc(title)+'</small><strong>'+esc(value)+'</strong><span>'+esc(hint||'')+'</span></article>';
  }
@@ -167,7 +178,7 @@
    section=next;
    const name=menuLinks().find(x=>x[0]===section)?.[1]||'داشبورد';
    const heading=el('pageTitle');if(heading)heading.textContent=name;
-   document.querySelectorAll('[data-page]').forEach(x=>x.classList.toggle('active',x.dataset.page===section));
+   document.querySelectorAll('[data-page]').forEach(x=>{const active=x.dataset.page===section;x.classList.toggle('active',active);if(active)x.setAttribute('aria-current','page');else x.removeAttribute('aria-current');});
    el('portalContent').innerHTML=({overview:renderOverview,services:renderServices,finance:renderFinance,debtors:renderDebtors,profile:renderProfile,password:renderPassword}[section]||renderOverview)();
    el('portalContent').querySelectorAll('[data-go]').forEach(x=>x.addEventListener('click',()=>selectSection(x.dataset.go)));
    const repForm=el('representativeDebtorsForm');if(repForm){repForm.addEventListener('submit',e=>{e.preventDefault();loadDebtors();});loadDebtors();}
@@ -221,7 +232,7 @@
    links.forEach(([key,title,icon])=>{
       const button=document.createElement('button');button.type='button';
       button.className='nav sy-portal-nav';button.dataset.page=key;
-      const symbol=document.createElement('span');symbol.className='sy-portal-nav-icon';symbol.textContent=icon;
+      const symbol=document.createElement('span');symbol.className='sy-portal-nav-icon';symbol.innerHTML=portalNavIcon(key);
       const caption=document.createElement('span');caption.textContent=title;
       button.append(symbol,caption);
       button.onclick=()=>{
@@ -321,7 +332,7 @@
    for(const [key,title,symbol] of menuLinks()){
      const button=document.createElement('button');
      button.type='button';button.className='nav sy-portal-nav';button.dataset.page=key;
-     button.innerHTML='<span class="sy-portal-nav-icon">'+esc(symbol)+'</span><span>'+esc(title)+'</span>';
+     button.innerHTML='<span class="sy-portal-nav-icon">'+portalNavIcon(key)+'</span><span>'+esc(title)+'</span>';
      button.onclick=()=>{
        history.replaceState(history.state,'',location.pathname+location.search+'#portal-'+key);
        selectSection(key);
