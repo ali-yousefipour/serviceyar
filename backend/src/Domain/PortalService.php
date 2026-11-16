@@ -385,14 +385,13 @@ final class PortalService {
                     throw new AuthException(422,'نشانی ایمیل معتبر نیست.','INVALID_EMAIL');
                 $pdo->prepare('UPDATE users SET email=? WHERE id=?')->execute([$email,$uid]);
             }
+            if($admin){
+                $pdo->prepare('INSERT INTO activity_logs(agency_id,user_id,action,entity_type,entity_id)
+                  VALUES(?,?,?,?,?)')->execute([$agencyId,$uid,'admin_driver_profile_updated','drivers',$partyId]);
+            }
             if($owned)$pdo->commit();
         }catch(\Throwable $e){if($owned&&$pdo->inTransaction())$pdo->rollBack();throw $e;}
-        if($admin){
-            $pdo->prepare('INSERT INTO activity_logs(agency_id,user_id,action,entity_type,entity_id)
-              VALUES(?,?,?,?,?)')->execute([$agencyId,$uid,'admin_driver_profile_updated','drivers',$partyId]);
-            return self::adminDriverPreview($uid,$agencyId,$partyId);
-        }
-        return self::dashboard($uid,$type,$agencyId,$partyId);
+        return $admin?self::adminDriverPreview($uid,$agencyId,$partyId):self::dashboard($uid,$type,$agencyId,$partyId);
     }
     public static function setPassword(int $uid,string $password,string $confirm,string $current=''): array {
         if(!self::memberships($uid))throw new AuthException(403,'حساب پنل یافت نشد.','PORTAL_FORBIDDEN');
