@@ -19,6 +19,7 @@
    return j.data;
  }
  function menuLinks(){
+   if(current.portalType==='representative')return [['overview','نمای کلی','◈'],['debtors','گزارش بدهکاران','▦']];
    return [['overview','نمای کلی','◈'],['services',current.portalType==='parent'?'سرویس فرزند':'مدارس و دانش‌آموزان','▤'],...(current.portalType==='driver'&&representativeSchools.length?[['debtors','گزارش بدهکاران','▦']]:[]),['finance','امور مالی','﷼'],['profile',impersonated?'مشاهده مشخصات':'اطلاعات و ویرایش','♧'],...(!impersonated?[['password','تنظیم رمز عبور','◇']]:[])];
  }
  function widget(title,value,hint,link=''){
@@ -31,6 +32,9 @@
  }
  function person(p){return [p?.first_name,p?.last_name].filter(Boolean).join(' ')||'—'}
  function renderOverview(){
+   if(current.portalType==='representative')return '<div class="portal-section-title"><h1>پنل نماینده مدارس</h1><p>مشاهده بدهکاران مدارس دارای مجوز</p></div>'+
+    '<div class="portal-kpis">'+widget('مدارس تحت پوشش',fa(representativeSchools.length),'دسترسی اختصاصی شرکت')+'</div>'+
+    '<section class="portal-panel"><h2>گزارش بدهکاران</h2><p>برای مشاهده وضعیت مالی دانش‌آموزان، مدرسه مورد نظر را انتخاب کنید.</p><button type="button" data-go="debtors" class="primary">مشاهده گزارش بدهکاران</button></section>';
    const parent=current.portalType==='parent',f=data.finance||{};
    const who=parent?person(data.student):person(data.driver);
    const cards=parent?[
@@ -90,7 +94,7 @@
      table(['تاریخ','مبلغ','روش','شماره پیگیری'],(f.payments||[]).map(x=>[date(x.payment_date),money(x.amount),x.method||'—',x.reference_no||'—']))+'</section>';
  }
  function renderDebtors(){
-   if(current.portalType!=='driver'||!representativeSchools.length)return '<section class="portal-panel">دسترسی نمایندگی فعال نیست.</section>';
+   if(!['driver','representative'].includes(current.portalType)||!representativeSchools.length)return '<section class="portal-panel">دسترسی نمایندگی فعال نیست.</section>';
    const yr=Number(normal(new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',timeZone:'Asia/Tehran'}).format(new Date())));
    return '<div class="portal-section-title"><h1>گزارش بدهکاران</h1><p>صرفاً مدارس مجاز در شرکت انتخاب‌شده</p></div>'+
      '<section class="portal-panel"><form id="representativeDebtorsForm" class="portal-profile-form">'+
@@ -107,7 +111,7 @@
    for(const key of ['academicYear','minDebt'])params.set(key,normal(params.get(key)).replace(/\\s/g,'').replace(/[٬,]/g,''));
    status.textContent='در حال دریافت اطلاعات…';target.replaceChildren();
    try{
-     const report=await api('/api/v1/portal/driver/'+current.agencyId+'/'+current.partyId+'/debtors?'+params);
+     const report=await api('/api/v1/portal/'+current.portalType+'/'+current.agencyId+'/'+current.partyId+'/debtors?'+params);
      if(!form.isConnected)return;
      status.textContent=fa(report.items.length)+' بدهکار · مجموع بدهی '+money(report.total);
      target.innerHTML=table(['دانش‌آموز','مدرسه','تلفن ولی','شهریه ماهانه','شهریه سالانه','پرداخت‌شده','بدهی باقی‌مانده'],
@@ -186,8 +190,8 @@
  async function openMembership(m){
    current=m;
    data=await api('/api/v1/portal/'+m.portalType+'/'+m.agencyId+'/'+m.partyId);
-   representativeSchools=m.portalType==='driver'?await api('/api/v1/portal/driver/'+m.agencyId+'/'+m.partyId+'/representative-schools').catch(()=>[]):[];
-   const parent=m.portalType==='parent',name=parent?'والدین':'رانندگان';
+   representativeSchools=m.portalType==='representative'?await api('/api/v1/portal/representative/'+m.agencyId+'/'+m.partyId+'/schools'):m.portalType==='driver'?await api('/api/v1/portal/driver/'+m.agencyId+'/'+m.partyId+'/representative-schools'):[];
+   const parent=m.portalType==='parent',name=parent?'والدین':m.portalType==='representative'?'نمایندگان':'رانندگان';
    const sidebar=el('nav');sidebar.replaceChildren();
    const links=menuLinks();
    links.forEach(([key,title,icon])=>{
@@ -223,27 +227,28 @@
    if(brand)brand.textContent='پنل '+name+' · '+m.agencyName;
    const sideName=el('syAccountName');if(sideName)sideName.textContent=data.profile?.username||'حساب شخصی';
    const role=el('syAccountRole');if(role)role.textContent=impersonated?'مشاهده نیابتی ادمین کل':('پنل '+name);
-   const avatar=el('syAccountAvatar');if(avatar){avatar.textContent=parent?'و':'ر';avatar.classList.remove('sy-account-avatar-has-photo');}
+   const avatar=el('syAccountAvatar');if(avatar){avatar.textContent=parent?'و':m.portalType==='representative'?'ن':'ر';avatar.classList.remove('sy-account-avatar-has-photo');}
    const account=el('syAccountMenu');if(account){account.open=false;account.hidden=true;}
    const agencyPicker=el('agencyPickerWrap');if(agencyPicker)agencyPicker.hidden=true;
    const returnButton=el('syAdminReturn');if(returnButton)returnButton.hidden=!impersonated;
    const logout=el('logout');if(logout)logout.textContent=impersonated?'بازگشت به پنل ادمین کل':'خروج از حساب';
    el('app').classList.add('sy-portal-mode');
    const content=el('content');
-   const selector=members.length>1?'<label class="sy-portal-identity-switch">انتخاب فرزند، شرکت یا نقش<select id="portalSwitch">'+members.map((x,i)=>'<option value="'+i+'"'+(x===m?' selected':'')+'>'+(x.portalType==='parent'?'والدین':'رانندگان')+' · '+esc(x.agencyName)+' · '+fa(x.partyId)+'</option>').join('')+'</select></label>':'';
+   const selector=members.length>1?'<label class="sy-portal-identity-switch">انتخاب فرزند، شرکت یا نقش<select id="portalSwitch">'+members.map((x,i)=>'<option value="'+i+'"'+(x===m?' selected':'')+'>'+(x.portalType==='parent'?'والدین':x.portalType==='representative'?'نمایندگان':'رانندگان')+' · '+esc(x.agencyName)+' · '+fa(x.partyId)+'</option>').join('')+'</select></label>':'';
    content.innerHTML='<div class="sy-portal-content">'+
      (impersonated?'<div class="sy-portal-impersonation-notice">در حال مشاهده نیابتی پنل '+name+' هستید؛ ویرایش اطلاعات و تغییر رمز غیرفعال است.</div>':'')+
      selector+'<div id="portalContent"></div></div>';
    if(el('portalSwitch'))el('portalSwitch').onchange=e=>openMembership(members[Number(e.target.value)]).catch(err=>note(err.message,true));
    const route=location.hash.slice(1);
-   const allowed=['overview','services','finance','profile','password'];
+   const allowed=['overview','services','finance','profile','password','debtors'];
    section=route.startsWith('portal-')&&allowed.includes(route.slice(7))?route.slice(7):'overview';
+   if(!menuLinks().some(x=>x[0]===section))section='overview';
    if(impersonated&&section==='password')section='overview';
    selectSection(section);
-   if(!data.hasPassword&&!impersonated)note('می‌توانید از بخش «تنظیم رمز عبور» رمز اختصاصی برای شماره همراه خود تعریف کنید.');
+   if(!data.hasPassword&&m.portalType!=='representative'&&!impersonated)note('می‌توانید از بخش «تنظیم رمز عبور» رمز اختصاصی برای شماره همراه خود تعریف کنید.');
  }
  function selectPortalRoute(raw){
-   const pages={dashboard:'overview','portal-dashboard':'overview','portal-services':'services','portal-finance':'finance','portal-profile':'profile','portal-password':'password'};
+   const pages={'portal-debtors':'debtors',dashboard:'overview','portal-dashboard':'overview','portal-services':'services','portal-finance':'finance','portal-profile':'profile','portal-password':'password'};
    if(pages[raw])selectSection(pages[raw]);
  }
  async function mount(authSession){
