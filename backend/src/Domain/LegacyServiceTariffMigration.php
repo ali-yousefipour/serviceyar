@@ -18,11 +18,13 @@ final class LegacyServiceTariffMigration {
   Authorization::requireAgencyAccess($uid,$aid);
   $pdo=Connection::get();
   $sql="SELECT DISTINCT st.id, st.school_id, st.tariff_vehicle_class, st.tariff_distance_km,
-       st.monthly_fee, st.driver_base_monthly, st.fee_source, st.academic_year, sc.region
+       st.monthly_fee, st.driver_base_monthly, st.fee_source, st.academic_year, sc.region, v.tariff_vehicle_class AS current_vehicle_class
        FROM students st JOIN service_students ss ON ss.student_id=st.id
        JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=st.agency_id
        JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id
-       WHERE st.agency_id=? ORDER BY st.id";
+       JOIN drivers d ON d.id=sv.driver_id AND d.agency_id=sv.agency_id
+       JOIN vehicles v ON v.id=d.vehicle_id AND v.agency_id=sv.agency_id AND v.is_active=1
+       WHERE st.agency_id=? AND st.fee_source='taxi' AND sv.fee_source='taxi' AND st.is_active=1 AND sv.is_active=1 AND sv.status='active' ORDER BY st.id";
   $q=$pdo->prepare($sql);$q->execute([$aid]);
   $changes=[];$issues=[];$regions=[];
   // Normalize every school in the agency, including schools without assigned students.
@@ -38,16 +40,16 @@ final class LegacyServiceTariffMigration {
    if($normalized===null){$issues[]=['studentId'=>(int)$row['id'],'reason'=>'ناحیه مدرسه نامعتبر: '.$row['region']];continue;}
    $regions[(int)$row['school_id']]=$normalized;
    try{
-    $quote=TaxiOrganizationTariffs::quote($pdo,(int)($normalized==='تبادکان'?8:$normalized),$row['tariff_vehicle_class'],$row['tariff_distance_km']);
+    $quote=TaxiOrganizationTariffs::quote($pdo,(int)($normalized==='تبادکان'?8:$normalized),$row['current_vehicle_class'],$row['tariff_distance_km']);
     $changes[]=['id'=>(int)$row['id'],'schoolId'=>(int)$row['school_id'],
      'oldFee'=>(int)$row['monthly_fee'],'newFee'=>(int)$quote['parentMonthly'],
      'oldDriverBase'=>(int)($row['driver_base_monthly']??0),'newDriverBase'=>(int)$quote['driverMonthly'],
-     'oldSource'=>(string)$row['fee_source']];
+     'oldSource'=>(string)$row['fee_source'],'vehicleClass'=>(int)$row['current_vehicle_class']];
    }catch(\Throwable $e){$issues[]=['studentId'=>(int)$row['id'],'reason'=>$e->getMessage()];}
   }
   // Cover ALL services, including drafts, cancelled and assignments without students.
   // The legacy code is stable, derived from immutable database ids and checked against existing codes.
-  $sq=$pdo->prepare('SELECT id,code,monthly_fee,fee_source FROM services WHERE agency_id=? ORDER BY id');
+  $sq=$pdo->prepare('SELECT id,code,monthly_fee,fee_source,status,is_active FROM services WHERE agency_id=? ORDER BY id');
   $sq->execute([$aid]);$allServices=$sq->fetchAll(PDO::FETCH_ASSOC);
   $usedCodes=[];
   $globalCodes=$pdo->query("SELECT code FROM services WHERE code IS NOT NULL AND TRIM(code)<>''");
@@ -69,12 +71,13 @@ final class LegacyServiceTariffMigration {
   $previewAmountChanges=0;$previewSourceOnly=0;
   $changeByStudent=[];foreach($changes as $change)$changeByStudent[$change['id']]=$change;
   foreach($allServices as $service){
+   if($service['fee_source']!=='taxi'||(int)$service['is_active']!==1||$service['status']!=='active'){$skippedServices++;continue;}
    $memberIds=$serviceMembers[(int)$service['id']]??[];
    if(!$memberIds||count(array_filter($memberIds,static fn($id)=>isset($studentCandidates[$id])))!==count($memberIds)){
     $skippedServices++;continue;
    }
    $eligibleServices++;
-   $gross=0;foreach($memberIds as $studentId)$gross+=$changeByStudent[$studentId]['newDriverBase'];
+   $gross=0;foreach($memberIds as $studentId)$gross+=$changeByStudent[$studentId]['newFee'];
    $net=(int)round(OperationsService::driverDeductions((float)$gross,$aid)['net_earned']);
    $old=(int)round((float)$service['monthly_fee']);
    if($old!==$net||(string)$service['fee_source']!=='taxi'){
@@ -117,7 +120,7 @@ final class LegacyServiceTariffMigration {
    // Invalid records must not prevent repricing unrelated valid services.
    // Each student is isolated with a savepoint so an invoice-specific error
    // cannot roll back the company's other valid tuition corrections.
-   $updateStudent=$pdo->prepare("UPDATE students SET fee_source='taxi',monthly_fee=?,driver_base_monthly=?,tariff_calculated_at=NOW() WHERE id=? AND agency_id=?");
+   $updateStudent=$pdo->prepare("UPDATE students SET fee_source='taxi',monthly_fee=?,driver_base_monthly=?,tariff_vehicle_class=?,tariff_calculated_at=NOW() WHERE id=? AND agency_id=?");
    $successStudents=[];$updatedStudents=0;$unchangedStudents=0;$invoicesSynced=0;$verifiedStudents=0;
    $studentAmountsChanged=0;$studentSourcesOnly=0;
    $verifyStudent=$pdo->prepare('SELECT monthly_fee,driver_base_monthly,fee_source FROM students WHERE id=? AND agency_id=?');
@@ -127,7 +130,7 @@ final class LegacyServiceTariffMigration {
      $changed=$c['oldFee']!==$c['newFee']||$c['oldDriverBase']!==$c['newDriverBase']||$c['oldSource']!=='taxi';
      if($changed){
       $audit->execute([$run,$aid,'student',$c['id'],json_encode(['monthlyFee'=>$c['oldFee'],'driverBaseMonthly'=>$c['oldDriverBase'],'feeSource'=>$c['oldSource']]),json_encode(['monthlyFee'=>$c['newFee'],'driverBaseMonthly'=>$c['newDriverBase'],'feeSource'=>'taxi']),$uid]);
-      $updateStudent->execute([$c['newFee'],$c['newDriverBase'],$c['id'],$aid]);
+      $updateStudent->execute([$c['newFee'],$c['newDriverBase'],$c['vehicleClass'],$c['id'],$aid]);
      }
      if(StudentServiceBilling::sync($pdo,$aid,(int)$c['id'])!==null)$invoicesSynced++;
      $verifyStudent->execute([$c['id'],$aid]);$saved=$verifyStudent->fetch(PDO::FETCH_ASSOC);
@@ -146,14 +149,15 @@ final class LegacyServiceTariffMigration {
      $issues[]=['studentId'=>(int)$c['id'],'reason'=>'خطای اصلاح شهریه یا فاکتور: '.$error->getMessage()];
     }
    }
-   $services=$pdo->prepare('SELECT id,monthly_fee,fee_source FROM services WHERE agency_id=? ORDER BY id FOR UPDATE');
+   $services=$pdo->prepare('SELECT id,monthly_fee,fee_source,status,is_active FROM services WHERE agency_id=? ORDER BY id FOR UPDATE');
    $services->execute([$aid]);$rows=$services->fetchAll(PDO::FETCH_ASSOC);
-   $gross=$pdo->prepare('SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
+   $gross=$pdo->prepare('SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? AND st.is_active=1 WHERE ss.service_id=?');
    $updateService=$pdo->prepare("UPDATE services SET fee_source='taxi',monthly_fee=? WHERE id=? AND agency_id=?");
    $updatedServices=0;$unchangedServices=0;$verifiedServices=0;$actualServiceChanges=[];
    $serviceAmountsChanged=0;$serviceSourcesOnly=0;
    $verifyService=$pdo->prepare('SELECT monthly_fee,fee_source FROM services WHERE id=? AND agency_id=?');
    foreach($rows as $s){
+    if($s['fee_source']!=='taxi'||(int)$s['is_active']!==1||$s['status']!=='active')continue;
     $memberIds=$serviceMembers[(int)$s['id']]??[];
     if(!$memberIds){
      $issues[]=['serviceId'=>(int)$s['id'],'reason'=>'سرویس دانش‌آموز تخصیص‌یافته ندارد؛ مبلغ قبلی بدون تغییر باقی ماند.'];
