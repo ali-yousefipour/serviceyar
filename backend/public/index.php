@@ -350,6 +350,13 @@ try {
    header('Cache-Control: private, no-store');
    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\StandaloneRepresentatives::report((int)$s['id'],(int)$rep[1],(int)$rep[2],$_GET)]);
  }
+ if($path==='/api/v1/admin/impersonation/driver-preview'&&$method==='GET'){
+   header('Cache-Control: private, no-store');
+   $agencyId=filter_var($_GET['agencyId']??null,FILTER_VALIDATE_INT);
+   $driverId=filter_var($_GET['driverId']??null,FILTER_VALIDATE_INT);
+   if(!$agencyId||!$driverId)throw new AuthException(422,'شرکت یا راننده معتبر نیست.','VALIDATION_ERROR');
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\PortalService::adminDriverPreview((int)$s['id'],(int)$agencyId,(int)$driverId)]);
+ }
  if($path==='/api/v1/admin/impersonation/users'&&$method==='GET'){
   $agencyId=filter_var($_GET['agencyId']??null,FILTER_VALIDATE_INT);
   if(!$agencyId)throw new AuthException(422,'شرکت انتخاب‌شده معتبر نیست.','INVALID_AGENCY');
