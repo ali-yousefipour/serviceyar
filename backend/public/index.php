@@ -550,6 +550,21 @@ try {
   $quote=\ServiceYar\Domain\ServicePricing::quote($pdo,$aid,$student,$source);
   Response::json(['ok'=>true,'data'=>$quote]);
  }
+ // Explicit application of the Taxi Organization rate never runs merely by
+ // opening an edit form. Preview is read-only; apply requires a confirmation,
+ // scoped company permissions, CSRF, and an atomic billing recalculation.
+ if(preg_match('#^/api/v1/operations/tariffs/apply-(service|driver)/([0-9]+)$#D',$path,$tariffTarget)){
+   $type=(string)$tariffTarget[1];$id=(int)$tariffTarget[2];
+   if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\TaxiTariffApplication::run(
+       (int)$s['id'],$aid,$type,$id,false)]);
+   if($method==='POST'){
+     $auth->requireCsrf($s);$body=Request::json();
+     if(($body['confirm']??'')!=='APPLY_OFFICIAL_TAXI_TARIFF')
+        throw new AuthException(422,'برای اعمال تعرفه سازمانی ابتدا پیش‌نمایش و تأیید نهایی لازم است.','CONFIRMATION_REQUIRED');
+     Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\TaxiTariffApplication::run(
+         (int)$s['id'],$aid,$type,$id,true)]);
+   }
+ }
  if($path==='/api/v1/admin/taxi-tariffs/reprice-legacy'){
   if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\LegacyServiceTariffMigration::run($s['id'],$aid,false)]);
   if($method==='POST'){
