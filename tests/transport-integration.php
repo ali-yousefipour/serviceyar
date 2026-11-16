@@ -207,6 +207,18 @@ try{
  $autoInvoice=$p->prepare('SELECT i.amount FROM student_service_debt_invoices m JOIN invoices i ON i.id=m.invoice_id WHERE m.agency_id=? AND m.student_id=?');
  $autoInvoice->execute([$feeAgency,$feeStudent['id']]);$automaticDebt=(float)$autoInvoice->fetchColumn();
  check($automaticDebt>0,'Assignment creates a linked annual service invoice');
+ $debtorFilter=['academicYear'=>'1405/1406','schoolId'=>$feeSchool['id'],'minDebt'=>(string)$automaticDebt];
+ $debtors=\ServiceYar\Domain\StudentDebtors::report($uid,$feeAgency,$debtorFilter);
+ check(count($debtors['items'])===1&&(float)$debtors['items'][0]['debt']===$automaticDebt,
+   'Debtor report uses only annual service invoices and their linked payments');
+ $debtInvoice=$p->prepare('SELECT invoice_id FROM student_service_debt_invoices WHERE agency_id=? AND student_id=?');
+ $debtInvoice->execute([$feeAgency,$feeStudent['id']]);
+ $payment=insertFixture('payments',['agency_id'=>$feeAgency,'invoice_id'=>$debtInvoice->fetchColumn(),'amount'=>'250.50','payment_date'=>'2026-10-01']);
+ $result=\ServiceYar\Domain\StudentDebtors::report($uid,$feeAgency,['academicYear'=>'1405-1406']);
+ check((float)$result['items'][0]['paid']===250.5&&(float)$result['total']===$automaticDebt-250.5
+   &&\ServiceYar\Domain\StudentDebtors::report($uid,$feeAgency,$debtorFilter)['items']===[],
+   'Linked receipt reduces balance and minimum debt filter uses remaining balance');
+ $p->prepare('DELETE FROM payments WHERE id=?')->execute([$payment]);
  check(abs((float)$item['invoiced']-($automaticDebt+1200000.50))<0.01
    &&$item['received']==='300000.25'
    &&abs((float)$item['balance']-($automaticDebt+900000.25))<0.01,

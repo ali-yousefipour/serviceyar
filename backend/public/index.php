@@ -472,6 +472,8 @@ try {
  if($method==='GET'&&$path==='/api/v1/reports/school-workbook.xlsx')ExportService::schoolWorkbook($s['id'],$aid,(string)($_GET['period']??'Mehr'));
  if($method==='GET'&&$path==='/api/v1/operations/service-finance')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ServiceFinanceReport::report($s['id'],$aid,$_GET)]);
  if($method==='GET'&&$path==='/api/v1/reports/service-finance.xlsx')ExportService::serviceFinance($s['id'],$aid,$_GET);
+ if($method==='GET'&&$path==='/api/v1/operations/debtors')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\StudentDebtors::report($s['id'],$aid,$_GET)]);
+ if($method==='GET'&&$path==='/api/v1/reports/debtors.xlsx')\ServiceYar\Reports\StudentDebtorsWorkbook::download($s['id'],$aid,$_GET,($_GET['scope']??'')==='all');
  if($method==='GET'&&preg_match('#^/api/v1/students/(\d+)/service-finance$#',$path,$m))Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ServiceFinanceReport::report($s['id'],$aid,$_GET,(int)$m[1])]);
  if($method==='GET'&&$path==='/api/v1/operations/school-statement/rules'){Authorization::requirePermission($s['id'],'finance.view');Response::json(['ok'=>true,'data'=>json_decode(file_get_contents(__DIR__.'/../src/Domain/school-statement-template-1405.json'),true,512,JSON_THROW_ON_ERROR)]);}
  if($method==='GET'&&preg_match('#^/api/v1/reports/school-statements/(\\d+)\\.xlsx$#',$path,$statementExport))\ServiceYar\Reports\MonthlyStatementWorkbook::download($s['id'],$aid,(int)$statementExport[1]);
