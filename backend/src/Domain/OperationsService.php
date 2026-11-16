@@ -145,7 +145,7 @@ final class OperationsService
             if((float)$feeCheck->fetchColumn()>0)StudentServiceBilling::sync($p,$aid,$studentId);
             // Keep the saved driver net consistent for direct assignments as well
             // as the new-service wizard; avoid leaving a zero legacy monthly total.
-            $driverGross=$p->prepare('SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
+            $driverGross=$p->prepare('SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
             $driverGross->execute([$aid,$serviceId]);
             $net=self::driverDeductions((float)$driverGross->fetchColumn(),$aid)['net_earned'];
             $p->prepare('UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?')->execute([$net,$serviceId,$aid]);
@@ -185,8 +185,8 @@ final class OperationsService
     public static function payroll(int $uid,int $aid,array $filter): array
     {
         $p=self::scope($uid,$aid,'finance.view');[$from,$to]=self::range($filter);
-        $estimateRequested=($filter['calculationMode']??'recorded')==='assignment_estimate';
-        if(!in_array(($filter['calculationMode']??'recorded'),['recorded','assignment_estimate'],true))throw new AuthException(422,'روش محاسبه حقوق نامعتبر است.','VALIDATION_ERROR');
+        $estimateRequested=($filter['calculationMode']??'assignment_estimate')==='assignment_estimate';
+        if(!in_array(($filter['calculationMode']??'assignment_estimate'),['recorded','assignment_estimate'],true))throw new AuthException(422,'روش محاسبه حقوق نامعتبر است.','VALIDATION_ERROR');
         $periodDays=(new \DateTimeImmutable($from))->diff(new \DateTimeImmutable($to))->days+1;
         if($estimateRequested&&($periodDays<28||$periodDays>31))throw new AuthException(422,'برآورد ماهانه فقط برای بازه کامل ۲۸ تا ۳۱ روزه مجاز است.','INVALID_ESTIMATE_PERIOD');
         $q=$p->prepare('SELECT d.id,d.first_name,d.last_name,d.mobile,d.iban,d.bank_account,
@@ -207,18 +207,53 @@ final class OperationsService
              WHERE s.driver_id=d.id AND s.agency_id=d.agency_id AND s.is_active=1 AND s.status=\'active\' AND st.is_active=1) assigned_student_count
           FROM drivers d WHERE d.agency_id=:a AND d.is_active=1 ORDER BY d.last_name,d.first_name');
         $q->execute(['a'=>$aid,'wf'=>$from,'wt'=>$to,'cf'=>$from,'ct'=>$to,'pf'=>$from,'pt'=>$to,'lf'=>$from,'lt'=>$to]);$rows=$q->fetchAll();
+        // One service snapshot drives the monthly payslip and the service editor.
+        // Never use driver_base_monthly here: it describes a different reference
+        // and can silently double-count deductions against parent tuition.
+        $details=$p->prepare("SELECT sv.id AS service_id,sv.driver_id,sv.title,sv.code,sv.fee_source,
+           COUNT(st.id) AS student_count,COALESCE(SUM(st.monthly_fee),0) AS monthly_gross
+           FROM services sv JOIN service_students ss ON ss.service_id=sv.id
+           JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id AND st.is_active=1
+           WHERE sv.agency_id=? AND sv.is_active=1 AND sv.status='active'
+           GROUP BY sv.id,sv.driver_id,sv.title,sv.code,sv.fee_source");
+        $details->execute([$aid]);$byDriver=[];
+        foreach($details->fetchAll(\PDO::FETCH_ASSOC) as $service){
+            if($service['driver_id']===null)continue;
+            $byDriver[(int)$service['driver_id']][]=$service;
+        }
+        $overrides=$filter['serviceDays']??[];
+        if(is_string($overrides))$overrides=json_decode($overrides,true);
+        if(!is_array($overrides)||count($overrides)>1000)
+            throw new AuthException(422,'روزهای کارکرد سرویس معتبر نیست.','INVALID_SERVICE_DAYS');
+        foreach($overrides as $serviceId=>$days){
+            if(!ctype_digit((string)$serviceId)||!is_numeric($days)||floor((float)$days)!==(float)$days||(int)$days<0||(int)$days>30)
+                throw new AuthException(422,'روزهای کارکرد هر سرویس باید عدد صحیح بین صفر تا ۳۰ باشد.','INVALID_SERVICE_DAYS');
+        }
         foreach($rows as &$r){
+            $serviceRows=[];$monthlyGross=0;$proratedGross=0;
+            foreach($byDriver[(int)$r['id']]??[] as $service){
+                $serviceId=(int)$service['service_id'];
+                $days=array_key_exists($serviceId,$overrides)?(int)$overrides[$serviceId]:30;
+                $amount=(int)round((float)$service['monthly_gross']);
+                $prorated=ServiceFinancialBasis::prorate($amount,$days);
+                $monthlyGross+=$amount;$proratedGross+=$prorated;
+                $serviceRows[]=['serviceId'=>$serviceId,'title'=>$service['title'],
+                  'code'=>$service['code'],'studentCount'=>(int)$service['student_count'],
+                  'feeSource'=>$service['fee_source'],'monthlyGross'=>$amount,
+                  'days'=>$days,'earnedGross'=>$prorated];
+            }
+            $r['service_details']=$serviceRows;
+            $r['assigned_monthly_base']=$monthlyGross;
             $gross=(float)$r['earned'];
             $r['recorded_earned']=$gross;
             // Current assignments do not describe historical service dates. This
             // explicit, single-month estimate is never written to driver_work.
-            $canEstimate=$estimateRequested && (int)$r['recorded_work_count']===0
-                && (float)$r['assigned_monthly_base']>0;
+            $canEstimate=$estimateRequested && count($serviceRows)>0;
             if($canEstimate){
-                $gross=(float)$r['assigned_monthly_base'];
+                $gross=(float)$proratedGross;
                 $r['earned']=$gross;
             }
-            $r['calculation_basis']=$canEstimate?'current_assignments_estimate':'recorded_driver_work';
+            $r['calculation_basis']=$canEstimate?'current_service_days_from_student_parent_fees':'recorded_driver_work';
             $r['estimate_requires_confirmation']=$canEstimate;
             $r['missing_work_records']=(int)$r['recorded_work_count']===0;
             $r['estimated_monthly_gross']=(float)$r['assigned_monthly_base'];
@@ -236,7 +271,7 @@ final class OperationsService
             $r['reconciliation_requires_review']=abs((float)$r['recorded_earned']-$assignedMonthly)>=1;
             $r['balance']=$deductions['net_earned']-$r['paid'];
         }unset($r);
-        return ['items'=>$rows,'from'=>$from,'to'=>$to,'calculationMode'=>$estimateRequested?'assignment_estimate':'recorded','estimatedOnly'=>$estimateRequested,'estimatedWarning'=>'برآورد بر اساس تخصیص‌های فعلی است؛ بدون تاریخچه تغییر راننده و روزهای خدمت، حقوق قطعی ماه‌های گذشته محسوب نمی‌شود.'];
+        return ['items'=>$rows,'from'=>$from,'to'=>$to,'calculationMode'=>$estimateRequested?'assignment_estimate':'recorded','estimatedOnly'=>$estimateRequested,'estimatedWarning'=>'مبنای هر سرویس ۳۰ روز است؛ برای ماه‌های گذشته و تغییرات راننده یا دانش‌آموز، روزهای واقعی را پیش از تأیید بررسی کنید.'];
     }
 
     /** Rates are agency-specific; defaults apply when no policy has been saved. */
