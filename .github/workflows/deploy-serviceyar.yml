@@ -130,7 +130,7 @@ jobs:
           test -s deploy-payload/portal.html
           test -s deploy-payload/assets/portal.js
           test -s deploy-payload/assets/portal.css
-          grep -q "${GITHUB_SHA}" deploy-payload/portal.html
+          grep -Fq "location.replace('/#login')" deploy-payload/portal.html
           cp -a backend/. deploy-payload/backend/
           cp -a database/. deploy-payload/database/
           cp -a storage/. deploy-payload/storage/
