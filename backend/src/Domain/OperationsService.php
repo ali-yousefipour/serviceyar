@@ -199,12 +199,12 @@ final class OperationsService
              FROM services s
              JOIN service_students ss ON ss.service_id=s.id
              JOIN students st ON st.id=ss.student_id AND st.agency_id=s.agency_id
-             WHERE s.driver_id=d.id AND s.agency_id=d.agency_id AND s.is_active=1 AND st.is_active=1) assigned_monthly_base,
+             WHERE s.driver_id=d.id AND s.agency_id=d.agency_id AND s.is_active=1 AND s.status=\'active\' AND st.is_active=1) assigned_monthly_base,
           (SELECT COUNT(*)
              FROM services s
              JOIN service_students ss ON ss.service_id=s.id
              JOIN students st ON st.id=ss.student_id AND st.agency_id=s.agency_id
-             WHERE s.driver_id=d.id AND s.agency_id=d.agency_id AND s.is_active=1 AND st.is_active=1) assigned_student_count
+             WHERE s.driver_id=d.id AND s.agency_id=d.agency_id AND s.is_active=1 AND s.status=\'active\' AND st.is_active=1) assigned_student_count
           FROM drivers d WHERE d.agency_id=:a AND d.is_active=1 ORDER BY d.last_name,d.first_name');
         $q->execute(['a'=>$aid,'wf'=>$from,'wt'=>$to,'cf'=>$from,'ct'=>$to,'pf'=>$from,'pt'=>$to,'lf'=>$from,'lt'=>$to]);$rows=$q->fetchAll();
         foreach($rows as &$r){
@@ -231,12 +231,12 @@ final class OperationsService
             // Never replace driver_work earnings or mutate approved payroll snapshots.
             $assignedMonthly=(float)$r['assigned_monthly_base'];
             $r['assigned_monthly_net']=self::driverDeductions($assignedMonthly,$aid)['net_earned'];
-            $r['work_vs_assigned_monthly_delta']=$gross-$assignedMonthly;
+            $r['work_vs_assigned_monthly_delta']=(float)$r['recorded_earned']-$assignedMonthly;
             $r['reconciliation_basis']='current_active_assignments_monthly_vs_recorded_period_work';
             $r['reconciliation_requires_review']=abs($gross-$assignedMonthly)>=1;
             $r['balance']=$deductions['net_earned']-$r['paid'];
         }unset($r);
-        return ['items'=>$rows,'from'=>$from,'to'=>$to,'calculationMode'=>$estimateRequested?'assignment_estimate':'recorded','estimatedOnly'=>true,'estimatedWarning'=>'برآورد بر اساس تخصیص‌های فعلی است؛ بدون تاریخچه تغییر راننده و روزهای خدمت، حقوق قطعی ماه‌های گذشته محسوب نمی‌شود.'];
+        return ['items'=>$rows,'from'=>$from,'to'=>$to,'calculationMode'=>$estimateRequested?'assignment_estimate':'recorded','estimatedOnly'=>$estimateRequested,'estimatedWarning'=>'برآورد بر اساس تخصیص‌های فعلی است؛ بدون تاریخچه تغییر راننده و روزهای خدمت، حقوق قطعی ماه‌های گذشته محسوب نمی‌شود.'];
     }
 
     /** Rates are agency-specific; defaults apply when no policy has been saved. */
