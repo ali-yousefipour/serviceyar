@@ -34,7 +34,7 @@
    return '<svg class="sy-portal-item-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(paths[key]||paths.overview)+'</svg>';
  }
  function widget(title,value,hint,link=''){
-   return '<article class="portal-kpi"><small>'+esc(title)+'</small><strong>'+esc(value)+'</strong><span>'+esc(hint||'')+'</span></article>';
+   return '<article class="portal-kpi sy-mgmt-kpi sy-mgmt-tone-green"><small>'+esc(title)+'</small><strong>'+esc(value)+'</strong><span>'+esc(hint||'')+'</span></article>';
  }
  function table(headers,rows){
    return '<div class="portal-table-scroll"><table><thead><tr>'+headers.map(x=>'<th>'+esc(x)+'</th>').join('')+'</tr></thead><tbody>'+
@@ -45,7 +45,7 @@
  function renderOverview(){
    if(current.portalType==='representative')return '<div class="portal-section-title"><h1>پنل نماینده مدارس</h1><p>مشاهده بدهکاران مدارس دارای مجوز</p></div>'+
     '<div class="portal-kpis">'+widget('مدارس تحت پوشش',fa(representativeSchools.length),'دسترسی اختصاصی شرکت')+'</div>'+
-    '<section class="portal-panel"><h2>گزارش بدهکاران</h2><p>برای مشاهده وضعیت مالی دانش‌آموزان، مدرسه مورد نظر را انتخاب کنید.</p><button type="button" data-go="debtors" class="primary">مشاهده گزارش بدهکاران</button></section>';
+    '<section class="portal-panel sy-mgmt-panel"><h2>گزارش بدهکاران</h2><p>برای مشاهده وضعیت مالی دانش‌آموزان، مدرسه مورد نظر را انتخاب کنید.</p><button type="button" data-go="debtors" class="primary">مشاهده گزارش بدهکاران</button></section>';
    const parent=current.portalType==='parent',f=data.finance||{};
    const who=parent?person(data.student):person(data.driver);
    const cards=parent?[
@@ -61,10 +61,10 @@
    ];
    const percent=parent?(Number(f.total)>0?Math.min(100,Math.max(0,Number(f.paid)/Number(f.total)*100)):0):
        (Number(f.recordedNet)>0?Math.min(100,Math.max(0,Number(f.paid)/Number(f.recordedNet)*100)):0);
-   return '<section class="portal-welcome"><div><small>داشبورد اختصاصی '+(parent?'والدین':'رانندگان')+'</small><h1>سلام، '+esc(who)+'</h1><p>'+esc(data.agency?.name||'سرویس‌یار')+' · اطلاعات ثبت‌شده در سامانه</p></div></section>'+
-   '<div class="portal-kpis">'+cards.map(x=>widget(...x)).join('')+'</div>'+
-   '<div class="portal-panels"><section class="portal-panel"><h2>خلاصه مالی</h2><p class="muted">نسبت مبالغ پرداخت‌شده به مبالغ ثبت‌شده</p><div class="portal-ring-wrap"><div class="portal-ring" style="--pct:'+percent+'%"><div><strong>'+fa(percent)+'٪</strong><small>پرداخت‌شده</small></div></div><div class="portal-ring-legend"><div><b>ثبت‌شده</b><span>'+money(parent?f.total:f.recordedNet)+'</span></div><div><b>پرداخت‌شده</b><span>'+money(f.paid)+'</span></div><div><b>باقی‌مانده</b><span>'+money(f.balance)+'</span></div></div></div></section>'+
-   '<section class="portal-panel"><h2>دسترسی‌های سریع</h2><div class="portal-shortcuts">'+menuLinks().filter(x=>x[0]!=='overview').map(x=>'<button type="button" data-go="'+x[0]+'"><b>'+x[2]+'</b>'+esc(x[1])+'<span>‹</span></button>').join('')+'</div></section></div>';
+   return '<section class="portal-welcome sy-mgmt-hero"><div><small>داشبورد اختصاصی '+(parent?'والدین':'رانندگان')+'</small><h1>سلام، '+esc(who)+'</h1><p>'+esc(data.agency?.name||'سرویس‌یار')+' · اطلاعات ثبت‌شده در سامانه</p></div></section>'+
+   '<div class="portal-kpis sy-mgmt-summary">'+cards.map(x=>widget(...x)).join('')+'</div>'+
+   '<div class="portal-panels sy-mgmt-grid"><section class="portal-panel sy-mgmt-panel"><h2>خلاصه مالی</h2><p class="muted">نسبت مبالغ پرداخت‌شده به مبالغ ثبت‌شده</p><div class="portal-ring-wrap"><div class="portal-ring" style="--pct:'+percent+'%"><div><strong>'+fa(percent)+'٪</strong><small>پرداخت‌شده</small></div></div><div class="portal-ring-legend"><div><b>ثبت‌شده</b><span>'+money(parent?f.total:f.recordedNet)+'</span></div><div><b>پرداخت‌شده</b><span>'+money(f.paid)+'</span></div><div><b>باقی‌مانده</b><span>'+money(f.balance)+'</span></div></div></div></section>'+
+   '<section class="portal-panel sy-mgmt-panel"><h2>دسترسی‌های سریع</h2><div class="portal-shortcuts">'+menuLinks().filter(x=>x[0]!=='overview').map(x=>'<button type="button" data-go="'+x[0]+'"><b>'+x[2]+'</b>'+esc(x[1])+'<span>‹</span></button>').join('')+'</div></section></div>';
  }
  function renderServices(){
    if(current.portalType==='parent'){
@@ -280,7 +280,7 @@
      });
      nav.append(link);
    }
-   const normalizeSearch=value=>normal(value).replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').replace(/[\\u200c\\s]+/g,' ').toLocaleLowerCase('fa');
+   const normalizeSearch=value=>normal(value).replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').replace(/[\u200c\s]+/g,' ').toLocaleLowerCase('fa');
    const input=search.querySelector('input');
    input.addEventListener('input',()=>{
      const query=normalizeSearch(input.value);let count=0;
