@@ -163,6 +163,13 @@ final class PortalService {
             throw new AuthException(422,'شرکت یا راننده معتبر نیست.','VALIDATION_ERROR');
         return self::dashboardData($adminId,'driver',$agencyId,$driverId,true);
     }
+    public static function adminParentPreview(int $adminId,int $agencyId,int $studentId): array {
+        if(!\ServiceYar\Auth\Authorization::isSuperAdmin($adminId))
+            throw new AuthException(403,'مشاهده پنل ولی فقط برای مدیر کل مجاز است.','FORBIDDEN');
+        if($agencyId<1||$studentId<1)
+            throw new AuthException(422,'شرکت یا دانش‌آموز معتبر نیست.','VALIDATION_ERROR');
+        return self::dashboardData($adminId,'parent',$agencyId,$studentId,true);
+    }
     private static function dashboardData(int $uid,string $type,int $agencyId,int $partyId,bool $preview): array {
         if(!$preview)self::authorized($uid,$type,$agencyId,$partyId);
         else self::ensureSchema();
@@ -174,7 +181,7 @@ final class PortalService {
              (SELECT setting_value FROM agency_settings WHERE agency_id=a.id AND setting_key='company_address') address
              FROM agencies a WHERE a.id=? AND a.is_active=1",[$agencyId])[0]??null;
         $configured=self::rows($pdo,"SELECT password_set_at FROM portal_credentials WHERE user_id=?",[$uid]);
-        $profile=self::rows($pdo,"SELECT username,first_name,last_name,mobile,address,postal_code,email FROM users WHERE id=?",[$uid])[0]??[];
+        $profile=self::rows($pdo,"SELECT id,username,first_name,last_name,mobile,address,postal_code,email,photo_version FROM users WHERE id=?",[$uid])[0]??[];
         $base=['portalType'=>$type,'agency'=>$agency,'profile'=>$profile,
             'hasPassword'=>!empty($configured[0]['password_set_at']),'readonly'=>false];
         if($type==='parent'){
@@ -184,10 +191,18 @@ final class PortalService {
                 FROM students st JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id
                 WHERE st.id=? AND st.agency_id=? AND st.is_active=1",[$partyId,$agencyId])[0]??null;
             if(!$student)throw new AuthException(404,'دانش‌آموز فعال پیدا نشد.','PORTAL_NOT_FOUND');
+            if($preview){
+                $guardianRow=self::rows($pdo,"SELECT id,name,mobile,relation_title FROM guardians
+                   WHERE student_id=? ORDER BY is_primary DESC,id ASC LIMIT 1",[$partyId])[0]??null;
+                $base['profile']=['username'=>$guardianRow['mobile']??'','mobile'=>$guardianRow['mobile']??'',
+                   'first_name'=>$guardianRow['name']??'ولی دانش‌آموز','last_name'=>''];
+                $base['readonly']=true;$base['previewOnly']=true;$base['hasPassword']=false;
+            }
             $phone=(string)($profile['mobile']??'');
             $guardian=self::rows($pdo,"SELECT id,name,mobile,relation_title FROM guardians
                 WHERE student_id=? AND mobile IN (?,?,?) ORDER BY is_primary DESC LIMIT 1",
                 [$partyId,$phone,'98'.substr($phone,1),'+98'.substr($phone,1)])[0]??null;
+            if($preview)$guardian=$guardianRow;
             $services=self::rows($pdo,"SELECT sv.id,sv.title,sv.code,ss.pickup_address,ss.pickup_order,
                 d.first_name driverFirstName,d.last_name driverLastName,d.mobile driverMobile,
                 v.plate,v.model,v.capacity
@@ -234,7 +249,7 @@ final class PortalService {
                 'installmentsNote'=>'برنامه اقساط بر اساس سند قطعی شرکت نمایش داده می‌شود؛ برای تاریخ سررسید قطعی از شرکت استعلام کنید.'];
         }
         $driver=self::rows($pdo,"SELECT d.id,d.first_name,d.last_name,d.mobile,d.national_code,
-            d.address,d.bank_name,d.bank_account,d.iban,d.status,v.id vehicleId,
+            d.address,d.bank_name,d.bank_account,d.iban,d.status,d.is_representative,v.id vehicleId,
             v.plate,v.model,v.capacity
             FROM drivers d LEFT JOIN vehicles v ON v.id=d.vehicle_id AND v.agency_id=d.agency_id
             WHERE d.id=? AND d.agency_id=? AND d.is_active=1",[$partyId,$agencyId])[0]??null;
@@ -276,6 +291,7 @@ final class PortalService {
         $monthlyServices=[];
         foreach($services as $r)$monthlyServices[(int)$r['id']]=['id'=>(int)$r['id'],
             'title'=>$r['title'],'code'=>$r['code'],'monthlyFee'=>$r['monthly_fee']];
+        $base['representative']=((int)($driver['is_representative']??0)===1);
         return $base+['driver'=>$driver,'students'=>$services,'services'=>array_values($monthlyServices),
             'finance'=>['earnings'=>$earnings,'payments'=>$payments,'recordedGross'=>$gross,
                'recordedNet'=>$net,'paid'=>$paid,'balance'=>max(0,$net-$paid),
