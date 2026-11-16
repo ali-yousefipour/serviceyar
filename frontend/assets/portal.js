@@ -235,7 +235,12 @@
    section=next;
    const name=menuLinks().find(x=>x[0]===section)?.[1]||'داشبورد';
    const heading=el('pageTitle');if(heading)heading.textContent=name;
-   document.querySelectorAll('[data-page]').forEach(x=>{const active=x.dataset.page===section;x.classList.toggle('active',active);if(active)x.setAttribute('aria-current','page');else x.removeAttribute('aria-current');});
+   document.querySelectorAll('#nav [data-page]').forEach(x=>{const active=x.dataset.page===section;x.classList.toggle('active',active);if(active)x.setAttribute('aria-current','page');else x.removeAttribute('aria-current');});
+   el('nav')?.querySelectorAll('.sy-portal-nav-group').forEach(group=>{
+     const active=Boolean(group.querySelector('a[data-page="'+section+'"]'));
+     group.classList.toggle('current-group',active);
+     if(active)group.open=true;
+   });
    el('portalContent').innerHTML=({overview:renderOverview,services:renderServices,finance:renderFinance,debtors:renderDebtors,profile:renderProfile,password:renderPassword}[section]||renderOverview)();
    el('portalContent').querySelectorAll('[data-go]').forEach(x=>x.addEventListener('click',()=>selectSection(x.dataset.go)));
    const repForm=el('representativeDebtorsForm');if(repForm){repForm.addEventListener('submit',e=>{e.preventDefault();loadDebtors();});loadDebtors();}
@@ -324,17 +329,45 @@
      '<input type="search" id="syPortalNavSearch" placeholder="جست‌وجوی بخش‌ها…" autocomplete="off" aria-label="جست‌وجوی منوی پنل">'+
      '<kbd>Ctrl K</kbd></span><small role="status" aria-live="polite"></small>';
    nav.append(search);
-   for(const [key,title] of links){
-     const link=document.createElement('a');
-     link.className='nav sy-portal-nav';link.href='#portal-'+key;link.dataset.page=key;
-     link.title=title;
-     link.innerHTML='<span class="sy-portal-nav-icon">'+portalNavIcon(key)+'</span><span>'+esc(title)+'</span>';
-     link.addEventListener('click',event=>{
-       event.preventDefault();
-       history.replaceState(history.state,'',location.pathname+location.search+'#portal-'+key);
-       selectSection(key);closePortalDrawer();
+   const groups=[
+     {title:'نمای کلی',icon:'overview',items:links.filter(x=>x[0]==='overview'),direct:true},
+     {title:'سرویس و مدارس',icon:'services',items:links.filter(x=>x[0]==='services')},
+     {title:'مالی و گزارش‌ها',icon:'finance',items:links.filter(x=>['finance','debtors'].includes(x[0]))},
+     {title:'حساب کاربری',icon:'profile',items:links.filter(x=>['profile','password'].includes(x[0]))}
+   ];
+   const navigate=key=>{
+     history.replaceState(history.state,'',location.pathname+location.search+'#portal-'+key);
+     selectSection(key);closePortalDrawer();
+   };
+   for(const group of groups){
+     if(!group.items.length)continue;
+     if(group.direct){
+       const [key,title]=group.items[0];
+       const link=document.createElement('a');
+       link.className='nav sy-portal-nav';link.href='#portal-'+key;link.dataset.page=key;
+       link.title=title;
+       link.innerHTML=portalNavIcon(key)+'<span>'+esc(title)+'</span>';
+       link.addEventListener('click',event=>{event.preventDefault();navigate(key);});
+       nav.append(link);continue;
+     }
+     const details=document.createElement('details');details.className='nav-group sy-portal-nav-group';
+     const summary=document.createElement('summary');summary.title=group.title;
+     summary.innerHTML=portalNavIcon(group.icon)+'<span>'+esc(group.title)+'</span>';
+     const popup=document.createElement('div');popup.className='nav-popup';
+     popup.setAttribute('aria-label',group.title);
+     for(const [key,title] of group.items){
+       const link=document.createElement('a');
+       link.href='#portal-'+key;link.className='sy-portal-nav';link.dataset.page=key;
+       link.title=title;
+       link.innerHTML=portalNavIcon(key)+'<span>'+esc(title)+'</span>';
+       link.addEventListener('click',event=>{event.preventDefault();navigate(key);});
+       popup.append(link);
+     }
+     details.append(summary,popup);nav.append(details);
+     details.addEventListener('toggle',()=>{
+       if(details.open&&!input.value.trim())
+         nav.querySelectorAll('.sy-portal-nav-group').forEach(other=>{if(other!==details)other.open=false;});
      });
-     nav.append(link);
    }
    const normalizeSearch=value=>normal(value).replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').replace(/[\u200c\s]+/g,' ').toLocaleLowerCase('fa');
    const input=search.querySelector('input');
@@ -343,6 +376,17 @@
      nav.querySelectorAll(':scope > a.sy-portal-nav').forEach(link=>{
        const show=!query||normalizeSearch(link.textContent).includes(query);
        link.hidden=!show;if(show)count++;
+     });
+     nav.querySelectorAll('.sy-portal-nav-group').forEach(group=>{
+       const matchesGroup=normalizeSearch(group.querySelector('summary')?.textContent).includes(query);
+       let visible=0;
+       group.querySelectorAll('.nav-popup a').forEach(link=>{
+         const match=!query||matchesGroup||normalizeSearch(link.textContent).includes(query);
+         link.hidden=!match;if(match){visible++;count++;}
+       });
+       group.hidden=visible===0;
+       if(query&&visible)group.open=true;
+       if(!query&&!group.classList.contains('current-group'))group.open=false;
      });
      search.querySelector('small').textContent=query?(count?'نتایج مرتبط: '+fa(count):'بخشی پیدا نشد.'):'';
    });
