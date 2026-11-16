@@ -59,7 +59,7 @@ final class TaxiTariffApplication
         foreach($services as $sv){
             $entry=['serviceId'=>(int)$sv['id'],'serviceTitle'=>$sv['title'],
               'oldSource'=>$sv['fee_source'],'oldServiceFee'=>(int)($sv['monthly_fee']??0),
-              'studentCount'=>0,'students'=>[],'errors'=>[],'changeCount'=>0,
+              'studentCount'=>0,'students'=>[],'errors'=>[],'changeCount'=>0,'newServiceFee'=>null,
               'vehicleClass'=>$sv['tariff_vehicle_class']===null?null:(int)$sv['tariff_vehicle_class']];
             if((int)$sv['is_active']!==1||$sv['status']==='cancelled'){
                 $entry['errors'][]='سرویس غیرفعال یا لغوشده است.';$blocking++;
@@ -72,7 +72,7 @@ final class TaxiTariffApplication
             }
             $members->execute([$aid,(int)$sv['id']]);
             $list=$members->fetchAll(PDO::FETCH_ASSOC);
-            $entry['studentCount']=count($list);$students+=count($list);
+            $entry['studentCount']=count($list);$students+=count($list);$grossParent=0;
             if(!$list){$entry['errors'][]='دانش‌آموزی به این سرویس متصل نیست.';$blocking++;}
             foreach($list as $st){
                 try{
@@ -81,13 +81,18 @@ final class TaxiTariffApplication
                     $quote=ServicePricing::quote($pdo,$aid,$st,'taxi');
                     $old=(int)$st['monthly_fee'];$new=(int)$quote['monthlyFee'];
                     $entry['students'][]=['studentId'=>(int)$st['id'],'name'=>trim($st['first_name'].' '.$st['last_name']),
-                      'oldFee'=>$old,'newFee'=>$new,'driverBaseMonthly'=>(int)$quote['driverBaseMonthly'],
-                      'changed'=>$old!==$new||$st['fee_source']!=='taxi'||$previousClass!==(int)$class];
-                    if($old!==$new||$st['fee_source']!=='taxi'||$previousClass!==(int)$class){$changes++;$entry['changeCount']++;}
+                      'oldFee'=>$old,'newFee'=>$new,'oldDriverBase'=>(int)($st['driver_base_monthly']??0),'driverBaseMonthly'=>(int)$quote['driverBaseMonthly'],
+                      'changed'=>$old!==$new||$st['fee_source']!=='taxi'||$previousClass!==(int)$class||(int)($st['driver_base_monthly']??0)!==(int)$quote['driverBaseMonthly']];
+                    $grossParent+=$new;
+                    if($old!==$new||$st['fee_source']!=='taxi'||$previousClass!==(int)$class||(int)($st['driver_base_monthly']??0)!==(int)$quote['driverBaseMonthly']){$changes++;$entry['changeCount']++;}
                 }catch(\Throwable $error){
                     $entry['errors'][]='دانش‌آموز '.(int)$st['id'].': '.$error->getMessage();
                     $blocking++;
                 }
+            }
+            if(!$entry['errors']&&$list){
+                $entry['newServiceFee']=(int)ServiceFinancialBasis::netOfGross($grossParent,$aid)['net_earned'];
+                if((int)$entry['oldServiceFee']!==$entry['newServiceFee']){$changes++;$entry['changeCount']++;}
             }
             $rows[]=$entry;
         }
