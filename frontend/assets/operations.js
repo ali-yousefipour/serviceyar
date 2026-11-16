@@ -4278,12 +4278,10 @@ async function openAdminImpersonationDialog(panelType='company'){
    try{
      const result=await api('/api/v1/admin/impersonation/driver-preview?agencyId='+encodeURIComponent(companyId)+'&driverId='+encodeURIComponent(driver.driverId));
      if(!overlay.isConnected||Number(selectedCompany?.id)!==companyId)return;
-     if(typeof window.serviceyarPortal?.renderDriverInspection!=='function')
+     if(typeof window.serviceyarPortal?.mountAdminDriverInspection!=='function')
        throw Error('ماژول پنل رانندگان بارگذاری نشده است.');
-     preview.innerHTML='<button type="button" class="secondary" data-preview-back>بازگشت به فهرست رانندگان</button>'+
-       '<div id="syDriverActualPortal"></div>';
-     preview.querySelector('[data-preview-back]').onclick=()=>{preview.hidden=true;userStep.hidden=false;preview.replaceChildren();};
-     window.serviceyarPortal.renderDriverInspection(preview.querySelector('#syDriverActualPortal'),result);
+     close();
+     window.serviceyarPortal.mountAdminDriverInspection(result);
    }catch(error){
      preview.innerHTML='<button type="button" class="secondary" data-preview-back>بازگشت به فهرست رانندگان</button>'+
        '<p role="alert">'+esc(error.message||'بارگذاری پنل راننده ناموفق بود.')+'</p>';
