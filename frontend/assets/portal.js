@@ -252,11 +252,23 @@
    el('portalContent').innerHTML=({overview:renderOverview,services:renderServices,finance:renderFinance,debtors:renderDebtors,profile:renderProfile,password:renderPassword}[section]||renderOverview)();
    el('portalContent').querySelectorAll('[data-go]').forEach(x=>x.addEventListener('click',()=>selectSection(x.dataset.go)));
    const repForm=el('representativeDebtorsForm');if(repForm){repForm.addEventListener('submit',e=>{e.preventDefault();loadDebtors();});loadDebtors();}
+   const portrait=el('portalPortrait');
+   if(portrait&&current.portalType==='driver'){
+     const endpoint=driverPortraitEndpoint();
+     const holder=portrait.parentElement;
+     portrait.addEventListener('error',()=>{portrait.hidden=true;holder?.classList.add('portrait-empty');});
+     api(endpoint+(endpoint.includes('?')?'&':'?')+'info=1').then(info=>{
+       if(!portrait.isConnected)return;
+       if(info.hasPhoto){portrait.hidden=false;holder?.classList.remove('portrait-empty');portrait.src=endpoint+(endpoint.includes('?')?'&':'?')+'v='+Number(info.version||0);}
+       else{portrait.hidden=true;holder?.classList.add('portrait-empty');}
+     }).catch(()=>{portrait.hidden=true;holder?.classList.add('portrait-empty');});
+   }
    const profile=el('portalProfileForm');
    if(profile)profile.addEventListener('submit',async e=>{
      e.preventDefault();const body=Object.fromEntries(new FormData(profile));
      const button=profile.querySelector('button[type=submit]');button.disabled=true;
-     try{data=await api('/api/v1/portal/'+current.portalType+'/'+current.agencyId+'/'+current.partyId,body,'PATCH');
+     try{const endpoint=impersonated&&current.portalType==='driver'?adminDriverEndpoint('profile'):'/api/v1/portal/'+current.portalType+'/'+current.agencyId+'/'+current.partyId;
+       data=await api(endpoint,body,'PATCH');
        note('اطلاعات شما ذخیره شد.');selectSection('profile');}catch(err){note(err.message,true);}finally{button.disabled=false;}
    });
    const photoForm=el('portalPhotoForm');
@@ -267,14 +279,15 @@
      const button=photoForm.querySelector('button[type=submit]');button.disabled=true;status.textContent='در حال ثبت تصویر…';
      try{
        const body=new FormData();body.append('photo',file);
-       const response=await fetch('/api/v1/auth/profile/photo',{method:'POST',body,
+       const endpoint=driverPortraitEndpoint();
+       const response=await fetch(endpoint,{method:'POST',body,
          credentials:'same-origin',headers:{'X-CSRF-Token':csrf,Accept:'application/json'}});
        const result=await response.json().catch(()=>({}));
        if(!response.ok||!result.ok)throw Error(result.error?.message||'ثبت تصویر انجام نشد.');
-       const version=Number(result.data?.photoVersion||Date.now());
-       if(data.profile)data.profile.photo_version=version;
-       const image=el('portalPortrait');if(image)image.src='/api/v1/auth/profile/photo?v='+version;
-       const avatar=el('syAccountAvatar');if(avatar){avatar.style.backgroundImage="url('/api/v1/auth/profile/photo?v="+version+"')";avatar.classList.add('sy-account-avatar-has-photo');}
+       const version=Number(result.data?.version||Date.now());
+       const updatedUrl=endpoint+(endpoint.includes('?')?'&':'?')+'v='+version;
+       const image=el('portalPortrait');if(image){image.hidden=false;image.parentElement?.classList.remove('portrait-empty');image.src=updatedUrl;}
+       const avatar=el('syAccountAvatar');if(avatar){avatar.style.backgroundImage='url("'+updatedUrl+'")';avatar.classList.add('sy-account-avatar-has-photo');}
        status.textContent='تصویر پرسنلی ثبت شد.';photoForm.reset();
      }catch(error){status.textContent=error.message;}finally{button.disabled=false;}
    });
@@ -287,8 +300,10 @@
    const vehicle=el('portalVehicleForm');
    if(vehicle)vehicle.addEventListener('submit',async e=>{
      e.preventDefault();const body=Object.fromEntries(new FormData(vehicle));const button=vehicle.querySelector('button');button.disabled=true;
-     try{const r=await api('/api/v1/portal/driver/'+current.agencyId+'/'+current.partyId+'/vehicle-request',body,'POST');
-       note(r.message);vehicle.reset();}catch(err){note(err.message,true);}finally{button.disabled=false;}
+     try{
+       if(impersonated){data=await api(adminDriverEndpoint('vehicle'),body,'PATCH');note('مشخصات خودرو ذخیره شد.');selectSection('profile');}
+       else{const r=await api('/api/v1/portal/driver/'+current.agencyId+'/'+current.partyId+'/vehicle-request',body,'POST');note(r.message);vehicle.reset();}
+     }catch(err){note(err.message,true);}finally{button.disabled=false;}
    });
  }
 
@@ -303,7 +318,7 @@
    if(brand)brand.textContent='پنل '+name+' · '+m.agencyName;
    const sideName=el('syAccountName');if(sideName)sideName.textContent=data.profile?.username||'حساب شخصی';
    const role=el('syAccountRole');if(role)role.textContent=impersonated?'مشاهده نیابتی ادمین کل':('پنل '+name);
-   const avatar=el('syAccountAvatar');if(avatar){avatar.textContent=parent?'و':m.portalType==='representative'?'ن':'ر';avatar.classList.remove('sy-account-avatar-has-photo');avatar.style.backgroundImage='';if(!parent&&m.portalType==='driver'&&data.profile?.id){avatar.style.backgroundImage="url('/api/v1/auth/profile/photo?v="+Number(data.profile.photo_version||0)+"')";avatar.classList.add('sy-account-avatar-has-photo');}}
+   const avatar=el('syAccountAvatar');if(avatar){avatar.textContent=parent?'و':m.portalType==='representative'?'ن':'ر';avatar.classList.remove('sy-account-avatar-has-photo');avatar.style.backgroundImage='';if(!parent&&m.portalType==='driver'&&data.profile?.id){avatar.style.backgroundImage='';}}
    const account=el('syAccountMenu');if(account){account.open=false;account.hidden=true;}
    const agencyPicker=el('agencyPickerWrap');if(agencyPicker)agencyPicker.hidden=true;
    const returnButton=el('syAdminReturn');if(returnButton)returnButton.hidden=!impersonated;
@@ -486,11 +501,14 @@
   * stays authenticated as the platform admin and never impersonates an
   * unverified user. Exiting reloads the original super-admin workspace.
   */
- function mountAdminInspection(payload){
+ async function mountAdminInspection(payload){
    if(!['driver','parent'].includes(payload?.portalType)||!payload?.previewOnly||
       !Number(payload.agency?.id)||!Number((payload.portalType==='parent'?payload.student:payload.driver)?.id))
      throw Error('اطلاعات پنل راننده معتبر نیست.');
-   // A valid admin response is obtained separately from a restricted GET API.
+   // The administrator's own CSRF credential is required for explicit edits.
+   const adminAuth=await api('/api/v1/auth/me');
+   csrf=adminAuth.csrfToken||'';
+   if(!csrf)throw Error('نشست مدیر کل معتبر نیست. دوباره وارد شوید.');
    current={portalType:payload.portalType,agencyId:Number(payload.agency.id),partyId:Number((payload.portalType==='parent'?payload.student:payload.driver).id)};
    data=payload;impersonated=true;representativeSchools=Array.isArray(payload.representativeSchools)?payload.representativeSchools:[];
    window.serviceyarAdminDriverInspection=true;
@@ -502,14 +520,18 @@
    const brand=document.querySelector('.sy-sidebar-brand-copy small');
    if(brand)brand.textContent='پنل '+(payload.portalType==='parent'?'والدین':'راننده')+' · '+(payload.agency?.name||'سرویس‌یار');
    const name=el('syAccountName');if(name)name.textContent=payload.portalType==='parent'?(payload.guardian?.name||person(payload.student)):person(payload.driver);
-   const role=el('syAccountRole');if(role)role.textContent='مشاهده نیابتی توسط مدیر کل';
+   const role=el('syAccountRole');if(role)role.textContent=payload.portalType==='driver'?'مدیریت اطلاعات راننده توسط مدیر کل':'مشاهده نیابتی توسط مدیر کل';
    const avatar=el('syAccountAvatar');if(avatar)avatar.textContent=payload.portalType==='parent'?'و':'ر';
+   if(avatar&&payload.portalType==='driver'){
+     const url='/api/v1/admin/impersonation/driver-portrait?agencyId='+encodeURIComponent(payload.agency.id)+'&driverId='+encodeURIComponent(payload.driver.id);
+     api(url+'&info=1').then(info=>{if(info.hasPhoto){avatar.style.backgroundImage='url("'+url+'&v='+Number(info.version||0)+'")';avatar.classList.add('sy-account-avatar-has-photo');}}).catch(()=>{});
+   }
    const headReturn=el('syAdminReturn');
    // Existing app.js listeners handle return without revoking the admin session.
    if(headReturn){headReturn.hidden=false;headReturn.textContent='بازگشت به پنل مدیر کل';}
    const logout=el('logout');if(logout)logout.textContent='بازگشت به پنل مدیر کل';
    el('content').innerHTML='<div class="sy-portal-content"><div class="sy-portal-impersonation-notice">'+
-      'مشاهده نیابتی پنل '+(payload.portalType==='parent'?'ولی دانش‌آموز':'راننده')+' · فقط خواندنی؛ نشست کاربر تغییر نمی‌کند.'+
+      (payload.portalType==='parent'?'مشاهده نیابتی پنل ولی دانش‌آموز · فقط خواندنی؛ نشست کاربر تغییر نمی‌کند.':'پنل راننده · مدیر کل مجاز به ویرایش مشخصات و تصویر و خودرو است. تمام ویرایش‌ها ثبت می‌شوند؛ نشست راننده تغییر نمی‌کند.')+
       '</div><div id="portalContent"></div></div>';
    section='overview';history.replaceState(history.state,'',location.pathname+location.search+'#portal-overview');
    selectSection('overview');
