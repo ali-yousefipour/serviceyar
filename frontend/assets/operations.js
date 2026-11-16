@@ -4273,7 +4273,7 @@ async function openAdminImpersonationDialog(panelType='company'){
  preview.id='syDriverImpersonationPreview';preview.hidden=true;preview.className='sy-impersonation-driver-preview';
  overlay.querySelector('.sy-impersonation-body').append(preview);
  const money=value=>Number(value||0).toLocaleString('fa-IR',{maximumFractionDigits:0})+' ریال';
- const previewTable=(headers,items)=>'<div class="table-wrap" style="max-height:340px;overflow:auto"><table><thead><tr>'+
+ const previewTable=(headers,items)=>'<div class="table-wrap sy-impersonation-preview-table"><table><thead><tr>'+
   headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+
   (items.length?items.map(row=>'<tr>'+row.map(v=>'<td>'+esc(v??'—')+'</td>').join('')+'</tr>').join(''):
   '<tr><td colspan="'+headers.length+'">موردی ثبت نشده است.</td></tr>')+'</tbody></table></div>';
