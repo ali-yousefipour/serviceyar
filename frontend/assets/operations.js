@@ -2631,7 +2631,7 @@ async function taxiOrganizationAdminPanel(container,token){
  <div id="syTaxiTariffTable" aria-live="polite">در حال دریافت نرخ‌های مصوب…</div>
  <div class="sy-taxi-tariff-actions"><button type="button" class="primary" id="syTaxiTariffSave" disabled>ذخیره نرخ‌های این ناحیه و کلاس</button><span id="syTaxiTariffStatus" role="status" aria-live="polite"></span></div>`;
  container.after(panel);
- const migrationPanel=document.createElement('details');migrationPanel.className='sy-taxi-legacy-reprice';migrationPanel.innerHTML='<summary>اصلاح نرخ سرویس‌های قبلی بر اساس نرخ‌نامه سازمان</summary><p>ابتدا پیش‌نمایش را دریافت کنید. این عملیات شهریه دانش‌آموزان و جمع سرویس‌ها را اصلاح می‌کند، ولی دریافت‌ها، پرداخت‌ها و اسناد قطعی را تغییر نمی‌دهد. نسخه قبلی مقادیر برای ممیزی ذخیره می‌شود.</p><div class="member-actions"><button type="button" data-reprice-preview>بررسی و پیش‌نمایش</button><button type="button" class="primary" data-reprice-apply disabled>تأیید و اعمال اصلاحات</button></div><div data-reprice-output role="status" aria-live="polite"></div>';
+ const migrationPanel=document.createElement('details');migrationPanel.className='sy-taxi-legacy-reprice';migrationPanel.innerHTML='<summary>اصلاح نرخ سرویس‌های قبلی بر اساس نرخ‌نامه سازمان</summary><p>یک شرکت را مشخص کنید و پیش‌نمایش بگیرید. این عملیات شهریه دانش‌آموزان و جمع سرویس‌ها را اصلاح می‌کند، ولی دریافت‌ها، پرداخت‌ها و اسناد قطعی را تغییر نمی‌دهد. نسخه قبلی مقادیر برای ممیزی ذخیره می‌شود.</p><label>شرکت موردنظر<select data-reprice-agency><option value="">انتخاب شرکت</option></select></label><div class="member-actions"><button type="button" data-reprice-preview>بررسی و پیش‌نمایش</button><button type="button" class="primary" data-reprice-apply disabled>تأیید و اعمال اصلاحات</button></div><div data-reprice-output role="status" aria-live="polite"></div>';
  panel.append(migrationPanel);
  const allPanel=document.createElement('details');allPanel.className='sy-taxi-legacy-reprice';
  allPanel.innerHTML='<summary>اصلاح تمام سرویس‌های تمام شرکت‌های سامانه</summary><p>سرویس‌های دارای نرخ معتبر مستقل از سوابق ناقص محاسبه می‌شوند. سرویس‌های بدون دانش‌آموز یا دارای اطلاعات تعرفه ناقص تغییر مبلغ نمی‌کنند و علت هر مورد گزارش می‌شود؛ فاکتورهای بدهی مرتبط همگام‌سازی خواهند شد.</p><div class="member-actions"><button type="button" data-global-preview>پیش‌نمایش کل سامانه</button><button type="button" data-global-apply class="primary" disabled>اعمال اصلاحات کل سامانه</button></div><div data-global-status role="status" aria-live="polite"></div>';
@@ -2683,10 +2683,24 @@ async function taxiOrganizationAdminPanel(container,token){
   }catch(e){allStatus.textContent=e.message;}
  };
  const previewBtn=migrationPanel.querySelector('[data-reprice-preview]'),applyBtn=migrationPanel.querySelector('[data-reprice-apply]'),output=migrationPanel.querySelector('[data-reprice-output]');
+ const agencySelect=migrationPanel.querySelector('[data-reprice-agency]');
+ const selectedRepriceUrl=()=>{
+  const id=Number(agencySelect.value);
+  if(!Number.isSafeInteger(id)||id<1)throw new Error('ابتدا شرکت موردنظر را انتخاب کنید.');
+  return '/api/v1/admin/taxi-tariffs/reprice-legacy?agencyId='+encodeURIComponent(id);
+ };
+ agencySelect.addEventListener('change',()=>{applyBtn.disabled=true;output.textContent='برای شرکت انتخاب‌شده، پیش‌نمایش تازه دریافت کنید.';});
+ previewBtn.disabled=true;
+ api('/api/v1/admin/overview').then(data=>{
+  if(!agencySelect.isConnected)return;
+  const companies=(data.agencies||[]).filter(a=>Number(a.is_active)===1);
+  agencySelect.replaceChildren(new Option('انتخاب شرکت',''),...companies.map(a=>new Option(a.name+' · '+number(a.id),String(a.id))));
+  previewBtn.disabled=false;
+ }).catch(error=>{if(agencySelect.isConnected)output.textContent='دریافت فهرست شرکت‌ها ناموفق بود: '+error.message;});
  previewBtn.onclick=async()=>{
   applyBtn.disabled=true;output.textContent='در حال بررسی سوابق…';
   try{
-   const data=await api(scoped('/api/v1/admin/taxi-tariffs/reprice-legacy'));
+   const data=await api(selectedRepriceUrl());
    if(!output.isConnected)return;
    output.innerHTML='<p>کل سرویس‌ها: '+number(data.servicesChecked)+' | تغییر مبلغ: '+number(data.servicesAmountToChange)+' | فقط تغییر مبنا: '+number(data.servicesSourceOnlyToChange)+' | بدون تغییر: '+number(data.servicesAlreadyCurrent)+' | سرویس‌های بدون کد: '+number(data.servicesWithoutCode)+' | دانش‌آموز نیازمند اصلاح: '+number(data.studentsToChange)+' | خطای محاسبه: '+number(data.errors.length)+' | اختلاف جمع ماهانه: '+number(data.monthlyDifference)+' ریال</p>'+tariffIssueTable(data.errors);
    applyBtn.disabled=!data.servicesChecked;
@@ -2696,7 +2710,7 @@ async function taxiOrganizationAdminPanel(container,token){
   if(!window.confirm('آیا اصلاح گروهی شهریه تمام سرویس‌های قدیمی شرکت انتخاب‌شده را تأیید می‌کنید؟ اسناد مالی گذشته بدون تغییر باقی می‌مانند.'))return;
   applyBtn.disabled=true;output.textContent='در حال ثبت اصلاحات همراه با سابقه ممیزی…';
   try{
-   const data=await write('/api/v1/admin/taxi-tariffs/reprice-legacy',{confirm:'REPRICE_LEGACY_TAXI'});
+   const data=await api(selectedRepriceUrl(),{method:'POST',headers:{'X-CSRF-Token':session.csrfToken,'Content-Type':'application/json'},body:JSON.stringify({confirm:'REPRICE_LEGACY_TAXI'})});
    output.innerHTML='<p>'+esc(data.applied?'سرویس‌های اصلاح‌شده: '+number(data.servicesUpdated)+' | دانش‌آموزان اصلاح‌شده: '+number(data.studentsUpdated)+' | شناسه ممیزی: '+data.runId:'اعمال کامل انجام نشد؛ تعداد خطا: '+number(data.errors.length))+'</p>'+tariffIssueTable(data.errors);
   }catch(e){output.textContent='اصلاح اعمال نشد: '+e.message;}
  };
