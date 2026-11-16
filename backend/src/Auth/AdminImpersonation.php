@@ -105,10 +105,13 @@ final class AdminImpersonation
         $sql="SELECT u.id,u.username,u.first_name,u.last_name,u.last_login_at,
             GROUP_CONCAT(DISTINCT r.title ORDER BY r.id SEPARATOR ', ') AS roles
             FROM users u
-            JOIN agency_users au ON au.user_id=u.id AND au.agency_id=?
+            JOIN agencies a ON a.id=? AND a.is_active=1
             LEFT JOIN user_roles ur ON ur.user_id=u.id
             LEFT JOIN roles r ON r.id=ur.role_id
             WHERE u.is_active=1 $filter
+              AND (EXISTS(SELECT 1 FROM agency_users au WHERE au.user_id=u.id AND au.agency_id=a.id)
+                   OR EXISTS(SELECT 1 FROM portal_memberships pm
+                             WHERE pm.user_id=u.id AND pm.agency_id=a.id))
               AND NOT EXISTS (
                 SELECT 1 FROM user_roles sur JOIN roles sr ON sr.id=sur.role_id
                 WHERE sur.user_id=u.id AND sr.name='super_admin'
@@ -157,9 +160,11 @@ final class AdminImpersonation
         $targetQuery=$pdo->prepare(
             "SELECT u.id,u.username,u.first_name,u.last_name,a.name AS agency_name
              FROM users u
-             JOIN agency_users au ON au.user_id=u.id AND au.agency_id=?
-             JOIN agencies a ON a.id=au.agency_id AND a.is_active=1
+             JOIN agencies a ON a.id=? AND a.is_active=1
              WHERE u.id=? AND u.is_active=1 $filter
+               AND (EXISTS(SELECT 1 FROM agency_users au WHERE au.user_id=u.id AND au.agency_id=a.id)
+                    OR EXISTS(SELECT 1 FROM portal_memberships pm
+                              WHERE pm.user_id=u.id AND pm.agency_id=a.id))
                AND NOT EXISTS (
                  SELECT 1 FROM user_roles sur JOIN roles sr ON sr.id=sur.role_id
                  WHERE sur.user_id=u.id AND sr.name='super_admin'
@@ -169,7 +174,7 @@ final class AdminImpersonation
         $targetQuery->execute([$agencyId,$targetId]);
         $target=$targetQuery->fetch(PDO::FETCH_ASSOC);
         if(!$target)
-            throw new AuthException(422,'کاربر انتخاب‌شده فعال نیست یا به شرکت انتخابی تخصیص داده نشده است.','IMPERSONATION_TARGET_NOT_ALLOWED');
+            throw new AuthException(422,'کاربر انتخاب‌شده فعال نیست یا در نقش شرکت، ولی دانش‌آموز یا راننده این شرکت ثبت نشده است.','IMPERSONATION_TARGET_NOT_ALLOWED');
 
         $now=time();
         $adminExpires=strtotime((string)$adminExpiry);
