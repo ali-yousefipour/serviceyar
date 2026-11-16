@@ -1598,6 +1598,15 @@ function attachOfficialTaxiTariffActions(form,key,id){
      const next=form.querySelector('[data-wizard-next]');
      if(next&&!next.hidden)next.click();
      else form.querySelector('[data-wizard-step]:last-child')?.click();
+     const review=form.querySelector('.wizard-review');
+     if(review&&!review.hidden&&!review.querySelector('[data-taxi-save-confirmation]')){
+       const message=document.createElement('p');
+       message.dataset.taxiSaveConfirmation='1';
+       message.className='sy-official-tariff-confirmation';
+       message.setAttribute('role','status');
+       message.textContent='اعمال نرخ‌نامه مصوب تاکسیرانی انتخاب شده است. با دکمه «ذخیره»، اطلاعات سرویس ثبت و بلافاصله مبالغ تعرفه سازمان اعمال می‌شوند.';
+       review.prepend(message);
+     }
      return;
    }
    if(!verified&&!(await previewRequest()))return;
