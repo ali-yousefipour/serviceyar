@@ -412,6 +412,49 @@ try {
   if($method==='PUT'&&!empty($m[1]))Response::json(['ok'=>true,'data'=>UserService::save($s['id'],0,Request::json(),(int)$m[1])]);
   if($method==='DELETE'&&!empty($m[1])&&empty($m[2]))Response::json(['ok'=>true,'data'=>UserService::delete($s['id'],(int)$m[1])]);
  }
+ // Global reprice must not require a selected company: super-admin has no agency context.
+ if($path==='/api/v1/admin/taxi-tariffs/reprice-all'){
+  if(!Authorization::isSuperAdmin($s['id']))throw new AuthException(403,'فقط مدیر کل مجاز است.','SUPER_ADMIN_REQUIRED');
+  if($method==='GET'||$method==='POST'){
+   if($method==='POST'){
+    $auth->requireCsrf($s);$body=Request::json();
+    if(($body['confirm']??null)!=='REPRICE_ALL_AGENCIES')throw new AuthException(422,'تأیید اصلاح گروهی کل سامانه الزامی است.','CONFIRMATION_REQUIRED');
+   }
+   $companies=Connection::get()->query('SELECT id,name FROM agencies ORDER BY name,id')->fetchAll(\PDO::FETCH_ASSOC);
+   $reports=[];$summary=['agencies'=>count($companies),'services'=>0,'missingCodes'=>0,'codesFilled'=>0,'recalculated'=>0,'servicesToChange'=>0,'servicesAmountToChange'=>0,'servicesSourceOnlyToChange'=>0,'servicesAlreadyCurrent'=>0,'servicesVerified'=>0,'serviceAmountsChanged'=>0,'serviceSourcesOnly'=>0,'studentsToChange'=>0,'studentsUpdated'=>0,'studentAmountsChanged'=>0,'studentSourcesOnly'=>0,'studentsUnchanged'=>0,'invoicesSynced'=>0,'skipped'=>0,'blocked'=>0];
+   foreach($companies as $company){
+    $companyId=(int)$company['id'];$companyName=trim((string)$company['name']);
+    if($companyName==='')$companyName='شرکت بدون نام';
+    try{
+     $report=\ServiceYar\Domain\LegacyServiceTariffMigration::run($s['id'],$companyId,$method==='POST');
+     $report['agencyName']=$companyName;
+     $reports[]=$report;$summary['services']+=(int)($report['servicesChecked']??0);
+     $summary['missingCodes']+=(int)($report['servicesWithoutCode']??0);
+     $summary['codesFilled']+=(int)($report['codesFilled']??0);
+     $summary['recalculated']+=(int)($report['servicesUpdated']??0);
+     $summary['servicesToChange']+=(int)($report['servicesToChange']??0);
+     $summary['servicesAmountToChange']+=(int)($report['servicesAmountToChange']??0);
+     $summary['servicesSourceOnlyToChange']+=(int)($report['servicesSourceOnlyToChange']??0);
+     $summary['serviceAmountsChanged']+=(int)($report['serviceAmountsChanged']??0);
+     $summary['serviceSourcesOnly']+=(int)($report['serviceSourcesOnly']??0);
+     $summary['studentAmountsChanged']+=(int)($report['studentAmountsChanged']??0);
+     $summary['studentSourcesOnly']+=(int)($report['studentSourcesOnly']??0);
+     $summary['servicesAlreadyCurrent']+=(int)($report['servicesAlreadyCurrent']??0);
+     $summary['servicesVerified']+=(int)($report['servicesVerified']??0);
+     $summary['studentsToChange']+=(int)($report['studentsToChange']??0);
+     $summary['studentsUnchanged']+=(int)($report['studentsUnchanged']??0);
+     $summary['studentsUpdated']+=(int)($report['studentsUpdated']??0);
+     $summary['invoicesSynced']+=(int)($report['invoicesSynced']??0);
+     $summary['skipped']+=(int)($report['servicesSkipped']??0);
+     if(!empty($report['errors']))$summary['blocked']++;
+    }catch(\Throwable $error){
+     $reports[]=['agencyId'=>$companyId,'agencyName'=>$companyName,'error'=>$error->getMessage()];
+     $summary['blocked']++;
+    }
+   }
+   Response::json(['ok'=>true,'data'=>['summary'=>$summary,'agencies'=>$reports]]);
+  }
+ }
  $aid=agencyId($s);
  if(preg_match('#^/api/v1/users/(\d+)/(password)$#',$path,$m)&&$method==='POST'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>UserService::changePassword($s['id'],$aid,(int)$m[1],Request::json())]);}
  if($method==='POST'&&$path==='/api/v1/operations/financial-preview'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>FinancialRules::preview($s['id'],$aid,Request::json())]);}
@@ -506,48 +549,6 @@ try {
    'monthly_fee'=>$b['monthlyFee']??null];
   $quote=\ServiceYar\Domain\ServicePricing::quote($pdo,$aid,$student,$source);
   Response::json(['ok'=>true,'data'=>$quote]);
- }
- if($path==='/api/v1/admin/taxi-tariffs/reprice-all'){
-  if(!Authorization::isSuperAdmin($s['id']))throw new AuthException(403,'فقط مدیر کل مجاز است.','SUPER_ADMIN_REQUIRED');
-  if($method==='GET'||$method==='POST'){
-   if($method==='POST'){
-    $auth->requireCsrf($s);$body=Request::json();
-    if(($body['confirm']??null)!=='REPRICE_ALL_AGENCIES')throw new AuthException(422,'تأیید اصلاح گروهی کل سامانه الزامی است.','CONFIRMATION_REQUIRED');
-   }
-   $companies=Connection::get()->query('SELECT id,name FROM agencies ORDER BY name,id')->fetchAll(\PDO::FETCH_ASSOC);
-   $reports=[];$summary=['agencies'=>count($companies),'services'=>0,'missingCodes'=>0,'codesFilled'=>0,'recalculated'=>0,'servicesToChange'=>0,'servicesAmountToChange'=>0,'servicesSourceOnlyToChange'=>0,'servicesAlreadyCurrent'=>0,'servicesVerified'=>0,'serviceAmountsChanged'=>0,'serviceSourcesOnly'=>0,'studentsToChange'=>0,'studentsUpdated'=>0,'studentAmountsChanged'=>0,'studentSourcesOnly'=>0,'studentsUnchanged'=>0,'invoicesSynced'=>0,'skipped'=>0,'blocked'=>0];
-   foreach($companies as $company){
-    $companyId=(int)$company['id'];$companyName=trim((string)$company['name']);
-    if($companyName==='')$companyName='شرکت بدون نام';
-    try{
-     $report=\ServiceYar\Domain\LegacyServiceTariffMigration::run($s['id'],$companyId,$method==='POST');
-     $report['agencyName']=$companyName;
-     $reports[]=$report;$summary['services']+=(int)($report['servicesChecked']??0);
-     $summary['missingCodes']+=(int)($report['servicesWithoutCode']??0);
-     $summary['codesFilled']+=(int)($report['codesFilled']??0);
-     $summary['recalculated']+=(int)($report['servicesUpdated']??0);
-     $summary['servicesToChange']+=(int)($report['servicesToChange']??0);
-     $summary['servicesAmountToChange']+=(int)($report['servicesAmountToChange']??0);
-     $summary['servicesSourceOnlyToChange']+=(int)($report['servicesSourceOnlyToChange']??0);
-     $summary['serviceAmountsChanged']+=(int)($report['serviceAmountsChanged']??0);
-     $summary['serviceSourcesOnly']+=(int)($report['serviceSourcesOnly']??0);
-     $summary['studentAmountsChanged']+=(int)($report['studentAmountsChanged']??0);
-     $summary['studentSourcesOnly']+=(int)($report['studentSourcesOnly']??0);
-     $summary['servicesAlreadyCurrent']+=(int)($report['servicesAlreadyCurrent']??0);
-     $summary['servicesVerified']+=(int)($report['servicesVerified']??0);
-     $summary['studentsToChange']+=(int)($report['studentsToChange']??0);
-     $summary['studentsUnchanged']+=(int)($report['studentsUnchanged']??0);
-     $summary['studentsUpdated']+=(int)($report['studentsUpdated']??0);
-     $summary['invoicesSynced']+=(int)($report['invoicesSynced']??0);
-     $summary['skipped']+=(int)($report['servicesSkipped']??0);
-     if(!empty($report['errors']))$summary['blocked']++;
-    }catch(\Throwable $error){
-     $reports[]=['agencyId'=>$companyId,'agencyName'=>$companyName,'error'=>$error->getMessage()];
-     $summary['blocked']++;
-    }
-   }
-   Response::json(['ok'=>true,'data'=>['summary'=>$summary,'agencies'=>$reports]]);
-  }
  }
  if($path==='/api/v1/admin/taxi-tariffs/reprice-legacy'){
   if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\LegacyServiceTariffMigration::run($s['id'],$aid,false)]);
