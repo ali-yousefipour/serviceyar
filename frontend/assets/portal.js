@@ -93,7 +93,14 @@
    return '<label>'+esc(label)+'<input name="'+name+'" value="'+esc(value||'')+'" '+extra+'></label>';
  }
  function renderProfile(){
-   if(impersonated)return '<section class="portal-panel"><h2>مشاهده اطلاعات در حالت ورود نیابتی</h2><p class="muted">ورود نیابتی ادمین کل فقط برای مشاهده است. تغییر نشانی، اطلاعات بانکی، خودرو یا رمز عبور غیرفعال است.</p></section>';
+   if(impersonated){
+     const parent=current.portalType==='parent',person=parent?(data.guardian||{}):(data.driver||{});
+     const fields=parent?[['نام ولی',person.name],['نسبت',person.relation_title],['نشانی دانش‌آموز',data.student?.address],['نشانی برگشت',data.student?.return_address]]:
+       [['نام راننده',[person.first_name,person.last_name].filter(Boolean).join(' ')],['کد ملی',person.national_code],
+       ['نشانی',person.address],['بانک',person.bank_name],['شماره حساب',person.bank_account],['شبا',person.iban],['خودرو',person.model],['پلاک',person.plate]];
+     return '<section class="portal-panel"><h2>مشخصات ثبت‌شده · مشاهده نیابتی</h2><p class="muted">این اطلاعات فقط قابل مشاهده هستند. هیچ ویرایش یا تغییر رمز در این نشست انجام نمی‌شود.</p><div class="portal-details">'+
+       [['شرکت',data.agency?.name],['شماره همراه',data.profile?.mobile],...fields].map(([k,v])=>'<div><span>'+esc(k)+'</span><b>'+esc(v||'—')+'</b></div>').join('')+'</div></section>';
+   }
    const parent=current.portalType==='parent',p=parent?(data.guardian||{}):(data.driver||{});
    const address=parent?data.student?.address:p.address;
    return '<div class="portal-section-title"><h1>اطلاعات حساب و پروفایل</h1><p>ویرایش فقط روی اطلاعات مرتبط با حساب تأییدشده شما انجام می‌شود.</p></div>'+
@@ -122,7 +129,10 @@
     '<button class="primary" type="submit">ذخیره رمز عبور</button></form></section>';
  }
  function selectSection(next){
+   if(impersonated&&next==='password')next='overview';
    section=next;
+   const name=menuLinks().find(x=>x[0]===section)?.[1]||'داشبورد';
+   const heading=el('pageTitle');if(heading)heading.textContent=name;
    document.querySelectorAll('[data-page]').forEach(x=>x.classList.toggle('active',x.dataset.page===section));
    el('portalContent').innerHTML=({overview:renderOverview,services:renderServices,finance:renderFinance,profile:renderProfile,password:renderPassword}[section]||renderOverview)();
    el('portalContent').querySelectorAll('[data-go]').forEach(x=>x.addEventListener('click',()=>selectSection(x.dataset.go)));
@@ -159,9 +169,29 @@
       const symbol=document.createElement('span');symbol.className='sy-portal-nav-icon';symbol.textContent=icon;
       const caption=document.createElement('span');caption.textContent=title;
       button.append(symbol,caption);
-      button.onclick=()=>{selectSection(key);document.querySelector('.sidebar')?.classList.remove('nav-open');};
+      button.onclick=()=>{
+        history.replaceState(history.state,'',location.pathname+location.search+'#portal-'+key);
+        selectSection(key);document.querySelector('.sidebar')?.classList.remove('nav-open');
+        const shade=el('navigationShade');if(shade)shade.hidden=true;
+        const toggle=el('navigationToggle');if(toggle)toggle.setAttribute('aria-expanded','false');
+      };
       sidebar.append(button);
    });
+   // Use the same responsive navigation drawer as the company dashboard.
+   if(!el('navigationToggle')){
+     const button=document.createElement('button');button.type='button';button.id='navigationToggle';
+     button.setAttribute('aria-label','باز کردن منوی اصلی');button.setAttribute('aria-expanded','false');
+     button.textContent='☰';document.querySelector('.header')?.prepend(button);
+     const shade=document.createElement('button');shade.type='button';shade.id='navigationShade';
+     shade.setAttribute('aria-label','بستن منوی اصلی');shade.hidden=true;el('app').append(shade);
+     const toggle=open=>{
+       document.querySelector('.sidebar')?.classList.toggle('nav-open',open);
+       shade.hidden=!open;button.setAttribute('aria-expanded',String(open));
+     };
+     button.onclick=()=>toggle(button.getAttribute('aria-expanded')!=='true');
+     shade.onclick=()=>toggle(false);
+     document.addEventListener('keydown',e=>{if(e.key==='Escape'&&button.getAttribute('aria-expanded')==='true')toggle(false);});
+   }
    const brand=document.querySelector('.sy-sidebar-brand-copy small');
    if(brand)brand.textContent='پنل '+name+' · '+m.agencyName;
    const sideName=el('syAccountName');if(sideName)sideName.textContent=data.profile?.username||'حساب شخصی';
@@ -178,7 +208,11 @@
      (impersonated?'<div class="sy-portal-impersonation-notice">در حال مشاهده نیابتی پنل '+name+' هستید؛ ویرایش اطلاعات و تغییر رمز غیرفعال است.</div>':'')+
      selector+'<div id="portalContent"></div></div>';
    if(el('portalSwitch'))el('portalSwitch').onchange=e=>openMembership(members[Number(e.target.value)]).catch(err=>note(err.message,true));
-   section='overview';selectSection(section);
+   const route=location.hash.slice(1);
+   const allowed=['overview','services','finance','profile','password'];
+   section=route.startsWith('portal-')&&allowed.includes(route.slice(7))?route.slice(7):'overview';
+   if(impersonated&&section==='password')section='overview';
+   selectSection(section);
    if(!data.hasPassword&&!impersonated)note('می‌توانید از بخش «تنظیم رمز عبور» رمز اختصاصی برای شماره همراه خود تعریف کنید.');
  }
  function selectPortalRoute(raw){
