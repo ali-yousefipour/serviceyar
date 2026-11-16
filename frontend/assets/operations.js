@@ -4280,8 +4280,7 @@ async function openAdminImpersonationDialog(panelType='company'){
      if(!overlay.isConnected||Number(selectedCompany?.id)!==companyId)return;
      if(typeof window.serviceyarPortal?.mountAdminDriverInspection!=='function')
        throw Error('ماژول پنل رانندگان بارگذاری نشده است.');
-     close();
-     window.serviceyarPortal.mountAdminDriverInspection(result);
+     await window.serviceyarPortal.mountAdminDriverInspection(result);close();
    }catch(error){
      preview.innerHTML='<button type="button" class="secondary" data-preview-back>بازگشت به فهرست رانندگان</button>'+
        '<p role="alert">'+esc(error.message||'بارگذاری پنل راننده ناموفق بود.')+'</p>';
