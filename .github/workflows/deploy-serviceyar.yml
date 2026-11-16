@@ -114,6 +114,7 @@ jobs:
         run: node tests/portal-access-contract.cjs
       - name: Official fare component unit test
         run: php tests/taxi-fare-components.php
+          php tests/service-finance-basis.php
       - name: Financial quote integration (read-only fixture)
         run: php tests/taxi-financial-integration.php
 
