@@ -71,10 +71,10 @@ final class PayrollDocuments
         });
     }
 
-    public static function approve(int $uid,int $aid,int $id): array
+    public static function approve(int $uid,int $aid,int $id,array $body=[]): array
     {
         Authorization::requirePermission($uid,'finance.manage');Authorization::requireAgencyAccess($uid,$aid);
-        return OperationsService::transaction(function(PDO $p)use($uid,$aid,$id){$q=$p->prepare('SELECT status FROM payroll_documents WHERE id=:id AND agency_id=:a FOR UPDATE');$q->execute(['id'=>$id,'a'=>$aid]);$status=$q->fetchColumn();if($status===false)throw new AuthException(404,'سند حقوق پیدا نشد.','NOT_FOUND');if($status!=='draft')throw new AuthException(409,'سند قبلاً تأیید شده است.','ALREADY_REVIEWED');$p->prepare("UPDATE payroll_documents SET status='approved' WHERE id=:id AND agency_id=:a")->execute(['id'=>$id,'a'=>$aid]);OperationsService::audit($uid,$aid,'approve_payroll','payroll_documents',$id);return ['status'=>'approved'];});
+        return OperationsService::transaction(function(PDO $p)use($uid,$aid,$id,$body){$q=$p->prepare('SELECT status,document_no FROM payroll_documents WHERE id=:id AND agency_id=:a FOR UPDATE');$q->execute(['id'=>$id,'a'=>$aid]);$doc=$q->fetch(PDO::FETCH_ASSOC);if(!$doc)throw new AuthException(404,'سند حقوق پیدا نشد.','NOT_FOUND');$status=$doc['status'];if(str_starts_with((string)$doc['document_no'],'EST-')&&($body['confirmEstimate']??false)!==true)throw new AuthException(422,'تأیید حقوق برآوردی نیازمند تأیید بررسی دستی است.','ESTIMATE_APPROVAL_CONFIRMATION_REQUIRED');if($status!=='draft')throw new AuthException(409,'سند قبلاً تأیید شده است.','ALREADY_REVIEWED');$p->prepare("UPDATE payroll_documents SET status='approved' WHERE id=:id AND agency_id=:a")->execute(['id'=>$id,'a'=>$aid]);OperationsService::audit($uid,$aid,'approve_payroll','payroll_documents',$id);return ['status'=>'approved'];});
     }
 
     public static function update(int $uid,int $aid,int $id,array $body): array
