@@ -281,6 +281,20 @@ try{
  $targetIds=array_map(static fn($u)=>(int)$u['id'],$adminPortalTargets);
  check(in_array($parentUid,$targetIds,true)&&in_array($driverUid,$targetIds,true),
    'Company-scoped super-admin impersonation lists verified parent and driver accounts');
+ $parentOnlyTargets=array_map(static fn($row)=>(int)$row['id'],
+   \ServiceYar\Auth\AdminImpersonation::users($uid,$a,'parent')['users']);
+ $driverOnlyTargets=array_map(static fn($row)=>(int)$row['id'],
+   \ServiceYar\Auth\AdminImpersonation::users($uid,$a,'driver')['users']);
+ $companyOnlyTargets=array_map(static fn($row)=>(int)$row['id'],
+   \ServiceYar\Auth\AdminImpersonation::users($uid,$a,'company')['users']);
+ check(in_array($parentUid,$parentOnlyTargets,true)&&!in_array($driverUid,$parentOnlyTargets,true),
+   'Parent impersonation modal lists only verified parents');
+ check(in_array($driverUid,$driverOnlyTargets,true)&&!in_array($parentUid,$driverOnlyTargets,true),
+   'Driver impersonation modal lists only verified drivers');
+ check(in_array($viewer,$companyOnlyTargets,true)&&!in_array($parentUid,$companyOnlyTargets,true)
+   &&!in_array($driverUid,$companyOnlyTargets,true),
+   'Company impersonation modal lists only agency-associated staff');
+ rejected(fn()=>\ServiceYar\Auth\AdminImpersonation::users($uid,$a,'unexpected'),'INVALID_IMPERSONATION_PANEL');
  $foreignTargetIds=array_map(static fn($u)=>(int)$u['id'],
    \ServiceYar\Auth\AdminImpersonation::users($uid,$b)['users']);
  check(!in_array($parentUid,$foreignTargetIds,true)&&!in_array($driverUid,$foreignTargetIds,true),
