@@ -330,9 +330,9 @@
    const role=el('syAccountRole');if(role)role.textContent='مشاهده نیابتی توسط مدیر کل';
    const avatar=el('syAccountAvatar');if(avatar)avatar.textContent='ر';
    const headReturn=el('syAdminReturn');
-   const restore=()=>{window.location.replace(window.location.pathname+window.location.search+'#admin-dashboard');window.location.reload();};
-   if(headReturn){headReturn.hidden=false;headReturn.textContent='بازگشت به پنل مدیر کل';headReturn.onclick=restore;}
-   const logout=el('logout');if(logout){logout.textContent='بازگشت به پنل مدیر کل';logout.onclick=restore;}
+   // Existing app.js listeners handle return without revoking the admin session.
+   if(headReturn){headReturn.hidden=false;headReturn.textContent='بازگشت به پنل مدیر کل';}
+   const logout=el('logout');if(logout)logout.textContent='بازگشت به پنل مدیر کل';
    el('content').innerHTML='<div class="sy-portal-content"><div class="sy-portal-impersonation-notice">'+
       'مشاهده پنل واقعی راننده توسط مدیر کل · فقط خواندنی؛ نشست راننده تغییر نمی‌کند.'+
       '</div><div id="portalContent"></div></div>';
