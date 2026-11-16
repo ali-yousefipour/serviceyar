@@ -23,7 +23,7 @@ assert.match(portal,/!el\('sySidebarCollapse'\)/,'Never duplicate company collap
 assert.match(portal,/function closePortalDrawer\(\)/,'Mobile drawer closes after navigation');
 assert.match(portal,/function openPortalDrawer\(\)/,'Mobile menu opens for search');
 assert.match(portal,/selectSection\(key\);closePortalDrawer\(\)/,'Each menu click updates page and closes drawer');
-assert.match(portal,/aria-current','Portal supports active navigation');
+assert.match(portal,/aria-current/,'Portal supports active navigation');
 assert.match(css,/--portal-ink:#1b3a4a;--portal-accent:#168660/,'Company palette reused');
 assert.match(css,/\.portal-welcome\.sy-mgmt-hero/,'Company gradient on welcome card');
 assert.match(css,/\.portal-panel\.sy-mgmt-panel/,'Company panel surfaces');
