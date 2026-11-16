@@ -455,6 +455,17 @@ try {
    Response::json(['ok'=>true,'data'=>['summary'=>$summary,'agencies'=>$reports]]);
   }
  }
+ // Organization-wide taxi tariff editor does not depend on an agency selection.
+ if($path==='/api/v1/admin/taxi-tariffs'){
+  if($method==='GET'){
+   $district=(int)($_GET['district']??1);$class=(string)($_GET['vehicleClass']??'economy');
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\TaxiOrganizationTariffs::editor($s['id'],$district,$class)]);
+  }
+  if($method==='PUT'){
+   $auth->requireCsrf($s);
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\TaxiOrganizationTariffs::save($s['id'],Request::json())]);
+  }
+ }
  $aid=agencyId($s);
  if(preg_match('#^/api/v1/users/(\d+)/(password)$#',$path,$m)&&$method==='POST'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>UserService::changePassword($s['id'],$aid,(int)$m[1],Request::json())]);}
  if($method==='POST'&&$path==='/api/v1/operations/financial-preview'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>FinancialRules::preview($s['id'],$aid,Request::json())]);}
@@ -639,16 +650,6 @@ try {
  if($method==='GET'&&$path==='/api/v1/operations/driver-deduction-rates'){Authorization::requirePermission($s['id'],'services.view');Authorization::requireAgencyAccess($s['id'],$aid);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\DriverDeductionPolicy::rates($aid)]);}
  if($method==='GET'&&$path==='/api/v1/finance/banks'){Authorization::requirePermission($s['id'],'finance.view');Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\IranBankDetails::banks()]);}
  if($method==='GET'&&$path==='/api/v1/finance/payment-methods')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\AgencyPaymentMethods::get($s['id'],$aid)]);
- if($path==='/api/v1/admin/taxi-tariffs'){
-  if($method==='GET'){
-   $district=(int)($_GET['district']??1);$class=(string)($_GET['vehicleClass']??'economy');
-   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\TaxiOrganizationTariffs::editor($s['id'],$district,$class)]);
-  }
-  if($method==='PUT'){
-   $auth->requireCsrf($s);
-   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\TaxiOrganizationTariffs::save($s['id'],Request::json())]);
-  }
- }
  if($method==='POST'&&$path==='/api/v1/admin/vehicle-class-catalog/prepare'){
    $auth->requireCsrf($s);
    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\VehicleClassCatalog::prepare(
