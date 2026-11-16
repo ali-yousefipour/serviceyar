@@ -139,6 +139,9 @@ final class PortalService {
         $q->execute([$uid,$type,$agencyId,$partyId]);
         if(!$q->fetchColumn())throw new AuthException(403,'دسترسی به این اطلاعات مجاز نیست.','PORTAL_FORBIDDEN');
     }
+    public static function requireDriverMembership(int $uid,int $agencyId,int $driverId): void {
+        self::authorized($uid,'driver',$agencyId,$driverId);
+    }
     public static function memberships(int $uid): array {
         self::ensureSchema();
         return self::rows(Connection::get(),"SELECT m.party_type portalType,m.party_id partyId,
