@@ -20,7 +20,16 @@ assert.ok(service.includes('au.agency_id=a.id')&&service.includes('pm.agency_id=
 assert.ok(service.includes("sr.name='super_admin'"),'super-admin accounts cannot be impersonated');
 assert.ok(service.includes('PortalService::memberships($adminId)'),'Membership schema is prepared before admin portal targeting');
 assert.ok(service.includes('portal_memberships pm'),'Parent and driver accounts are included in the impersonation list');
-assert.ok(operations.includes('syImpersonationRoleFilter'),'Admin can filter impersonation by parent and driver roles');
+for(const [id,type] of [['syOpenImpersonation','company'],['syOpenParentImpersonation','parent'],['syOpenDriverImpersonation','driver']]){
+ assert.ok(operations.includes("id=\\""+id+"\\""),'Separate sidebar impersonation entry exists for '+type);
+ assert.ok(operations.includes("['"+id+"','"+type+"']"),'Sidebar impersonation entry opens '+type+' modal');
+}
+assert.ok(operations.includes('async function openAdminImpersonationDialog(panelType=')&&operations.includes('sy-admin-impersonation-\'+panelType'),'Role-specific modal has its own title, description, search and presentation');
+assert.ok(operations.includes('panelType})'),'Selected role is submitted for server-side enforcement');
+assert.ok(operations.includes("+'&panelType='+encodeURIComponent(panelType)"),'Role-specific modal requests only scoped users');
+assert.ok(service.includes("pm.party_type='parent'")&&service.includes("pm.party_type='driver'"),'Backend checks exact parent and driver memberships');
+assert.ok(service.includes('INVALID_IMPERSONATION_PANEL'),'Invalid impersonation types are rejected');
+assert.ok(routes.includes("$_GET['panelType']"),'API forwards role filter to server');
 assert.ok(service.includes('random_bytes(32)'),'target session token is cryptographically random');
 assert.ok(service.includes('hash(\'sha256\',$targetToken)'),'target session token is stored as a hash');
 assert.ok(service.includes("'httponly'=>true")&&service.includes("'samesite'=>'Strict'"),'original administrator session is protected by an HttpOnly Strict cookie');
