@@ -1619,7 +1619,15 @@ function attachOfficialTaxiTariffActions(form,key,id){
      verified=false;
      status.innerHTML='<p role="status">نرخ سازمان ثبت شد: '+number(result.servicesUpdated)+' سرویس و '+
        number(result.studentsUpdated)+' دانش‌آموز به‌روزرسانی شد.</p>';
-     if(kind==='service'&&form.elements.feeSource)form.elements.feeSource.value='taxi';
+     if(kind==='service'){
+       if(form.elements.feeSource)form.elements.feeSource.value='taxi';
+       // Show the persisted service amount, not the stale pre-apply quote.
+       try{
+         const saved=await api(scoped('/api/v1/services/'+encodeURIComponent(id)));
+         if(form.isConnected&&form.elements.monthlyFee&&saved.monthly_fee!==undefined)
+           form.elements.monthlyFee.value=String(saved.monthly_fee);
+       }catch(_){/* Application already succeeded; a refresh can load the amount. */}
+     }
      notify('نرخ‌نامه مصوب تاکسیرانی با موفقیت بر سرویس اعمال شد.');
    }catch(error){status.textContent='اعمال تعرفه انجام نشد: '+error.message;notify(error.message,true);}
    finally{busy=false;preview.disabled=false;syncApply();}
