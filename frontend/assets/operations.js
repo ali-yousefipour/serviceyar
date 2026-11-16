@@ -4342,7 +4342,7 @@ async function openAdminImpersonationDialog(panelType='company'){
   selectedUser=users.find(u=>Number(u.userKey??u.id)===id);if(!selectedUser)return;
   overlay.querySelector('#syImpersonationChosenName').textContent=((selectedUser.first_name||'')+' '+(selectedUser.last_name||'')).trim()||selectedUser.username;
   overlay.querySelector('#syImpersonationChosenDetails').textContent='نام کاربری: '+selectedUser.username+' · نقش: '+(selectedUser.roles||'بدون نقش')+' · شرکت: '+selectedCompany.name;
-  startButton.textContent=panelType==='driver'&&!Number(selectedUser.portalReady)?'مشاهده پنل راننده':panelInfo.button;
+  startButton.textContent=panelType==='driver'?'مدیریت پنل راننده':panelInfo.button;
   confirmBox.hidden=false;showError('');
   confirmBox.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'nearest'});
  };
@@ -4356,7 +4356,7 @@ async function openAdminImpersonationDialog(panelType='company'){
  companySearch.focus();
  startButton.onclick=async()=>{
   if(!selectedCompany||!selectedUser)return;
-  if(panelType==='driver'&&!Number(selectedUser.portalReady)){await openDriverPreview(selectedUser);return;}
+  if(panelType==='driver'){await openDriverPreview(selectedUser);return;}
   if(panelType==='parent'){await openParentInspection(selectedUser);return;}
   startButton.disabled=true;startButton.textContent='در حال ورود امن به پنل کاربر…';showError('');
   try{
