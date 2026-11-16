@@ -222,11 +222,8 @@ final class OperationsService
              JOIN service_students ss ON ss.service_id=s.id
              JOIN students st ON st.id=ss.student_id AND st.agency_id=s.agency_id
              WHERE s.driver_id=d.id AND s.agency_id=d.agency_id AND s.is_active=1 AND s.status=\'active\' AND st.is_active=1) assigned_student_count
-          FROM drivers d WHERE d.agency_id=:a AND d.is_active=1 AND (
-          EXISTS (SELECT 1 FROM services svc WHERE svc.agency_id=d.agency_id AND svc.driver_id=d.id AND svc.is_active=1 AND svc.status=\'active\')
-          OR EXISTS (SELECT 1 FROM driver_work wx WHERE wx.agency_id=d.agency_id AND wx.driver_id=d.id AND wx.work_date BETWEEN :workFrom AND :workTo AND wx.status<>\'cancelled\')
-          ) ORDER BY d.last_name,d.first_name');
-        $q->execute(['a'=>$aid,'wf'=>$from,'wt'=>$to,'cf'=>$from,'ct'=>$to,'pf'=>$from,'pt'=>$to,'lf'=>$from,'lt'=>$to,'workFrom'=>$from,'workTo'=>$to]);$rows=$q->fetchAll();
+          FROM drivers d WHERE d.agency_id=:a AND d.is_active=1 ORDER BY d.last_name,d.first_name');
+        $q->execute(['a'=>$aid,'wf'=>$from,'wt'=>$to,'cf'=>$from,'ct'=>$to,'pf'=>$from,'pt'=>$to,'lf'=>$from,'lt'=>$to]);$rows=$q->fetchAll();
         // One service snapshot drives the monthly payslip and the service editor.
         // Never use driver_base_monthly here: it describes a different reference
         // and can silently double-count deductions against parent tuition.
