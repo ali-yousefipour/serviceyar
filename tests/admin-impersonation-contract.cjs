@@ -16,8 +16,11 @@ for(const column of ['admin_user_id','target_user_id','agency_id','admin_session
  assert.ok(migration.includes(column),'audit session column '+column);
 assert.ok(service.includes('Authorization::isSuperAdmin($userId)'),'impersonation is restricted to super admins');
 assert.ok(service.includes('ensureSchema(PDO $pdo)')&&service.includes('CREATE TABLE IF NOT EXISTS admin_impersonation_sessions'),'schema can be prepared on first use when host migrations are not yet applied');
-assert.ok(service.includes('au.agency_id=?'),'target account must belong to selected agency');
+assert.ok(service.includes('au.agency_id=a.id')&&service.includes('pm.agency_id=a.id'),'target staff and portal accounts must belong to selected agency');
 assert.ok(service.includes("sr.name='super_admin'"),'super-admin accounts cannot be impersonated');
+assert.ok(service.includes('PortalService::memberships($adminId)'),'Membership schema is prepared before admin portal targeting');
+assert.ok(service.includes('portal_memberships pm'),'Parent and driver accounts are included in the impersonation list');
+assert.ok(operations.includes('syImpersonationRoleFilter'),'Admin can filter impersonation by parent and driver roles');
 assert.ok(service.includes('random_bytes(32)'),'target session token is cryptographically random');
 assert.ok(service.includes('hash(\'sha256\',$targetToken)'),'target session token is stored as a hash');
 assert.ok(service.includes("'httponly'=>true")&&service.includes("'samesite'=>'Strict'"),'original administrator session is protected by an HttpOnly Strict cookie');
