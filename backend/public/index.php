@@ -350,6 +350,20 @@ try {
    header('Cache-Control: private, no-store');
    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\StandaloneRepresentatives::report((int)$s['id'],(int)$rep[1],(int)$rep[2],$_GET)]);
  }
+ if($path==='/api/v1/admin/impersonation/representative-schools'&&$method==='GET'){
+   header('Cache-Control: private, no-store');
+   $aid=filter_var($_GET['agencyId']??null,FILTER_VALIDATE_INT);
+   $did=filter_var($_GET['driverId']??null,FILTER_VALIDATE_INT);
+   if(!$aid||!$did)throw new AuthException(422,'راننده یا شرکت معتبر نیست.','VALIDATION_ERROR');
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolRepresentatives::adminSchools((int)$s['id'],(int)$aid,(int)$did)]);
+ }
+ if($path==='/api/v1/admin/impersonation/representative-debtors'&&$method==='GET'){
+   header('Cache-Control: private, no-store');
+   $aid=filter_var($_GET['agencyId']??null,FILTER_VALIDATE_INT);
+   $did=filter_var($_GET['driverId']??null,FILTER_VALIDATE_INT);
+   if(!$aid||!$did)throw new AuthException(422,'راننده یا شرکت معتبر نیست.','VALIDATION_ERROR');
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolRepresentatives::adminReport((int)$s['id'],(int)$aid,(int)$did,$_GET)]);
+ }
  if($path==='/api/v1/admin/impersonation/parent-preview'&&$method==='GET'){
    header('Cache-Control: private, no-store');
    $agencyId=filter_var($_GET['agencyId']??null,FILTER_VALIDATE_INT);
