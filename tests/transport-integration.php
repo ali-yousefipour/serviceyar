@@ -277,6 +277,14 @@ try{
    ->execute(['09129990002',$driver['id'],$a]);
  $driverUid=\ServiceYar\Domain\PortalService::provisionVerifiedMobile('09129990002');
  check(is_int($driverUid)&&$driverUid>0,'Verified driver contact creates portal');
+ $adminPortalTargets=\ServiceYar\Auth\AdminImpersonation::users($uid,$a)['users'];
+ $targetIds=array_map(static fn($u)=>(int)$u['id'],$adminPortalTargets);
+ check(in_array($parentUid,$targetIds,true)&&in_array($driverUid,$targetIds,true),
+   'Company-scoped super-admin impersonation lists verified parent and driver accounts');
+ $foreignTargetIds=array_map(static fn($u)=>(int)$u['id'],
+   \ServiceYar\Auth\AdminImpersonation::users($uid,$b)['users']);
+ check(!in_array($parentUid,$foreignTargetIds,true)&&!in_array($driverUid,$foreignTargetIds,true),
+   'Parent and driver impersonation candidates cannot cross company boundaries');
  $driverView=\ServiceYar\Domain\PortalService::dashboard($driverUid,'driver',$a,(int)$driver['id']);
  $expectedDriverRows=$p->prepare("SELECT COUNT(*) FROM services sv JOIN service_students ss ON ss.service_id=sv.id
    JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id AND st.is_active=1
