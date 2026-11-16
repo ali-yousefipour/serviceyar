@@ -1968,3 +1968,19 @@ body{background:var(--canvas);color:var(--ink)}
  .sy-admin-page-card th,.sy-admin-page-card td{padding:8px 9px;font-size:9px}
  .sy-admin-page-card .toolbar{align-items:flex-start}
 }
+
+/* Dedicated super-admin impersonation entry points and contextual modals. */
+#nav .sy-admin-impersonation-trigger{min-height:45px}
+#nav #syOpenImpersonation{--sy-impersonation-accent:#237c61}
+#nav #syOpenParentImpersonation{--sy-impersonation-accent:#5e74ac}
+#nav #syOpenDriverImpersonation{--sy-impersonation-accent:#b07539}
+#nav .sy-admin-impersonation-trigger:hover,
+#nav .sy-admin-impersonation-trigger:focus-visible{border-inline-start:3px solid var(--sy-impersonation-accent,#237c61)}
+.sy-admin-impersonation-overlay.sy-admin-impersonation-company{--sy-impersonation-accent:#247d59;--sy-impersonation-pale:#e8f4ec}
+.sy-admin-impersonation-overlay.sy-admin-impersonation-parent{--sy-impersonation-accent:#4b66a3;--sy-impersonation-pale:#edf2fb}
+.sy-admin-impersonation-overlay.sy-admin-impersonation-driver{--sy-impersonation-accent:#9b682c;--sy-impersonation-pale:#fbf3e7}
+.sy-admin-impersonation-overlay .sy-admin-impersonation-dialog{border-top:5px solid var(--sy-impersonation-accent,#247d59)}
+.sy-admin-impersonation-overlay .sy-impersonation-steps span.active,
+.sy-admin-impersonation-overlay .sy-impersonation-selected-company{background:var(--sy-impersonation-pale,#e8f4ec);color:var(--sy-impersonation-accent,#247d59)}
+.sy-admin-impersonation-overlay .sy-impersonation-fixed-role{padding:8px 12px;margin:-4px 0 12px;border:1px solid #e2e9f0;border-radius:10px;background:var(--sy-impersonation-pale,#e8f4ec);color:var(--sy-impersonation-accent,#247d59);font-weight:750;font-size:12px}
+.sy-admin-impersonation-overlay .sy-impersonation-search input:focus{border-color:var(--sy-impersonation-accent,#247d59)}
