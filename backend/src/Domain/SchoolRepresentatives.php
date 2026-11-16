@@ -27,6 +27,7 @@ final class SchoolRepresentatives
           FOREIGN KEY(driver_id) REFERENCES drivers(id) ON DELETE CASCADE,
           FOREIGN KEY(school_id) REFERENCES schools(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        StandaloneRepresentatives::ensureSchema($pdo);
         return $pdo;
     }
     private static function staff(int $uid,int $aid,bool $write=false): PDO
@@ -101,7 +102,7 @@ final class SchoolRepresentatives
             $driver['schools']=self::scopedSchools($pdo,$aid,(int)$driver['id']);
             $reps[]=$driver;
         }
-        return ['representatives'=>$reps,'drivers'=>$drivers,'schools'=>$schools];
+        return ['representatives'=>$reps,'drivers'=>$drivers,'schools'=>$schools,'standalone'=>StandaloneRepresentatives::list($pdo,$aid)];
     }
     public static function save(int $uid,int $aid,array $data): array
     {
