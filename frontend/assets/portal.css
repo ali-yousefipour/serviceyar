@@ -201,3 +201,116 @@
 @media(max-width:380px){
  #app.sy-portal-mode .sy-portal-content .portal-kpis.sy-mgmt-summary{grid-template-columns:1fr}
 }
+
+/* Polished navigation parity: use the company's actual SVG icon set and rail. */
+#app.sy-portal-mode .sy-command-sidebar{
+ background:linear-gradient(180deg,#0b5b43 0%,#064631 52%,#043b2b 100%);
+ color:#eaf9f0;border:1px solid #1c8660;
+ box-shadow:0 10px 30px #0739221c;
+}
+#app.sy-portal-mode .sy-command-sidebar .sy-sidebar-brand-copy strong{color:#fff}
+#app.sy-portal-mode .sy-command-sidebar .sy-sidebar-brand-copy small,
+#app.sy-portal-mode .sy-command-sidebar .sy-sidebar-caption{color:#b0d9c6}
+#app.sy-portal-mode .sy-command-sidebar #nav>.sy-portal-nav{
+ color:#e7f7ed;border-color:transparent;background:transparent;
+ border-radius:12px;padding:11px 12px;font-size:13px;font-weight:700;min-height:46px;
+}
+#app.sy-portal-mode .sy-command-sidebar #nav>.sy-portal-nav:hover,
+#app.sy-portal-mode .sy-command-sidebar #nav>.sy-portal-nav:focus-visible{
+ background:#ffffff1b;color:#fff;border-color:#ffffff30;
+}
+#app.sy-portal-mode .sy-command-sidebar #nav>.sy-portal-nav.active,
+#app.sy-portal-mode .sy-command-sidebar #nav>.sy-portal-nav[aria-current=page]{
+ background:linear-gradient(110deg,#f5da95,#e6b858);color:#23483a;
+ border-color:#eac67a;box-shadow:0 7px 19px #001b1024;
+}
+#app.sy-portal-mode .sy-portal-nav-icon{min-width:25px;width:25px;height:25px;display:grid;place-items:center}
+#app.sy-portal-mode .sy-portal-nav-icon svg{width:20px;height:20px;fill:currentColor}
+#app.sy-portal-mode .sy-nav-search{padding:7px 3px 12px;border-bottom:1px solid #ffffff24;margin-bottom:10px}
+#app.sy-portal-mode .sy-nav-search-label{color:#ccebdc}
+#app.sy-portal-mode .sy-nav-search-field{background:#ffffff16;border-color:#ffffff35;color:#f1fff8;min-height:45px}
+#app.sy-portal-mode .sy-nav-search-field input{color:#fff;background:transparent;min-width:0}
+#app.sy-portal-mode .sy-nav-search-field input::placeholder{color:#e1eee6}
+#app.sy-portal-mode .sy-nav-search-field kbd{border-color:#ffffff3d;color:#d5eadf}
+#app.sy-portal-mode .sy-nav-search small{color:#b5dfcb}
+#app.sy-portal-mode .sy-command-sidebar .sy-sidebar-bottom{border-top-color:#ffffff25}
+#app.sy-portal-mode .sy-command-sidebar #logout{background:#ffffff12;color:#f5fff9;border:1px solid #ffffff30}
+#app.sy-portal-mode .sy-command-sidebar .sy-sidebar-collapse-toggle{border-color:#ffffff2f;color:#f8fff9;background:#ffffff14}
+#app.sy-portal-mode .sy-portal-shortcut-icon{display:inline-grid;place-items:center;width:26px;height:26px}
+#app.sy-portal-mode .sy-portal-shortcut-icon svg{width:20px;height:20px;fill:currentColor}
+
+/* Responsive debtor report: mobile gets scannable cards rather than a squeezed table. */
+#app.sy-portal-mode .portal-debtors-workspace{display:grid;gap:18px;min-width:0}
+#app.sy-portal-mode .portal-debtors-filters{
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;
+ align-items:end;padding:18px;border:1px solid #e0eae7;border-radius:17px;background:#f8fbf9
+}
+#app.sy-portal-mode .portal-debtors-filters>label,
+#app.sy-portal-mode .portal-debtors-more label{display:grid;gap:6px;font-size:12px;color:#355b50;font-weight:750;min-width:0}
+#app.sy-portal-mode .portal-debtors-filters input,
+#app.sy-portal-mode .portal-debtors-filters select{width:100%;min-width:0;min-height:46px;padding:8px 12px}
+#app.sy-portal-mode .portal-debtors-more{grid-column:1/-1;padding:0;border:0}
+#app.sy-portal-mode .portal-debtors-more summary{cursor:pointer;color:#0b7557;font-size:12px;font-weight:800;padding:6px}
+#app.sy-portal-mode .portal-debtors-more>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:10px}
+#app.sy-portal-mode .portal-debtors-submit{display:flex;align-items:center;justify-content:center;gap:9px;min-height:46px}
+#app.sy-portal-mode .portal-debtors-submit svg{width:20px;height:20px;fill:currentColor}
+#app.sy-portal-mode .portal-debtors-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#app.sy-portal-mode .portal-debtors-stats>div{background:#f5faf7;border:1px solid #d9e9df;border-radius:14px;padding:15px;display:grid;gap:6px}
+#app.sy-portal-mode .portal-debtors-stats small{font-size:12px;color:#667e76}
+#app.sy-portal-mode .portal-debtors-stats strong{color:#116e56;font-size:20px;line-height:1.5;overflow-wrap:anywhere}
+#app.sy-portal-mode .portal-debtors-results{display:grid;gap:14px;min-width:0}
+#app.sy-portal-mode .portal-debtors-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid #e8eeea;padding-top:14px}
+#app.sy-portal-mode .portal-debtors-toolbar label{font-size:12px;font-weight:750;color:#355b50}
+#app.sy-portal-mode .portal-debtors-toolbar input{flex:1;min-width:min(100%,230px);padding-inline:12px}
+#app.sy-portal-mode .portal-debtors-toolbar span{font-size:12px;color:#55746a}
+#app.sy-portal-mode .portal-debtors-table-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#app.sy-portal-mode .portal-debtors-table-head h3{margin:0;color:#1b3a4a}
+#app.sy-portal-mode .portal-debtors-table-head span{font-size:11px;color:#72827c}
+#app.sy-portal-mode .portal-debtors-desktop{display:block;min-width:0}
+#app.sy-portal-mode .portal-debtors-mobile{display:none}
+#app.sy-portal-mode .portal-debtors-pagination{display:flex;justify-content:space-between;align-items:center;gap:8px;padding-top:8px;border-top:1px solid #e7eeea}
+#app.sy-portal-mode .portal-debtors-pagination button{border:1px solid #cbded6;background:#f7fbf9;color:#135c49;border-radius:10px;padding:8px 15px;min-height:44px}
+#app.sy-portal-mode .portal-debtors-pagination button:disabled{opacity:.42;cursor:not-allowed}
+#app.sy-portal-mode .portal-debtors-pagination span{font-size:12px;color:#42665a;font-weight:700}
+#app.sy-portal-mode .portal-debtors-empty{padding:25px;text-align:center;border:1px dashed #cbded6;border-radius:14px;color:#607b71}
+@media(max-width:920px){
+ #app.sy-portal-mode .portal-debtors-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:760px){
+ #app.sy-portal-mode .portal-debtors-workspace{gap:14px;padding:14px}
+ #app.sy-portal-mode .portal-debtors-filters{grid-template-columns:minmax(0,1fr);padding:12px;gap:10px}
+ #app.sy-portal-mode .portal-debtors-filters>label{width:100%}
+ #app.sy-portal-mode .portal-debtors-more>div{grid-template-columns:minmax(0,1fr)}
+ #app.sy-portal-mode .portal-debtors-submit{width:100%}
+ #app.sy-portal-mode .portal-debtors-desktop{display:none}
+ #app.sy-portal-mode .portal-debtors-mobile{display:grid;gap:12px}
+ #app.sy-portal-mode .portal-debtors-table-head span{display:none}
+ #app.sy-portal-mode .portal-debtors-stats>div{padding:12px}
+ #app.sy-portal-mode .portal-debtors-stats strong{font-size:clamp(14px,4vw,19px)}
+ #app.sy-portal-mode .portal-debtors-toolbar{display:grid;grid-template-columns:minmax(0,1fr)}
+ #app.sy-portal-mode .portal-debtors-toolbar input{width:100%}
+ #app.sy-portal-mode .portal-debtor-card{border:1px solid #dce8e2;border-radius:16px;background:#fff;box-shadow:0 5px 16px #153d290c;padding:15px;min-width:0}
+ #app.sy-portal-mode .portal-debtor-card-head{display:grid;grid-template-columns:38px minmax(0,1fr);align-items:center;gap:10px}
+ #app.sy-portal-mode .portal-debtor-avatar{width:38px;height:38px;display:grid;place-items:center;background:#e4f4eb;color:#0b7455;border-radius:12px;font-weight:850}
+ #app.sy-portal-mode .portal-debtor-identity{display:grid;gap:4px;min-width:0}
+ #app.sy-portal-mode .portal-debtor-identity strong{color:#1a3f33;font-size:14px;overflow-wrap:anywhere}
+ #app.sy-portal-mode .portal-debtor-identity small{color:#758a7e;font-size:11px}
+ #app.sy-portal-mode .portal-debtor-due{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff7ed;border:1px solid #f4ddc0;padding:10px 12px;border-radius:11px}
+ #app.sy-portal-mode .portal-debtor-due small{font-size:11px;color:#895b1d}
+ #app.sy-portal-mode .portal-debtor-due strong{font-size:15px;color:#90550a;overflow-wrap:anywhere}
+ #app.sy-portal-mode .portal-debtor-card-body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+ #app.sy-portal-mode .portal-debtor-card-body>div{background:#f6faf8;border-radius:10px;padding:10px;display:grid;gap:5px;min-width:0}
+ #app.sy-portal-mode .portal-debtor-card-body span{font-size:10px;color:#687f74}
+ #app.sy-portal-mode .portal-debtor-card-body b{font-size:12px;color:#193f32;overflow-wrap:anywhere}
+ #app.sy-portal-mode .portal-debtor-details{border-top:1px solid #e9efec;padding-top:10px}
+ #app.sy-portal-mode .portal-debtor-details summary{cursor:pointer;color:#087857;font-size:12px;font-weight:850;min-height:38px;display:flex;align-items:center}
+ #app.sy-portal-mode .portal-debtor-details dl{display:grid;gap:0;margin:10px 0}
+ #app.sy-portal-mode .portal-debtor-details dl>div{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px dashed #e0e9e3;padding:10px 0}
+ #app.sy-portal-mode .portal-debtor-details dt{font-size:11px;color:#698275}
+ #app.sy-portal-mode .portal-debtor-details dd{font-size:12px;font-weight:800;color:#28473a;margin:0;max-width:60%;text-align:left;overflow-wrap:anywhere}
+ #app.sy-portal-mode .portal-debtor-call{display:block;text-align:center;background:#e4f5ec;border-radius:11px;color:#087755;padding:12px;text-decoration:none;font-weight:800}
+}
+@media(max-width:360px){
+ #app.sy-portal-mode .portal-debtors-stats{grid-template-columns:1fr}
+ #app.sy-portal-mode .portal-debtor-card-body{grid-template-columns:1fr}
+}
