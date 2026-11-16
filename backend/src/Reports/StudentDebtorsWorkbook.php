@@ -46,6 +46,7 @@ final class StudentDebtorsWorkbook
             $used[mb_strtolower($name)]=true;
             $title=$full || count($schools??[])===1?'گزارش مالی بدهکاران مدرسه '.$school:'گزارش مالی بدهکاران · '.$school;
             $label=static fn(string $v): string => htmlspecialchars(ExcelLocalization::digits($v),ENT_XML1|ENT_QUOTES,'UTF-8');
+            $border=' border="thin#CDDED2"';
             $head=['نام و نام خانوادگی دانش‌آموز','شماره تماس ولی','مبلغ ماهیانه سرویس (ریال)','مبلغ سالیانه سرویس (ریال)','مبلغ پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'];
             if (!$full) array_splice($head,2,0,['مدرسه']);
             $moneyHead=array_slice($head,-4);
@@ -53,25 +54,30 @@ final class StudentDebtorsWorkbook
                 ['<center><b><style font-size="14" height="27" bgcolor="#005B35" color="#FFFFFF">'.$label($title).'</style></b></center>'],
                 ['<center><style height="17" color="#005B35">'.$label('تاریخ گزارش‌گیری '.$date.' · سال تحصیلی '.$report['academicYear']).'</style></center>'],
                 ['<center><b><style height="19" color="#005B35">'.$label(($report['agencyName']??'شرکت').' - سامانه سرویس یار').'</style></b></center>'],
-                array_merge(array_map(static fn($v)=>'<center><wraptext><b><style height="31" bgcolor="#087447" color="#FFFFFF">'.$v.'</style></b></wraptext></center>',$head),$moneyHead),
+                array_merge(array_map(static fn($v)=>'<center><wraptext><b><style height="31" bgcolor="#087447" color="#FFFFFF"'.$border.'>'.$v.'</style></b></wraptext></center>',$head),$moneyHead),
             ];
             $total=0;
             foreach ($group['items'] as $item) {
-                $row=[SimpleXLSXGen::raw(ExcelLocalization::digits($item['student'])),SimpleXLSXGen::raw(ExcelLocalization::digits((string)$item['guardian_mobile']))];
-                if (!$full) $row[]=SimpleXLSXGen::raw(ExcelLocalization::digits($item['school']));
+                $row=[$item['student'],(string)$item['guardian_mobile']];
+                if (!$full) $row[]=$item['school'];
                 $values=array_map(static fn($field)=>(string)$item[$field],['monthly_fee','annual_fee','paid','debt']);
-                foreach ($values as $value) $row[]=SimpleXLSXGen::raw(self::persianMoney($value));
+                foreach ($values as $value) $row[]=self::persianMoney($value);
+                $background=count($rows)%2===0?'#FFFFFF':'#F3F8F4';
+                $style='<style bgcolor="'.$background.'"'.$border.'>';
+                $row=array_map(static fn(string $value): string =>
+                    $style.'<raw>'.$label(str_replace(["\r","\n"],' ',$value)).'</raw></style>',$row);
                 $total+=(int)round((float)$item['debt']*100);
                 $rows[]=array_merge($row,$values);
             }
             $last=count($rows);
             $end=chr(64+count($head));
-            $footer=array_fill(0,count($head),'');
-            $footer[0]='<b><style bgcolor="#E8F5ED" color="#005B35">مجموع بدهی</style></b>';
             $number=number_format($total/100,2,'.','');
+            $footerStyle='<b><style bgcolor="#E8F5ED" color="#005B35"'.$border.'>';
+            $footer=array_fill(0,count($head),$footerStyle.'</style></b>');
+            $footer[0]=$footerStyle.'مجموع بدهی</style></b>';
             $debtColumn=chr(ord($end)+4);
             $formula=$last>4?"SUM({$debtColumn}5:{$debtColumn}{$last})":'0';
-            $footer[count($head)-1]='<b><style bgcolor="#E8F5ED" color="#005B35">'.self::persianMoney($number).'</style></b>';
+            $footer[count($head)-1]=$footerStyle.self::persianMoney($number).'</style></b>';
             array_push($footer,'','','','<f v="'.$number.'">'.$formula.'</f>');
             $rows[]=$footer;
             $book->addSheet($rows,$name)->mergeCells("A1:{$end}1")->mergeCells("A2:{$end}2")->mergeCells("A3:{$end}3")
