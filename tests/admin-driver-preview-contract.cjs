@@ -7,6 +7,7 @@ const routes=read('backend/public/index.php');
 const ui=read('frontend/assets/operations.js');
 const driverUI=read('frontend/assets/portal.js');
 const css=read('frontend/assets/operations.css');
+const portalCss=read('frontend/assets/portal.css');
 assert.match(admin,/if\(\$panelType==='driver'\)/,'Drivers have their own candidate source');
 assert.match(admin,/FROM drivers d\s+JOIN agencies a ON a\.id=d\.agency_id AND a\.is_active=1/,'Candidates come from live agency drivers');
 assert.match(admin,/WHERE d\.agency_id=\? AND d\.is_active=1/,'Candidates are restricted to the selected agency');
@@ -32,7 +33,7 @@ assert.match(driverUI,/selectSection\('overview'\)/,'Full portal uses original r
 assert.match(driverUI,/impersonated=true;representativeSchools=\[\]/,'Inspection is read-only and excludes unauthorized representative reports');
 assert.match(driverUI,/window\.serviceyarAdminDriverInspection=true/,'Full shell is distinguished from real user impersonation');
 assert.match(driverUI,/menuLinks\(\)/,'Real sidebar shows the original driver pages');
-assert.match(css,/#app\.sy-portal-mode #content/,'The real portal uses the standard responsive shell');
+assert.match(portalCss,/#app\.sy-portal-mode #content/,'The real portal uses the standard responsive shell');
 assert.doesNotMatch(ui,/previewTable\(/,'Duplicated simplified table rendering is removed');
 assert.doesNotMatch(ui,/renderDriverInspection\(preview/,'Old embedded modal renderer is no longer used');
 assert.match(ui,/close\(\);\s*window\.serviceyarPortal\.mountAdminDriverInspection\(result\)/,'Selection modal closes before mounting portal');
