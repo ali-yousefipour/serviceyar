@@ -719,19 +719,38 @@ async function dashboard(token=pageToken){
   const modal=document.createElement('dialog');
   modal.className='sy-dashboard-details';
   modal.setAttribute('aria-labelledby','dashboardDetailsTitle');
-  modal.innerHTML='<header class="modal-head"><h3 id="dashboardDetailsTitle">'+esc(labels[metric]+(selectedSchool?' · '+selectedSchool.name:''))+'</h3><form method="dialog"><button aria-label="بستن جزئیات">×</button></form></header><div class="modal-body"><p data-dashboard-message role="status"></p><div data-dashboard-results></div><div class="member-actions"><button type="button" data-dashboard-prev hidden>صفحه قبل</button><button type="button" data-dashboard-next hidden>صفحه بعد</button><a href="#'+resource+'">مشاهده فهرست کامل</a></div></div>';
+  modal.innerHTML='<header class="sy-dashboard-dialog-header"><h3 id="dashboardDetailsTitle">'+esc(labels[metric]+(selectedSchool?' · '+selectedSchool.name:''))+'</h3><form method="dialog"><button type="submit" aria-label="بستن جزئیات" autofocus>×</button></form></header><div class="sy-dashboard-dialog-body"><p data-dashboard-message role="status"></p><div data-dashboard-results></div><button type="button" data-dashboard-retry hidden>تلاش دوباره</button></div><footer class="sy-dashboard-dialog-footer"><nav aria-label="صفحه‌بندی جزئیات"><button type="button" data-dashboard-prev hidden>صفحه قبل</button><button type="button" data-dashboard-next hidden>صفحه بعد</button></nav><a href="#'+resource+'">مشاهده فهرست کامل</a></footer>';
   const message=modal.querySelector('[data-dashboard-message]'),results=modal.querySelector('[data-dashboard-results]');
   const previous=modal.querySelector('[data-dashboard-prev]'),next=modal.querySelector('[data-dashboard-next]');
+  const retry=modal.querySelector('[data-dashboard-retry]');
   let page=1;
-  modal.addEventListener('close',()=>{modal.remove();if(button.isConnected)button.focus();},{once:true});
+  const onBackdrop=event=>{
+   if(event.target!==modal)return false;
+   const {left,right,top,bottom}=modal.getBoundingClientRect();
+   return event.clientX<left||event.clientX>=right||event.clientY<top||event.clientY>=bottom;
+  };
+  let startedOutside=false;
+  modal.addEventListener('pointerdown',event=>{startedOutside=event.button===0&&onBackdrop(event);});
+  modal.addEventListener('pointercancel',()=>{startedOutside=false;});
+  modal.addEventListener('click',event=>{
+   if(startedOutside&&onBackdrop(event))modal.close();
+   startedOutside=false;
+  });
+  modal.addEventListener('close',()=>{
+   modal.remove();
+   if(button.isConnected)button.focus({preventScroll:true});
+  },{once:true});
   modal.querySelector('a').onclick=()=>{if(metric==='student-status')initialStudentStatus=status;modal.close();};
   dashboardRoot.append(modal);modal.showModal();
   const load=async()=>{
-   previous.hidden=next.hidden=true;
+   retry.hidden=true;
+   previous.disabled=next.disabled=true;
    if(metric==='schools'){
     results.innerHTML=simpleTable(['مدرسه','دانش‌آموز فعال','دارای سرویس','بدون سرویس'],schoolRows);
+    message.textContent=fmt(schoolRows.length)+' مدرسه';
     return;
    }
+   results.replaceChildren();
    message.textContent='در حال دریافت جزئیات…';
    const query=new URLSearchParams({metric,status,page:String(page)});
    if(schoolId)query.set('schoolId',schoolId);
@@ -742,8 +761,11 @@ async function dashboard(token=pageToken){
     results.innerHTML=simpleTable(headers,detail.items.map(item=>resource==='services'?[item.name,item.detail||'—',fmt(item.state)]:resource==='drivers'?[item.name,fmt(item.detail)]:[item.name,item.detail,statuses[item.state]||item.state]));
     message.textContent=fmt(detail.total)+' مورد · صفحه '+fmt(page);
     previous.hidden=page<=1;next.hidden=page*25>=detail.total;
-   }catch(error){if(modal.open)message.textContent=error.message;}
+   }catch(error){
+    if(modal.open){message.textContent='دریافت جزئیات ناموفق بود. '+error.message;retry.hidden=false;}
+   }finally{previous.disabled=next.disabled=false;}
   };
+  retry.onclick=()=>void load();
   previous.onclick=()=>{page--;void load();};next.onclick=()=>{page++;void load();};
   void load();
  });
