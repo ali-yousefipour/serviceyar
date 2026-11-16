@@ -228,22 +228,7 @@
    data=await api('/api/v1/portal/'+m.portalType+'/'+m.agencyId+'/'+m.partyId);
    representativeSchools=m.portalType==='representative'?await api('/api/v1/portal/representative/'+m.agencyId+'/'+m.partyId+'/schools'):m.portalType==='driver'?await api('/api/v1/portal/driver/'+m.agencyId+'/'+m.partyId+'/representative-schools'):[];
    const parent=m.portalType==='parent',name=parent?'والدین':m.portalType==='representative'?'نمایندگان':'رانندگان';
-   const sidebar=el('nav');sidebar.replaceChildren();
-   const links=menuLinks();
-   links.forEach(([key,title,icon])=>{
-      const button=document.createElement('button');button.type='button';
-      button.className='nav sy-portal-nav';button.dataset.page=key;
-      const symbol=document.createElement('span');symbol.className='sy-portal-nav-icon';symbol.innerHTML=portalNavIcon(key);
-      const caption=document.createElement('span');caption.textContent=title;
-      button.append(symbol,caption);
-      button.onclick=()=>{
-        history.replaceState(history.state,'',location.pathname+location.search+'#portal-'+key);
-        selectSection(key);document.querySelector('.sidebar')?.classList.remove('nav-open');
-        const shade=el('navigationShade');if(shade)shade.hidden=true;
-        const toggle=el('navigationToggle');if(toggle)toggle.setAttribute('aria-expanded','false');
-      };
-      sidebar.append(button);
-   });
+   renderPortalNavigation();
    ensurePortalDrawer();
    const brand=document.querySelector('.sy-sidebar-brand-copy small');
    if(brand)brand.textContent='پنل '+name+' · '+m.agencyName;
@@ -268,6 +253,94 @@
    if(impersonated&&section==='password')section='overview';
    selectSection(section);
    if(!data.hasPassword&&m.portalType!=='representative'&&!impersonated)note('می‌توانید از بخش «تنظیم رمز عبور» رمز اختصاصی برای شماره همراه خود تعریف کنید.');
+ }
+ // Use the same command-sidebar conventions as the company workspace:
+ // navigable links, live search, keyboard shortcut and persistent compact rail.
+ function renderPortalNavigation(){
+   const nav=el('nav');nav.replaceChildren();
+   const links=menuLinks();
+   const search=document.createElement('label');
+   search.className='sy-nav-search sy-portal-nav-search';
+   search.setAttribute('for','syPortalNavSearch');
+   search.innerHTML='<span class="sy-nav-search-label">جست‌وجوی منو</span>'+
+     '<span class="sy-nav-search-field">'+
+     '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>'+
+     '<input type="search" id="syPortalNavSearch" placeholder="جست‌وجوی بخش‌ها…" autocomplete="off" aria-label="جست‌وجوی منوی پنل">'+
+     '<kbd>Ctrl K</kbd></span><small role="status" aria-live="polite"></small>';
+   nav.append(search);
+   for(const [key,title] of links){
+     const link=document.createElement('a');
+     link.className='nav sy-portal-nav';link.href='#portal-'+key;link.dataset.page=key;
+     link.title=title;
+     link.innerHTML='<span class="sy-portal-nav-icon">'+portalNavIcon(key)+'</span><span>'+esc(title)+'</span>';
+     link.addEventListener('click',event=>{
+       event.preventDefault();
+       history.replaceState(history.state,'',location.pathname+location.search+'#portal-'+key);
+       selectSection(key);closePortalDrawer();
+     });
+     nav.append(link);
+   }
+   const normalizeSearch=value=>normal(value).replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').replace(/[\\u200c\\s]+/g,' ').toLocaleLowerCase('fa');
+   const input=search.querySelector('input');
+   input.addEventListener('input',()=>{
+     const query=normalizeSearch(input.value);let count=0;
+     nav.querySelectorAll(':scope > a.sy-portal-nav').forEach(link=>{
+       const show=!query||normalizeSearch(link.textContent).includes(query);
+       link.hidden=!show;if(show)count++;
+     });
+     search.querySelector('small').textContent=query?(count?'نتایج مرتبط: '+fa(count):'بخشی پیدا نشد.'):'';
+   });
+   if(!window.syPortalNavShortcut){
+     window.syPortalNavShortcut=true;
+     document.addEventListener('keydown',event=>{
+       if(!el('app')?.classList.contains('sy-portal-mode'))return;
+       if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){
+         const field=el('syPortalNavSearch');if(!field)return;
+         event.preventDefault();
+         if(matchMedia('(max-width:920px)').matches)openPortalDrawer();
+         else if(document.querySelector('.sy-command-sidebar.sy-collapsed'))
+           el('syPortalSidebarCollapse')?.click();
+         field.focus();field.select();
+       }
+     });
+   }
+   const side=document.querySelector('.sy-command-sidebar');
+   if(side){
+     // Company rail uses the same sy-collapsed class. Keep a separate persisted
+     // preference so a driver never changes the company's menu preference.
+     let button=el('syPortalSidebarCollapse');
+     if(!button){
+       button=document.createElement('button');button.type='button';button.id='syPortalSidebarCollapse';
+       button.className='sy-sidebar-collapse-toggle';side.querySelector('.sy-sidebar-brand')?.append(button);
+       button.addEventListener('click',()=>{
+         applyPortalRail(!side.classList.contains('sy-collapsed'));
+       });
+     }
+     let collapsed=false;
+     try{collapsed=localStorage.getItem('sy-portal-sidebar-collapsed')==='1';}catch(_){}
+     applyPortalRail(collapsed,false);
+   }
+ }
+ function applyPortalRail(collapsed,persist=true){
+   const side=document.querySelector('.sy-command-sidebar'),app=el('app'),button=el('syPortalSidebarCollapse');
+   if(!side||!button)return;
+   side.classList.toggle('sy-collapsed',collapsed);
+   app?.classList.toggle('sy-sidebar-collapsed',collapsed);
+   button.setAttribute('aria-expanded',String(!collapsed));
+   button.setAttribute('aria-label',collapsed?'باز کردن منوی کناری':'جمع کردن منوی کناری');
+   button.title=collapsed?'باز کردن منو':'جمع کردن منو';
+   button.innerHTML=collapsed?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg>';
+   if(persist)try{localStorage.setItem('sy-portal-sidebar-collapsed',collapsed?'1':'0');}catch(_){}
+ }
+ function closePortalDrawer(){
+   document.querySelector('.sidebar')?.classList.remove('nav-open');
+   const shade=el('navigationShade');if(shade)shade.hidden=true;
+   const toggle=el('navigationToggle');if(toggle)toggle.setAttribute('aria-expanded','false');
+ }
+ function openPortalDrawer(){
+   document.querySelector('.sidebar')?.classList.add('nav-open');
+   const shade=el('navigationShade');if(shade)shade.hidden=false;
+   const toggle=el('navigationToggle');if(toggle)toggle.setAttribute('aria-expanded','true');
  }
  function ensurePortalDrawer(){
    if(!el('navigationToggle')){
@@ -314,7 +387,7 @@
    data=payload;impersonated=true;representativeSchools=Array.isArray(payload.representativeSchools)?payload.representativeSchools:[];
    window.serviceyarAdminDriverInspection=true;
    const app=el('app');app.classList.add('sy-portal-mode','sy-admin-driver-inspection-mode');
-   const nav=el('nav');nav.replaceChildren();
+   renderPortalNavigation();
    ensurePortalDrawer();
    const account=el('syAccountMenu');if(account){account.open=false;account.hidden=true;}
    const picker=el('agencyPickerWrap');if(picker)picker.hidden=true;
@@ -330,19 +403,6 @@
    el('content').innerHTML='<div class="sy-portal-content"><div class="sy-portal-impersonation-notice">'+
       'مشاهده نیابتی پنل '+(payload.portalType==='parent'?'ولی دانش‌آموز':'راننده')+' · فقط خواندنی؛ نشست کاربر تغییر نمی‌کند.'+
       '</div><div id="portalContent"></div></div>';
-   for(const [key,title,symbol] of menuLinks()){
-     const button=document.createElement('button');
-     button.type='button';button.className='nav sy-portal-nav';button.dataset.page=key;
-     button.innerHTML='<span class="sy-portal-nav-icon">'+portalNavIcon(key)+'</span><span>'+esc(title)+'</span>';
-     button.onclick=()=>{
-       history.replaceState(history.state,'',location.pathname+location.search+'#portal-'+key);
-       selectSection(key);
-       document.querySelector('.sidebar')?.classList.remove('nav-open');
-       if(el('navigationShade'))el('navigationShade').hidden=true;
-       if(el('navigationToggle'))el('navigationToggle').setAttribute('aria-expanded','false');
-     };
-     nav.append(button);
-   }
    section='overview';history.replaceState(history.state,'',location.pathname+location.search+'#portal-overview');
    selectSection('overview');
  }
