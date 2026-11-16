@@ -62,7 +62,7 @@ final class PayrollDocuments
             $mode=$body['calculationMode']??'recorded';
             if(!in_array($mode,['recorded','assignment_estimate'],true))throw new AuthException(422,'روش محاسبه نامعتبر است.','VALIDATION_ERROR');
             if($mode==='assignment_estimate' && ($body['confirmEstimate']??false)!==true)throw new AuthException(422,'پیش از ثبت سند برآوردی باید محدودیت تاریخچه تخصیص و کارکرد را تأیید کنید.','ESTIMATE_CONFIRMATION_REQUIRED');
-            $payroll=OperationsService::payroll($uid,$aid,['from'=>$from,'to'=>$to,'calculationMode'=>$mode]);$actual=[];foreach($payroll['items'] as $row)$actual[(int)$row['id']]=$row;
+            $payroll=OperationsService::payroll($uid,$aid,['from'=>$from,'to'=>$to,'calculationMode'=>$mode,'serviceDays'=>$body['serviceDays']??[]]);$actual=[];foreach($payroll['items'] as $row)$actual[(int)$row['id']]=$row;
             $chosen=[];$total=0;$estimatedRows=0;
             foreach($lines as $line){if(!is_array($line))throw new AuthException(422,'ردیف حقوق نامعتبر است.','VALIDATION_ERROR');$id=(int)($line['driverId']??0);$amount=$line['amount']??null;if(!isset($actual[$id])||isset($chosen[$id]))throw new AuthException(422,'راننده تکراری یا خارج از شرکت است.','CROSS_SCOPE_REFERENCE');$salary=self::salaryRials($amount);$chosen[$id]=['row'=>$actual[$id],'salary'=>$salary];if(!empty($actual[$id]['estimate_requires_confirmation']))$estimatedRows++;$total+=$salary;}
             $no=($estimatedRows>0?'EST-':'PAY-').str_replace('-','',$from).'-'.bin2hex(random_bytes(3));$p->prepare('INSERT INTO payroll_documents(agency_id,document_no,date_from,date_to,total_amount,created_by) VALUES(:a,:n,:f,:t,:v,:u)')->execute(['a'=>$aid,'n'=>$no,'f'=>$from,'t'=>$to,'v'=>$total,'u'=>$uid]);$doc=(int)$p->lastInsertId();
