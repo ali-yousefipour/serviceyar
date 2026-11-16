@@ -96,6 +96,9 @@ final class AdminImpersonation
         self::requireAdmin($adminId);
         if($agencyId<1)throw new AuthException(422,'شرکت انتخاب‌شده معتبر نیست.','INVALID_AGENCY');
         $pdo=Connection::get();
+        // FTP-hosted installations may not have installed the portal migration yet.
+        // Checking memberships prepares its idempotent schema before we query it.
+        \ServiceYar\Domain\PortalService::memberships($adminId);
         $filter=self::activeUserFilter($pdo);
         $agency=$pdo->prepare('SELECT id,name FROM agencies WHERE id=? AND is_active=1');
         $agency->execute([$agencyId]);
@@ -138,6 +141,7 @@ final class AdminImpersonation
         $adminToken=self::adminToken();
         $adminHash=hash('sha256',$adminToken);
         $pdo=Connection::get();
+        \ServiceYar\Domain\PortalService::memberships($adminId);
         self::ensureSchema($pdo);
         $adminQuery=$pdo->prepare(
             'SELECT expires_at FROM user_sessions
