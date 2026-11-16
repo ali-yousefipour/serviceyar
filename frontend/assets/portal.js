@@ -22,16 +22,14 @@
    if(current.portalType==='representative')return [['overview','نمای کلی','◈'],['debtors','گزارش بدهکاران','▦']];
    return [['overview','نمای کلی','◈'],['services',current.portalType==='parent'?'سرویس فرزند':'مدارس و دانش‌آموزان','▤'],...(current.portalType==='driver'&&(data?.representative||representativeSchools.length)?[['debtors','گزارش بدهکاران','▦']]:[]),['finance','امور مالی','﷼'],['profile',impersonated?'مشاهده مشخصات':'اطلاعات و ویرایش','♧'],...(!impersonated?[['password','تنظیم رمز عبور','◇']]:[])];
  }
+ // Reuse the exact icon paths and SVG renderer used by the company/admin menus.
  function portalNavIcon(key){
-   const paths={
-     overview:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
-     services:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/>',
-     debtors:'<path d="M4 3h16v18l-3-2-3 2-3-2-3 2-4-2z"/><path d="M8 8h8M8 12h8"/>',
-     finance:'<rect x="2" y="5" width="20" height="15" rx="2"/><path d="M2 10h20M16 15h3"/>',
-     profile:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-5 3.4-8 8-8s8 3 8 8"/>',
-     password:'<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3"/>'
-   };
-   return '<svg class="sy-portal-item-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(paths[key]||paths.overview)+'</svg>';
+   const shared={overview:'dashboard',services:'schools',debtors:'reports',
+     finance:'accounts',profile:'students',password:'settings'};
+   const resolved=shared[key]||key;
+   if(typeof samarMenuIcon==='function')return samarMenuIcon(resolved);
+   if(typeof navIcon==='function')return navIcon(resolved);
+   return '<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><circle cx="12" cy="12" r="7"/></svg>';
  }
  function widget(title,value,hint,link=''){
    return '<article class="portal-kpi sy-mgmt-kpi sy-mgmt-tone-green"><small>'+esc(title)+'</small><strong>'+esc(value)+'</strong><span>'+esc(hint||'')+'</span></article>';
