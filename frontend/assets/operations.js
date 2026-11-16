@@ -4297,7 +4297,7 @@ async function openAdminImpersonationDialog(panelType='company'){
      if(!overlay.isConnected||Number(selectedCompany?.id)!==agencyId)return;
      if(typeof window.serviceyarPortal?.mountAdminParentInspection!=='function')
        throw Error('ماژول پنل والدین بارگذاری نشده است.');
-     close();window.serviceyarPortal.mountAdminParentInspection(result);
+     await window.serviceyarPortal.mountAdminParentInspection(result);close();
    }catch(error){
      preview.innerHTML='<button type="button" class="secondary" data-preview-back>بازگشت به فهرست اولیا</button>'+
        '<p role="alert">'+esc(error.message||'نمایش پنل ولی انجام نشد.')+'</p>';
