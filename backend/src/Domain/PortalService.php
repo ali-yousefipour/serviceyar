@@ -314,8 +314,19 @@ final class PortalService {
     private static function driverNet(int $agencyId,float $gross): float {
         return (float)OperationsService::driverDeductions($gross,$agencyId)['net_earned'];
     }
+    public static function adminUpdateDriverProfile(int $uid,int $agencyId,int $driverId,array $input): array {
+        if(!\ServiceYar\Auth\Authorization::isSuperAdmin($uid))
+            throw new AuthException(403,'ویرایش مدیریتی فقط برای مدیر کل مجاز است.','FORBIDDEN');
+        if($agencyId<1||$driverId<1)throw new AuthException(422,'شرکت یا راننده معتبر نیست.','VALIDATION_ERROR');
+        if(array_key_exists('email',$input))throw new AuthException(422,'ویرایش ایمیل حساب کاربری از این بخش مجاز نیست.','INVALID_FIELD');
+        return self::updateProfileCore($uid,'driver',$agencyId,$driverId,$input,true);
+    }
     public static function updateProfile(int $uid,string $type,int $agencyId,int $partyId,array $input): array {
-        self::authorized($uid,$type,$agencyId,$partyId);
+        return self::updateProfileCore($uid,$type,$agencyId,$partyId,$input,false);
+    }
+    private static function updateProfileCore(int $uid,string $type,int $agencyId,int $partyId,array $input,bool $admin): array {
+        if(!$admin)self::authorized($uid,$type,$agencyId,$partyId);
+        if($admin)self::adminDriverPreview($uid,$agencyId,$partyId);
         $pdo=Connection::get();
         $allowed=$type==='parent'
             ?['address','returnAddress','guardianName','guardianRelation','email']
@@ -376,6 +387,11 @@ final class PortalService {
             }
             if($owned)$pdo->commit();
         }catch(\Throwable $e){if($owned&&$pdo->inTransaction())$pdo->rollBack();throw $e;}
+        if($admin){
+            $pdo->prepare('INSERT INTO activity_logs(agency_id,user_id,action,entity_type,entity_id)
+              VALUES(?,?,?,?,?)')->execute([$agencyId,$uid,'admin_driver_profile_updated','drivers',$partyId]);
+            return self::adminDriverPreview($uid,$agencyId,$partyId);
+        }
         return self::dashboard($uid,$type,$agencyId,$partyId);
     }
     public static function setPassword(int $uid,string $password,string $confirm,string $current=''): array {
@@ -396,6 +412,50 @@ final class PortalService {
             if($ownsTransaction)$pdo->commit();
             return ['updated'=>true,'username'=>self::rows($pdo,'SELECT username FROM users WHERE id=?',[$uid])[0]['username']];
         }catch(\Throwable $e){if($ownsTransaction&&$pdo->inTransaction())$pdo->rollBack();throw $e;}
+    }
+    public static function adminUpdateDriverVehicle(int $uid,int $agencyId,int $driverId,array $body): array {
+        if(!\ServiceYar\Auth\Authorization::isSuperAdmin($uid))
+            throw new AuthException(403,'ویرایش خودرو فقط برای مدیر کل مجاز است.','FORBIDDEN');
+        $allowed=['model','plate'];
+        foreach($body as $key=>$value){
+            if(!in_array($key,$allowed,true)||!is_string($value)||mb_strlen($value)>100)
+                throw new AuthException(422,'فیلد خودرو نامعتبر است.','INVALID_VEHICLE_FIELD');
+        }
+        $model=trim((string)($body['model']??''));
+        $plate=trim((string)($body['plate']??''));
+        if($model===''&&$plate==='')throw new AuthException(422,'حداقل یک تغییر وارد کنید.','INVALID_VEHICLE_REQUEST');
+        $pdo=Connection::get();$owned=!$pdo->inTransaction();
+        if($owned)$pdo->beginTransaction();
+        try {
+            $q=$pdo->prepare("SELECT v.id,v.model,v.plate,v.tariff_vehicle_class
+              FROM drivers d JOIN vehicles v ON v.id=d.vehicle_id AND v.agency_id=d.agency_id AND v.is_active=1
+              JOIN agencies a ON a.id=d.agency_id AND a.is_active=1
+              WHERE d.id=? AND d.agency_id=? AND d.is_active=1 FOR UPDATE");
+            $q->execute([$driverId,$agencyId]);$current=$q->fetch(\PDO::FETCH_ASSOC);
+            if(!$current)throw new AuthException(404,'خودروی فعال راننده یافت نشد.','VEHICLE_NOT_FOUND');
+            if($model!==''){
+                if(!VehicleClassCatalog::validSelection($pdo,$model))
+                    throw new AuthException(422,'مدل جدید در فهرست خودروهای تأییدشده نیست.','MODEL_NOT_APPROVED');
+                $q=$pdo->prepare('SELECT DISTINCT class_number FROM vehicle_tariff_class_models WHERE family_name=? OR alias=?');
+                $q->execute([$model,$model]);
+                $classes=array_unique(array_map('intval',$q->fetchAll(\PDO::FETCH_COLUMN)));
+                if(count($classes)!==1||(int)$current['tariff_vehicle_class']<1||$classes[0]!=(int)$current['tariff_vehicle_class'])
+                    throw new AuthException(409,'تغییر کلاس خودرو نیازمند بازبینی تعرفه در مدیریت خودرو شرکت است.','VEHICLE_CLASS_REVIEW_REQUIRED');
+            }
+            if($plate!==''&&(mb_strlen($plate)<5||mb_strlen($plate)>50))
+                throw new AuthException(422,'پلاک معتبر وارد کنید.','INVALID_PLATE');
+            if($plate!==''&&$plate!==(string)$current['plate']){
+                $q=$pdo->prepare('SELECT id FROM vehicles WHERE agency_id=? AND plate=? AND id<>? AND is_active=1 LIMIT 1');
+                $q->execute([$agencyId,$plate,(int)$current['id']]);
+                if($q->fetchColumn())throw new AuthException(409,'این پلاک برای خودرو دیگری ثبت شده است.','PLATE_EXISTS');
+            }
+            $q=$pdo->prepare('UPDATE vehicles SET model=COALESCE(?,model),plate=COALESCE(?,plate) WHERE id=? AND agency_id=? AND is_active=1');
+            $q->execute([$model?:null,$plate?:null,(int)$current['id'],$agencyId]);
+            $pdo->prepare('INSERT INTO activity_logs(agency_id,user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?)')
+                ->execute([$agencyId,$uid,'admin_driver_vehicle_updated','vehicles',(int)$current['id']]);
+            if($owned)$pdo->commit();
+        }catch(\Throwable $e){if($owned&&$pdo->inTransaction())$pdo->rollBack();throw $e;}
+        return self::adminDriverPreview($uid,$agencyId,$driverId);
     }
     public static function requestVehicleChange(int $uid,int $agencyId,int $driverId,array $body): array {
         self::authorized($uid,'driver',$agencyId,$driverId);
