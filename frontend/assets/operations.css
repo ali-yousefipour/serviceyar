@@ -3090,3 +3090,34 @@ body.sy-menu-palette-open{overflow:hidden}
  .sy-admin-impersonation-dialog:has(.sy-impersonation-driver-preview:not([hidden])){width:calc(100vw - 12px)}
  .sy-impersonation-driver-preview{padding:10px 0}
 }
+
+/* The actual portal components, not a duplicated summary, are shown within
+   the super-admin driver inspection. All controls are observation-only. */
+.sy-admin-impersonation-dialog:has(.sy-admin-driver-portal){
+  width:min(1300px,calc(100vw - 24px));
+  max-height:calc(100dvh - 24px);
+}
+.sy-impersonation-driver-preview:has(.sy-admin-driver-portal){width:100%;min-width:0}
+.sy-admin-driver-portal{width:100%;min-width:0;padding:12px 0 24px}
+.sy-driver-inspection-layout{
+  display:grid;grid-template-columns:minmax(190px,230px) minmax(0,1fr);
+  align-items:start;gap:18px;min-width:0
+}
+.sy-driver-inspection-layout .portal-nav{
+  position:static;min-width:0
+}
+.sy-driver-inspection-layout .portal-body{min-width:0}
+.sy-driver-inspection-view{display:grid;gap:17px;min-width:0}
+.sy-admin-driver-portal .portal-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+.sy-admin-driver-portal .portal-panels{grid-template-columns:repeat(2,minmax(0,1fr))}
+.sy-admin-driver-portal .portal-profile-form{display:none}
+@media(max-width:850px){
+ .sy-driver-inspection-layout{grid-template-columns:1fr}
+ .sy-driver-inspection-layout .portal-nav nav{display:flex;gap:8px;overflow:auto}
+ .sy-driver-inspection-layout .portal-nav nav button{flex-shrink:0}
+ .sy-admin-driver-portal .portal-panels{grid-template-columns:1fr}
+}
+@media(max-width:540px){
+ .sy-admin-driver-portal .portal-kpis{grid-template-columns:1fr 1fr}
+ .sy-admin-driver-portal .portal-kpi{padding:12px}
+}
