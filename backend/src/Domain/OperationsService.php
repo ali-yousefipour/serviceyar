@@ -233,7 +233,7 @@ final class OperationsService
             $r['assigned_monthly_net']=self::driverDeductions($assignedMonthly,$aid)['net_earned'];
             $r['work_vs_assigned_monthly_delta']=(float)$r['recorded_earned']-$assignedMonthly;
             $r['reconciliation_basis']='current_active_assignments_monthly_vs_recorded_period_work';
-            $r['reconciliation_requires_review']=abs($gross-$assignedMonthly)>=1;
+            $r['reconciliation_requires_review']=abs((float)$r['recorded_earned']-$assignedMonthly)>=1;
             $r['balance']=$deductions['net_earned']-$r['paid'];
         }unset($r);
         return ['items'=>$rows,'from'=>$from,'to'=>$to,'calculationMode'=>$estimateRequested?'assignment_estimate':'recorded','estimatedOnly'=>$estimateRequested,'estimatedWarning'=>'برآورد بر اساس تخصیص‌های فعلی است؛ بدون تاریخچه تغییر راننده و روزهای خدمت، حقوق قطعی ماه‌های گذشته محسوب نمی‌شود.'];
