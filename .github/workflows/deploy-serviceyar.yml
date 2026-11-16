@@ -77,6 +77,7 @@ jobs:
           node --check frontend/assets/login-methods.js
           node tests/login-methods-contract.cjs
           node tests/negin-sms-admin-settings.cjs
+          node tests/representative-access-contract.cjs
           node tests/admin-impersonation-contract.cjs
           node tests/api-route-guard-contract.cjs
           node tests/payroll-reconciliation-contract.cjs
