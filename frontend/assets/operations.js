@@ -1525,61 +1525,102 @@ function attachOfficialTaxiTariffActions(form,key,id){
  const kind=key==='services'?'service':'driver';
  const box=document.createElement('section');box.className='sy-official-tariff-apply';
  const intro=kind==='service'?'دانش‌آموزان متصل به این سرویس':'تمام سرویس‌های فعال متعلق به این راننده';
- box.innerHTML='<h4>اعمال نرخ‌نامه مصوب سازمان تاکسیرانی</h4>'+
-  '<p>ابتدا پیش‌نمایش مبلغ قبلی و مبلغ جدید '+intro+' را بررسی کنید. <strong>محاسبه به‌تنهایی مبلغ ثبت‌شده را تغییر نمی‌دهد.</strong> اعمال فقط پس از تأیید شما انجام می‌شود؛ دریافت‌ها و اسناد نهایی گذشته محفوظ می‌مانند.</p>'+
-  '<div class="member-actions"><button type="button" data-official-preview>پیش‌نمایش و بررسی تعرفه</button>'+
-  '<button type="button" class="primary" data-official-apply disabled>تأیید و اعمال نرخ‌نامه به '+(kind==='service'?'این سرویس':'سرویس‌های راننده')+'</button></div>'+
-  '<div data-official-status role="status" aria-live="polite"></div>';
+ box.innerHTML='<h4>تأیید و اعمال نرخ‌نامه سازمان تاکسیرانی</h4>'+
+  '<p>مبلغ محاسبه‌شده ابتدا به‌صورت پیش‌نمایش بررسی می‌شود. <strong>اعمال تعرفه، مبلغ شهریه و مبنای پرداخت راننده را در سوابق قابل اصلاح به‌روزرسانی می‌کند.</strong> پرداخت‌ها و اسناد قطعی گذشته محفوظ می‌مانند.</p>'+
+  '<div class="member-actions"><button type="button" data-official-preview>محاسبه و بررسی تعرفه</button>'+
+  '<button type="button" class="primary" data-official-apply>تأیید و اعمال تعرفه برای '+(kind==='service'?'این سرویس':'سرویس‌های راننده')+'</button></div>'+
+  '<p data-official-status role="status" aria-live="polite"></p>';
+ // Keep the action with the pricing fields in step three. The wizard's own
+ // navigation moves the user to the final review before it submits edits.
  const steps=[...form.querySelectorAll('.wizard-step:not(.wizard-review)')];
  (steps.at(-1)||form).append(box);
  const preview=box.querySelector('[data-official-preview]'),apply=box.querySelector('[data-official-apply]'),status=box.querySelector('[data-official-status]');
- let verified=false,busy=false,unsaved=false;
+ const endpoint='/api/v1/operations/tariffs/apply-'+kind+'/'+encodeURIComponent(id);
+ const isTaxi=()=>kind!=='service'||form.elements.feeSource?.value==='taxi';
+ let verified=false,busy=false,unsaved=false,revision=0;
+ const syncApply=()=>{
+   apply.disabled=busy||!isTaxi()||(!unsaved&&!verified);
+   if(kind==='service'&&unsaved&&isTaxi())apply.textContent='تأیید، سپس ذخیره و اعمال نرخ‌نامه';
+   else apply.textContent='تأیید و اعمال تعرفه برای '+(kind==='service'?'این سرویس':'سرویس‌های راننده');
+ };
  const invalidate=()=>{
-  if(busy)return;unsaved=true;verified=false;apply.disabled=true;
-  status.textContent='تغییرات فرم هنوز ذخیره نشده‌اند. ابتدا «ذخیره» را بزنید، سپس پیش‌نمایش و اعمال نرخ‌نامه را انجام دهید.';
+   revision++;unsaved=true;verified=false;
+   form.dataset.applyTaxiAfterSave='';
+   status.textContent=isTaxi()
+      ?'تغییرات فرم هنوز ذخیره نشده است. گزینه «تأیید، سپس ذخیره و اعمال» شما را به مرحله بازبینی می‌برد؛ پس از ذخیره، نرخ‌نامه برای این سرویس اعمال می‌شود.'
+      :'ابتدا مبنای محاسبه هزینه سرویس را «تعرفه مصوب سازمان تاکسیرانی» انتخاب کنید.';
+   syncApply();
  };
  form.addEventListener('input',event=>{if(event.isTrusted&&!box.contains(event.target))invalidate();});
  form.addEventListener('change',event=>{if(event.isTrusted&&!box.contains(event.target))invalidate();});
- const endpoint='/api/v1/operations/tariffs/apply-'+kind+'/'+encodeURIComponent(id);
  const previewRequest=async()=>{
-  verified=false;apply.disabled=true;
-  if(unsaved){status.textContent='ابتدا تغییرات فرم را ذخیره کنید تا محاسبه بر اساس اطلاعات قطعی راننده، خودرو و کلاس تعرفه انجام شود.';return;}
-  busy=true;preview.disabled=true;status.textContent='در حال محاسبه تعرفه و بررسی سرویس‌ها…';
-  try{
-   const result=await api(scoped(endpoint));
-   if(!box.isConnected)return;
-   const rows=result.services||[];
-   status.innerHTML='<p>سرویس‌ها: '+number(result.serviceCount)+' | دانش‌آموزان: '+number(result.studentCount)+
-    ' | مبالغ یا مبنای قابل اصلاح: '+number(result.changes)+' | ایرادات: '+number(result.blocking)+'</p>'+
-    rows.map(item=>'<details class="sy-taxi-apply-service"><summary>'+esc(item.serviceTitle||('سرویس '+number(item.serviceId)))+
-     ' · '+number(item.studentCount)+' دانش‌آموز'+(item.errors?.length?' · دارای خطا':'')+'</summary>'+
-     (item.students?.length?simpleTable(['دانش‌آموز','مبلغ قبلی (ریال)','تعرفه سازمان (ریال)'],
-       item.students.map(st=>[st.name,number(st.oldFee),number(st.newFee)])):'')+
-     (item.errors?.length?'<ul class="sy-official-tariff-errors">'+item.errors.map(err=>'<li>'+esc(err)+'</li>').join('')+'</ul>':'')+'</details>').join('')+
-    (result.canApply?'<p>اطلاعات معتبر است؛ برای ثبت واقعی، دکمه «تأیید و اعمال نرخ‌نامه» را بزنید.</p>':
-      '<p class="error">تا رفع ایرادات تعرفه، هیچ مبلغی تغییر نخواهد کرد.</p>');
-   verified=Boolean(result.canApply);apply.disabled=!verified;
-  }catch(error){status.textContent='دریافت پیش‌نمایش ناموفق بود: '+error.message;notify(error.message,true);}
-  finally{busy=false;if(preview.isConnected)preview.disabled=false;}
+   if(unsaved){
+     status.textContent='برای پیش‌نمایش نهایی، ابتدا تغییرات فرم را ذخیره کنید؛ یا از گزینه «تأیید، سپس ذخیره و اعمال نرخ‌نامه» استفاده کنید.';
+     return false;
+   }
+   if(!isTaxi()){
+     status.textContent='ابتدا گزینه «تعرفه مصوب سازمان تاکسیرانی» را انتخاب کنید.';
+     return false;
+   }
+   const requested=revision;
+   verified=false;busy=true;preview.disabled=true;syncApply();
+   status.textContent='در حال بررسی مبالغ ثبت‌شده، کلاس خودرو و نرخ‌نامه…';
+   try{
+     const result=await api(scoped(endpoint));
+     if(!box.isConnected||requested!==revision)return false;
+     const rows=result.services||[];
+     status.innerHTML='<p>سرویس‌ها: '+number(result.serviceCount)+' | دانش‌آموزان: '+number(result.studentCount)+
+       ' | تغییرات: '+number(result.changes)+' | موارد مسدودکننده: '+number(result.blocking)+'</p>'+
+       rows.map(item=>'<details class="sy-taxi-apply-service"><summary>'+esc(item.serviceTitle||('سرویس '+number(item.serviceId)))+
+        ' · '+number(item.studentCount)+' دانش‌آموز'+(item.errors?.length?' · دارای خطا':'')+'</summary>'+
+        (item.students?.length?simpleTable(['دانش‌آموز','مبلغ فعلی (ریال)','مبلغ مصوب سازمان (ریال)'],
+          item.students.map(st=>[st.name,number(st.oldFee),number(st.newFee)])):'')+
+        (item.errors?.length?'<ul class="sy-official-tariff-errors">'+item.errors.map(err=>'<li>'+esc(err)+'</li>').join('')+'</ul>':'')+'</details>').join('')+
+       (result.canApply?'<p class="sy-official-ready">مبالغ معتبر است؛ با دکمه تأیید، تعرفه روی سرویس ثبت می‌شود.</p>':
+        '<p class="error">برای اعمال تعرفه باید ابتدا ایرادات مشخص‌شده را برطرف کنید.</p>');
+     verified=Boolean(result.canApply);return verified;
+   }catch(error){
+     if(requested===revision){status.textContent='پیش‌نمایش تعرفه ناموفق بود: '+error.message;notify(error.message,true);}
+     return false;
+   }finally{busy=false;if(preview.isConnected)preview.disabled=false;syncApply();}
  };
  preview.addEventListener('click',previewRequest);
  apply.addEventListener('click',async()=>{
-  if(!verified||busy||unsaved)return;
-  if(!confirm('نرخ‌نامه رسمی تاکسیرانی برای '+(kind==='service'?'این سرویس':'تمام سرویس‌های فعال راننده')+
-   ' اعمال شود؟ مبالغ دانش‌آموزان و بدهی‌های قابل بروزرسانی تغییر می‌کند؛ دریافتی‌ها و اسناد قطعی قبلی نباید بازنویسی شوند.'))return;
-  busy=true;apply.disabled=true;preview.disabled=true;
-  status.textContent='در حال اعمال تعرفه و کنترل یکپارچگی صورتحساب‌ها…';
-  try{
-   const result=await write(endpoint,{confirm:'APPLY_OFFICIAL_TAXI_TARIFF'});
-   verified=false;
-   status.innerHTML='<p role="status">نرخ سازمان ثبت شد: '+number(result.servicesUpdated)+' سرویس و '+
-     number(result.studentsUpdated)+' دانش‌آموز بروزرسانی شد. برای مشاهده مبالغ فعلی فرم را مجدداً باز کنید.</p>';
-   if(kind==='service'&&form.elements.feeSource)form.elements.feeSource.value='taxi';
-   notify('اعمال تعرفه سازمان تاکسیرانی با موفقیت ثبت شد.');
-  }catch(error){status.textContent='اعمال نرخ‌نامه انجام نشد: '+error.message;notify(error.message,true);}
-  finally{busy=false;if(preview.isConnected)preview.disabled=false;}
+   if(busy||!isTaxi())return;
+   if(unsaved){
+     if(kind!=='service'){
+       status.textContent='ابتدا تغییرات راننده را با دکمه ذخیره ثبت کنید و سپس تعرفه سرویس‌های او را اعمال کنید.';
+       return;
+     }
+     if(!confirm('تغییرات سرویس ذخیره و سپس نرخ‌نامه مصوب سازمان تاکسیرانی بر دانش‌آموزان این سرویس اعمال شود؟ دریافت‌ها و اسناد قطعی گذشته تغییر نمی‌کنند.'))return;
+     form.dataset.applyTaxiAfterSave='1';
+     status.textContent='اعمال نرخ‌نامه تأیید شد. در مرحله بازبینی نهایی، دکمه «ذخیره» را بزنید تا ذخیره و اعمال تعرفه انجام شود.';
+     const next=form.querySelector('[data-wizard-next]');
+     if(next&&!next.hidden)next.click();
+     else form.querySelector('[data-wizard-step]:last-child')?.click();
+     return;
+   }
+   if(!verified&&!(await previewRequest()))return;
+   if(!confirm('نرخ‌نامه سازمان تاکسیرانی بر '+(kind==='service'?'این سرویس':'تمام سرویس‌های فعال راننده')+
+    ' اعمال شود؟ شهریه دانش‌آموزان و صورتحساب‌های قابل اصلاح به‌روزرسانی می‌شوند و دریافت‌ها و اسناد قطعی قبلی محفوظ می‌مانند.'))return;
+   busy=true;preview.disabled=true;syncApply();
+   status.textContent='در حال ذخیره نرخ‌نامه و همگام‌سازی صورتحساب‌ها…';
+   try{
+     const result=await write(endpoint,{confirm:'APPLY_OFFICIAL_TAXI_TARIFF'});
+     verified=false;
+     status.innerHTML='<p role="status">نرخ سازمان ثبت شد: '+number(result.servicesUpdated)+' سرویس و '+
+       number(result.studentsUpdated)+' دانش‌آموز به‌روزرسانی شد.</p>';
+     if(kind==='service'&&form.elements.feeSource)form.elements.feeSource.value='taxi';
+     notify('نرخ‌نامه مصوب تاکسیرانی با موفقیت بر سرویس اعمال شد.');
+   }catch(error){status.textContent='اعمال تعرفه انجام نشد: '+error.message;notify(error.message,true);}
+   finally{busy=false;preview.disabled=false;syncApply();}
  });
+ syncApply();
+ // A freshly opened edit form is clean: show whether the existing service
+ // qualifies for a real apply, instead of leaving the confirmation disabled.
+ if(isTaxi())void previewRequest();
 }
+
 async function formResource(key,id,onSaved){
  if(!can(key,'manage'))return;if(key==='schools'&&!id){await selectSchoolFromCatalog();return;}const token=pageToken;let row={};try{if(id)row=await api(scoped('/api/v1/'+key+'/'+id));if(token!==pageToken)return;
  let companyAccountOptions=[],bankOptions=[];
@@ -1970,6 +2011,18 @@ if(form.elements.mobile){const mobile=form.elements.mobile;mobile.pattern='09[0-
    body.importOwnerDriver=form.dataset.importOwnerDriver===ServiceYarDates.digits(body.ownerNationalCode);
    await write('/api/v1/vehicles/create-with-owner',body,'POST');
   }else await write('/api/v1/'+key+(id?'/'+id:''),body,id?'PUT':'POST');
+  if(key==='services'&&id&&form.dataset.applyTaxiAfterSave==='1'){
+    if(body.feeSource!=='taxi')throw Error('اطلاعات سرویس ذخیره شد، اما مبنای محاسبه دیگر تاکسیرانی نیست؛ نرخ سازمان اعمال نشد.');
+    form.dataset.applyTaxiAfterSave='';
+    try{
+      const result=await write('/api/v1/operations/tariffs/apply-service/'+encodeURIComponent(id),
+        {confirm:'APPLY_OFFICIAL_TAXI_TARIFF'});
+      notify('نرخ سازمان تاکسیرانی برای '+number(result.studentsUpdated)+' دانش‌آموز اعمال شد.');
+    }catch(error){
+      throw Error('تغییرات سرویس ذخیره شد، اما اعمال نرخ سازمان کامل نشد: '+error.message+
+        '؛ فرم را مجدداً باز کنید و پیش‌نمایش تعرفه را بررسی کنید.');
+    }
+  }
   if(key==='schools'&&id){
    const file=form.querySelector('#sySchoolPhotoUpload')?.files?.[0];
    if(file){
