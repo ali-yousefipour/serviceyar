@@ -47,6 +47,7 @@ final class PayrollDocuments
             $line['expected_net_salary']=$deductions['net_earned'];
             $line['salary_differs_from_calculated_net']=abs((float)$line['salary']-$deductions['net_earned'])>=1;
         }unset($line);
+        $doc['has_estimated_lines']=str_starts_with((string)$doc['document_no'],'EST-');
         $doc['deduction_policy']='کسورات اسناد جدید هنگام ثبت ثابت می‌شوند. کسورات اسناد قدیمی که نسخه تاریخی ندارند صرفاً برآورد با نرخ فعلی هستند.';
         return $doc;
     }
@@ -58,10 +59,13 @@ final class PayrollDocuments
         return OperationsService::transaction(function(PDO $p)use($uid,$aid,$from,$to,$lines){
             $q=$p->prepare('SELECT id FROM agencies WHERE id=:a FOR UPDATE');$q->execute(['a'=>$aid]);
             $q=$p->prepare('SELECT id FROM payroll_documents WHERE agency_id=:a AND date_from=:f AND date_to=:t');$q->execute(['a'=>$aid,'f'=>$from,'t'=>$to]);if($q->fetchColumn())throw new AuthException(409,'برای این بازه سند حقوق ثبت شده است.','PAYROLL_EXISTS');
-            $payroll=OperationsService::payroll($uid,$aid,['from'=>$from,'to'=>$to]);$actual=[];foreach($payroll['items'] as $row)$actual[(int)$row['id']]=$row;
-            $chosen=[];$total=0;
-            foreach($lines as $line){if(!is_array($line))throw new AuthException(422,'ردیف حقوق نامعتبر است.','VALIDATION_ERROR');$id=(int)($line['driverId']??0);$amount=$line['amount']??null;if(!isset($actual[$id])||isset($chosen[$id]))throw new AuthException(422,'راننده تکراری یا خارج از شرکت است.','CROSS_SCOPE_REFERENCE');$salary=self::salaryRials($amount);$chosen[$id]=['row'=>$actual[$id],'salary'=>$salary];$total+=$salary;}
-            $no='PAY-'.str_replace('-','',$from).'-'.bin2hex(random_bytes(3));$p->prepare('INSERT INTO payroll_documents(agency_id,document_no,date_from,date_to,total_amount,created_by) VALUES(:a,:n,:f,:t,:v,:u)')->execute(['a'=>$aid,'n'=>$no,'f'=>$from,'t'=>$to,'v'=>$total,'u'=>$uid]);$doc=(int)$p->lastInsertId();
+            $mode=$body['calculationMode']??'recorded';
+            if(!in_array($mode,['recorded','assignment_estimate'],true))throw new AuthException(422,'روش محاسبه نامعتبر است.','VALIDATION_ERROR');
+            if($mode==='assignment_estimate' && ($body['confirmEstimate']??false)!==true)throw new AuthException(422,'پیش از ثبت سند برآوردی باید محدودیت تاریخچه تخصیص و کارکرد را تأیید کنید.','ESTIMATE_CONFIRMATION_REQUIRED');
+            $payroll=OperationsService::payroll($uid,$aid,['from'=>$from,'to'=>$to,'calculationMode'=>$mode]);$actual=[];foreach($payroll['items'] as $row)$actual[(int)$row['id']]=$row;
+            $chosen=[];$total=0;$estimatedRows=0;
+            foreach($lines as $line){if(!is_array($line))throw new AuthException(422,'ردیف حقوق نامعتبر است.','VALIDATION_ERROR');$id=(int)($line['driverId']??0);$amount=$line['amount']??null;if(!isset($actual[$id])||isset($chosen[$id]))throw new AuthException(422,'راننده تکراری یا خارج از شرکت است.','CROSS_SCOPE_REFERENCE');$salary=self::salaryRials($amount);$chosen[$id]=['row'=>$actual[$id],'salary'=>$salary];if(!empty($actual[$id]['estimate_requires_confirmation']))$estimatedRows++;$total+=$salary;}
+            $no=($estimatedRows>0?'EST-':'PAY-').str_replace('-','',$from).'-'.bin2hex(random_bytes(3));$p->prepare('INSERT INTO payroll_documents(agency_id,document_no,date_from,date_to,total_amount,created_by) VALUES(:a,:n,:f,:t,:v,:u)')->execute(['a'=>$aid,'n'=>$no,'f'=>$from,'t'=>$to,'v'=>$total,'u'=>$uid]);$doc=(int)$p->lastInsertId();
             $q=$p->prepare('INSERT INTO payroll_document_lines(document_id,driver_id,earned,agreed,paid,salary,supervision_deduction,coordination_deduction,overhead_deduction,insurance_deduction,total_deductions) VALUES(:doc,:driver,:earned,:agreed,:paid,:salary,:supervision,:coordination,:overhead,:insurance,:total)');foreach($chosen as $driver=>$item){$r=$item['row'];$q->execute(['doc'=>$doc,'driver'=>$driver,'earned'=>$r['earned'],'agreed'=>$r['agreed'],'paid'=>$r['paid'],'salary'=>$item['salary'],'supervision'=>$r['supervision_deduction'],'coordination'=>$r['coordination_deduction'],'overhead'=>$r['overhead_deduction'],'insurance'=>$r['insurance_deduction'],'total'=>$r['total_deductions']]);}
             OperationsService::audit($uid,$aid,'create_payroll','payroll_documents',$doc);return ['id'=>$doc,'documentNo'=>$no,'total'=>$total,'status'=>'draft'];
         });
