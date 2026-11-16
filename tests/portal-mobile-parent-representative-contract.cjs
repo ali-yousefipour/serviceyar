@@ -16,7 +16,7 @@ assert.match(portal,/ensurePortalDrawer\(\)/,'Mobile drawer in regular and inspe
 assert.match(portal,/function portalNavIcon\(key\)/,'Accessible consistent nav icons');
 assert.doesNotMatch(portal,/portal-welcome-ornament">✦/,'Decorative star removed');
 assert.match(portal,/portalPhotoForm/,'Driver portrait form');
-assert.match(portal,/auth\/profile\/photo/,'Portrait uses authenticated endpoint');
+assert.match(portal,/function driverPortraitEndpoint\(\)/,'Portrait uses the authenticated driver-specific endpoint');
 assert.match(portal,/new FormData\(\)/,'Photo uploaded as multipart');
 assert.match(portal,/representativeSchools=Array\.isArray\(payload\.representativeSchools\)/,'Admin driver sees representative schools');
 assert.match(portal,/admin\/impersonation\/representative-debtors/,'Admin representative report has a scoped route');
