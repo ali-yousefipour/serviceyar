@@ -107,6 +107,42 @@ final class AdminImpersonation
         $company=$agency->fetch(PDO::FETCH_ASSOC);
         if(!$company)throw new AuthException(404,'شرکت فعال موردنظر پیدا نشد.','AGENCY_NOT_FOUND');
 
+        if($panelType==='driver'){
+            // List actual active company drivers, even if Bale portal enrollment has
+            // not happened yet. Never fabricate a verified account or membership.
+            $query=$pdo->prepare("SELECT d.id AS driverId,d.first_name,d.last_name,
+                d.mobile AS username,d.mobile,
+                u.id AS id,u.last_login_at,
+                CASE WHEN u.id IS NULL THEN 0 ELSE 1 END AS portalReady,
+                CASE WHEN u.id IS NULL THEN 'راننده · بدون حساب تأییدشده'
+                     ELSE 'راننده · حساب پنل فعال' END AS roles
+              FROM drivers d
+              JOIN agencies a ON a.id=d.agency_id AND a.is_active=1
+              LEFT JOIN portal_memberships pm ON pm.agency_id=d.agency_id
+                AND pm.party_type='driver' AND pm.party_id=d.id
+              LEFT JOIN users u ON u.id=pm.user_id AND u.is_active=1
+                AND EXISTS(SELECT 1 FROM user_roles ur
+                           JOIN roles r ON r.id=ur.role_id
+                           WHERE ur.user_id=u.id AND r.name='driver_portal')
+                AND NOT EXISTS(SELECT 1 FROM user_roles ur
+                           JOIN roles r ON r.id=ur.role_id
+                           WHERE ur.user_id=u.id AND r.name='super_admin')
+              WHERE d.agency_id=? AND d.is_active=1
+              GROUP BY d.id,d.first_name,d.last_name,d.mobile,u.id,u.last_login_at
+              ORDER BY d.last_name,d.first_name,d.id");
+            $query->execute([$agencyId]);
+            $rows=$query->fetchAll(PDO::FETCH_ASSOC);
+            // One entry per driver, prioritizing the existing portal identity.
+            $byDriver=[];
+            foreach($rows as $row){
+                $id=(int)$row['driverId'];
+                if(!isset($byDriver[$id])||(int)$row['portalReady']>(int)$byDriver[$id]['portalReady'])
+                    $byDriver[$id]=$row;
+            }
+            return ['agency'=>['id'=>(int)$company['id'],'name'=>$company['name']],
+                    'users'=>array_values($byDriver)];
+        }
+
         $roleConstraint=match($panelType){
             'company'=>" AND EXISTS(SELECT 1 FROM agency_users cm WHERE cm.user_id=u.id AND cm.agency_id=a.id)",
             'parent'=>" AND EXISTS(SELECT 1 FROM portal_memberships pm WHERE pm.user_id=u.id AND pm.agency_id=a.id AND pm.party_type='parent')",
