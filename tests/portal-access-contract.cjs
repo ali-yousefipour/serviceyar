@@ -43,6 +43,7 @@ assert.ok(ui.includes('window.serviceyarPortal={mount,selectPortalRoute}')&&ui.i
 assert.ok(app.includes('await window.serviceyarPortal.mount(session)')&&!app.includes('location.replace(\'/portal.html'),'Main application renders portal roles locally');
 assert.ok(admin.includes('portal_memberships pm'),'Admin can impersonate verified parent and driver accounts');
 assert.ok(routes.includes('IMPERSONATION_READ_ONLY'),'Impersonated portal session blocks profile and password mutations');
+assert.ok(routes.includes("!array_diff($roles,['parent_portal','driver_portal'])")&&routes.includes("$path!=='/api/v1/admin/impersonation/stop'"),'Portal impersonation is globally read-only across all mutation APIs except safe admin return');
 assert.match(ui,/\/api\/v1\/portal\/driver\//,'Driver portal pages remain distinct');
 assert.ok(deploy.includes('("/portal.html", "portal.html")'),'Live portal HTML checksum verification enabled');
 assert.match(workflow,/cp frontend\/portal\.html deploy-payload\/portal\.html/,'Portal HTML deployed');
