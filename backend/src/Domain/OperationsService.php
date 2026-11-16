@@ -115,27 +115,24 @@ final class OperationsService
             foreach($assigned as $id)if((int)$id!==$serviceId)throw new AuthException(409,'دانش‌آموز سرویس فعال دیگری دارد. ابتدا تخصیص قبلی را حذف کنید.','ALREADY_ASSIGNED');
             if(!$assigned){$q=$p->prepare('SELECT COUNT(*) FROM service_students WHERE service_id=:s');$q->execute(['s'=>$serviceId]);if((int)$q->fetchColumn()>=(int)$service['capacity'])throw new AuthException(409,'ظرفیت سرویس تکمیل است.','CAPACITY_EXCEEDED');}
             $p->prepare('INSERT INTO service_students(service_id,student_id,pickup_address,pickup_order) VALUES(:s,:st,:p,:o) ON DUPLICATE KEY UPDATE pickup_address=VALUES(pickup_address),pickup_order=VALUES(pickup_order)')->execute(['s'=>$serviceId,'st'=>$studentId,'p'=>$address,'o'=>$order]);
-            // Only empty legacy fees are filled during ordinary assignment.
-            // Legacy schools without a recorded district retain their existing
-            // agency tariff, while explicit taxi selection is enforced by the
-            // new service and student editors.
-            if(!$assigned && $canSetTariff && (float)$student['monthly_fee']===0.0
-                && !empty($student['tariff_distance_km']) && !empty($student['tariff_vehicle_class'])){
-                $fee=null;
-                try {
-                    $quote=ServicePricing::quote($p,$aid,$student,ServicePricing::source($student['fee_source']??'taxi'));
-                    $fee=(int)$quote['monthlyFee'];
-                    $base=(int)$quote['driverBaseMonthly'];
-                    $source=(string)$quote['feeSource'];
-                } catch(AuthException $e) {
-                    if($e->codeName!=='TAXI_DISTRICT_REQUIRED')throw $e;
-                    $fee=AgencySchoolTariffs::quote($p,$aid,(int)$student['school_id'],
-                        (string)(($student['academic_year']??null)?:AgencySchoolTariffs::YEAR),
-                        $student['tariff_distance_km'],$student['tariff_vehicle_class']);
-                    $base=$fee;$source='agency';
-                }
-                if($fee!==null)$p->prepare('UPDATE students SET monthly_fee=?,driver_base_monthly=?,fee_source=?,tariff_calculated_at=NOW() WHERE id=? AND agency_id=?')
-                    ->execute([$fee,$base,$source,$studentId,$aid]);
+            // A new assignment establishes the authoritative vehicle class.
+            // Official tariff is default; explicitly agreed/agency student fees
+            // are preserved as opt-outs and never silently converted to taxi.
+            $vehicle=ServiceFinancialBasis::service($p,$aid,$serviceId);
+            $class=(int)($vehicle['tariff_vehicle_class']??0);
+            if(!in_array($class,[1,2,3],true))
+                throw new AuthException(422,'کلاس خودروی راننده این سرویس مشخص نیست.','VEHICLE_TARIFF_CLASS_REQUIRED');
+            $source=(string)($student['fee_source']??'taxi');
+            if($source==='taxi' && in_array($service['fee_source'],['agency','agreed'],true))
+                $source=(string)$service['fee_source'];
+            if($source!=='agreed'){
+                $quote=ServiceFinancialBasis::quoteStudent($p,$aid,$student,$source,$class);
+                $p->prepare("UPDATE students SET tariff_vehicle_class=?,fee_source=?,monthly_fee=?,
+                  driver_base_monthly=?,tariff_calculated_at=NOW() WHERE id=? AND agency_id=?")
+                  ->execute([$class,$source,(int)$quote['monthlyFee'],(int)$quote['driverBaseMonthly'],$studentId,$aid]);
+            }else{
+                $p->prepare('UPDATE students SET tariff_vehicle_class=? WHERE id=? AND agency_id=?')
+                    ->execute([$class,$studentId,$aid]);
             }
             $p->prepare("UPDATE students SET service_status='assigned' WHERE id=:id AND agency_id=:a")->execute(['id'=>$studentId,'a'=>$aid]);
             // A new-service wizard recalculates zero/legacy rates later in the same
@@ -168,9 +165,8 @@ final class OperationsService
             $serviceIds=$p->prepare('SELECT DISTINCT ss.service_id FROM service_students ss JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=? AND sv.is_active=1 WHERE ss.student_id IN ('.implode(',',array_fill(0,count($ids),'?')).')');
             $serviceIds->execute(array_merge([$aid],$ids));
             foreach($serviceIds->fetchAll(PDO::FETCH_COLUMN) as $serviceId){
-                $sum=$p->prepare('SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
-                $sum->execute([$aid,$serviceId]);
-                $net=self::driverDeductions((float)$sum->fetchColumn(),$aid)['net_earned'];
+                $gross=ServiceFinancialBasis::grossOfService($p,$aid,(int)$serviceId);
+                $net=ServiceFinancialBasis::netOfGross($gross,$aid)['net_earned'];
                 $p->prepare('UPDATE services SET monthly_fee=? WHERE agency_id=? AND id=?')->execute([$net,$aid,$serviceId]);
             }
         });self::audit($uid,$aid,'bulk_fees','students',null);return ['updated'=>count($ids)];
@@ -195,7 +191,7 @@ final class OperationsService
           (SELECT COALESCE(SUM(dp.amount),0) FROM driver_payments dp WHERE dp.driver_id=d.id AND dp.agency_id=d.agency_id AND dp.payment_date BETWEEN :pf AND :pt) paid,
           (SELECT COALESCE(SUM(CASE WHEN le.direction=\'payment\' THEN le.amount ELSE -le.amount END),0) FROM ledger_entries le WHERE le.party_type=\'driver\' AND le.party_id=d.id AND le.agency_id=d.agency_id AND le.is_active=1 AND le.entry_date BETWEEN :lf AND :lt) ledger_paid,
           (SELECT COALESCE(SUM(s.agreed_amount),0) FROM services s WHERE s.driver_id=d.id AND s.agency_id=d.agency_id AND s.is_active=1) agreed,
-          (SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0)
+          (SELECT COALESCE(SUM(st.monthly_fee),0)
              FROM services s
              JOIN service_students ss ON ss.service_id=s.id
              JOIN students st ON st.id=ss.student_id AND st.agency_id=s.agency_id
