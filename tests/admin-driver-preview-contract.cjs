@@ -30,7 +30,7 @@ assert.match(ui,/sy-impersonation-driver-preview/,'Read-only view is present');
 assert.match(ui,/serviceyarPortal\.mountAdminDriverInspection\(/,'Admin opens the real full-screen portal shell');
 assert.match(driverUI,/function mountAdminDriverInspection\(payload\)/,'Full portal shell entrypoint exists');
 assert.match(driverUI,/selectSection\('overview'\)/,'Full portal uses original real-page renderer');
-assert.match(driverUI,/impersonated=true;representativeSchools=\[\]/,'Inspection is read-only and excludes unauthorized representative reports');
+assert.match(driverUI,/impersonated=true;representativeSchools=Array\.isArray\(payload\.representativeSchools\)/,'Inspection uses backend-approved representative school scope');
 assert.match(driverUI,/window\.serviceyarAdminDriverInspection=true/,'Full shell is distinguished from real user impersonation');
 assert.match(driverUI,/menuLinks\(\)/,'Real sidebar shows the original driver pages');
 assert.match(portalCss,/#app\.sy-portal-mode #content/,'The real portal uses the standard responsive shell');
