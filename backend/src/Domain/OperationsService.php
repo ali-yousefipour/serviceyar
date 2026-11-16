@@ -191,7 +191,7 @@ final class OperationsService
         if($estimateRequested&&($periodDays<28||$periodDays>31))throw new AuthException(422,'برآورد ماهانه فقط برای بازه کامل ۲۸ تا ۳۱ روزه مجاز است.','INVALID_ESTIMATE_PERIOD');
         $q=$p->prepare('SELECT d.id,d.first_name,d.last_name,d.mobile,d.iban,d.bank_account,
           (SELECT COALESCE(SUM(w.amount),0) FROM driver_work w WHERE w.driver_id=d.id AND w.agency_id=d.agency_id AND w.work_date BETWEEN :wf AND :wt AND w.status<>\'cancelled\') earned,
-          (SELECT COUNT(*) FROM driver_work w WHERE w.driver_id=d.id AND w.agency_id=d.agency_id AND w.work_date BETWEEN :cf AND :ct AND w.status<>'cancelled') recorded_work_count,
+          (SELECT COUNT(*) FROM driver_work w WHERE w.driver_id=d.id AND w.agency_id=d.agency_id AND w.work_date BETWEEN :cf AND :ct AND w.status<>\'cancelled\') recorded_work_count,
           (SELECT COALESCE(SUM(dp.amount),0) FROM driver_payments dp WHERE dp.driver_id=d.id AND dp.agency_id=d.agency_id AND dp.payment_date BETWEEN :pf AND :pt) paid,
           (SELECT COALESCE(SUM(CASE WHEN le.direction=\'payment\' THEN le.amount ELSE -le.amount END),0) FROM ledger_entries le WHERE le.party_type=\'driver\' AND le.party_id=d.id AND le.agency_id=d.agency_id AND le.is_active=1 AND le.entry_date BETWEEN :lf AND :lt) ledger_paid,
           (SELECT COALESCE(SUM(s.agreed_amount),0) FROM services s WHERE s.driver_id=d.id AND s.agency_id=d.agency_id AND s.is_active=1) agreed,
