@@ -113,7 +113,7 @@ final class ServicePricing {
         }
         $gross=ServiceFinancialBasis::grossOfService($pdo,$agencyId,$serviceId);
         $net=ServiceFinancialBasis::netOfGross($gross,$agencyId)['net_earned'];
-        if($reprice && $source!=='agreed')$pdo->prepare('UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?')
+        if($reprice)$pdo->prepare('UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?')
             ->execute([$net,$serviceId,$agencyId]);
         return ['updatedStudents'=>$updated,'vehicleClass'=>(int)$class];
     }
