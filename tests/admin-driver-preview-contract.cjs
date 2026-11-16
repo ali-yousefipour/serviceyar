@@ -23,7 +23,7 @@ assert.match(portal,/if\(!\$preview\)self::authorized/,'Regular membership guard
 assert.match(portal,/WHERE d\.id=\? AND d\.agency_id=\? AND d\.is_active=1/,'Preview loads only matching active driver');
 assert.match(routes,/admin\/impersonation\/driver-preview/,'Preview has a GET-only route');
 assert.match(routes,/PortalService::adminDriverPreview/,'Route delegates scoped authorization');
-assert.match(ui,/userKey:panelType==='driver'&&!Number\(u\.portalReady\)\?-Number\(u\.driverId\)/,'Unenrolled drivers have unique non-user IDs');
+assert.match(ui,/userKey:\(panelType==='driver'\|\|panelType==='parent'\)\?Number\(panelType==='driver'\?u\.driverId:u\.guardianId\)\*-1/,'Driver and guardian candidate IDs are scoped to their entity IDs');
 assert.match(ui,/if\(panelType==='driver'&&!Number\(selectedUser\.portalReady\)\)/,'Unenrolled drivers never start a forged user session');
 assert.match(ui,/openDriverPreview\(selectedUser\)/,'Unenrolled drivers have an accessible view');
 assert.match(ui,/sy-impersonation-driver-preview/,'Read-only view is present');
