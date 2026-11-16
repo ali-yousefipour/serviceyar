@@ -6,7 +6,7 @@
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const normal=v=>String(v||'').trim().replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-1776)).replace(/[٠-٩]/g,c=>String(c.charCodeAt(0)-1632));
  const date=v=>{if(!v)return '—';const d=new Date(String(v).substring(0,10)+'T12:00:00Z');return Number.isNaN(d.getTime())?esc(v):new Intl.DateTimeFormat('fa-IR-u-ca-persian',{dateStyle:'medium',timeZone:'Asia/Tehran'}).format(d)};
- let csrf='',members=[],current=null,data=null,section='overview',impersonated=false;
+ let csrf='',members=[],current=null,data=null,section='overview',impersonated=false,representativeSchools=[];
  const note=(msg,error=false)=>{
    let target=el('portalToast');
    if(!target){target=document.createElement('div');target.id='portalToast';target.setAttribute('role','status');document.body.append(target);}
@@ -19,7 +19,7 @@
    return j.data;
  }
  function menuLinks(){
-   return [['overview','نمای کلی','◈'],['services',current.portalType==='parent'?'سرویس فرزند':'مدارس و دانش‌آموزان','▤'],['finance','امور مالی','﷼'],['profile',impersonated?'مشاهده مشخصات':'اطلاعات و ویرایش','♧'],...(!impersonated?[['password','تنظیم رمز عبور','◇']]:[])];
+   return [['overview','نمای کلی','◈'],['services',current.portalType==='parent'?'سرویس فرزند':'مدارس و دانش‌آموزان','▤'],...(current.portalType==='driver'&&representativeSchools.length?[['debtors','گزارش بدهکاران','▦']]:[]),['finance','امور مالی','﷼'],['profile',impersonated?'مشاهده مشخصات':'اطلاعات و ویرایش','♧'],...(!impersonated?[['password','تنظیم رمز عبور','◇']]:[])];
  }
  function widget(title,value,hint,link=''){
    return '<article class="portal-kpi"><small>'+esc(title)+'</small><strong>'+esc(value)+'</strong><span>'+esc(hint||'')+'</span></article>';
@@ -89,6 +89,31 @@
      '<section class="portal-panel"><h2>'+(parent?'فیش‌های پرداخت به شرکت':'پرداخت‌های شرکت به راننده')+'</h2>'+
      table(['تاریخ','مبلغ','روش','شماره پیگیری'],(f.payments||[]).map(x=>[date(x.payment_date),money(x.amount),x.method||'—',x.reference_no||'—']))+'</section>';
  }
+ function renderDebtors(){
+   if(current.portalType!=='driver'||!representativeSchools.length)return '<section class="portal-panel">دسترسی نمایندگی فعال نیست.</section>';
+   const yr=Number(normal(new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',timeZone:'Asia/Tehran'}).format(new Date())));
+   return '<div class="portal-section-title"><h1>گزارش بدهکاران</h1><p>صرفاً مدارس مجاز در شرکت انتخاب‌شده</p></div>'+
+     '<section class="portal-panel"><form id="representativeDebtorsForm" class="portal-profile-form">'+
+     '<label>انتخاب مدرسه<select name="schoolId" required>'+representativeSchools.map(s=>'<option value="'+Number(s.id)+'">'+esc(s.name)+'</option>').join('')+'</select></label>'+
+     '<label>سال تحصیلی<input name="academicYear" required value="'+esc(String(yr)+'/'+String(yr+1))+'" placeholder="۱۴۰۵/۱۴۰۶"></label>'+
+     '<label>نام دانش‌آموز<input name="student" type="search"></label>'+
+     '<label>حداقل بدهی (ریال)<input name="minDebt" inputmode="numeric"></label>'+
+     '<button type="submit" class="primary">نمایش بدهکاران</button></form><div id="repDebtorsSummary" role="status"></div><div id="repDebtorsTable"></div></section>';
+ }
+ async function loadDebtors(){
+   const form=el('representativeDebtorsForm');if(!form)return;
+   const status=el('repDebtorsSummary'),target=el('repDebtorsTable');
+   const params=new URLSearchParams(new FormData(form));
+   for(const key of ['academicYear','minDebt'])params.set(key,normal(params.get(key)).replace(/\\s/g,'').replace(/[٬,]/g,''));
+   status.textContent='در حال دریافت اطلاعات…';target.replaceChildren();
+   try{
+     const report=await api('/api/v1/portal/driver/'+current.agencyId+'/'+current.partyId+'/debtors?'+params);
+     if(!form.isConnected)return;
+     status.textContent=fa(report.items.length)+' بدهکار · مجموع بدهی '+money(report.total);
+     target.innerHTML=table(['دانش‌آموز','مدرسه','تلفن ولی','شهریه ماهانه','شهریه سالانه','پرداخت‌شده','بدهی باقی‌مانده'],
+       report.items.map(row=>[row.student,row.school,row.guardian_mobile||'—',money(row.monthly_fee),money(row.annual_fee),money(row.paid),money(row.debt)]));
+   }catch(error){status.textContent=error.message;}
+ }
  function inputField(name,label,value,extra=''){
    return '<label>'+esc(label)+'<input name="'+name+'" value="'+esc(value||'')+'" '+extra+'></label>';
  }
@@ -134,8 +159,9 @@
    const name=menuLinks().find(x=>x[0]===section)?.[1]||'داشبورد';
    const heading=el('pageTitle');if(heading)heading.textContent=name;
    document.querySelectorAll('[data-page]').forEach(x=>x.classList.toggle('active',x.dataset.page===section));
-   el('portalContent').innerHTML=({overview:renderOverview,services:renderServices,finance:renderFinance,profile:renderProfile,password:renderPassword}[section]||renderOverview)();
+   el('portalContent').innerHTML=({overview:renderOverview,services:renderServices,finance:renderFinance,debtors:renderDebtors,profile:renderProfile,password:renderPassword}[section]||renderOverview)();
    el('portalContent').querySelectorAll('[data-go]').forEach(x=>x.addEventListener('click',()=>selectSection(x.dataset.go)));
+   const repForm=el('representativeDebtorsForm');if(repForm){repForm.addEventListener('submit',e=>{e.preventDefault();loadDebtors();});loadDebtors();}
    const profile=el('portalProfileForm');
    if(profile)profile.addEventListener('submit',async e=>{
      e.preventDefault();const body=Object.fromEntries(new FormData(profile));
@@ -160,6 +186,7 @@
  async function openMembership(m){
    current=m;
    data=await api('/api/v1/portal/'+m.portalType+'/'+m.agencyId+'/'+m.partyId);
+   representativeSchools=m.portalType==='driver'?await api('/api/v1/portal/driver/'+m.agencyId+'/'+m.partyId+'/representative-schools').catch(()=>[]):[];
    const parent=m.portalType==='parent',name=parent?'والدین':'رانندگان';
    const sidebar=el('nav');sidebar.replaceChildren();
    const links=menuLinks();
