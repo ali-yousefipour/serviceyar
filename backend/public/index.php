@@ -708,7 +708,7 @@ try {
   if($method==='GET'&&($m[2]??'')==='xlsx')\ServiceYar\Reports\PayrollWorkbook::download($s['id'],$aid,(int)$m[1]);
   if($method==='GET')Response::json(['ok'=>true,'data'=>PayrollDocuments::get($s['id'],$aid,(int)$m[1])]);
   if($method==='PUT'&&empty($m[2])){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>PayrollDocuments::update($s['id'],$aid,(int)$m[1],Request::json())]);}
-  if($method==='POST'&&($m[2]??'')==='approve'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>PayrollDocuments::approve($s['id'],$aid,(int)$m[1])]);}
+  if($method==='POST'&&($m[2]??'')==='approve'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>PayrollDocuments::approve($s['id'],$aid,(int)$m[1],Request::json())]);}
  }
  if($method==='POST'&&$path==='/api/v1/operations/installments'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\InstallmentPlan::create($s['id'],$aid,Request::json())],201);}
  if($method==='POST'&&$path==='/api/v1/operations/installments/preview'){$auth->requireCsrf($s);Authorization::requireAgencyAccess($s['id'],$aid);Authorization::requirePermission($s['id'],'finance.view');Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\InstallmentPlan::preview(Request::json())]);}
