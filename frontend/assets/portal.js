@@ -263,50 +263,6 @@
    await openMembership(chosen);
  }
  /**
-  * Render the actual driver portal components for a super-admin inspection.
-  * This does not start a driver session or bypass regular portal authorization.
-  * The inspection payload comes only from the super-admin scoped GET endpoint.
-  */
- function renderDriverInspection(host,payload){
-   if(!(host instanceof HTMLElement)||payload?.portalType!=='driver'||!payload?.previewOnly)
-     throw Error('اطلاعات پنل راننده معتبر نیست.');
-   const saved={current,data,impersonated,representativeSchools};
-   const inspected={portalType:'driver',agencyId:Number(payload.agency?.id),partyId:Number(payload.driver?.id)};
-   const pages=[['overview','نمای کلی','◈'],['services','مدارس و دانش‌آموزان','▤'],
-     ['finance','امور مالی','﷼'],['profile','مشاهده مشخصات','♧']];
-   let active='overview';
-   const render=()=>{
-     if(!host.isConnected)return;
-     // Shared renderers are synchronous and side-effect free. Restore the real
-     // admin/portal context before wiring user interactions.
-     let html='';
-     try{
-       current=inspected;data=payload;impersonated=true;representativeSchools=[];
-       html=({overview:renderOverview,services:renderServices,finance:renderFinance,profile:renderProfile}[active]||renderOverview)();
-     }finally{
-       current=saved.current;data=saved.data;impersonated=saved.impersonated;
-       representativeSchools=saved.representativeSchools;
-     }
-     host.innerHTML='<div class="sy-portal-content sy-admin-driver-portal">'+
-       '<div class="sy-portal-impersonation-notice">مشاهده نیابتی پنل راننده · فقط خواندنی</div>'+
-       '<div class="sy-driver-inspection-layout"><aside class="portal-nav"><div class="portal-user"><b>'+
-         esc(person(payload.driver))+'</b><span>'+esc(payload.agency?.name||'')+'</span></div>'+
-         '<nav aria-label="بخش‌های واقعی پنل راننده">'+pages.map(([key,label,icon])=>
-           '<button type="button" data-inspect-tab="'+key+'" class="'+(key===active?'active':'')+'">'+
-           '<i aria-hidden="true">'+icon+'</i>'+esc(label)+'</button>').join('')+'</nav></aside>'+
-       '<main class="portal-body"><div class="sy-driver-inspection-view">'+html+'</div></main></div></div>';
-     host.querySelectorAll('[data-inspect-tab]').forEach(button=>{
-       button.addEventListener('click',()=>{active=button.dataset.inspectTab;render();});
-     });
-     host.querySelectorAll('[data-go]').forEach(button=>{
-       button.addEventListener('click',()=>{const page=button.dataset.go;
-         if(pages.some(item=>item[0]===page)){active=page;render();}
-       });
-     });
-   };
-   render();
- }
- /**
   * Full application-shell inspection: the main sidebar, dashboard, routes and
   * page content are the exact same renderers as the driver portal. The browser
   * stays authenticated as the platform admin and never impersonates an
@@ -352,5 +308,5 @@
    section='overview';history.replaceState(history.state,'',location.pathname+location.search+'#portal-overview');
    selectSection('overview');
  }
- window.serviceyarPortal={mount,selectPortalRoute,renderDriverInspection,mountAdminDriverInspection};
+ window.serviceyarPortal={mount,selectPortalRoute,mountAdminDriverInspection};
 })();
