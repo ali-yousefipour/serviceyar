@@ -35,8 +35,8 @@
    return '<article class="portal-kpi sy-mgmt-kpi sy-mgmt-tone-green"><small>'+esc(title)+'</small><strong>'+esc(value)+'</strong><span>'+esc(hint||'')+'</span></article>';
  }
  function table(headers,rows){
-   return '<div class="portal-table-scroll"><table><thead><tr>'+headers.map(x=>'<th>'+esc(x)+'</th>').join('')+'</tr></thead><tbody>'+
-     (rows.length?rows.map(r=>'<tr>'+r.map(c=>'<td>'+esc(c??'—')+'</td>').join('')+'</tr>').join(''):
+   return '<div class="portal-table-scroll"><table><thead><tr>'+headers.map(x=>'<th scope="col">'+esc(x)+'</th>').join('')+'</tr></thead><tbody>'+
+     (rows.length?rows.map(r=>'<tr>'+r.map((c,i)=>'<td data-label="'+esc(headers[i]||'')+'">'+esc(c??'—')+'</td>').join('')+'</tr>').join(''):
      '<tr><td colspan="'+headers.length+'" class="empty">اطلاعاتی ثبت نشده است.</td></tr>')+'</tbody></table></div>';
  }
  function person(p){return [p?.first_name,p?.last_name].filter(Boolean).join(' ')||'—'}
