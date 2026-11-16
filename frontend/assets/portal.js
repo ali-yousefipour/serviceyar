@@ -318,7 +318,19 @@
    if(brand)brand.textContent='پنل '+name+' · '+m.agencyName;
    const sideName=el('syAccountName');if(sideName)sideName.textContent=data.profile?.username||'حساب شخصی';
    const role=el('syAccountRole');if(role)role.textContent=impersonated?'مشاهده نیابتی ادمین کل':('پنل '+name);
-   const avatar=el('syAccountAvatar');if(avatar){avatar.textContent=parent?'و':m.portalType==='representative'?'ن':'ر';avatar.classList.remove('sy-account-avatar-has-photo');avatar.style.backgroundImage='';if(!parent&&m.portalType==='driver'&&data.profile?.id){avatar.style.backgroundImage='';}}
+   const avatar=el('syAccountAvatar');
+   if(avatar){
+     avatar.textContent=parent?'و':m.portalType==='representative'?'ن':'ر';
+     avatar.classList.remove('sy-account-avatar-has-photo');avatar.style.backgroundImage='';
+     if(m.portalType==='driver'){
+       const endpoint=driverPortraitEndpoint();
+       api(endpoint+'?info=1').then(info=>{
+         if(!avatar.isConnected||!info.hasPhoto||current!==m)return;
+         avatar.style.backgroundImage='url("'+endpoint+'?v='+Number(info.version||0)+'")';
+         avatar.classList.add('sy-account-avatar-has-photo');
+       }).catch(()=>{});
+     }
+   }
    const account=el('syAccountMenu');if(account){account.open=false;account.hidden=true;}
    const agencyPicker=el('agencyPickerWrap');if(agencyPicker)agencyPicker.hidden=true;
    const returnButton=el('syAdminReturn');if(returnButton)returnButton.hidden=!impersonated;
