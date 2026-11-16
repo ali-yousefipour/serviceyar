@@ -193,8 +193,14 @@
  function inputField(name,label,value,extra=''){
    return '<label>'+esc(label)+'<input name="'+name+'" value="'+esc(value||'')+'" '+extra+'></label>';
  }
+ function driverPortraitEndpoint(){
+   if(!current||current.portalType!=='driver')return '';
+   return impersonated?'/api/v1/admin/impersonation/driver-portrait?agencyId='+encodeURIComponent(current.agencyId)+'&driverId='+encodeURIComponent(current.partyId):
+     '/api/v1/portal/driver/'+encodeURIComponent(current.agencyId)+'/'+encodeURIComponent(current.partyId)+'/portrait';
+ }
+ function adminDriverEndpoint(action){return '/api/v1/admin/impersonation/driver-'+action+'?agencyId='+encodeURIComponent(current.agencyId)+'&driverId='+encodeURIComponent(current.partyId);}
  function renderProfile(){
-   if(impersonated){
+   if(impersonated&&current.portalType==='parent'){
      const parent=current.portalType==='parent',person=parent?(data.guardian||{}):(data.driver||{});
      const fields=parent?[['نام ولی',person.name],['نسبت',person.relation_title],['نشانی دانش‌آموز',data.student?.address],['نشانی برگشت',data.student?.return_address]]:
        [['نام راننده',[person.first_name,person.last_name].filter(Boolean).join(' ')],['کد ملی',person.national_code],
@@ -204,12 +210,14 @@
    }
    const parent=current.portalType==='parent',p=parent?(data.guardian||{}):(data.driver||{});
    const address=parent?data.student?.address:p.address;
-   return '<div class="portal-section-title"><h1>اطلاعات حساب و پروفایل</h1><p>ویرایش فقط روی اطلاعات مرتبط با حساب تأییدشده شما انجام می‌شود.</p></div>'+
+   const adminEdit=impersonated&&!parent;
+   const portraitUrl=parent?'':driverPortraitEndpoint();
+   return '<div class="portal-section-title"><h1>اطلاعات حساب و پروفایل</h1><p>'+(adminEdit?'ویرایش مدیریتی توسط مدیر کل؛ تمام تغییرات در سامانه ثبت می‌شوند.':'ویرایش اطلاعات حساب تأییدشده شما')+'</p></div>'+
    '<section class="portal-panel"><h2>حساب و شرکت سرویس‌دهنده</h2><div class="portal-details">'+
      [['شرکت',data.agency?.name],['کد شرکت',data.agency?.code],['نام مدیر',data.agency?.managerName],['تلفن دفتر',data.agency?.phone],
        ['تلفن مدیر',data.agency?.managerMobile],['آدرس دفتر',data.agency?.address],
        ['نام کاربری',data.profile?.username],['شماره همراه تأییدشده',data.profile?.mobile],['نوع حساب',parent?'ولی دانش‌آموز':'راننده سرویس']].map(([k,v])=>'<div><span>'+esc(k)+'</span><b>'+esc(v||'—')+'</b></div>').join('')+'</div></section>'+
-   (parent?'':'<section class="portal-panel portal-photo-card"><div class="portal-photo-head"><div class="portal-avatar-frame"><img id="portalPortrait" src="/api/v1/auth/profile/photo?v='+Number(data.profile?.photo_version||0)+'" alt="تصویر پرسنلی راننده" loading="lazy"></div><div><h2>تصویر پرسنلی</h2><p class="muted">تصویر خود را از دوربین یا گالری انتخاب کنید؛ تصویر در فضای خصوصی ذخیره می‌شود.</p></div></div><form id="portalPhotoForm" class="portal-photo-form"><label>انتخاب تصویر<input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required></label><button class="primary" type="submit">ثبت تصویر پرسنلی</button></form><p id="portalPhotoStatus" role="status"></p></section>')+
+   (parent?'':'<section class="portal-panel portal-photo-card"><div class="portal-photo-head"><div class="portal-avatar-frame"><img id="portalPortrait" alt="تصویر پرسنلی راننده" loading="lazy"></div><div><h2>تصویر پرسنلی</h2><p class="muted">تصویر را از گالری یا دوربین انتخاب کنید. حجم فایل حداکثر پنج مگابایت است.</p></div></div><form id="portalPhotoForm" class="portal-photo-form"><label>انتخاب تصویر<input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required></label><button class="primary" type="submit">ثبت تصویر پرسنلی</button></form><p id="portalPhotoStatus" role="status"></p></section>')+
    '<section class="portal-panel"><h2>ویرایش مشخصات</h2><form id="portalProfileForm" class="portal-profile-form">'+
       (parent?inputField('guardianName','نام ولی',p.name)+inputField('guardianRelation','نسبت با دانش‌آموز',p.relation_title):
        inputField('firstName','نام',p.first_name,'required maxlength="100"')+inputField('lastName','نام خانوادگی',p.last_name,'required maxlength="100"')+
@@ -217,9 +225,9 @@
        inputField('bankName','بانک',p.bank_name)+inputField('bankAccount','شماره حساب',p.bank_account)+inputField('iban','شماره شبا',p.iban,'dir="ltr" maxlength="26"'))+
       inputField('address','نشانی',address)+
       (parent?inputField('returnAddress','نشانی برگشت',data.student?.return_address):'')+
-      inputField('email','پست الکترونیکی',data.profile?.email,'type="email"')+
+      (adminEdit?'':inputField('email','پست الکترونیکی',data.profile?.email,'type="email"'))+
       '<button type="submit" class="primary">ثبت اطلاعات</button></form></section>'+
-      (parent?'':'<section class="portal-panel"><h2>مشخصات خودرو و درخواست اصلاح</h2><p class="muted">برای حفظ صحت پلاک و مشخصات ثبت‌شده، تغییر خودرو باید توسط شرکت تأیید شود.</p><div class="portal-details"><div><span>مدل فعلی</span><b>'+esc(p.model||'—')+'</b></div><div><span>پلاک فعلی</span><b>'+esc(p.plate||'—')+'</b></div></div><form id="portalVehicleForm" class="portal-profile-form">'+inputField('model','درخواست مدل جدید','')+inputField('plate','درخواست پلاک جدید','')+inputField('note','توضیح درخواست','')+'<button type="submit" class="primary">ارسال درخواست اصلاح برای شرکت</button></form></section>');
+      (parent?'':'<section class="portal-panel"><h2>مشخصات خودرو '+(adminEdit?'و ویرایش مدیریتی':'و درخواست اصلاح')+'</h2><p class="muted">'+(adminEdit?'ویرایش پلاک و مدل توسط مدیر کل ثبت می‌شود؛ تغییر کلاس تعرفه باید در مدیریت خودرو بررسی شود.':'تغییر پلاک و مدل توسط راننده پس از تأیید شرکت اعمال می‌شود.')+'</p><div class="portal-details"><div><span>مدل فعلی</span><b>'+esc(p.model||'—')+'</b></div><div><span>پلاک فعلی</span><b>'+esc(p.plate||'—')+'</b></div><div><span>ظرفیت</span><b>'+fa(p.capacity||0)+'</b></div></div><form id="portalVehicleForm" class="portal-profile-form">'+inputField('model',adminEdit?'مدل جدید':'درخواست مدل جدید','')+inputField('plate',adminEdit?'پلاک جدید':'درخواست پلاک جدید','')+(adminEdit?'':inputField('note','توضیح درخواست',''))+'<button type="submit" class="primary">'+(adminEdit?'ذخیره تغییرات خودرو':'ارسال درخواست اصلاح برای شرکت')+'</button></form></section>');
  }
  function renderPassword(){
    return '<div class="portal-section-title"><h1>تنظیم رمز ورود</h1><p>نام کاربری شما شماره همراه تأییدشده '+esc(data.profile?.username||'')+' است.</p></div>'+
