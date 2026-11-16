@@ -44,7 +44,7 @@
  function person(p){return [p?.first_name,p?.last_name].filter(Boolean).join(' ')||'—'}
  function renderOverview(){
    if(current.portalType==='representative')return '<div class="portal-section-title"><h1>پنل نماینده مدارس</h1><p>مشاهده بدهکاران مدارس دارای مجوز</p></div>'+
-    '<div class="portal-kpis">'+widget('مدارس تحت پوشش',fa(representativeSchools.length),'دسترسی اختصاصی شرکت')+'</div>'+
+    '<div class="portal-kpis sy-mgmt-summary">'+widget('مدارس تحت پوشش',fa(representativeSchools.length),'دسترسی اختصاصی شرکت')+'</div>'+
     '<section class="portal-panel sy-mgmt-panel"><h2>گزارش بدهکاران</h2><p>برای مشاهده وضعیت مالی دانش‌آموزان، مدرسه مورد نظر را انتخاب کنید.</p><button type="button" data-go="debtors" class="primary">مشاهده گزارش بدهکاران</button></section>';
    const parent=current.portalType==='parent',f=data.finance||{};
    const who=parent?person(data.student):person(data.driver);
@@ -64,7 +64,7 @@
    return '<section class="portal-welcome sy-mgmt-hero"><div><small>داشبورد اختصاصی '+(parent?'والدین':'رانندگان')+'</small><h1>سلام، '+esc(who)+'</h1><p>'+esc(data.agency?.name||'سرویس‌یار')+' · اطلاعات ثبت‌شده در سامانه</p></div></section>'+
    '<div class="portal-kpis sy-mgmt-summary">'+cards.map(x=>widget(...x)).join('')+'</div>'+
    '<div class="portal-panels sy-mgmt-grid"><section class="portal-panel sy-mgmt-panel"><h2>خلاصه مالی</h2><p class="muted">نسبت مبالغ پرداخت‌شده به مبالغ ثبت‌شده</p><div class="portal-ring-wrap"><div class="portal-ring" style="--pct:'+percent+'%"><div><strong>'+fa(percent)+'٪</strong><small>پرداخت‌شده</small></div></div><div class="portal-ring-legend"><div><b>ثبت‌شده</b><span>'+money(parent?f.total:f.recordedNet)+'</span></div><div><b>پرداخت‌شده</b><span>'+money(f.paid)+'</span></div><div><b>باقی‌مانده</b><span>'+money(f.balance)+'</span></div></div></div></section>'+
-   '<section class="portal-panel sy-mgmt-panel"><h2>دسترسی‌های سریع</h2><div class="portal-shortcuts">'+menuLinks().filter(x=>x[0]!=='overview').map(x=>'<button type="button" data-go="'+x[0]+'"><b>'+x[2]+'</b>'+esc(x[1])+'<span>‹</span></button>').join('')+'</div></section></div>';
+   '<section class="portal-panel sy-mgmt-panel"><h2>دسترسی‌های سریع</h2><div class="portal-shortcuts">'+menuLinks().filter(x=>x[0]!=='overview').map(x=>'<button type="button" data-go="'+x[0]+'"><b class="sy-portal-shortcut-icon">'+portalNavIcon(x[0])+'</b>'+esc(x[1])+'<span>‹</span></button>').join('')+'</div></section></div>';
  }
  function renderServices(){
    if(current.portalType==='parent'){
@@ -299,7 +299,7 @@
          event.preventDefault();
          if(matchMedia('(max-width:920px)').matches)openPortalDrawer();
          else if(document.querySelector('.sy-command-sidebar.sy-collapsed'))
-           el('syPortalSidebarCollapse')?.click();
+           (el('syPortalSidebarCollapse')||el('sySidebarCollapse'))?.click();
          field.focus();field.select();
        }
      });
