@@ -329,6 +329,15 @@ try {
       (int)$s['id'],(int)$portal[1],(int)$portal[2],Request::json())]);
  }
 
+ if(preg_match('#^/api/v1/portal/driver/([0-9]+)/([0-9]+)/representative-schools$#D',$path,$rep)&&$method==='GET'){
+   header('Cache-Control: private, no-store');
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolRepresentatives::portalSchools((int)$s['id'],(int)$rep[1],(int)$rep[2])]);
+ }
+ if(preg_match('#^/api/v1/portal/driver/([0-9]+)/([0-9]+)/debtors$#D',$path,$rep)&&$method==='GET'){
+   header('Cache-Control: private, no-store');
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolRepresentatives::report((int)$s['id'],(int)$rep[1],(int)$rep[2],$_GET)]);
+ }
+
  if($path==='/api/v1/admin/impersonation/users'&&$method==='GET'){
   $agencyId=filter_var($_GET['agencyId']??null,FILTER_VALIDATE_INT);
   if(!$agencyId)throw new AuthException(422,'شرکت انتخاب‌شده معتبر نیست.','INVALID_AGENCY');
@@ -472,6 +481,13 @@ try {
  if($method==='GET'&&$path==='/api/v1/reports/school-workbook.xlsx')ExportService::schoolWorkbook($s['id'],$aid,(string)($_GET['period']??'Mehr'));
  if($method==='GET'&&$path==='/api/v1/operations/service-finance')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ServiceFinanceReport::report($s['id'],$aid,$_GET)]);
  if($method==='GET'&&$path==='/api/v1/reports/service-finance.xlsx')ExportService::serviceFinance($s['id'],$aid,$_GET);
+ if($path==='/api/v1/representatives'){
+   if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolRepresentatives::manageList((int)$s['id'],$aid)]);
+   if($method==='POST'){
+     $auth->requireCsrf($s);
+     Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolRepresentatives::save((int)$s['id'],$aid,Request::json())]);
+   }
+ }
  if($method==='GET'&&$path==='/api/v1/operations/debtors')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\StudentDebtors::report($s['id'],$aid,$_GET)]);
  if($method==='GET'&&$path==='/api/v1/reports/debtors.xlsx')\ServiceYar\Reports\StudentDebtorsWorkbook::download($s['id'],$aid,$_GET,($_GET['scope']??'')==='all');
  if($method==='GET'&&preg_match('#^/api/v1/students/(\d+)/service-finance$#',$path,$m))Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ServiceFinanceReport::report($s['id'],$aid,$_GET,(int)$m[1])]);
