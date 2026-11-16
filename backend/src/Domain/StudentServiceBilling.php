@@ -25,11 +25,7 @@ final class StudentServiceBilling {
   // Never issue a zero-value invoice or block the assignment; a later tariff
   // update will create the invoice idempotently.
   if(!is_finite($fee)||$fee<=0)return null;
-  $type=(string)($student['school_type']??'');$grade=(string)($student['grade']??'');
-  $primary=preg_match('/ابتدایی|دبستان|primary|elementary/ui',$type)
-   ||(!preg_match('/متوسطه|دبیرستان|secondary|high.school/ui',$type)
-   && (preg_match('/ابتدایی|دبستان|primary|elementary/ui',$grade)||in_array($grade,['1','2','3','4','5','6','۱','۲','۳','۴','۵','۶'],true)));
-  $months=$primary?8.5:9;
+  $months=ServiceFinancialBasis::monthsOfStudent($student);
   $amount=(int)round($fee*$months);
   $year=trim(str_replace('/','-',(string)($student['academic_year']?:AgencySchoolTariffs::YEAR)));
   $map=$pdo->prepare('SELECT invoice_id FROM student_service_debt_invoices WHERE agency_id=? AND student_id=? AND academic_year=? FOR UPDATE');
@@ -91,7 +87,7 @@ final class StudentServiceBilling {
   // Full academic-year driver entitlement is based on each student's driver
   // tariff and actual school duration, with agency deductions applied once.
   $grossQuery=$pdo->prepare("SELECT
-   COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee) *
+   COALESCE(SUM(st.monthly_fee *
      (CASE WHEN sc.school_type REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9
            WHEN sc.school_type REGEXP 'ابتدایی|دبستان|primary|elementary' THEN 8.5
            WHEN st.grade REGEXP 'ابتدایی|دبستان|primary|elementary' OR st.grade IN ('1','2','3','4','5','6','۱','۲','۳','۴','۵','۶') THEN 8.5
