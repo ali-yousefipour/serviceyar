@@ -2308,12 +2308,23 @@ async function representativesPage(token){
  if(!can('drivers'))throw Error('دسترسی به مدیریت رانندگان لازم است.');
  const info=await api(scoped('/api/v1/representatives'));
  if(token!==pageToken)return;
- const reps=info.representatives||[],drivers=info.drivers||[],schools=info.schools||[];
+ const reps=info.representatives||[],drivers=info.drivers||[],schools=info.schools||[],standalone=info.standalone||[];
  $('content').innerHTML='<section class="panel sy-operation-page">'+
   '<header class="sy-operation-header"><div><h2>مدیریت نمایندگان</h2><p>نماینده می‌تواند فقط بدهی دانش‌آموزان مدارس مجاز را مشاهده کند. مدارس پیش‌فرض از سرویس‌های فعال راننده تعیین می‌شوند.</p></div><a href="#drivers/new">ثبت راننده / نماینده جدید</a></header>'+
-  '<div class="sy-operation-result-head"><h3>نمایندگان شرکت · '+number(reps.length)+'</h3></div>'+
+  '<div class="sy-operation-result-head"><h3>نمایندگان شرکت · '+number(reps.length+standalone.length)+'</h3></div>'+
   simpleTable(['نام نماینده','شماره همراه','محدوده مدارس','تنظیمات'],
    reps.map(r=>[r.first_name+' '+r.last_name,r.mobile||'—',(r.schools||[]).map(sc=>sc.name).join('، ')||'بدون مدرسه',r.customScope?'دسترسی اختصاصی':'مدارس سرویس‌های فعال']))+
+  '<section class="sy-representative-standalone"><h3>نمایندگان مستقل (غیرراننده)</h3>'+
+  simpleTable(['نام','شماره همراه','مدارس مجاز','وضعیت'],standalone.map(r=>[r.firstName+' '+r.lastName,r.mobile||'—',(r.schools||[]).map(sc=>sc.name).join('، ')||'—',Number(r.isActive)?'فعال':'غیرفعال']))+
+  '<form id="repStandaloneEdit" class="filters sy-operation-filters"><label>انتخاب نماینده<select name="userId"><option value="">انتخاب کنید</option>'+standalone.map(r=>'<option value="'+Number(r.userId)+'">'+esc(r.firstName+' '+r.lastName)+'</option>').join('')+'</select></label>'+
+  '<label><input name="enabled" type="checkbox" checked> دسترسی فعال باشد</label><fieldset><legend>مدارس مجاز</legend>'+schools.map(sc=>'<label><input type="checkbox" name="schoolIds" value="'+Number(sc.id)+'"> '+esc(sc.name)+'</label>').join('')+'</fieldset>'+
+  '<button class="primary" type="submit">ذخیره دسترسی نماینده مستقل</button><span role="status"></span></form>'+
+  '<h3>ثبت نماینده جدید به‌عنوان کاربر مستقل</h3><form id="repStandaloneNew" class="filters sy-operation-filters">'+
+  '<label>نام<input name="firstName" required maxlength="100"></label><label>نام خانوادگی<input name="lastName" required maxlength="120"></label>'+
+  '<label>شماره همراه<input name="mobile" required inputmode="tel" pattern="09[0-9]{9}" maxlength="11"></label>'+
+  '<label>رمز اولیه حساب<input name="password" type="password" minlength="10" maxlength="72" autocomplete="new-password" required></label>'+
+  '<fieldset><legend>مدارس مجاز</legend>'+schools.map(sc=>'<label><input type="checkbox" name="schoolIds" value="'+Number(sc.id)+'"> '+esc(sc.name)+'</label>').join('')+'</fieldset>'+
+  '<button class="primary" type="submit">ایجاد حساب نماینده</button><span role="status"></span></form></section>'+
   '<form id="repCompanyForm" class="sy-operation-filters filters">'+
   '<label>انتخاب راننده / نماینده<select name="driverId" required><option value="">انتخاب کنید</option>'+drivers.map(d=>'<option value="'+Number(d.id)+'">'+esc(d.first_name+' '+d.last_name+' · '+(d.mobile||''))+'</option>').join('')+'</select></label>'+
   '<label><input type="checkbox" name="enabled" checked> نماینده فعال باشد</label>'+
@@ -2321,6 +2332,32 @@ async function representativesPage(token){
   '<div class="sy-representative-school-list" id="repSchoolList"><h3>مدارس دارای دسترسی</h3><p>در حالت پیش‌فرض، مدارس از سرویس‌های فعال راننده مشخص می‌شوند.</p>'+
   schools.map(sc=>'<label><input type="checkbox" name="schoolIds" value="'+Number(sc.id)+'"> '+esc(sc.name)+'</label>').join('')+'</div>'+
   '<button type="submit" class="primary">ذخیره دسترسی نماینده</button><span id="repCompanyStatus" role="status"></span></form></section>';
+ const standaloneForm=$('repStandaloneNew'),standaloneEdit=$('repStandaloneEdit');
+ const schoolIds=form=>[...form.querySelectorAll('input[name="schoolIds"]:checked')].map(x=>Number(x.value));
+ standaloneForm.addEventListener('submit',async e=>{
+  e.preventDefault();const button=standaloneForm.querySelector('button[type=submit]'),status=standaloneForm.querySelector('[role=status]');
+  button.disabled=true;status.textContent='در حال ایجاد حساب…';
+  try{const input=Object.fromEntries(new FormData(standaloneForm));input.schoolIds=schoolIds(standaloneForm);
+   await write('/api/v1/representatives/standalone',input);
+   notify('حساب نماینده مستقل ایجاد شد.');representativesPage(token);
+  }catch(err){status.textContent=err.message;}finally{button.disabled=false;}
+ });
+ const pick=standaloneEdit.elements.userId;
+ pick.addEventListener('change',()=>{
+   const record=standalone.find(x=>Number(x.userId)===Number(pick.value));
+   standaloneEdit.elements.enabled.checked=record?Number(record.isActive)===1:true;
+   const selected=new Set((record?.schools||[]).map(x=>Number(x.id)));
+   standaloneEdit.querySelectorAll('input[name=schoolIds]').forEach(x=>x.checked=selected.has(Number(x.value)));
+ });
+ standaloneEdit.addEventListener('submit',async e=>{
+   e.preventDefault();const button=standaloneEdit.querySelector('button[type=submit]'),status=standaloneEdit.querySelector('[role=status]');
+   if(!Number(pick.value)){status.textContent='نماینده را انتخاب کنید.';return;}
+   button.disabled=true;status.textContent='در حال ذخیره…';
+   try{await write('/api/v1/representatives/standalone',{userId:Number(pick.value),
+     enabled:standaloneEdit.elements.enabled.checked,schoolIds:schoolIds(standaloneEdit)},'PUT');
+     notify('دسترسی نماینده به‌روزرسانی شد.');representativesPage(token);
+   }catch(err){status.textContent=err.message;}finally{button.disabled=false;}
+ });
  const form=$('repCompanyForm'),picker=form.elements.driverId,custom=form.elements.customScope,enabled=form.elements.enabled,box=$('repSchoolList'),status=$('repCompanyStatus');
  function sync(){
    const r=reps.find(x=>Number(x.id)===Number(picker.value));
