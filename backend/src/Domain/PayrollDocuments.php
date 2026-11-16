@@ -48,6 +48,17 @@ final class PayrollDocuments
             $line['salary_differs_from_calculated_net']=abs((float)$line['salary']-$deductions['net_earned'])>=1;
         }unset($line);
         $doc['has_estimated_lines']=str_starts_with((string)$doc['document_no'],'EST-');
+        $doc['service_details']=[];
+        $snapshotExists=$p->query("SHOW TABLES LIKE 'payroll_service_day_snapshots'")->fetchColumn();
+        if($snapshotExists){
+            $details=$p->prepare("SELECT driver_id,service_id AS serviceId,service_title AS title,
+              fee_source AS feeSource,student_count AS studentCount,monthly_gross AS monthlyGross,
+              service_days AS days,earned_gross AS earnedGross
+              FROM payroll_service_day_snapshots WHERE document_id=? ORDER BY driver_id,service_id");
+            $details->execute([$id]);
+            foreach($details->fetchAll(PDO::FETCH_ASSOC) as $detail)
+                $doc['service_details'][(int)$detail['driver_id']][]=$detail;
+        }
         $doc['deduction_policy']='کسورات اسناد جدید هنگام ثبت ثابت می‌شوند. کسورات اسناد قدیمی که نسخه تاریخی ندارند صرفاً برآورد با نرخ فعلی هستند.';
         return $doc;
     }
@@ -67,6 +78,23 @@ final class PayrollDocuments
             foreach($lines as $line){if(!is_array($line))throw new AuthException(422,'ردیف حقوق نامعتبر است.','VALIDATION_ERROR');$id=(int)($line['driverId']??0);$amount=$line['amount']??null;if(!isset($actual[$id])||isset($chosen[$id]))throw new AuthException(422,'راننده تکراری یا خارج از شرکت است.','CROSS_SCOPE_REFERENCE');$salary=self::salaryRials($amount);$chosen[$id]=['row'=>$actual[$id],'salary'=>$salary];if(!empty($actual[$id]['estimate_requires_confirmation']))$estimatedRows++;$total+=$salary;}
             $no=($estimatedRows>0?'EST-':'PAY-').str_replace('-','',$from).'-'.bin2hex(random_bytes(3));$p->prepare('INSERT INTO payroll_documents(agency_id,document_no,date_from,date_to,total_amount,created_by) VALUES(:a,:n,:f,:t,:v,:u)')->execute(['a'=>$aid,'n'=>$no,'f'=>$from,'t'=>$to,'v'=>$total,'u'=>$uid]);$doc=(int)$p->lastInsertId();
             $q=$p->prepare('INSERT INTO payroll_document_lines(document_id,driver_id,earned,agreed,paid,salary,supervision_deduction,coordination_deduction,overhead_deduction,insurance_deduction,total_deductions) VALUES(:doc,:driver,:earned,:agreed,:paid,:salary,:supervision,:coordination,:overhead,:insurance,:total)');foreach($chosen as $driver=>$item){$r=$item['row'];$q->execute(['doc'=>$doc,'driver'=>$driver,'earned'=>$r['earned'],'agreed'=>$r['agreed'],'paid'=>$r['paid'],'salary'=>$item['salary'],'supervision'=>$r['supervision_deduction'],'coordination'=>$r['coordination_deduction'],'overhead'=>$r['overhead_deduction'],'insurance'=>$r['insurance_deduction'],'total'=>$r['total_deductions']]);}
+            // Persist the exact monthly service/day inputs as a financial snapshot.
+            // Reassigning students or editing rates later must not rewrite this history.
+            if($mode==='assignment_estimate'){
+                $exists=$p->query("SHOW TABLES LIKE 'payroll_service_day_snapshots'")->fetchColumn();
+                if(!$exists)throw new AuthException(503,'مهاجرت روزهای سرویس حقوق هنوز اجرا نشده است.','PAYROLL_DAYS_MIGRATION_REQUIRED');
+                $saveService=$p->prepare("INSERT INTO payroll_service_day_snapshots
+                  (document_id,driver_id,service_id,service_title,fee_source,student_count,
+                   monthly_gross,service_days,earned_gross) VALUES(?,?,?,?,?,?,?,?,?)");
+                foreach($chosen as $driver=>$item){
+                    foreach($item['row']['service_details']??[] as $service){
+                        $saveService->execute([$doc,(int)$driver,(int)$service['serviceId'],
+                            (string)$service['title'],(string)$service['feeSource'],
+                            (int)$service['studentCount'],(int)$service['monthlyGross'],
+                            (int)$service['days'],(int)$service['earnedGross']]);
+                    }
+                }
+            }
             OperationsService::audit($uid,$aid,'create_payroll','payroll_documents',$doc);return ['id'=>$doc,'documentNo'=>$no,'total'=>$total,'status'=>'draft'];
         });
     }
