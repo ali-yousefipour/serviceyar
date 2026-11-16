@@ -185,8 +185,8 @@ final class OperationsService
     public static function payroll(int $uid,int $aid,array $filter): array
     {
         $p=self::scope($uid,$aid,'finance.view');[$from,$to]=self::range($filter);
-        $estimateRequested=($filter['calculationMode']??'assignment_estimate')==='assignment_estimate';
-        if(!in_array(($filter['calculationMode']??'assignment_estimate'),['recorded','assignment_estimate'],true))throw new AuthException(422,'روش محاسبه حقوق نامعتبر است.','VALIDATION_ERROR');
+        $estimateRequested=($filter['calculationMode']??'recorded')==='assignment_estimate';
+        if(!in_array(($filter['calculationMode']??'recorded'),['recorded','assignment_estimate'],true))throw new AuthException(422,'روش محاسبه حقوق نامعتبر است.','VALIDATION_ERROR');
         $periodDays=(new \DateTimeImmutable($from))->diff(new \DateTimeImmutable($to))->days+1;
         if($estimateRequested&&($periodDays<28||$periodDays>31))throw new AuthException(422,'برآورد ماهانه فقط برای بازه کامل ۲۸ تا ۳۱ روزه مجاز است.','INVALID_ESTIMATE_PERIOD');
         $q=$p->prepare('SELECT d.id,d.first_name,d.last_name,d.mobile,d.iban,d.bank_account,
