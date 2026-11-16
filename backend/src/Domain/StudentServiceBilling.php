@@ -81,7 +81,7 @@ final class StudentServiceBilling {
  public static function driverAccount(int $uid,int $agencyId,int $driverId): array {
   Authorization::requirePermission($uid,'drivers.view');Authorization::requireAgencyAccess($uid,$agencyId);
   $pdo=Connection::get();
-  $q=$pdo->prepare("SELECT sv.id,sv.code,sv.monthly_fee FROM services sv WHERE sv.agency_id=? AND sv.driver_id=? AND sv.is_active=1 AND sv.status<>'cancelled'");
+  $q=$pdo->prepare("SELECT sv.id,sv.code,sv.monthly_fee FROM services sv WHERE sv.agency_id=? AND sv.driver_id=? AND sv.is_active=1 AND sv.status='active'");
   $q->execute([$agencyId,$driverId]);$services=$q->fetchAll(PDO::FETCH_ASSOC);
   $monthly=(float)array_sum(array_column($services,'monthly_fee'));
   // Full academic-year driver entitlement is based on each student's driver
@@ -95,7 +95,7 @@ final class StudentServiceBilling {
    FROM service_students ss JOIN services sv ON sv.id=ss.service_id
    JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id
    JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id
-   WHERE sv.agency_id=? AND sv.driver_id=? AND sv.is_active=1 AND sv.status<>'cancelled'");
+   WHERE sv.agency_id=? AND sv.driver_id=? AND sv.is_active=1 AND sv.status='active' AND st.is_active=1");
   $grossQuery->execute([$agencyId,$driverId]);
   $annualGross=(float)$grossQuery->fetchColumn();
   $deductions=OperationsService::driverDeductions($annualGross,$agencyId);
