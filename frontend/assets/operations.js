@@ -4233,7 +4233,7 @@ async function openAdminImpersonationDialog(panelType='company'){
  if(!['company','parent','driver'].includes(panelType))return;
  const panelInfo={
   company:{title:'ورود نیابتی به پنل شرکت',description:'ابتدا شرکت را انتخاب کنید؛ سپس یکی از کاربران مدیریتی همان شرکت را برای ورود نیابتی برگزینید.',userTitle:'کاربر شرکت',placeholder:'نام، نام خانوادگی یا نام کاربری مدیر شرکت…',empty:'کاربر مدیریتی فعالی در این شرکت پیدا نشد.',button:'ورود به پنل شرکت'},
-  parent:{title:'ورود نیابتی به پنل والدین',description:'شرکت ارائه‌دهنده سرویس را انتخاب کنید؛ سپس از میان حساب‌های تأییدشده والدین آن شرکت، ولی موردنظر را جستجو کنید. دسترسی صرفاً مشاهده‌ای است.',userTitle:'ولی دانش‌آموز',placeholder:'نام ولی، شماره همراه یا نام کاربری…',empty:'حساب والد تأییدشده‌ای برای این شرکت یافت نشد.',button:'مشاهده پنل ولی'},
+  parent:{title:'ورود نیابتی به پنل والدین',description:'ولی دانش‌آموز را حتی بدون حساب تأییدشده انتخاب کنید؛ پنل اصلی در حالت مشاهده باز می‌شود.',userTitle:'ولی دانش‌آموز',placeholder:'نام ولی، شماره همراه یا نام کاربری…',empty:'ولی دانش‌آموز فعالی برای این شرکت یافت نشد.',button:'مشاهده پنل ولی'},
   driver:{title:'ورود نیابتی به پنل رانندگان',description:'همه رانندگان فعال شرکت نمایش داده می‌شوند؛ پنل واقعی آن‌ها حتی بدون تأیید حساب، در حالت مشاهده نیابتی قابل بررسی است.',userTitle:'راننده',placeholder:'نام راننده یا شماره همراه…',empty:'راننده فعالی برای این شرکت یافت نشد.',button:'مشاهده پنل راننده'}
  }[panelType];
  if(!session?.roles?.includes('super_admin')||session?.impersonation)return;
@@ -4288,6 +4288,22 @@ async function openAdminImpersonationDialog(panelType='company'){
      preview.querySelector('[data-preview-back]').onclick=()=>{preview.hidden=true;userStep.hidden=false;preview.replaceChildren();};
    }
  };
+ const openParentInspection=async guardian=>{
+   const agencyId=Number(selectedCompany?.id);
+   preview.hidden=false;userStep.hidden=true;preview.textContent='در حال بارگذاری پنل ولی دانش‌آموز…';
+   try{
+     const result=await api('/api/v1/admin/impersonation/parent-preview?agencyId='+
+       encodeURIComponent(agencyId)+'&studentId='+encodeURIComponent(guardian.studentId));
+     if(!overlay.isConnected||Number(selectedCompany?.id)!==agencyId)return;
+     if(typeof window.serviceyarPortal?.mountAdminParentInspection!=='function')
+       throw Error('ماژول پنل والدین بارگذاری نشده است.');
+     close();window.serviceyarPortal.mountAdminParentInspection(result);
+   }catch(error){
+     preview.innerHTML='<button type="button" class="secondary" data-preview-back>بازگشت به فهرست اولیا</button>'+
+       '<p role="alert">'+esc(error.message||'نمایش پنل ولی انجام نشد.')+'</p>';
+     preview.querySelector('[data-preview-back]').onclick=()=>{preview.hidden=true;userStep.hidden=false;preview.replaceChildren();};
+   }
+ };
  const normalize=value=>String(value||'').replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').replace(/[\u200c\s]+/g,' ').trim().toLocaleLowerCase('fa');
  const fa=value=>Number(value||0).toLocaleString('fa-IR');
  let companies=[],selectedCompany=null,users=[],selectedUser=null,companyLoadSequence=0;
@@ -4302,8 +4318,8 @@ async function openAdminImpersonationDialog(panelType='company'){
   const term=normalize(userSearch.value);
   // The server already restricts results to the selected agency and panelType.
   // Do not re-classify users by translated role titles, which may vary.
-  const list=users.filter(u=>normalize([u.username,u.first_name,u.last_name,u.roles].join(' ')).includes(term));
-  usersBox.innerHTML=list.length?list.map(u=>'<button type="button" class="sy-impersonation-result" data-user="'+Number(u.userKey??u.id)+'"><span class="sy-impersonation-result-avatar sy-user-avatar">'+esc((u.first_name||u.username||'ک').trim().slice(0,1))+'</span><span><b>'+esc(((u.first_name||'')+' '+(u.last_name||'')).trim()||u.username)+'</b><small>'+esc(u.username)+' · '+esc(u.roles||'بدون نقش')+'</small></span><em>'+(panelType==='driver'&&!Number(u.portalReady)?'بدون حساب':'فعال')+'</em><i aria-hidden="true">←</i></button>').join(''):'<div class="sy-impersonation-empty">'+esc(panelInfo.empty)+'</div>';
+  const list=users.filter(u=>normalize([u.username,u.first_name,u.last_name,u.roles,u.studentFirstName,u.studentLastName].join(' ')).includes(term));
+  usersBox.innerHTML=list.length?list.map(u=>'<button type="button" class="sy-impersonation-result" data-user="'+Number(u.userKey??u.id)+'"><span class="sy-impersonation-result-avatar sy-user-avatar">'+esc((u.first_name||u.username||'ک').trim().slice(0,1))+'</span><span><b>'+esc(((u.first_name||'')+' '+(u.last_name||'')).trim()||u.username)+'</b><small>'+esc(u.username)+' · '+esc(u.roles||'بدون نقش')+'</small></span><em>'+((panelType==='driver'||panelType==='parent')&&!Number(u.portalReady)?'بدون حساب':'فعال')+'</em><i aria-hidden="true">←</i></button>').join(''):'<div class="sy-impersonation-empty">'+esc(panelInfo.empty)+'</div>';
   usersBox.querySelectorAll('[data-user]').forEach(button=>button.onclick=()=>chooseUser(Number(button.dataset.user)));
  };
  const selectCompany=async id=>{
@@ -4317,7 +4333,7 @@ async function openAdminImpersonationDialog(panelType='company'){
   try{
    const data=await api('/api/v1/admin/impersonation/users?agencyId='+encodeURIComponent(id)+'&panelType='+encodeURIComponent(panelType));
    if(!overlay.isConnected||requestSequence!==companyLoadSequence||Number(selectedCompany?.id)!==id)return;
-   users=(data.users||[]).map(u=>({...u,userKey:panelType==='driver'&&!Number(u.portalReady)?-Number(u.driverId):Number(u.id)}));renderUsers();userSearch.focus();
+   users=(data.users||[]).map(u=>({...u,userKey:(panelType==='driver'||panelType==='parent')?Number(panelType==='driver'?u.driverId:u.guardianId)*-1:Number(u.id)}));renderUsers();userSearch.focus();
   }catch(error){
    if(!overlay.isConnected||requestSequence!==companyLoadSequence)return;
    usersBox.textContent='دریافت کاربران ناموفق بود.';showError(error.message);
@@ -4342,6 +4358,7 @@ async function openAdminImpersonationDialog(panelType='company'){
  startButton.onclick=async()=>{
   if(!selectedCompany||!selectedUser)return;
   if(panelType==='driver'&&!Number(selectedUser.portalReady)){await openDriverPreview(selectedUser);return;}
+  if(panelType==='parent'){await openParentInspection(selectedUser);return;}
   startButton.disabled=true;startButton.textContent='در حال ورود امن به پنل کاربر…';showError('');
   try{
    await api('/api/v1/admin/impersonation/start',{method:'POST',headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify({agencyId:Number(selectedCompany.id),userId:Number(selectedUser.id),panelType})});
