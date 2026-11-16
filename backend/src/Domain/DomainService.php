@@ -628,6 +628,20 @@ final class DomainService {
   // Honor an explicit pricing source; preserve existing import amounts when
   // editing unrelated fields, and always keep the driver base separately.
   if($resource==='students'){
+   // For an assigned student, the DRIVER'S registered vehicle is the only
+   // authoritative source for tariff class, not the student's old dropdown.
+   if($id){
+    $actual=$pdo->prepare("SELECT v.tariff_vehicle_class FROM service_students ss
+      JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=? AND sv.is_active=1 AND sv.status<>'cancelled'
+      JOIN drivers dr ON dr.id=sv.driver_id AND dr.agency_id=sv.agency_id
+      JOIN vehicles v ON v.id=dr.vehicle_id AND v.agency_id=sv.agency_id AND v.is_active=1
+      WHERE ss.student_id=? LIMIT 1");
+    $actual->execute([$aid,$id]);$assignedClass=$actual->fetchColumn();
+    if($assignedClass!==false&&in_array((int)$assignedClass,[1,2,3],true)){
+     $merged['tariff_vehicle_class']=(int)$assignedClass;
+     $data['tariff_vehicle_class']=(int)$assignedClass;
+    }
+   }
    $source=ServicePricing::source($merged['fee_source']??'taxi');
    $data['fee_source']=$source;
    $fields=['tariff_distance_km','tariff_vehicle_class','school_id','academic_year','fee_source'];
