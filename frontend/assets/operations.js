@@ -3556,7 +3556,7 @@ async function balePaymentsPage(token){
 let payrollServiceDays={};
 async function renderPayroll(data,token){
  const result=$('operationResult');
- const drivers=Array.isArray(data.items)?data.items:[];
+ const drivers=(Array.isArray(data.items)?data.items:[]).filter(r=>data.calculationMode!=='assignment_estimate'||(r.service_details||[]).length>0||Number(r.recorded_work_count||0)>0||Number(r.paid||0)!==0);
  const gross=drivers.reduce((sum,r)=>sum+Number(r.earned||0),0),netTotal=drivers.reduce((sum,r)=>sum+Number(r.net_earned||0),0);
  const referenceTotal=drivers.reduce((sum,r)=>sum+Number(r.assigned_monthly_net||0),0);
  const noRecordedWork=drivers.length>0&&drivers.every(r=>Number(r.recorded_earned??r.earned??0)===0);
