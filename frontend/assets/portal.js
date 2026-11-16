@@ -102,35 +102,93 @@
      '<section class="portal-panel"><h2>'+(parent?'فیش‌های پرداخت به شرکت':'پرداخت‌های شرکت به راننده')+'</h2>'+
      table(['تاریخ','مبلغ','روش','شماره پیگیری'],(f.payments||[]).map(x=>[date(x.payment_date),money(x.amount),x.method||'—',x.reference_no||'—']))+'</section>';
  }
+ const debtorPageSize=12;
+ let debtorRows=[],debtorPage=1,debtorSearch='';
  function renderDebtors(){
    if(!['driver','representative'].includes(current.portalType))return '<section class="portal-panel">این قسمت مخصوص نمایندگان مدارس است.</section>';
    if(!representativeSchools.length)return '<section class="portal-panel"><h2>گزارش بدهکاران</h2><p>هنوز مدرسه‌ای برای این نماینده تعریف نشده است. مدیر شرکت می‌تواند دسترسی مدارس را از بخش مدیریت نمایندگان تنظیم کند.</p></section>';
    const yr=Number(normal(new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',timeZone:'Asia/Tehran'}).format(new Date())));
-   return '<div class="portal-section-title"><h1>گزارش بدهکاران</h1><p>صرفاً مدارس مجاز در شرکت انتخاب‌شده</p></div>'+
-     '<section class="portal-panel"><form id="representativeDebtorsForm" class="portal-profile-form">'+
-     '<label>انتخاب مدرسه<select name="schoolId" required>'+representativeSchools.map(s=>'<option value="'+Number(s.id)+'">'+esc(s.name)+'</option>').join('')+'</select></label>'+
+   return '<div class="portal-section-title"><h1>گزارش بدهکاران</h1><p>مدارس مجاز شما · اطلاعات مالی ثبت‌شده شرکت</p></div>'+
+     '<section class="portal-panel portal-debtors-workspace sy-mgmt-panel">'+
+     '<form id="representativeDebtorsForm" class="portal-debtors-filters">'+
+     '<label>مدرسه<select name="schoolId" required>'+representativeSchools.map(s=>'<option value="'+Number(s.id)+'">'+esc(s.name)+'</option>').join('')+'</select></label>'+
      '<label>سال تحصیلی<input name="academicYear" required value="'+esc(String(yr)+'/'+String(yr+1))+'" placeholder="۱۴۰۵/۱۴۰۶"></label>'+
-     '<label>نام دانش‌آموز<input name="student" type="search"></label>'+
-     '<label>حداقل بدهی (ریال)<input name="minDebt" inputmode="numeric"></label>'+ 
-     '<label>حداکثر بدهی (ریال)<input name="maxDebt" inputmode="numeric"></label>'+
-     '<button type="submit" class="primary">نمایش بدهکاران</button></form><div id="repDebtorsSummary" role="status"></div><div id="repDebtorsTable"></div></section>';
+     '<label>نام دانش‌آموز<input name="student" type="search" placeholder="جستجو در گزارش…"></label>'+
+     '<details class="portal-debtors-more"><summary>فیلتر مبلغ بدهی</summary><div>'+
+     '<label>حداقل بدهی (ریال)<input name="minDebt" inputmode="numeric" placeholder="۰"></label>'+
+     '<label>حداکثر بدهی (ریال)<input name="maxDebt" inputmode="numeric" placeholder="بدون محدودیت"></label></div></details>'+
+     '<button type="submit" class="primary portal-debtors-submit">'+portalNavIcon('debtors')+' دریافت گزارش</button></form>'+
+     '<div id="repDebtorsSummary" role="status" aria-live="polite"></div>'+
+     '<div id="repDebtorsTable" class="portal-debtors-results"></div></section>';
+ }
+ function formatDebtorRow(row){
+   return [row.student,row.school,row.guardian_mobile||'—',money(row.monthly_fee),
+      money(row.annual_fee),money(row.paid),money(row.debt)];
+ }
+ function renderDebtorResults(){
+   const target=el('repDebtorsTable');
+   if(!target)return;
+   const query=normal(debtorSearch).replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').trim().toLocaleLowerCase('fa');
+   const rows=debtorRows.filter(r=>!query||normal([r.student,r.guardian_mobile,r.school].join(' ')).replace(/[ي]/g,'ی').replace(/[ك]/g,'ک').toLocaleLowerCase('fa').includes(query));
+   const pages=Math.max(1,Math.ceil(rows.length/debtorPageSize));debtorPage=Math.min(debtorPage,pages);
+   const start=(debtorPage-1)*debtorPageSize,visible=rows.slice(start,start+debtorPageSize);
+   const searchBox='<div class="portal-debtors-toolbar"><label for="repDebtorsLocalSearch">جستجو در نتایج دریافتی</label>'+
+     '<input id="repDebtorsLocalSearch" type="search" autocomplete="off" placeholder="نام دانش‌آموز یا تلفن ولی…" value="'+esc(debtorSearch)+'">'+
+     '<span>'+fa(rows.length)+' دانش‌آموز در نتایج</span></div>';
+   const heading='<div class="portal-debtors-table-head"><h3>فهرست بدهکاران</h3>'+
+      '<span>اطلاعات کامل هر دانش‌آموز در کارت موبایل قابل مشاهده است.</span></div>';
+   const cards=visible.map((r,index)=>'<article class="portal-debtor-card">'+
+     '<div class="portal-debtor-card-head"><div class="portal-debtor-avatar" aria-hidden="true">'+esc(String(r.student||'د').trim().slice(0,1))+'</div>'+
+     '<div class="portal-debtor-identity"><strong>'+esc(r.student)+'</strong><small>'+esc(r.school||'مدرسه نامشخص')+'</small></div>'+
+     '<div class="portal-debtor-due"><small>مانده بدهی</small><strong>'+money(r.debt)+'</strong></div></div>'+
+     '<div class="portal-debtor-card-body"><div><span>شهریه سالانه</span><b>'+money(r.annual_fee)+'</b></div>'+
+     '<div><span>پرداخت‌شده</span><b>'+money(r.paid)+'</b></div></div>'+
+     '<details class="portal-debtor-details"><summary>مشاهده جزئیات مالی و تماس</summary>'+
+     '<dl><div><dt>شهریه ماهانه</dt><dd>'+money(r.monthly_fee)+'</dd></div>'+
+     '<div><dt>شهریه سالانه</dt><dd>'+money(r.annual_fee)+'</dd></div>'+
+     '<div><dt>پرداخت‌شده</dt><dd>'+money(r.paid)+'</dd></div>'+
+     '<div><dt>مانده بدهی</dt><dd>'+money(r.debt)+'</dd></div>'+
+     '<div><dt>شماره ولی</dt><dd>'+esc(r.guardian_mobile||'—')+'</dd></div></dl>'+
+     (r.guardian_mobile&&/^\+?[0-9۰-۹٠-٩\s-]{9,18}$/.test(String(r.guardian_mobile))?
+       '<a class="portal-debtor-call" href="tel:'+esc(normal(r.guardian_mobile).replace(/[^0-9+]/g,''))+'">تماس با ولی</a>':'')+
+     '</details></article>').join('');
+   const pagination='<nav class="portal-debtors-pagination" aria-label="صفحات گزارش">'+
+     '<button type="button" data-debtor-page="prev" '+(debtorPage===1?'disabled':'')+'>صفحه قبل</button>'+
+     '<span>صفحه '+fa(debtorPage)+' از '+fa(pages)+'</span>'+
+     '<button type="button" data-debtor-page="next" '+(debtorPage>=pages?'disabled':'')+'>صفحه بعد</button></nav>';
+   target.innerHTML=searchBox+heading+
+     '<div class="portal-debtors-mobile">'+(cards||'<p class="portal-debtors-empty">بدهکاری مطابق جستجوی شما وجود ندارد.</p>')+'</div>'+
+     '<div class="portal-debtors-desktop">'+table(['دانش‌آموز','مدرسه','تلفن ولی','شهریه ماهانه','شهریه سالانه','پرداخت‌شده','مانده بدهی'],
+        visible.map(formatDebtorRow))+'</div>'+pagination;
+   const input=el('repDebtorsLocalSearch');
+   if(input)input.addEventListener('input',()=>{
+     const caret=input.selectionStart;debtorSearch=input.value;debtorPage=1;
+     renderDebtorResults();const next=el('repDebtorsLocalSearch');
+     next?.focus();if(next&&caret!==null)next.setSelectionRange(Math.min(caret,next.value.length),Math.min(caret,next.value.length));
+   });
+   target.querySelectorAll('[data-debtor-page]').forEach(button=>button.addEventListener('click',()=>{
+     debtorPage=Math.max(1,Math.min(pages,debtorPage+(button.dataset.debtorPage==='next'?1:-1)));
+     renderDebtorResults();el('repDebtorsTable')?.scrollIntoView({behavior:'auto',block:'start'});
+   }));
  }
  async function loadDebtors(){
    const form=el('representativeDebtorsForm');if(!form)return;
    const status=el('repDebtorsSummary'),target=el('repDebtorsTable');
    const params=new URLSearchParams(new FormData(form));
    for(const key of ['academicYear','minDebt','maxDebt'])params.set(key,normal(params.get(key)).replace(/\s/g,'').replace(/[٬,]/g,''));
+   const company=Number(current.agencyId),subject=Number(current.partyId);
    status.textContent='در حال دریافت اطلاعات…';target.replaceChildren();
    try{
      const endpoint=window.serviceyarAdminDriverInspection&&current.portalType==='driver'
       ?'/api/v1/admin/impersonation/representative-debtors?agencyId='+encodeURIComponent(current.agencyId)+'&driverId='+encodeURIComponent(current.partyId)+'&'+params
       :'/api/v1/portal/'+current.portalType+'/'+current.agencyId+'/'+current.partyId+'/debtors?'+params;
      const report=await api(endpoint);
-     if(!form.isConnected)return;
-     status.textContent=fa(report.items.length)+' بدهکار · مجموع بدهی '+money(report.total);
-     target.innerHTML=table(['دانش‌آموز','مدرسه','تلفن ولی','شهریه ماهانه','شهریه سالانه','پرداخت‌شده','بدهی باقی‌مانده'],
-       report.items.map(row=>[row.student,row.school,row.guardian_mobile||'—',money(row.monthly_fee),money(row.annual_fee),money(row.paid),money(row.debt)]));
-   }catch(error){status.textContent=error.message;}
+     if(!form.isConnected||current.agencyId!==company||current.partyId!==subject)return;
+     debtorRows=Array.isArray(report.items)?report.items:[];debtorPage=1;debtorSearch='';
+     status.innerHTML='<div class="portal-debtors-stats"><div><small>تعداد بدهکاران</small><strong>'+fa(debtorRows.length)+'</strong></div>'+
+       '<div><small>مجموع بدهی مدرسه</small><strong>'+money(report.total)+'</strong></div></div>';
+     renderDebtorResults();
+   }catch(error){status.textContent=error.message;target.replaceChildren();}
  }
  function inputField(name,label,value,extra=''){
    return '<label>'+esc(label)+'<input name="'+name+'" value="'+esc(value||'')+'" '+extra+'></label>';
