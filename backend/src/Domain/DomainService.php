@@ -339,7 +339,7 @@ final class DomainService {
    (SELECT CONCAT_WS(' · ',a.code,a.title) FROM accounting_accounts a WHERE a.id=ledger_entries.company_account_id AND a.agency_id=ledger_entries.agency_id) AS company_account_name";
   if($resource==='services')$select="services.*,
    (SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id WHERE ss.service_id=services.id) AS students_monthly_total,
-    (SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id WHERE ss.service_id=services.id) AS driver_base_monthly_total,
+    (SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id WHERE ss.service_id=services.id) AS driver_base_monthly_total,
    (SELECT COALESCE(SUM(ROUND(COALESCE(st.monthly_fee,0) *
      (CASE WHEN LOWER(COALESCE(sc.school_type,'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9
        WHEN LOWER(COALESCE(sc.school_type,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' THEN 8.5
@@ -386,7 +386,7 @@ final class DomainService {
   $row['student_credit']=max(0,round($paid-$invoiced));
  }
  private static function attachServicePayable(array &$row): void {
-  $gross=max(0,(float)($row['driver_base_monthly_total']??$row['students_monthly_total']??0));
+  $gross=max(0,(float)($row['students_monthly_total']??0));
   $parts=OperationsService::driverDeductions($gross,(int)($row['agency_id']??0));
   $row['driver_gross_monthly']=$gross;
   $row['driver_net_monthly']=$parts['net_earned'];
@@ -454,7 +454,7 @@ final class DomainService {
    $row['effective_owner_name']=$owner!==''?$owner:$driverName;
   }
   if($resource==='services'){
-   $summary=Connection::get()->prepare("SELECT COALESCE(SUM(st.monthly_fee),0) AS students_monthly_total,COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) AS driver_base_monthly_total FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=:agency WHERE ss.service_id=:service");
+   $summary=Connection::get()->prepare("SELECT COALESCE(SUM(st.monthly_fee),0) AS students_monthly_total,COALESCE(SUM(st.monthly_fee),0) AS driver_base_monthly_total FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=:agency WHERE ss.service_id=:service");
    $summary->execute(['agency'=>$aid,'service'=>$id]);$row=array_merge($row,$summary->fetch()?:[]);
    self::attachServicePayable($row);
   }
@@ -532,7 +532,7 @@ final class DomainService {
    ServicePricing::synchronizeServiceVehicle($pdo,$aid,(int)$service['id'],
       ServicePricing::source($b['feeSource']??'taxi'),true,array_key_exists('feeSource',$b));
    if ($students && !array_key_exists('monthlyFee', $b)) {
-    $grossQuery=$pdo->prepare('SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
+    $grossQuery=$pdo->prepare('SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
     $grossQuery->execute([$aid,$service['id']]);
     $net=OperationsService::driverDeductions((float)$grossQuery->fetchColumn(),$aid)['net_earned'];
     $pdo->prepare('UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?')->execute([$net,$service['id'],$aid]);
