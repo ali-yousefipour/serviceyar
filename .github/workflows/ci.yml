@@ -60,6 +60,8 @@ jobs:
         run: node tests/taxi-tariff-application-contract.cjs
       - name: Verified parent and driver portal security and UI contracts
         run: node tests/portal-access-contract.cjs
+      - name: Representative school access, dedicated role and account contracts
+        run: node tests/representative-access-contract.cjs
       - name: Official fare component unit test
         run: php tests/taxi-fare-components.php
       - name: Financial quote integration (read-only fixture)
