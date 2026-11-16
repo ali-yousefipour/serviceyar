@@ -332,7 +332,7 @@ try {
  if($path==='/api/v1/admin/impersonation/users'&&$method==='GET'){
   $agencyId=filter_var($_GET['agencyId']??null,FILTER_VALIDATE_INT);
   if(!$agencyId)throw new AuthException(422,'شرکت انتخاب‌شده معتبر نیست.','INVALID_AGENCY');
-  Response::json(['ok'=>true,'data'=>\ServiceYar\Auth\AdminImpersonation::users((int)$s['id'],(int)$agencyId)]);
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Auth\AdminImpersonation::users((int)$s['id'],(int)$agencyId,(string)($_GET['panelType']??'all'))]);
  }
  if($path==='/api/v1/admin/impersonation/start'&&$method==='POST'){
   $auth->requireCsrf($s);
