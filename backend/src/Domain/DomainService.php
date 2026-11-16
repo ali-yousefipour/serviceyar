@@ -338,8 +338,8 @@ final class DomainService {
    END AS party_name,
    (SELECT CONCAT_WS(' · ',a.code,a.title) FROM accounting_accounts a WHERE a.id=ledger_entries.company_account_id AND a.agency_id=ledger_entries.agency_id) AS company_account_name";
   if($resource==='services')$select="services.*,
-   (SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id WHERE ss.service_id=services.id) AS students_monthly_total,
-    (SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id WHERE ss.service_id=services.id) AS driver_base_monthly_total,
+   (SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id AND st.is_active=1 WHERE ss.service_id=services.id) AS students_monthly_total,
+    (SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id AND st.is_active=1 WHERE ss.service_id=services.id) AS driver_base_monthly_total,
    (SELECT COALESCE(SUM(ROUND(COALESCE(st.monthly_fee,0) *
      (CASE WHEN LOWER(COALESCE(sc.school_type,'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9
        WHEN LOWER(COALESCE(sc.school_type,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' THEN 8.5
@@ -349,10 +349,10 @@ final class DomainService {
     LEFT JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id
     WHERE ss.service_id=services.id) AS students_annual_total,
    (SELECT COUNT(*) FROM service_students ss WHERE ss.service_id=services.id) AS student_count,
-   ROUND((SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id WHERE ss.service_id=services.id)*0.03,0) AS supervision_deduction,
-   ROUND((SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id WHERE ss.service_id=services.id)*0.01,0) AS coordination_deduction,
-   ROUND((SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id WHERE ss.service_id=services.id)*0.07,0) AS overhead_deduction,
-   ROUND((SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id WHERE ss.service_id=services.id)*0.078,0) AS insurance_deduction";
+   ROUND((SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id AND st.is_active=1 WHERE ss.service_id=services.id)*0.03,0) AS supervision_deduction,
+   ROUND((SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id AND st.is_active=1 WHERE ss.service_id=services.id)*0.01,0) AS coordination_deduction,
+   ROUND((SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id AND st.is_active=1 WHERE ss.service_id=services.id)*0.07,0) AS overhead_deduction,
+   ROUND((SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id AND st.is_active=1 WHERE ss.service_id=services.id)*0.078,0) AS insurance_deduction";
   if($resource==='vehicles')$select="vehicles.*, (SELECT GROUP_CONCAT(CONCAT_WS(' ',vd.first_name,vd.last_name) ORDER BY vd.id DESC SEPARATOR '، ') FROM drivers vd WHERE vd.vehicle_id=vehicles.id AND vd.agency_id=vehicles.agency_id AND vd.is_active=1) AS driver_name, COALESCE(NULLIF(TRIM(vehicles.owner_name),''),(SELECT NULLIF(TRIM(CONCAT_WS(' ',vd.first_name,vd.last_name)),'') FROM drivers vd WHERE vd.vehicle_id=vehicles.id AND vd.agency_id=vehicles.agency_id AND vd.is_active=1 ORDER BY vd.id DESC LIMIT 1)) AS effective_owner_name";
   if($resource==='students')$select="students.*,
    (CASE WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'ابتدایی|دبستان|primary|elementary' THEN 8.5 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR TRIM(COALESCE(students.grade,'')) IN ('1','2','3','4','5','6','۱','۲','۳','۴','۵','۶') THEN 8.5 ELSE 9 END) AS annual_months,
@@ -454,7 +454,7 @@ final class DomainService {
    $row['effective_owner_name']=$owner!==''?$owner:$driverName;
   }
   if($resource==='services'){
-   $summary=Connection::get()->prepare("SELECT COALESCE(SUM(st.monthly_fee),0) AS students_monthly_total,COALESCE(SUM(st.monthly_fee),0) AS driver_base_monthly_total FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=:agency WHERE ss.service_id=:service");
+   $summary=Connection::get()->prepare("SELECT COALESCE(SUM(st.monthly_fee),0) AS students_monthly_total,COALESCE(SUM(st.monthly_fee),0) AS driver_base_monthly_total FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=:agency AND st.is_active=1 WHERE ss.service_id=:service");
    $summary->execute(['agency'=>$aid,'service'=>$id]);$row=array_merge($row,$summary->fetch()?:[]);
    self::attachServicePayable($row);
   }
@@ -532,7 +532,7 @@ final class DomainService {
    ServicePricing::synchronizeServiceVehicle($pdo,$aid,(int)$service['id'],
       ServicePricing::source($b['feeSource']??'taxi'),true,array_key_exists('feeSource',$b));
    if ($students && !array_key_exists('monthlyFee', $b)) {
-    $grossQuery=$pdo->prepare('SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
+    $grossQuery=$pdo->prepare('SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? AND st.is_active=1 WHERE ss.service_id=?');
     $grossQuery->execute([$aid,$service['id']]);
     $net=OperationsService::driverDeductions((float)$grossQuery->fetchColumn(),$aid)['net_earned'];
     $pdo->prepare('UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?')->execute([$net,$service['id'],$aid]);

@@ -969,7 +969,20 @@ try {
   if($path===$base&&$method==='GET')Response::json(['ok'=>true,'data'=>DomainService::list($s['id'],$aid,$resource,$_GET)]);
   if($path===$base&&$method==='POST'){ $auth->requireCsrf($s);if($resource==='contracts')throw new AuthException(409,'صدور قرارداد جدید تنها از فرآیند نسخه‌دار قراردادها امکان‌پذیر است.','CONTRACT_ISSUANCE_REQUIRED');$body=Request::json();Response::json(['ok'=>true,'data'=>$resource==='vehicles'?DomainService::createVehicleFromForm($s['id'],$aid,$body):DomainService::save($s['id'],$aid,$resource,$body)],201); }
   if(preg_match('#^'.preg_quote($base,'#').'/(\d+)$#',$path,$m)){
-   $id=(int)$m[1];if($method==='PUT'||$method==='PATCH'){ $auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>DomainService::save($s['id'],$aid,$resource,Request::json(),$id)]);}
+   $id=(int)$m[1];if($method==='PUT'||$method==='PATCH'){
+    $auth->requireCsrf($s);
+    $body=Request::json();
+    if($resource==='services'&&($body['applyOfficialTariff']??false)===true){
+     if(($body['feeSource']??'')!=='taxi')throw new AuthException(422,'برای اعمال تعرفه، مبنای تاکسیرانی را انتخاب کنید.','INVALID_FEE_SOURCE');
+     $data=OperationsService::transaction(function()use($s,$aid,$resource,$body,$id){
+      DomainService::save($s['id'],$aid,$resource,$body,$id);
+      \ServiceYar\Domain\TaxiTariffApplication::run((int)$s['id'],$aid,'service',$id,true);
+      return DomainService::get($s['id'],$aid,$resource,$id);
+     });
+     Response::json(['ok'=>true,'data'=>$data]);
+    }
+    Response::json(['ok'=>true,'data'=>DomainService::save($s['id'],$aid,$resource,$body,$id)]);
+   }
    if($method==='GET')Response::json(['ok'=>true,'data'=>DomainService::get($s['id'],$aid,$resource,$id)]);
    if($method==='DELETE'){ $auth->requireCsrf($s);DomainService::delete($s['id'],$aid,$resource,$id);Response::json(['ok'=>true,'data'=>['deleted'=>true]]);}
   }

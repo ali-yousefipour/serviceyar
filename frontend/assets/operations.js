@@ -1320,18 +1320,20 @@ function dialog(title,content){disposeMaps();restoreModalBackground();returnFocu
 function closeDialog(){disposeMaps();if($('modal'))$('modal').innerHTML='';restoreModalBackground();if(returnFocus?.isConnected)returnFocus.focus();}
 document.addEventListener('keydown',e=>{const modal=$('modal')?.querySelector('.modal[role="dialog"]');if(!modal)return;if(e.key==='Escape'){if(document.querySelector('.solar-calendar'))return;e.preventDefault();closeDialog();return;}if(e.key==='Tab'){const items=[...modal.querySelectorAll('button,input,select,textarea,a[href],[tabindex="0"]')].filter(x=>!x.disabled&&x.type!=='hidden'&&x.getClientRects().length&&!x.closest('[hidden]'));const first=items[0],last=items.at(-1);if(!first){e.preventDefault();modal.focus();}else if(e.shiftKey&&(document.activeElement===first||document.activeElement===modal)){e.preventDefault();last.focus();}else if(!e.shiftKey&&(document.activeElement===last||document.activeElement===modal)){e.preventDefault();first.focus();}}});
 function resourceWizard(form,key){
- const definitions={students:[['اطلاعات ولی',['mobile','guardianFirstName','guardianLastName','guardianNationalCode','guardianRelation','emergencyPhone']],['مشخصات دانش‌آموز',['firstName','lastName','gender','nationality','nationalCode','fatherName','healthStatus']],['نشانی و مدرسه',['address','returnAddress','latitude','longitude','schoolId','grade','shift','academicYear']],['وضعیت و هزینه',['serviceStatus','tariffDistanceKm','tariffVehicleClass','monthlyFee']]],drivers:[['مشخصات راننده',['firstName','lastName','nationalCode','mobile','status']],['خودرو و نشانی',['vehicleId','isRepresentative','address']],['اطلاعات بانکی',['bankName','bankAccount','iban']]],services:[['مشخصات سرویس',['title','code','capacity','shift','status']],['مدرسه و راننده',['schoolId','driverId','packId']],['مسیر و مبالغ',['startAddress','endAddress','monthlyFee','agreedAmount']]]};
+ const definitions={students:[['اطلاعات ولی',['mobile','guardianFirstName','guardianLastName','guardianNationalCode','guardianRelation','emergencyPhone']],['مشخصات دانش‌آموز',['firstName','lastName','gender','nationality','nationalCode','fatherName','healthStatus']],['نشانی و مدرسه',['address','returnAddress','latitude','longitude','schoolId','grade','shift','academicYear']],['وضعیت و هزینه',['serviceStatus','tariffDistanceKm','tariffVehicleClass','monthlyFee']]],drivers:[['مشخصات راننده',['firstName','lastName','nationalCode','mobile','status']],['خودرو و نشانی',['vehicleId','isRepresentative','address']],['اطلاعات بانکی',['bankName','bankAccount','iban']]],services:[['مشخصات سرویس',['title','capacity','shift','status']],['مدرسه و راننده',['schoolId','driverId','vehicleModel','packId']],['مسیر و مبالغ',['startAddress','endAddress','feeSource','agreedAmount']]]};
  definitions.cheques=[['مشخصات چک',['bankName','branchName','serialNo','bankAccount']],['دریافت و سررسید',['receivedFrom','accountId','amount','receivedDate','dueDate','description','counterAccountId']]];
  definitions.vehicles=[['پلاک و فراخوانی اطلاعات',['plate']],['مشخصات خودرو',['ownerName','ownerNationalCode','vehicleType','vehicleSystem','vehicleTrim','model','tariffVehicleClass','capacity']],['اطلاعات تکمیلی',['vin','makeYear','fuelType','color','engineNumber','chassisNumber','insuranceNumber','sepandStatus','isActive']]];
  const groups=definitions[key];if(!groups)return;const grid=form.querySelector('.form-grid'),fields=[...grid.children],steps=[];form.classList.add('sy-record-wizard',`sy-record-wizard--${key}`);
  const progress=document.createElement('nav');progress.className='wizard-progress';progress.setAttribute('aria-label','مراحل تکمیل فرم');form.prepend(progress);
  for(const [title,names] of groups){const section=document.createElement('section');section.className='wizard-step';const heading=document.createElement('h4');heading.textContent=title;section.append(heading);const content=document.createElement('div');content.className='form-grid sy-wizard-fields';section.append(content);for(const name of names){const field=fields.find(l=>l.querySelector(`[name="${name}"]`));if(field)content.append(field);}steps.push({title,section,fields:names});grid.before(section);}
+ const pricing=form.querySelector('.sy-service-price-status');
+ if(pricing)steps.at(-1).section.append(pricing);
  const leftovers=[...grid.children];if(leftovers.length){const extra=document.createElement('details');extra.className='sy-wizard-extras';const summary=document.createElement('summary');summary.textContent='سایر مشخصات ('+number(leftovers.length)+' مورد)';const extraGrid=document.createElement('div');extraGrid.className='form-grid sy-wizard-fields';extraGrid.append(...leftovers);extra.append(summary,extraGrid);if(extraGrid.querySelector('[required]'))extra.open=true;steps.at(-1).section.append(extra);}grid.remove();
  const map=form.querySelector('.location-picker');if(map){const address=steps.find(step=>step.fields.includes('latitude'))||steps[0];address.section.append(map);}
  const calculator=form.querySelector('.financial-calculator');if(calculator)steps.at(-1).section.append(calculator);
  const review=document.createElement('section');review.className='wizard-step wizard-review';steps.at(-1).section.after(review);steps.push({title:'بازبینی و ثبت',section:review,fields:[]});
  const actions=document.createElement('div');actions.className='wizard-actions';actions.innerHTML='<button type="button" data-wizard-prev>مرحله قبل</button><span aria-live="polite" data-wizard-position></span><button type="button" class="primary" data-wizard-next>ادامه</button>';form.append(actions);const save=$('saveRecord');actions.append(save);form.noValidate=true;let current=0;
- const show=index=>{current=index;steps.forEach((step,i)=>step.section.hidden=i!==index);progress.innerHTML=steps.map((step,i)=>`<button type="button" class="wizard-marker ${i<index?'complete':''}" ${i===index?'aria-current="step"':''} ${i>index?'disabled':''} data-wizard-step="${i}" aria-label="مرحله ${number(i+1)}: ${esc(step.title)}"><b>${number(i+1)}</b>${esc(step.title)}</button>`).join('');progress.querySelectorAll('[data-wizard-step]').forEach(b=>b.onclick=()=>show(Number(b.dataset.wizardStep)));progress.querySelector('[aria-current="step"]')?.scrollIntoView({block:'nearest',inline:'nearest'});actions.querySelector('[data-wizard-prev]').hidden=index===0;actions.querySelector('[data-wizard-next]').hidden=index===steps.length-1;save.hidden=index!==steps.length-1;actions.querySelector('[data-wizard-position]').textContent='مرحله '+number(index+1)+' از '+number(steps.length);if(index===steps.length-1){
+ const show=index=>{current=index;steps.forEach((step,i)=>step.section.hidden=i!==index);progress.innerHTML=steps.map((step,i)=>`<button type="button" class="wizard-marker ${i<index?'complete':''}" ${i===index?'aria-current="step"':''} ${i>index?'disabled':''} data-wizard-step="${i}" aria-label="مرحله ${number(i+1)}: ${esc(step.title)}"><b>${number(i+1)}</b>${esc(step.title)}</button>`).join('');progress.querySelectorAll('[data-wizard-step]').forEach(b=>b.onclick=()=>show(Number(b.dataset.wizardStep)));progress.querySelector('[aria-current="step"]')?.scrollIntoView({block:'nearest',inline:'nearest'});actions.querySelector('[data-wizard-prev]').hidden=index===0;actions.querySelector('[data-wizard-next]').hidden=index===steps.length-1;save.hidden=index!==steps.length-1;actions.querySelector('[data-wizard-position]').textContent='مرحله '+number(index+1)+' از '+number(steps.length);if(pricing&&index!==steps.length-1)steps.at(-2).section.append(pricing);if(index===steps.length-1){
   const valueOf=f=>{
    if(f.type==='hidden'&&f.dataset.solarEnhanced)return persianDigits(ServiceYarDates.toSolar(f.value));
    if(f.tagName==='SELECT')return f.selectedOptions[0]?.textContent||'—';
@@ -1341,10 +1343,11 @@ function resourceWizard(form,key){
    return persianDigits(f.value||'—');
   };
   const sections=steps.slice(0,-1).map((step,i)=>{
-   const fields=[...step.section.querySelectorAll('label')].map(label=>label.querySelector('input[name],select[name],textarea[name]')).filter(f=>f&&f.name!=='amountDisplay'&&f.type!=='hidden');
-   return '<section class="sy-wizard-review-group"><div class="sy-wizard-review-heading"><h5>'+esc(step.title)+'</h5><button type="button" data-review-step="'+i+'" aria-label="ویرایش '+esc(step.title)+'">ویرایش این بخش</button></div><dl class="detail-grid">'+fields.map(f=>'<div><dt>'+esc(labels[f.name]||f.name)+'</dt><dd>'+esc(valueOf(f))+'</dd></div>').join('')+'</dl></section>';
+   const fields=[...step.section.querySelectorAll('label')].map(label=>label.closest('[hidden]')?null:label.querySelector('input[name],select[name],textarea[name]')).filter(f=>f&&f.name!=='amountDisplay'&&f.type!=='hidden');
+   return '<section class="sy-wizard-review-group"><div class="sy-wizard-review-heading"><h5>'+esc(step.title)+'</h5><button type="button" data-review-step="'+i+'" aria-label="ویرایش '+esc(step.title)+'">ویرایش این بخش</button></div><dl class="detail-grid">'+fields.map(f=>'<div><dt>'+esc(({vehicleModel:'نوع خودرو',vehicleClass:'کلاس تعرفه'}[f.name]||labels[f.name]||f.name))+'</dt><dd>'+esc(valueOf(f))+'</dd></div>').join('')+'</dl></section>';
   });
-  review.innerHTML='<h4>بازبینی نهایی اطلاعات</h4><p class="sy-wizard-review-notice">جزئیات هر بخش را بررسی کنید. برای اصلاح مقدار، «ویرایش این بخش» را انتخاب کنید.</p>'+sections.join('');
+  review.innerHTML='<h4>بازبینی نهایی اطلاعات</h4>'+sections.join('');
+  if(pricing)review.append(pricing);
   review.querySelectorAll('[data-review-step]').forEach(button=>button.onclick=()=>show(Number(button.dataset.reviewStep)));
 }steps[index].section.querySelector('h4')?.setAttribute('tabindex','-1');steps[index].section.querySelector('h4')?.focus();requestAnimationFrame(()=>activeMaps.forEach(m=>m.invalidateSize()));};
  const invalid=section=>{const field=[...section.querySelectorAll('input,select,textarea')].find(f=>f.willValidate&&!f.checkValidity());if(field){const collapsed=field.closest('details.sy-wizard-extras');if(collapsed)collapsed.open=true;const message=field.validity.valueMissing?'این مورد را تکمیل کنید.':field.validity.patternMismatch?(field.title||'قالب مقدار واردشده صحیح نیست.'):field.validationMessage||'مقدار واردشده معتبر نیست.';const id='wizard-error-'+(field.name||'date')+'-'+[...form.elements].indexOf(field);let hint=form.querySelector('[id="'+id+'"]');if(!hint){hint=document.createElement('small');hint.id=id;hint.className='field-error';field.closest('label')?.append(hint);}hint.textContent=message;field.dataset.wizardError=id;field.setAttribute('aria-invalid','true');field.setAttribute('aria-describedby',id);field.setCustomValidity(message);}return field;};
@@ -1580,12 +1583,11 @@ function attachOfficialTaxiTariffActions(form,key,id){
  if(!id||!['services','drivers'].includes(key))return;
  const kind=key==='services'?'service':'driver';
  const box=document.createElement('section');box.className='sy-official-tariff-apply';
- const intro=kind==='service'?'دانش‌آموزان متصل به این سرویس':'تمام سرویس‌های فعال متعلق به این راننده';
- box.innerHTML='<h4>مرحله نهایی: پیش‌نمایش و اعمال نرخ‌نامه سازمان تاکسیرانی</h4>'+
-  '<p>مبلغ محاسبه‌شده ابتدا به‌صورت پیش‌نمایش بررسی می‌شود. <strong>اعمال تعرفه، مبلغ شهریه و مبنای پرداخت راننده را در سوابق قابل اصلاح به‌روزرسانی می‌کند.</strong> پرداخت‌ها و اسناد قطعی گذشته محفوظ می‌مانند.</p>'+
+ box.innerHTML='<h4>اعمال نرخ‌نامه تاکسیرانی</h4>'+
+  '<p>اعمال تعرفه، شهریه و صورتحساب‌های قابل اصلاح را به‌روزرسانی می‌کند.</p>'+
   '<div class="member-actions"><button type="button" data-official-preview>محاسبه و بررسی تعرفه</button>'+
   '<button type="button" class="primary" data-official-apply>تأیید و اعمال تعرفه برای '+(kind==='service'?'این سرویس':'سرویس‌های راننده')+'</button></div>'+
-  '<p data-official-status role="status" aria-live="polite"></p>';
+  '<div data-official-status role="status" aria-live="polite"></div>';
  // Keep the action with the pricing fields in step three. The wizard's own
  // navigation moves the user to the final review before it submits edits.
  const steps=[...form.querySelectorAll('.wizard-step:not(.wizard-review)')];
@@ -1596,14 +1598,14 @@ function attachOfficialTaxiTariffActions(form,key,id){
  let verified=false,busy=false,unsaved=false,revision=0;
  const syncApply=()=>{
    apply.disabled=busy||!isTaxi()||(!unsaved&&!verified);
-   if(kind==='service'&&unsaved&&isTaxi())apply.textContent='تأیید، سپس ذخیره و اعمال نرخ‌نامه';
+   if(kind==='service'&&isTaxi())apply.textContent='اعمال نرخ‌نامه هنگام ذخیره';
    else apply.textContent='تأیید و اعمال تعرفه برای '+(kind==='service'?'این سرویس':'سرویس‌های راننده');
  };
  const invalidate=()=>{
    revision++;unsaved=true;verified=false;
    form.dataset.applyTaxiAfterSave='';
    status.textContent=isTaxi()
-      ?'تغییرات فرم هنوز ذخیره نشده است. گزینه «تأیید، سپس ذخیره و اعمال» شما را به مرحله بازبینی می‌برد؛ پس از ذخیره، نرخ‌نامه برای این سرویس اعمال می‌شود.'
+      ?'برای ثبت هم‌زمان تغییرات و تعرفه، «اعمال نرخ‌نامه هنگام ذخیره» را انتخاب کنید.'
       :'ابتدا مبنای محاسبه هزینه سرویس را «تعرفه مصوب سازمان تاکسیرانی» انتخاب کنید.';
    syncApply();
  };
@@ -1611,7 +1613,7 @@ function attachOfficialTaxiTariffActions(form,key,id){
  form.addEventListener('change',event=>{if(event.isTrusted&&!box.contains(event.target))invalidate();});
  const previewRequest=async()=>{
    if(unsaved){
-     status.textContent='برای پیش‌نمایش نهایی، ابتدا تغییرات فرم را ذخیره کنید؛ یا از گزینه «تأیید، سپس ذخیره و اعمال نرخ‌نامه» استفاده کنید.';
+     status.textContent='پیش‌نمایش مبالغ بر اساس اطلاعات فعلی فرم در همین مرحله نمایش داده می‌شود.';
      return false;
    }
    if(!isTaxi()){
@@ -1629,7 +1631,8 @@ function attachOfficialTaxiTariffActions(form,key,id){
        ' | تغییرات: '+number(result.changes)+' | موارد مسدودکننده: '+number(result.blocking)+'</p>'+
        rows.map(item=>'<details class="sy-taxi-apply-service"><summary>'+esc(item.serviceTitle||('سرویس '+number(item.serviceId)))+
         ' · '+number(item.studentCount)+' دانش‌آموز'+(item.errors?.length?' · دارای خطا':'')+'</summary>'+
-        (item.students?.length?simpleTable(['دانش‌آموز','مبلغ فعلی (ریال)','مبلغ مصوب سازمان (ریال)'],
+        (item.newServiceFee==null?'':'<p>خالص ثبت‌شده: '+number(item.oldServiceFee)+' ریال · خالص طبق تعرفه: '+number(item.newServiceFee)+' ریال</p>')+
+        (item.students?.length?simpleTable(['دانش‌آموز','شهریه فعلی (ریال)','شهریه طبق نرخ‌نامه (ریال)'],
           item.students.map(st=>[st.name,number(st.oldFee),number(st.newFee)])):'')+
         (item.errors?.length?'<ul class="sy-official-tariff-errors">'+item.errors.map(err=>'<li>'+esc(err)+'</li>').join('')+'</ul>':'')+'</details>').join('')+
        (result.canApply?'<p class="sy-official-ready">مبالغ معتبر است؛ با دکمه تأیید، تعرفه روی سرویس ثبت می‌شود.</p>':
@@ -1643,7 +1646,7 @@ function attachOfficialTaxiTariffActions(form,key,id){
  preview.addEventListener('click',previewRequest);
  apply.addEventListener('click',async()=>{
    if(busy||!isTaxi())return;
-   if(unsaved){
+   if(unsaved||kind==='service'){
      if(kind!=='service'){
        status.textContent='ابتدا تغییرات راننده را با دکمه ذخیره ثبت کنید و سپس تعرفه سرویس‌های او را اعمال کنید.';
        return;
@@ -1675,15 +1678,6 @@ function attachOfficialTaxiTariffActions(form,key,id){
      verified=false;
      status.innerHTML='<p role="status">نرخ سازمان ثبت شد: '+number(result.servicesUpdated)+' سرویس و '+
        number(result.studentsUpdated)+' دانش‌آموز به‌روزرسانی شد.</p>';
-     if(kind==='service'){
-       if(form.elements.feeSource)form.elements.feeSource.value='taxi';
-       // Show the persisted service amount, not the stale pre-apply quote.
-       try{
-         const saved=await api(scoped('/api/v1/services/'+encodeURIComponent(id)));
-         if(form.isConnected&&form.elements.monthlyFee&&saved.monthly_fee!==undefined)
-           form.elements.monthlyFee.value=String(saved.monthly_fee);
-       }catch(_){/* Application already succeeded; a refresh can load the amount. */}
-     }
      notify('نرخ‌نامه مصوب تاکسیرانی با موفقیت بر سرویس اعمال شد.');
    }catch(error){status.textContent='اعمال تعرفه انجام نشد: '+error.message;notify(error.message,true);}
    finally{busy=false;preview.disabled=false;syncApply();}
@@ -1717,6 +1711,8 @@ async function formResource(key,id,onSaved){
  const form=$('editForm');
  if(key==='drivers'&&id)await attachDriverVehiclePicker(form,row);
  if(key==='services'){
+  form.elements.monthlyFee?.closest('label')?.remove();
+  form.elements.code?.closest('label')?.remove();
   // The service controls the vehicle actually registered to its driver.
   // A selected model/class updates that registered vehicle transactionally.
   const driverField=form.elements.driverId;
@@ -1745,10 +1741,8 @@ async function formResource(key,id,onSaved){
     onChange:()=>{if(typeof refresh==='function')void refresh();}
    }).then(picker=>{serviceModelPicker=picker;void refreshVehicle();});
   driverField?.addEventListener('change',()=>{void refreshVehicle();});
-  const code=form.elements.code;
-  if(code){code.readOnly=true;code.placeholder='توسط سامانه تولید می‌شود';code.closest('label')?.append(Object.assign(document.createElement('small'),{textContent:'کد سرویس پس از ثبت توسط سامانه ساخته می‌شود و قابل ویرایش نیست.'}));}
   const agreed=form.elements.agreedAmount,source=form.elements.feeSource;
-  const status=document.createElement('p');status.className='sy-service-price-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+  const status=document.createElement('section');status.className='sy-service-price-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');
   source?.closest('label')?.after(status);
   let priceRequest=0;
   const refresh=async()=>{
@@ -1767,7 +1761,9 @@ async function formResource(key,id,onSaved){
     }
     if(version!==priceRequest||!form.isConnected)return;
     const net=driverFeeBreakdown(total,rates).net;
-    status.textContent='شهریه ماهانه اولیا: '+number(total)+' ریال · حق‌الزحمه مرجع راننده: '+number(officialDriver)+' ریال · خالص بر اساس کسورات شرکت: '+number(net)+' ریال';
+    status.innerHTML='<h5>مبالغ ماهانه (ریال)</h5><dl class="sy-service-price-summary">'+
+      [['جمع شهریه اولیا',total],['حق‌الزحمه مرجع راننده',officialDriver],['خالص قابل پرداخت به راننده',net]]
+        .map(([label,value])=>'<div><dt>'+label+'</dt><dd>'+number(value)+'</dd></div>').join('')+'</dl>';
    }catch(e){if(version===priceRequest&&form.isConnected)status.textContent='محاسبه ناموفق: '+e.message;}
   };
   source?.addEventListener('change',refresh);
@@ -2025,7 +2021,7 @@ if(form.elements.mobile){const mobile=form.elements.mobile;mobile.pattern='09[0-
    render();
    lookup('schools').then(rows=>{schoolTypes=new Map(rows.map(sc=>[String(sc.id),sc.school_type||sc.schoolType||'']));if(form.isConnected)render();}).catch(()=>{});
   }
- }else if(['services','driver-work'].includes(key)&&can('payroll'))attachFinancialCalculator(form,key,id,row);
+ }else if(key==='driver-work'&&can('payroll'))attachFinancialCalculator(form,key,id,row);
  const relationVersion=new WeakMap();
  const populate=async(select,search='')=>{
   const version=(relationVersion.get(select)||0)+1;relationVersion.set(select,version);
@@ -2089,22 +2085,14 @@ if(form.elements.mobile){const mobile=form.elements.mobile;mobile.pattern='09[0-
     delete body.vehicleModel;delete body.vehicleClass;
    }
   }
+  if(key==='services'&&id&&form.dataset.applyTaxiAfterSave==='1'){
+   if(body.feeSource!=='taxi')throw Error('برای اعمال نرخ‌نامه، مبنای تاکسیرانی را انتخاب کنید.');
+   body.applyOfficialTariff=true;
+  }
   if(key==='vehicles'&&!id&&body.ownerNationalCode){
    body.importOwnerDriver=form.dataset.importOwnerDriver===ServiceYarDates.digits(body.ownerNationalCode);
    await write('/api/v1/vehicles/create-with-owner',body,'POST');
   }else await write('/api/v1/'+key+(id?'/'+id:''),body,id?'PUT':'POST');
-  if(key==='services'&&id&&form.dataset.applyTaxiAfterSave==='1'){
-    if(body.feeSource!=='taxi')throw Error('اطلاعات سرویس ذخیره شد، اما مبنای محاسبه دیگر تاکسیرانی نیست؛ نرخ سازمان اعمال نشد.');
-    form.dataset.applyTaxiAfterSave='';
-    try{
-      const result=await write('/api/v1/operations/tariffs/apply-service/'+encodeURIComponent(id),
-        {confirm:'APPLY_OFFICIAL_TAXI_TARIFF'});
-      notify('نرخ سازمان تاکسیرانی برای '+number(result.studentsUpdated)+' دانش‌آموز اعمال شد.');
-    }catch(error){
-      throw Error('تغییرات سرویس ذخیره شد، اما اعمال نرخ سازمان کامل نشد: '+error.message+
-        '؛ فرم را مجدداً باز کنید و پیش‌نمایش تعرفه را بررسی کنید.');
-    }
-  }
   if(key==='schools'&&id){
    const file=form.querySelector('#sySchoolPhotoUpload')?.files?.[0];
    if(file){
