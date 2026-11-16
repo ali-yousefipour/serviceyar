@@ -13,7 +13,9 @@ assert.match(portal,/class="portal-kpi sy-mgmt-kpi sy-mgmt-tone-green"/,'Portal 
 assert.match(portal,/portal-panels sy-mgmt-grid/,'Portal uses company dashboard grid');
 assert.match(portal,/function renderPortalNavigation\(\)/,'Shared navigation builder for regular and inspected portal');
 assert.match(portal,/renderPortalNavigation\(\);/,'Both portal entry points use unified menu');
-assert.match(portal,/className='nav sy-portal-nav';link\.href='#portal-'/,'Menu uses semantic links like company menu');
+assert.match(portal,/className='nav sy-portal-nav';link\.href='#portal-'/,'Main portal overview uses semantic navigation link');
+assert.match(portal,/details\.className='nav-group sy-portal-nav-group'/,'Portal sidebar uses real company-style menu groups');
+assert.match(portal,/typeof samarMenuIcon==='function'/,'Portal icons originate from the company and admin SVG renderer');
 assert.match(portal,/function portalNavIcon\(key\)/,'Accessible matching menu icons');
 assert.match(portal,/sy-nav-search sy-portal-nav-search/,'Company search styling reused');
 assert.match(portal,/syPortalNavSearch/,'Live menu search exists');
