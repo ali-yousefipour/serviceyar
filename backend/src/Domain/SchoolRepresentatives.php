@@ -68,6 +68,22 @@ final class SchoolRepresentatives
         $query=$pdo->prepare($sql);$query->execute([$aid,$driverId]);
         return $query->fetchAll(PDO::FETCH_ASSOC);
     }
+    /** Admin inspection of representative schools: authorization is super-admin only. */
+    public static function adminSchools(int $adminId,int $aid,int $driverId): array
+    {
+        if(!Authorization::isSuperAdmin($adminId))
+            throw new AuthException(403,'فقط مدیر کل مجاز است.','FORBIDDEN');
+        $pdo=self::db();$driver=self::driver($pdo,$aid,$driverId);
+        return (int)$driver['is_representative']===1?self::scopedSchools($pdo,$aid,$driverId):[];
+    }
+    public static function adminReport(int $adminId,int $aid,int $driverId,array $filters): array
+    {
+        $schools=self::adminSchools($adminId,$aid,$driverId);
+        $schoolId=filter_var($filters['schoolId']??null,FILTER_VALIDATE_INT);
+        if(!$schoolId||!in_array((int)$schoolId,array_map(static fn($r)=>(int)$r['id'],$schools),true))
+            throw new AuthException(403,'مدرسه برای نماینده مجاز نیست.','SCHOOL_SCOPE_FORBIDDEN');
+        return StudentDebtors::reportForRepresentative($adminId,$aid,$filters);
+    }
     public static function portalSchools(int $uid,int $aid,int $driverId): array
     {
         // The verified, live portal membership is mandatory, even for admins viewing portals.
