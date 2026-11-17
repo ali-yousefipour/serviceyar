@@ -1561,7 +1561,7 @@ async function attachDriverVehiclePicker(form,row){
      '<article class="sy-driver-vehicle-item"><div>'+iranPlate(vehicle.plate)+'<p>'+esc(vehicle.model||vehicle.vehicleType||'مدل نامشخص')+
      ' · '+(vehicle.inCurrentAgency?'ثبت‌شده در شرکت جاری':'موجود در سوابق سپند یا سایر شرکت‌ها')+'</p></div>'+
      '<button type="button" data-vehicle-choice="'+i+'">'+(vehicle.inCurrentAgency?'انتخاب خودرو':'فراخوانی و ثبت برای شرکت')+'</button></article>').join('')+'</div>':'<p class="muted">نتیجه‌ای یافت نشد.</p>';
-    results.querySelectorAll('[data-vehicle-choice]').forEach(button=>button.onclick=()=>{
+    results.querySelectorAll('[data-vehicle-choice]').forEach(button=>button.onclick=async()=>{
      const v=found[Number(button.dataset.vehicleChoice)];
      if(v.inCurrentAgency){
       if(row?.id){
