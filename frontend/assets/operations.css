@@ -3183,12 +3183,64 @@ body.sy-menu-palette-open{overflow:hidden}
  .sy-dashboard-dialog-body .sy-report-table :is(th,td){white-space:normal;overflow-wrap:anywhere}
 }
 
+/* Common company page headers and filter layouts */
+@media screen {
+ #content :is(.sy-operation-header,.services-page-head,.toolbar:has(>.sy-directory-heading)){
+  background:linear-gradient(115deg,var(--brand-soft,#f0f6ed),#fff 76%);
+  border-color:var(--line,#dce7da);
+  border-inline-start:3px solid var(--brand-green,#095d43);
+  padding:clamp(14px,2.5vw,24px);
+  gap:clamp(10px,2vw,18px);
+ }
+ #content :is(.sy-operation-header,.services-page-head,.sy-directory-heading) h2{
+  margin-block:0;
+  color:var(--ink,#193c30);
+  font-size:clamp(20px,2.4vw,27px);
+  line-height:1.5;
+  overflow-wrap:anywhere;
+ }
+ #content :is(.sy-operation-header,.services-page-head,.sy-directory-heading) p{
+  margin:5px 0 0;
+  color:#425e51;
+  font-size:13px;
+  line-height:1.85;
+ }
+ #content :is(.sy-operation-header,.services-page-head)>div{min-width:0;max-width:100%}
+ #content :is(.sy-operation-actions,.toolbar-buttons) button,
+ #content>.toolbar:has(.sy-directory-heading) .toolbar-buttons button{min-height:44px;overflow-wrap:anywhere}
+ #content .directory-filters{
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,148px),1fr));
+  align-items:end;
+ }
+ #content .directory-filters .directory-search{grid-column:1/-1}
+ #content .sy-operation-filters>label{min-width:0;max-width:none}
+ #content .sy-operation-filters :is(input,select,button):focus-visible{
+  outline:2px solid var(--brand-green,#095d43);
+  outline-offset:2px;
+ }
+ #content .sy-operation-result-head{flex-wrap:wrap}
+ #content .sy-operation-result-head [role="status"]{color:#425e51;font-size:12px}
+ #content>.sy-page-state{
+  min-height:90px;
+  align-content:center;
+  padding:18px;
+  border:1px solid var(--line,#dce7da);
+  border-radius:12px;
+  line-height:1.8;
+  overflow-wrap:anywhere;
+ }
+}
+
 @media screen and (max-width:650px){
  #content>.toolbar{row-gap:12px}
  #content>.toolbar>:is(.toolbar-buttons,.member-actions),
  #content .sy-operation-header>.sy-operation-actions{min-width:0;max-width:100%;flex-wrap:wrap;gap:8px}
  #content>.toolbar :is(.toolbar-buttons,.member-actions)>button,
  #content .sy-operation-actions>button{min-height:44px;white-space:normal}
+ #content .sy-operation-header .sy-operation-actions{display:flex;align-items:stretch}
+ #content .sy-operation-header .sy-operation-actions>button{flex:1 1 132px;width:auto}
+ #content .sy-operation-header .sy-operation-actions>[role="status"]{flex-basis:100%}
+ #content :is(form.directory-filters,form.sy-operation-filters) :is(input,select){font-size:16px;min-height:44px;max-height:none}
 }
 
 /* Shared record dialogs and the service pricing step */

@@ -313,21 +313,21 @@ function render(){
   document.querySelectorAll('.nav-group').forEach(d=>{const active=!!d.querySelector('a[href="#'+key+'"]');d.classList.toggle('current-group',active);if(active)d.open=true;else if(!$('syNavSearch')?.value.trim())d.open=false;});
   $('nav').querySelectorAll('a[href^="#"]').forEach(link=>{const active=link.getAttribute('href')==='#'+key;link.classList.toggle('active',active);if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');});
   $('pageTitle').textContent=adminTitles[key];$('app').classList.toggle('dashboard-active',key==='admin-dashboard');$('content').classList.toggle('dashboard-content',key==='admin-dashboard');
-  $('content').innerHTML='<div class="loading">در حال آماده‌سازی پنل مدیریت کل…</div>';
+  $('content').innerHTML='<div class="loading sy-page-state" role="status">در حال آماده‌سازی پنل مدیریت کل…</div>';
   document.querySelector('.sidebar').classList.remove('nav-open');if($('navigationShade'))$('navigationShade').hidden=true;if($('navigationToggle'))$('navigationToggle').setAttribute('aria-expanded','false');
   const task=key==='admin-dashboard'?adminDashboardPage(token):adminSectionPage(key,token);
-  Promise.resolve(task).catch(error=>{if(token===pageToken)$('content').innerHTML='<div class="error">'+esc(error.message||'بارگذاری بخش مدیریت ناموفق بود.')+'</div>';});
+  Promise.resolve(task).catch(error=>{if(token===pageToken)$('content').innerHTML='<div class="error sy-page-state" role="alert">'+esc(error.message||'بارگذاری بخش مدیریت ناموفق بود.')+'</div>';});
   return;
  }
  let key=raw||'dashboard';if(key==='admin')key='dashboard';if(!titles[key])key='dashboard';
  document.querySelectorAll('.nav-group').forEach(d=>{if(!$('syNavSearch')?.value.trim())d.open=false;});
  $('pageTitle').textContent=titles[key];$('app').classList.toggle('dashboard-active',key==='dashboard');$('content').classList.toggle('dashboard-content',key==='dashboard');
- $('content').innerHTML='<div class="loading">در حال دریافت اطلاعات…</div>';
+ $('content').innerHTML='<div class="loading sy-page-state" role="status">در حال دریافت اطلاعات…</div>';
  document.querySelector('.sidebar').classList.remove('nav-open');if($('navigationShade'))$('navigationShade').hidden=true;if($('navigationToggle'))$('navigationToggle').setAttribute('aria-expanded','false');
  $('nav').querySelectorAll('a').forEach(a=>{const active=a.getAttribute('href')==='#'+(raw||'dashboard')+(action?'/'+action:'');a.classList.toggle('active',active);if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
  $('nav').querySelectorAll('details').forEach(d=>{const active=!!d.querySelector('[aria-current=page]');d.classList.toggle('current-group',active);if(active)d.open=true;});
- if(key!=='companies'&&!currentAgency){$('content').innerHTML='<div class="empty">ابتدا شرکت فعال را انتخاب کنید.</div>';return;}
- if(key!=='companies'&&!can(key)){$('content').innerHTML='<div class="error">برای مشاهده این بخش مجوز ندارید.</div>';return;}
+ if(key!=='companies'&&!currentAgency){$('content').innerHTML='<div class="empty sy-page-state" role="status">ابتدا شرکت فعال را انتخاب کنید.</div>';return;}
+ if(key!=='companies'&&!can(key)){$('content').innerHTML='<div class="error sy-page-state" role="alert">برای مشاهده این بخش مجوز ندارید.</div>';return;}
  const task=key==='representatives'?representativesPage(token):key==='debtors'?studentDebtorsPage(token):key==='portal-vehicle-requests'?portalVehicleRequestsPage(token):key==='services'&&action==='new'?newServicePage(token,recordId):key==='installments'?installmentPage():key==='daily-schedule'?dailySchedulePage(token):key==='driver-assignment'?driverAssignmentPage(token):key==='accounting-documents'?(action==='statement'?accountStatementPage(token):action==='quick'?quickJournalPage(token):action==='defaults'?financialAccountsPage(token):action==='cheques'?chequePage(token):journalPage(token)):key==='dashboard'?dashboard(token):key==='companies'?companiesPage():key==='contracts'?contractsPage(token):key==='settings'?settingsPage():key==='reports'?reportsPage(token):key==='import'?importPage(token):key==='bale-payments'?balePaymentsPage(token):key==='school-statement'?schoolStatementPage(token):['payroll','finance-report','distances','monitoring','grouping','school-report'].includes(key)?operationPage(key,token):resourcePage(key==='previous-students'?'students':key==='agreements'?'services':key,token,{previous:key==='previous-students',agreements:key==='agreements'});
  Promise.resolve(task).then(()=>{if(token!==pageToken)return;if(action==='new'&&resources[key]&&!['accounting-documents','services','ledger','contracts'].includes(key))formResource(key,null);if(action==='fees')bulkFeeDialog();}).catch(e=>{if(token===pageToken)$('content').innerHTML='<div class="error">'+esc(e.message)+'</div>';});
 }
