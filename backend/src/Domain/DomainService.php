@@ -327,7 +327,23 @@ final class DomainService {
   if($resource==='students' && ($q['unassigned']??'')==='1')$where.=' AND NOT EXISTS (SELECT 1 FROM service_students ss JOIN services sv ON sv.id=ss.service_id WHERE ss.student_id=students.id AND sv.agency_id=students.agency_id AND sv.is_active=1)';
   if($resource==='students'&&!empty($q['eligibleServiceId'])){self::get($uid,$aid,'services',(int)$q['eligibleServiceId']);$where.=" AND students.service_status<>'cancelled' AND EXISTS(SELECT 1 FROM services sv LEFT JOIN service_schools ss ON ss.service_id=sv.id WHERE sv.id=:eligible_service AND sv.agency_id=students.agency_id AND (sv.school_id=students.school_id OR ss.school_id=students.school_id))";$params['eligible_service']=(int)$q['eligibleServiceId'];}
   $limit=min(max((int)($q['limit']??50),1),200);$page=max((int)($q['page']??1),1);$off=($page-1)*$limit;
-  $pdo=Connection::get();if($resource==='ledger'&&!in_array('company_account_id',thisColumns('ledger_entries',$pdo),true))throw new AuthException(503,'ساختار حساب‌های شرکت به‌روزرسانی نشده است؛ مهاجرت دیتابیس 0031 باید اجرا شود.','FINANCE_SCHEMA_UPDATE_REQUIRED');$count=$pdo->prepare("SELECT COUNT(*) FROM {$c['table']} WHERE $where");$count->execute($params);
+  $pdo=Connection::get();
+  // Vehicle is the inverse editor of drivers.vehicle_id. It is NOT a
+  // vehicles.driver_id column. Resolve its requested driver transactionally
+  // after saving the vehicle and through the same driver validation path.
+  $vehicleDriverSpecified=$resource==='vehicles' && (array_key_exists('driverId',$b)||array_key_exists('driver_id',$b));
+  $vehicleDriverRaw=$vehicleDriverSpecified?($b['driverId']??$b['driver_id']):null;
+  $vehicleDriverId=null;
+  if($vehicleDriverSpecified){
+   if($vehicleDriverRaw!==null&&$vehicleDriverRaw!==''){
+    if(!ctype_digit((string)$vehicleDriverRaw)||(int)$vehicleDriverRaw<1)
+     throw new AuthException(422,'راننده انتخاب‌شده معتبر نیست.','INVALID_DRIVER_ID');
+    $vehicleDriverId=(int)$vehicleDriverRaw;
+   }
+   if(!$id && $vehicleDriverId===null)
+    $vehicleDriverSpecified=false;
+  }
+  if($resource==='ledger'&&!in_array('company_account_id',thisColumns('ledger_entries',$pdo),true))throw new AuthException(503,'ساختار حساب‌های شرکت به‌روزرسانی نشده است؛ مهاجرت دیتابیس 0031 باید اجرا شود.','FINANCE_SCHEMA_UPDATE_REQUIRED');$count=$pdo->prepare("SELECT COUNT(*) FROM {$c['table']} WHERE $where");$count->execute($params);
   $select='*';
   if($resource==='ledger')$select="ledger_entries.*,
    CASE ledger_entries.party_type
@@ -769,8 +785,39 @@ final class DomainService {
   $wasCreate=!$id;
   if(!$id){$data['agency_id']=$aid;if(in_array('uuid',thisColumns($c['table'],$pdo),true))$data['uuid']=Uuid::v4();$cols=array_keys($data);$sql='INSERT INTO '.$c['table'].' ('.implode(',',$cols).') VALUES ('.implode(',',array_map(fn($x)=>':'.$x,$cols)).')';$st=$pdo->prepare($sql);$st->execute($data);$id=(int)$pdo->lastInsertId();}
   else{$sets=[];$params=['id'=>$id,'agency'=>$aid];foreach($data as $f=>$v){if($f==='agency_id'||$f==='uuid')continue;$sets[]="$f=:$f";$params[$f]=$v;}if(!$sets)throw new AuthException(422,'تغییری ارسال نشده است.','VALIDATION_ERROR');$pdo->prepare('UPDATE '.$c['table'].' SET '.implode(',',$sets).' WHERE id=:id AND agency_id=:agency')->execute($params);}
+  if($resource==='vehicles'&&$vehicleDriverSpecified){
+   if($vehicleDriverId!==null){
+    $driver=$pdo->prepare("SELECT id,vehicle_id FROM drivers WHERE id=? AND agency_id=? AND is_active=1 FOR UPDATE");
+    $driver->execute([$vehicleDriverId,$aid]);
+    if(!$driver->fetch(\PDO::FETCH_ASSOC))
+     throw new AuthException(422,'راننده فعال در شرکت جاری یافت نشد.','DRIVER_NOT_AVAILABLE');
+    $other=$pdo->prepare("SELECT id FROM drivers WHERE vehicle_id=? AND agency_id=? AND is_active=1 AND id<>? LIMIT 1 FOR UPDATE");
+    $other->execute([$id,$aid,$vehicleDriverId]);
+    if($other->fetchColumn())
+     throw new AuthException(409,'این خودرو پیش‌تر به راننده دیگری تخصیص یافته است؛ ابتدا اتصال قبلی را اصلاح کنید.','VEHICLE_ASSIGNED_TO_OTHER_DRIVER');
+    if((int)($data['is_active']??$existing['is_active']??1)!==1)
+     throw new AuthException(422,'ابتدا خودرو را فعال کنید، سپس راننده را به آن تخصیص دهید.','VEHICLE_NOT_AVAILABLE');
+    self::saveRecord($uid,$aid,'drivers',['vehicleId'=>$id],$vehicleDriverId);
+   }elseif($id){
+    // An explicit empty selection clears only the existing active driver,
+    // and never touches a driver belonging to another company.
+    $current=$pdo->prepare('SELECT id FROM drivers WHERE agency_id=? AND vehicle_id=? AND is_active=1 FOR UPDATE');
+    $current->execute([$aid,$id]);
+    foreach($current->fetchAll(\PDO::FETCH_COLUMN) as $driverId)
+     self::saveRecord($uid,$aid,'drivers',['vehicleId'=>null],(int)$driverId);
+   }
+  }
   // Reassigning a driver's vehicle must immediately synchronize all active
   // services with its class and capacity, rather than waiting for a service edit.
+  if($resource==='drivers'&&isset($data['vehicle_id'])&&(int)$data['vehicle_id']>0){
+   $other=$pdo->prepare('SELECT id FROM drivers WHERE agency_id=? AND vehicle_id=? AND id<>? AND is_active=1 LIMIT 1 FOR UPDATE');
+   $other->execute([$aid,(int)$data['vehicle_id'],$id??0]);
+   if($other->fetchColumn())throw new AuthException(409,'این خودرو قبلاً به راننده فعال دیگری اختصاص یافته است.','VEHICLE_ASSIGNED_TO_OTHER_DRIVER');
+   $vehicle=$pdo->prepare('SELECT is_active FROM vehicles WHERE id=? AND agency_id=? FOR UPDATE');
+   $vehicle->execute([(int)$data['vehicle_id'],$aid]);
+   if((int)$vehicle->fetchColumn()!==1)
+    throw new AuthException(422,'خودروی انتخاب‌شده غیرفعال است؛ ابتدا آن را از قسمت خودروها فعال کنید.','VEHICLE_NOT_AVAILABLE');
+  }
   if($resource==='drivers'&&$id&&array_key_exists('vehicle_id',$data)
      &&(int)($existing['vehicle_id']??0)!==(int)($data['vehicle_id']??0)
      &&(int)($data['vehicle_id']??0)>0){
