@@ -1764,7 +1764,48 @@ async function formResource(key,id,onSaved){
  const required={schools:['name'],students:['firstName','lastName','mobile','schoolId'],drivers:['firstName','lastName'],services:['title'],vehicles:['plate'],ledger:['partyType','partyId','direction','amount','entryDate'],'driver-work':['driverId','workDate','amount'],'driver-payments':['driverId','paymentDate','amount']};
  dialog((id?'ویرایش ':'ثبت ')+resourceName(key),`<form id="editForm" class="${key==='ledger'?'sy-ledger-editor':''}"><div class="form-grid">${resources[key][1].map(f=>{const defaults={academicYear:year(),nationality:'iranian',capacity:4,feeSource:'taxi',serviceStatus:'no_request',isRepresentative:0,direction:'receipt',channel:'internal',monthlyFee:0,agreedAmount:0};const original=val(row,f);const v=original!==''?original:(id?'':defaults[f]??''),options=f==='companyAccountId'&&key==='ledger'?companyAccountOptions:f==='bankName'&&key==='accounts'?bankOptions:f==='method'&&key==='ledger'&&id&&row.method&&!fieldOptions(key,f).some(([code])=>code===row.method)?[...fieldOptions(key,f),[row.method,methodLabel(row.method)+' (روش سابق)']]:fieldOptions(key,f),req=required[key]?.includes(f)||f==='companyAccountId'&&key==='ledger'&&!id?'required':'',text=/address|body|note|reason|description|response/i.test(f),relation=relations[f]||(['partyId','ownerId','recipientId'].includes(f)?'party':null),rialField=f==='amount'&&['invoices','payments','driver-payments','school-charges','service-charges','contracts'].includes(key);return `<label>${labels[f]||esc(f)}${req?' *':''}${f==='amount'&&key==='ledger'?`<div class="sy-money-field"><input type="text" name="amountDisplay" data-money-display inputmode="numeric" autocomplete="off" spellcheck="false" dir="ltr" placeholder="۰" aria-label="مبلغ به ریال" ${req} value="${esc(v!==''?number(v):'')}"><span class="sy-money-unit">ریال</span><input type="hidden" name="amount" value="${esc(v)}"></div><small class="sy-money-hint">مبلغ را بدون اعشار وارد کنید؛ ارقام به‌صورت سه‌رقمی جدا می‌شوند.</small>`:options?`<select name="${f}" ${req}><option value="">انتخاب کنید</option>${options.map(([value,title])=>`<option value="${esc(value)}" ${String(v)===String(value)?'selected':''}>${esc(title)}</option>`).join('')}</select>`:relation?`<input data-lookup-search="${f}" placeholder="جستجوی ${labels[f]}" aria-label="جستجوی ${labels[f]}"><select name="${f}" aria-label="${esc(labels[f]||f)}" data-relation="${relation}" ${req}><option value="">انتخاب کنید</option>${v?`<option value="${esc(v)}" selected>#${esc(v)}</option>`:''}</select>`:rialField?`<input type="text" name="${f}" data-rial-amount inputmode="numeric" autocomplete="off" dir="ltr" ${req} placeholder="۰" value="${esc(v!==''?number(v):'')}" aria-label="${esc(labels[f]||f)} به ریال"><small class="sy-money-hint">مبلغ به ریال؛ بدون اعشار و با جداکننده هزارگان</small>`:text?`<textarea name="${f}" maxlength="6000" ${req}>${esc(v)}</textarea>`:`<input name="${f}" ${req} ${/Date$/.test(f)?'type="date"':/distanceKm/i.test(f)?'type="number" min="0" step="1" inputmode="numeric"':/amount|fee|capacity|score|latitude|longitude|rating|balance/i.test(f)?'type="number" step="any"':/mobile|phone/i.test(f)?'inputmode="tel"':'maxlength="255"'} value="${esc(v)}">`}</label>`}).join('')}</div><p class="muted">مبالغ به ریال و تمام تاریخ‌های ورودی و نمایشی شمسی هستند.</p><button class="primary" id="saveRecord">ذخیره</button></form>`);
  const form=$('editForm');
- if(key==='drivers'&&id)await attachDriverVehiclePicker(form,row);
+ if(key==='drivers')await attachDriverVehiclePicker(form,row);
+ if(key==='vehicles'){
+  // The owner of a vehicle is not necessarily its assigned driver.
+  // The canonical relationship is drivers.vehicle_id; this editor sends
+  // driverId as a virtual field handled atomically on the backend.
+  const parent=form.querySelector('.form-grid');
+  const field=document.createElement('label');
+  field.className='sy-vehicle-driver-control';
+  field.innerHTML='<span>راننده تخصیص‌یافته</span><input type="search" data-vehicle-driver-search placeholder="جستجوی نام، نام خانوادگی یا کد ملی راننده" autocomplete="off">'+
+   '<select name="driverId" aria-label="راننده تخصیص‌یافته"><option value="">فاقد راننده (حذف تخصیص)</option></select>'+
+   '<small>مالک خودرو و راننده دو مشخصه مستقل هستند. فقط رانندگان همین شرکت قابل انتخاب‌اند. خودرو باید فعال باشد.</small>';
+  parent?.append(field);
+  const select=field.querySelector('select'),search=field.querySelector('input');
+  try{
+   const drivers=await lookup('drivers',true);
+   if(!form.isConnected)return;
+   const assigned=drivers.filter(d=>String(d.vehicle_id||'')===String(id||'')&&Number(d.is_active??1)===1);
+   const original=assigned[0]||null;
+   const fill=term=>{
+    const q=String(term||'').trim().toLocaleLowerCase('fa');
+    const items=drivers.filter(d=>Number(d.is_active??1)===1 && (!q||(person(d)+' '+(d.national_code||'')).toLocaleLowerCase('fa').includes(q)));
+    const chosen=select.value||String(original?.id||'');
+    select.replaceChildren(new Option('فاقد راننده (حذف تخصیص)',''));
+    for(const d of items.slice(0,250))select.add(new Option(person(d)+' · '+(d.national_code||'بدون کد ملی'),String(d.id)));
+    if(chosen&&!Array.from(select.options).some(opt=>opt.value===chosen)){
+     const match=drivers.find(d=>String(d.id)===chosen);
+     if(match)select.add(new Option(person(match)+' (انتخاب‌شده)',chosen));
+    }
+    select.value=chosen;
+   };
+   fill('');
+   if(assigned.length>1){
+    field.querySelector('small').textContent='هشدار: این خودرو به چند راننده مرتبط است؛ ابتدا ارتباط‌های تکراری را اصلاح کنید.';
+   }
+   let debounce;
+   search.addEventListener('input',()=>{clearTimeout(debounce);debounce=setTimeout(()=>fill(search.value),220);});
+   select.addEventListener('change',()=>{const a=drivers.find(d=>String(d.id)===select.value);if(a)search.value=person(a);});
+  }catch(error){
+   field.querySelector('small').textContent='فهرست رانندگان دریافت نشد: '+error.message;
+   select.disabled=true;
+  }
+ }
  if(key==='services'){
   form.elements.monthlyFee?.closest('label')?.remove();
   form.elements.code?.closest('label')?.remove();
