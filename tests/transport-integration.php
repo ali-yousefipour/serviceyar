@@ -132,6 +132,8 @@ try{
  rejected(fn()=>D::save($uid,$a,'vehicles',['driverId'=>$replacement['id']],(int)$inactiveVehicle['id']),'VEHICLE_NOT_AVAILABLE');
  D::save($uid,$a,'vehicles',['isActive'=>1,'driverId'=>$replacement['id']],(int)$inactiveVehicle['id']);
  check((int)D::get($uid,$a,'drivers',(int)$replacement['id'])['vehicle_id']===(int)$inactiveVehicle['id'],'Activation and assignment are atomic');
+ D::save($uid,$a,'vehicles',['driverId'=>''],(int)$inverseVehicle['id']);
+ check(D::get($uid,$a,'drivers',(int)$driver['id'])['vehicle_id']===null,'The existing capacity-one fixture remains independent from the inverse assignment test');
 
  $service=D::save($uid,$a,'services',['title'=>'صبح','schoolId'=>$school['id'],'driverId'=>$driver['id'],'capacity'=>1]);
  D::assignStudent($uid,$a,(int)$service['id'],(int)$s1['id']);check(D::get($uid,$a,'students',(int)$s1['id'])['service_status']==='assigned','Assignment updates service status');
