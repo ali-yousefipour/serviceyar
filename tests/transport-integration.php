@@ -118,6 +118,21 @@ try{
  rejected(fn()=>\ServiceYar\Domain\DriverAssignment::apply($uid,$a,$assignment),'ASSIGNMENT_CONFLICT');
  check((int)D::get($uid,$a,'services',(int)$as['id'])['driver_id']===(int)$ad['id'],'Driver remains assigned after rejected duplicate');
  $driver=D::save($uid,$a,'drivers',['firstName'=>'راننده','lastName'=>'یک']);$replacement=D::save($uid,$a,'drivers',['firstName'=>'راننده','lastName'=>'دو']);
+ // Vehicle-to-driver assignment is the inverse of drivers.vehicle_id;
+ // both editors must use the same transactional validation and scope.
+ $inverseVehicle=D::save($uid,$a,'vehicles',['plate'=>'INV-'.$tag,'capacity'=>4,'tariffVehicleClass'=>1,'driverId'=>$driver['id']]);
+ check((int)D::get($uid,$a,'drivers',(int)$driver['id'])['vehicle_id']===(int)$inverseVehicle['id'],'Vehicle editor assigns a driver on create');
+ rejected(fn()=>D::save($uid,$a,'vehicles',['driverId'=>$replacement['id']],(int)$inverseVehicle['id']),'VEHICLE_ASSIGNED_TO_OTHER_DRIVER');
+ D::save($uid,$a,'vehicles',['driverId'=>''],(int)$inverseVehicle['id']);
+ check(D::get($uid,$a,'drivers',(int)$driver['id'])['vehicle_id']===null,'Vehicle editor removes a driver assignment');
+ D::save($uid,$a,'vehicles',['driverId'=>$driver['id']],(int)$inverseVehicle['id']);
+ check((int)D::get($uid,$a,'drivers',(int)$driver['id'])['vehicle_id']===(int)$inverseVehicle['id'],'Vehicle editor reassigns driver on edit');
+ $inactiveVehicle=D::save($uid,$a,'vehicles',['plate'=>'INV-INACTIVE-'.$tag,'isActive'=>0,'capacity'=>4]);
+ rejected(fn()=>D::save($uid,$a,'drivers',['vehicleId'=>$inactiveVehicle['id']],(int)$replacement['id']),'VEHICLE_NOT_AVAILABLE');
+ rejected(fn()=>D::save($uid,$a,'vehicles',['driverId'=>$replacement['id']],(int)$inactiveVehicle['id']),'VEHICLE_NOT_AVAILABLE');
+ D::save($uid,$a,'vehicles',['isActive'=>1,'driverId'=>$replacement['id']],(int)$inactiveVehicle['id']);
+ check((int)D::get($uid,$a,'drivers',(int)$replacement['id'])['vehicle_id']===(int)$inactiveVehicle['id'],'Activation and assignment are atomic');
+
  $service=D::save($uid,$a,'services',['title'=>'صبح','schoolId'=>$school['id'],'driverId'=>$driver['id'],'capacity'=>1]);
  D::assignStudent($uid,$a,(int)$service['id'],(int)$s1['id']);check(D::get($uid,$a,'students',(int)$s1['id'])['service_status']==='assigned','Assignment updates service status');
  $studentServices=D::list($uid,$a,'services',['studentSearch'=>'آرمان آزمایشی']);
