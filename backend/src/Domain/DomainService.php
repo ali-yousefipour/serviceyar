@@ -751,6 +751,13 @@ if($resource==='ledger'&&!in_array('company_account_id',thisColumns('ledger_entr
    $type=$merged[$resource==='wallets'?'owner_type':'party_type']??null;$party=$merged[$resource==='wallets'?'owner_id':'party_id']??null;
    if($party!==null)self::party($pdo,$aid,(string)$type,(int)$party);
   }
+  if($resource==='drivers'&&isset($data['vehicle_id'])){
+   $target=$pdo->prepare('SELECT is_active FROM vehicles WHERE id=? AND agency_id=? LIMIT 1');
+   $target->execute([(int)$data['vehicle_id'],$aid]);
+   $isActive=$target->fetchColumn();
+   if($isActive!==false&&(int)$isActive!==1)
+    throw new AuthException(422,'خودروی انتخاب‌شده غیرفعال است؛ ابتدا خودرو را فعال کنید.','VEHICLE_NOT_AVAILABLE');
+  }
   self::validateRelations($pdo,$aid,$c['table'],$data);
   if(isset($data['amount']) && (!is_numeric($data['amount']) || (float)$data['amount']<0))throw new AuthException(422,'مبلغ نامعتبر است.','VALIDATION_ERROR');
   if(isset($data['capacity']) && (!ctype_digit((string)$data['capacity']) || (int)$data['capacity']<1 || (int)$data['capacity']>1000))throw new AuthException(422,'ظرفیت نامعتبر است.','VALIDATION_ERROR');
