@@ -1563,7 +1563,16 @@ async function attachDriverVehiclePicker(form,row){
      '<button type="button" data-vehicle-choice="'+i+'">'+(vehicle.inCurrentAgency?'انتخاب خودرو':'فراخوانی و ثبت برای شرکت')+'</button></article>').join('')+'</div>':'<p class="muted">نتیجه‌ای یافت نشد.</p>';
     results.querySelectorAll('[data-vehicle-choice]').forEach(button=>button.onclick=()=>{
      const v=found[Number(button.dataset.vehicleChoice)];
-     if(v.inCurrentAgency){setVehicle(v);close();return;}
+     if(v.inCurrentAgency){
+      if(row?.id){
+       button.disabled=true;
+       try{
+        await write('/api/v1/drivers/'+encodeURIComponent(row.id),{vehicleId:Number(v.id)},'PUT');
+        lookupCache={};setVehicle(v);close();notify('خودرو به راننده تخصیص داده شد.');
+       }catch(error){status.textContent='تخصیص خودرو انجام نشد: '+error.message;button.disabled=false;}
+      }else{setVehicle(v);close();notify('خودرو انتخاب شد؛ پس از ثبت راننده، ارتباط ذخیره می‌شود.');}
+      return;
+     }
      registrationForm(v); 
     });
    }catch(e){if(ticket===sequence&&shell.isConnected){status.textContent='خطا در جستجوی خودرو: '+e.message;results.replaceChildren();}}
@@ -1615,12 +1624,12 @@ async function attachDriverVehiclePicker(form,row){
       vehicleSystem:newForm.elements.vehicleSystem.value.trim(),makeYear:newForm.elements.makeYear.value||null,
       color:newForm.elements.color.value.trim(),fuelType:newForm.elements.fuelType.value,
       engineNumber:newForm.elements.engineNumber.value.trim(),chassisNumber:newForm.elements.chassisNumber.value.trim(),
-      insuranceNumber:newForm.elements.insuranceNumber.value.trim()};
+      insuranceNumber:newForm.elements.insuranceNumber.value.trim(),...(row?.id?{driverId:Number(row.id)}:{})};
      const saved=await write('/api/v1/vehicles',payload,'POST');
      lookupCache={};
      setVehicle({id:saved.id,plate:saved.plate||payload.plate});
      close();
-     notify('خودرو ثبت شد و برای راننده انتخاب گردید. برای نهایی‌شدن ارتباط، اطلاعات راننده را ذخیره کنید.');
+     notify(row?.id?'خودرو ثبت و بلافاصله به راننده تخصیص داده شد.':'خودرو ثبت و انتخاب شد؛ با ذخیره راننده، ارتباط نهایی می‌شود.');
     }catch(error){err.hidden=false;err.textContent='ثبت خودرو انجام نشد: '+error.message;button.disabled=false;}
    };
   };
