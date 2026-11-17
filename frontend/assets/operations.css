@@ -3301,6 +3301,27 @@ body.sy-menu-palette-open{overflow:hidden}
 
 @media print{.sy-skip-link{display:none!important}}
 
+/* Accounting and payroll workspaces */
+@media screen{
+ #content :is(.sy-journal-list-header,.sy-account-statement-heading,.sy-cheque-intro,.sy-payroll-overview){
+  padding:clamp(14px,2.5vw,22px);
+  border:1px solid var(--line,#dce7da);border-inline-start:3px solid var(--brand-green,#095d43);
+  border-radius:12px;background:var(--brand-soft,#f0f6ed);
+ }
+ #content :is(.sy-journal-list-header,.sy-account-statement-heading,.sy-cheque-intro,.sy-payroll-overview) :is(h2,h3){
+  margin-block:0 6px;color:var(--ink,#193c30);font-size:clamp(19px,2.5vw,25px);line-height:1.55;
+ }
+ #content :is(.sy-journal-list-header,.sy-account-statement-heading,.sy-cheque-intro,.sy-payroll-overview) p{color:#425e51}
+ #content .sy-payroll-tabs{gap:8px}
+ #content .sy-payroll-tabs button:focus-visible{outline:2px solid var(--brand-green,#095d43);outline-offset:2px}
+}
+@media screen and (max-width:650px){
+ #content :is(.sy-journal-list-filters,.sy-account-statement-filters,.sy-cheque-filters){grid-template-columns:minmax(0,1fr)}
+ #content :is(.sy-journal-list-filters,.sy-account-statement-filters,.sy-cheque-filters) :is(input,select){font-size:16px;min-height:44px}
+ #content :is(.sy-journal-list-filters,.sy-account-statement-filters,.sy-cheque-filters) button{min-height:44px}
+ #content .sy-payroll-tabs button{flex:1 1 auto;padding-inline:10px}
+}
+
 /* Shared record dialogs and the service pricing step */
 @media screen {
  #modal .modal-head #closeModal,

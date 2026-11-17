@@ -3695,16 +3695,29 @@ async function renderPayroll(data,token){
   }catch(e){notify('محاسبه روزهای سرویس: '+e.message,true);input.disabled=false;}
  }));
  let payrollTab='drivers',listRevision=0;
+ const tabs={drivers:$('payrollDriversTab'),docs:$('payrollDocsTab'),archive:$('payrollArchiveTab')};
  const selectTab=tab=>{
   payrollTab=tab;
   const show=tab==='drivers';$('payrollDriversPane').hidden=!show;$('payrollDocsPane').hidden=show;
-  const tabs={drivers:'payrollDriversTab',docs:'payrollDocsTab',archive:'payrollArchiveTab'};
-  for(const [key,id] of Object.entries(tabs))$(id).setAttribute('aria-selected',String(tab===key));
-  if(!show){$('payrollDocsPane').setAttribute('aria-labelledby',tabs[tab]);list().catch(e=>notify(e.message,true));}
+  for(const [key,button] of Object.entries(tabs)){
+   button.setAttribute('aria-selected',String(tab===key));button.tabIndex=tab===key?0:-1;
+  }
+  if(!show){$('payrollDocsPane').setAttribute('aria-labelledby',tabs[tab].id);list().catch(e=>notify(e.message,true));}
  };
- $('payrollDriversTab').onclick=()=>selectTab('drivers');
- $('payrollDocsTab').onclick=()=>selectTab('docs');
- $('payrollArchiveTab').onclick=()=>selectTab('archive');
+ const tabKeys=Object.keys(tabs);
+ for(const [index,key] of tabKeys.entries()){
+  const button=tabs[key];button.tabIndex=index===0?0:-1;
+  button.onclick=()=>selectTab(key);
+  button.onkeydown=event=>{
+   const rtl=getComputedStyle(button).direction==='rtl';
+   const steps={ArrowRight:rtl?-1:1,ArrowLeft:rtl?1:-1};
+   const target=event.key==='Home'?0:event.key==='End'?tabKeys.length-1:
+    steps[event.key]?(index+steps[event.key]+tabKeys.length)%tabKeys.length:null;
+   if(target===null)return;
+   event.preventDefault();
+   const next=tabKeys[target];selectTab(next);tabs[next].focus();
+  };
+ }
 
  result.querySelectorAll('[data-details-driver]').forEach(button=>button.onclick=()=>{
   const detail=result.querySelector('[data-detail-for="'+button.dataset.detailsDriver+'"]');
