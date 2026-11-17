@@ -599,18 +599,20 @@ function dashboardSchoolMarker(map,point,sc){
 async function portalVehicleRequestsPage(token=pageToken){
  const items=await api(scoped('/api/v1/operations/portal-vehicle-requests'));
  if(token!==pageToken)return;
- const pending=items.filter(x=>x.status==='pending').length;
- $('content').innerHTML='<section class="panel"><div class="page-intro"><div><h2>درخواست‌های اصلاح مشخصات خودرو</h2><p>راننده تغییر مدل یا پلاک را درخواست می‌کند؛ اعمال تغییر صرفاً پس از تأیید مدیر شرکت و ثبت رویداد انجام می‌شود.</p></div><b>'+number(pending)+' درخواست در انتظار</b></div>'+
- simpleTable(['راننده','مدل فعلی','مدل درخواستی','پلاک فعلی','پلاک درخواستی','توضیحات','وضعیت','عملیات'],
-   items.map(r=>[
-     (r.first_name||'')+' '+(r.last_name||''),
-     r.current_model||'—',r.requested_model||'—',r.current_plate||'—',r.requested_plate||'—',
-     r.note||'—',r.status==='pending'?'در انتظار بررسی':r.status==='approved'?'تأییدشده':'ردشده',
-     r.status==='pending'?'در حال بررسی':'—'
-   ]))+
- '<div class="sy-portal-review-actions">'+items.filter(x=>x.status==='pending').map(r=>
- '<article class="panel" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:12px"><span><strong>'+esc((r.first_name||'')+' '+(r.last_name||''))+'</strong> · '+esc(r.current_plate||'—')+' ← '+esc(r.requested_plate||r.current_plate||'—')+'</span>'+
- (can('drivers','manage')?'<div style="display:flex;gap:8px"><button class="primary" type="button" data-portal-review="'+r.id+'" data-action="approve">تأیید</button><button type="button" data-portal-review="'+r.id+'" data-action="reject">رد درخواست</button></div>':'')+'</article>').join('')+'</div></section>';
+ const pending=items.filter(row=>row.status==='pending');
+ const history=items.filter(row=>row.status!=='pending');
+ const driver=row=>[row.first_name,row.last_name].filter(Boolean).join(' ')||'راننده';
+ const change=(label,before,after)=>'<div><dt>'+label+'</dt><dd><span>فعلی: '+esc(before||'—')+'</span><strong>درخواستی: '+esc(after||before||'—')+'</strong></dd></div>';
+ $('content').innerHTML='<section class="panel sy-vehicle-requests"><header class="page-intro"><div><h2>درخواست‌های اصلاح خودرو</h2><p>مدل و پلاک درخواستی را با اطلاعات فعلی مقایسه کنید.</p></div><b>'+number(pending.length)+' درخواست در انتظار</b></header>'+
+ '<section><h3>در انتظار بررسی</h3><div class="sy-vehicle-request-list">'+
+ (pending.map(row=>'<article class="sy-vehicle-request"><h4>'+esc(driver(row))+'</h4><dl>'+change('مدل خودرو',row.current_model,row.requested_model)+change('پلاک',row.current_plate,row.requested_plate)+'</dl>'+
+ (row.note?'<p>'+esc(row.note)+'</p>':'')+
+ (can('drivers','manage')?'<div class="member-actions"><button class="primary" type="button" data-portal-review="'+Number(row.id)+'" data-action="approve">تأیید تغییر</button><button type="button" data-portal-review="'+Number(row.id)+'" data-action="reject">رد درخواست</button></div>':'')+'</article>').join('')||
+ '<p class="empty">درخواست در انتظار بررسی وجود ندارد.</p>')+'</div></section>'+
+ '<section class="sy-operational-history"><h3>سوابق بررسی</h3>'+
+ (history.length?simpleTable(['راننده','مدل درخواستی','پلاک درخواستی','توضیحات','نتیجه'],
+  history.map(row=>[driver(row),row.requested_model||'—',row.requested_plate||'—',row.note||'—',row.status==='approved'?'تأییدشده':'ردشده'])):
+  '<p class="empty">سابقه‌ای ثبت نشده است.</p>')+'</section></section>';
  $('content').querySelectorAll('[data-portal-review]').forEach(button=>button.onclick=async()=>{
    const action=button.dataset.action,id=Number(button.dataset.portalReview);
    if(!Number.isInteger(id)||id<1)return;
@@ -3944,9 +3946,17 @@ reportsPage=async function(token=pageToken){
 async function driverAssignmentPage(token=pageToken){
  if(!can('services','manage'))throw new Error('مجوز مدیریت سرویس لازم است.');
  const d=await api(scoped('/api/v1/operations/driver-assignment'));if(token!==pageToken)return;
- $('content').innerHTML=`<section class="panel"><div class="page-intro"><div><h2>تخصیص پیشنهادی راننده</h2><p>سرویس بدون راننده به راننده فعال با خودروی دارای ظرفیت کافی پیشنهاد می‌شود. راننده و خودرو در سرویس فعال دیگری نباید استفاده شده باشند. این پیشنهاد بر پایه ظرفیت است؛ زمان‌بندی شیفت و مسیر جاده‌ای را محاسبه نمی‌کند.</p></div><button id="refreshAssignments">تازه‌سازی</button></div><form id="driverAssignmentForm"><div class="table-wrap"><table><thead><tr><th>انتخاب</th><th>سرویس</th><th>راننده</th><th>ظرفیت خودرو</th></tr></thead><tbody>${d.items.map((r,i)=>`<tr><td><input type="checkbox" name="assignment" value="${i}" aria-label="تخصیص ${esc(r.serviceTitle)}" checked></td><td>${esc(r.serviceTitle)}</td><td>${esc(r.driverName)}</td><td>${number(r.capacity)}</td></tr>`).join('')||'<tr><td colspan="4">پیشنهاد قابل ثبت وجود ندارد.</td></tr>'}</tbody></table></div>${d.items.length?'<button class="primary">ثبت تخصیص‌های انتخاب‌شده</button>':''}<p id="assignmentFeedback" role="status"></p></form><h3>سرویس‌های بدون پیشنهاد</h3>${simpleTable(['سرویس'],d.unmatched.map(r=>[r.title]))}</section>`;
+ $('content').innerHTML=`<section class="panel sy-assignment-page"><div class="page-intro"><div><h2>تخصیص پیشنهادی راننده</h2><p>سرویس بدون راننده به راننده فعال با خودروی دارای ظرفیت کافی پیشنهاد می‌شود. راننده و خودرو در سرویس فعال دیگری نباید استفاده شده باشند. این پیشنهاد بر پایه ظرفیت است؛ زمان‌بندی شیفت و مسیر جاده‌ای را محاسبه نمی‌کند.</p></div><button id="refreshAssignments">تازه‌سازی</button></div><form id="driverAssignmentForm"><div class="table-wrap sy-report-table-wrap"><table class="sy-report-table"><thead><tr><th>انتخاب</th><th>سرویس</th><th>راننده</th><th>ظرفیت خودرو</th></tr></thead><tbody>${d.items.map((r,i)=>`<tr><td data-label="انتخاب"><input type="checkbox" name="assignment" value="${i}" aria-label="تخصیص ${esc(r.serviceTitle)}" checked></td><td data-label="سرویس">${esc(r.serviceTitle)}</td><td data-label="راننده">${esc(r.driverName)}</td><td data-label="ظرفیت خودرو">${number(r.capacity)}</td></tr>`).join('')||'<tr class="sy-report-empty"><td colspan="4">پیشنهاد قابل ثبت وجود ندارد.</td></tr>'}</tbody></table></div>${d.items.length?'<button type="submit" class="primary">ثبت تخصیص‌های انتخاب‌شده</button>':''}<p id="assignmentSelection" role="status"></p><p id="assignmentFeedback" role="alert"></p></form><h3>سرویس‌های بدون پیشنهاد</h3>${simpleTable(['سرویس'],d.unmatched.map(r=>[r.title]))}</section>`;
  $('refreshAssignments').onclick=()=>driverAssignmentPage(token).catch(e=>notify(e.message,true));
- $('driverAssignmentForm').onsubmit=async e=>{e.preventDefault();const button=e.target.querySelector('button'),items=[...e.target.querySelectorAll('[name=assignment]:checked')].map(x=>({serviceId:d.items[Number(x.value)].serviceId,driverId:d.items[Number(x.value)].driverId}));if(!items.length){$('assignmentFeedback').textContent='حداقل یک پیشنهاد انتخاب کنید.';return;}button.disabled=true;try{const result=await write('/api/v1/operations/driver-assignment',{items});lookupCache={};notify(number(result.assigned)+' تخصیص ثبت شد.');await driverAssignmentPage(token);}catch(err){if($('assignmentFeedback'))$('assignmentFeedback').textContent=err.message;if(button.isConnected)button.disabled=false;}};
+ const assignmentForm=$('driverAssignmentForm');
+ const updateSelection=()=>{
+  const selected=assignmentForm.querySelectorAll('[name="assignment"]:checked').length;
+  $('assignmentSelection').textContent=d.items.length?number(selected)+' پیشنهاد انتخاب شده':'';
+  const save=assignmentForm.querySelector('button[type="submit"]');
+  if(save)save.disabled=selected===0||assignmentForm.getAttribute('aria-busy')==='true';
+ };
+ assignmentForm.onchange=updateSelection;updateSelection();
+ $('driverAssignmentForm').onsubmit=async e=>{e.preventDefault();const button=e.target.querySelector('button'),items=[...e.target.querySelectorAll('[name=assignment]:checked')].map(x=>({serviceId:d.items[Number(x.value)].serviceId,driverId:d.items[Number(x.value)].driverId}));if(!items.length){$('assignmentFeedback').textContent='حداقل یک پیشنهاد انتخاب کنید.';return;}assignmentForm.setAttribute('aria-busy','true');button.disabled=true;try{const result=await write('/api/v1/operations/driver-assignment',{items});lookupCache={};notify(number(result.assigned)+' تخصیص ثبت شد.');await driverAssignmentPage(token);}catch(err){if($('assignmentFeedback'))$('assignmentFeedback').textContent=err.message;}finally{if(assignmentForm.isConnected){assignmentForm.setAttribute('aria-busy','false');updateSelection();}}};
 }
 
 async function financialPostingDialog(key,id){
@@ -3976,10 +3986,15 @@ async function dailySchedulePage(token=pageToken){
    const d=await api(scoped('/api/v1/operations/daily-schedule?'+new URLSearchParams(new FormData($('dailyScheduleFilters')))));
    if(token!==pageToken||version!==request||!box.isConnected)return;
    const items=Array.isArray(d.items)?d.items:[],conflicts=Array.isArray(d.conflicts)?d.conflicts:[],issues=Array.isArray(d.issues)?d.issues:[];
-   box.innerHTML=`<div class="sy-daily-summary"><div><span>شیفت‌های برنامه‌ریزی‌شده</span><strong>${number(items.length)}</strong></div><div class="${conflicts.length?'sy-daily-alert':''}"><span>تداخل زمانی</span><strong>${number(conflicts.length)}</strong></div><div class="${issues.length?'sy-daily-caution':''}"><span>اطلاعات نیازمند تکمیل</span><strong>${number(issues.length)}</strong></div></div>
-   <section class="sy-daily-section"><h3>شیفت‌های فعال</h3>${simpleTable(['سرویس','شیفت','ورود','خروج','راننده'],items.map(row=>[row.service,row.shift,row.start,row.end,row.driver||'تخصیص نیافته']))}</section>
-   <section class="sy-daily-section"><h3>تداخل‌های نیازمند بررسی</h3>${conflicts.length?simpleTable(['سرویس اول','سرویس دوم','علت'],conflicts.map(row=>[row.first,row.second,row.reason])):'<p class="sy-daily-empty">تداخل زمانی ثبت نشده است.</p>'}</section>
-   <section class="sy-daily-section"><h3>موارد ناقص</h3>${issues.length?simpleTable(['سرویس','علت'],issues.map(row=>[row.service,row.reason])):'<p class="sy-daily-empty">مورد ناقصی در اطلاعات برنامه پیدا نشد.</p>'}</section>`;
+   box.innerHTML=`<div class="sy-daily-summary"><div><button type="button" data-schedule-section="active"><span>شیفت‌های برنامه‌ریزی‌شده</span><strong>${number(items.length)}</strong></button></div><div class="${conflicts.length?'sy-daily-alert':''}"><button type="button" data-schedule-section="conflicts"><span>تداخل زمانی</span><strong>${number(conflicts.length)}</strong></button></div><div class="${issues.length?'sy-daily-caution':''}"><button type="button" data-schedule-section="issues"><span>اطلاعات نیازمند تکمیل</span><strong>${number(issues.length)}</strong></button></div></div>
+   <section class="sy-daily-section"><h3 id="schedule-active" tabindex="-1">شیفت‌های فعال</h3>${simpleTable(['سرویس','شیفت','ورود','خروج','راننده'],items.map(row=>[row.service,row.shift,row.start,row.end,row.driver||'تخصیص نیافته']))}</section>
+   <section class="sy-daily-section"><h3 id="schedule-conflicts" tabindex="-1">تداخل‌های نیازمند بررسی</h3>${conflicts.length?simpleTable(['سرویس اول','سرویس دوم','علت'],conflicts.map(row=>[row.first,row.second,row.reason])):'<p class="sy-daily-empty">تداخل زمانی ثبت نشده است.</p>'}</section>
+   <section class="sy-daily-section"><h3 id="schedule-issues" tabindex="-1">موارد ناقص</h3>${issues.length?simpleTable(['سرویس','علت'],issues.map(row=>[row.service,row.reason])):'<p class="sy-daily-empty">مورد ناقصی در اطلاعات برنامه پیدا نشد.</p>'}</section>`;
+   box.querySelectorAll('[data-schedule-section]').forEach(button=>button.onclick=()=>{
+    const section=$('schedule-'+button.dataset.scheduleSection);
+    section.focus({preventScroll:true});
+    section.scrollIntoView({block:'start'});
+   });
   }catch(err){
    if(token===pageToken&&version===request&&box.isConnected)box.innerHTML='<div class="sy-operation-error" role="alert"><strong>دریافت برنامه ناموفق بود</strong><p>'+esc(err.message)+'</p><button type="button" id="dailyScheduleRetry">تلاش مجدد</button></div>';
    $('dailyScheduleRetry')?.addEventListener('click',load);

@@ -3343,3 +3343,25 @@ body.sy-menu-palette-open{overflow:hidden}
  #modal .modal-body .sy-record-wizard .sy-wizard-fields :is(input,select,textarea) { min-height:44px; font-size:16px }
  #modal .sy-vehicle-edit-form .form-grid { grid-template-columns:minmax(0,1fr) }
 }
+
+@media screen{
+ #content .sy-vehicle-request-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}
+ #content .sy-vehicle-request{min-width:0;padding:14px;border:1px solid var(--line,#dce7da);border-radius:12px;background:#f8faf8}
+ #content .sy-vehicle-request :is(h4,p){margin:0 0 10px;overflow-wrap:anywhere}
+ #content .sy-vehicle-request dl{display:grid;gap:9px;margin:0 0 12px}
+ #content .sy-vehicle-request dl>div{padding:9px 11px;border:1px solid var(--line,#dce7da);border-radius:8px;background:#fff}
+ #content .sy-vehicle-request dd{display:grid;gap:3px;margin:4px 0 0;overflow-wrap:anywhere}
+ #content .sy-vehicle-request dd span{color:#425e51}
+ #content .sy-vehicle-request button,#content .sy-assignment-page button{min-height:44px}
+ #content .sy-operational-history{margin-block-start:20px}
+ #content .sy-assignment-page :is(#assignmentSelection,#assignmentFeedback):empty{display:none}
+ #content .sy-assignment-page button[type="submit"]{margin-block-start:12px}
+ #content .sy-assignment-page td:has(input[type="checkbox"]){line-height:44px}
+ #content .sy-daily-summary>div{padding:0}
+ #content .sy-daily-summary button{
+  display:flex;flex-direction:column;align-items:flex-start;gap:4px;width:100%;min-height:64px;
+  padding:10px;background:transparent;border:0;color:inherit;text-align:start;
+ }
+ #content .sy-daily-summary button:focus-visible{outline:2px solid var(--brand-green,#095d43);outline-offset:2px}
+ #content .sy-daily-section h3{scroll-margin-block-start:72px}
+}
