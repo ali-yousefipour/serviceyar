@@ -785,7 +785,7 @@ if($resource==='ledger'&&!in_array('company_account_id',thisColumns('ledger_entr
   if(!$id&&$resource==='students'&&($data['service_status']??'')==='assigned')throw new AuthException(422,'ابتدا دانش‌آموز را ثبت و سپس به سرویس تخصیص دهید.','ASSIGNMENT_CONFLICT');
   $wasCreate=!$id;
   if(!$id){$data['agency_id']=$aid;if(in_array('uuid',thisColumns($c['table'],$pdo),true))$data['uuid']=Uuid::v4();$cols=array_keys($data);$sql='INSERT INTO '.$c['table'].' ('.implode(',',$cols).') VALUES ('.implode(',',array_map(fn($x)=>':'.$x,$cols)).')';$st=$pdo->prepare($sql);$st->execute($data);$id=(int)$pdo->lastInsertId();}
-  else{$sets=[];$params=['id'=>$id,'agency'=>$aid];foreach($data as $f=>$v){if($f==='agency_id'||$f==='uuid')continue;$sets[]="$f=:$f";$params[$f]=$v;}if(!$sets)throw new AuthException(422,'تغییری ارسال نشده است.','VALIDATION_ERROR');$pdo->prepare('UPDATE '.$c['table'].' SET '.implode(',',$sets).' WHERE id=:id AND agency_id=:agency')->execute($params);}
+  else{$sets=[];$params=['id'=>$id,'agency'=>$aid];foreach($data as $f=>$v){if($f==='agency_id'||$f==='uuid')continue;$sets[]="$f=:$f";$params[$f]=$v;}if(!$sets&&!$vehicleDriverSpecified)throw new AuthException(422,'تغییری ارسال نشده است.','VALIDATION_ERROR');if($sets)$pdo->prepare('UPDATE '.$c['table'].' SET '.implode(',',$sets).' WHERE id=:id AND agency_id=:agency')->execute($params);}
   if($resource==='vehicles'&&$vehicleDriverSpecified){
    if($vehicleDriverId!==null){
     $driver=$pdo->prepare("SELECT id,vehicle_id FROM drivers WHERE id=? AND agency_id=? AND is_active=1 FOR UPDATE");
