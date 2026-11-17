@@ -1782,10 +1782,11 @@ async function formResource(key,id,onSaved){
    if(!form.isConnected)return;
    const assigned=drivers.filter(d=>String(d.vehicle_id||'')===String(id||'')&&Number(d.is_active??1)===1);
    const original=assigned[0]||null;
+   let selectedDriverId=String(original?.id||'');
    const fill=term=>{
     const q=String(term||'').trim().toLocaleLowerCase('fa');
     const items=drivers.filter(d=>Number(d.is_active??1)===1 && (!q||(person(d)+' '+(d.national_code||'')).toLocaleLowerCase('fa').includes(q)));
-    const chosen=select.value||String(original?.id||'');
+    const chosen=selectedDriverId;
     select.replaceChildren(new Option('فاقد راننده (حذف تخصیص)',''));
     for(const d of items.slice(0,250))select.add(new Option(person(d)+' · '+(d.national_code||'بدون کد ملی'),String(d.id)));
     if(chosen&&!Array.from(select.options).some(opt=>opt.value===chosen)){
@@ -1800,7 +1801,7 @@ async function formResource(key,id,onSaved){
    }
    let debounce;
    search.addEventListener('input',()=>{clearTimeout(debounce);debounce=setTimeout(()=>fill(search.value),220);});
-   select.addEventListener('change',()=>{const a=drivers.find(d=>String(d.id)===select.value);if(a)search.value=person(a);});
+   select.addEventListener('change',()=>{selectedDriverId=select.value;const a=drivers.find(d=>String(d.id)===select.value);search.value=a?person(a):'';});
   }catch(error){
    field.querySelector('small').textContent='فهرست رانندگان دریافت نشد: '+error.message;
    select.disabled=true;
