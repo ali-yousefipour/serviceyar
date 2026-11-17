@@ -3185,21 +3185,61 @@ body.sy-menu-palette-open{overflow:hidden}
 
 /* Common company page headers and filter layouts */
 @media screen {
- #content :is(.sy-operation-header,.services-page-head,.toolbar:has(>.sy-directory-heading)){
+ .sy-skip-link{
+  position:fixed;inset-block-start:8px;inset-inline-start:8px;z-index:1200;
+  min-height:44px;padding-inline:16px;color:#fff;background:#095d43;border-radius:8px;
+  transform:translateY(calc(-100% - 16px));
+ }
+ .sy-skip-link:focus{transform:none;outline:2px solid #fff;outline-offset:-4px}
+ .transport-main #content{min-width:0;scroll-margin-block-start:70px}
+ .transport-main #content:focus-visible{outline:2px solid #117650;outline-offset:-2px}
+ #content>.panel>.page-intro{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+  margin-block:0 16px;padding:clamp(12px,2vw,19px);border-inline-start:3px solid var(--brand-green,#095d43);
+  border-radius:10px;background:var(--brand-soft,#f0f6ed);
+ }
+ #content>.panel>.page-intro>div{min-width:0;flex:1 1 235px}
+ #content>.panel>.page-intro h2,#content>.panel>h2{
+  margin-block:0 5px;color:var(--ink,#193c30);font-size:clamp(19px,2.4vw,26px);
+  line-height:1.5;overflow-wrap:anywhere;
+ }
+ #content>.panel>.page-intro p{margin:0;color:#425e51;font-size:13px;line-height:1.85}
+ #content>.panel>.page-intro :is(a,button){
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;max-width:100%;white-space:normal;
+ }
+ #content :is(.accounting-tabs,.form-actions){flex-wrap:wrap;gap:8px}
+ #content .accounting-tabs a{min-height:44px;align-content:center}
+ #content :is(.accounting-tabs,.form-actions,.page-intro) :is(a,button):focus-visible{
+  outline:2px solid var(--brand-green,#095d43);outline-offset:2px;
+ }
+ #content :is(.panel,.form-grid,.filters){min-width:0}
+ #content>.sy-transfer-page>form{
+  align-items:end;gap:12px;margin-block:14px;padding:14px;
+  border:1px solid var(--line,#dce7da);border-radius:10px;
+ }
+ #content>.sy-transfer-page>form :is(input,select,button){min-height:44px;max-width:100%}
+ #content>.sy-transfer-page>form input[type="file"]{width:100%;min-width:0}
+ #content>.sy-transfer-page>[role="status"]{margin-block:10px;color:#425e51}
+ #content>.sy-transfer-page>[role="status"]:empty{display:none}
+ #content #importPreview:not(:empty){margin-block-start:18px}
+ #content #importPreview button{min-height:44px;margin-block-start:12px}
+ #modal .modal-body .table-wrap{max-width:100%;overscroll-behavior-inline:contain}
+ #modal .modal-head h3{margin-block:0}
+ #content :is(.sy-operation-header,.services-page-head,.sy-report-page-heading,.toolbar:has(>.sy-directory-heading)){
   background:linear-gradient(115deg,var(--brand-soft,#f0f6ed),#fff 76%);
   border-color:var(--line,#dce7da);
   border-inline-start:3px solid var(--brand-green,#095d43);
   padding:clamp(14px,2.5vw,24px);
   gap:clamp(10px,2vw,18px);
  }
- #content :is(.sy-operation-header,.services-page-head,.sy-directory-heading) h2{
+ #content :is(.sy-operation-header,.services-page-head,.sy-directory-heading,.sy-report-page-heading) h2{
   margin-block:0;
   color:var(--ink,#193c30);
   font-size:clamp(20px,2.4vw,27px);
   line-height:1.5;
   overflow-wrap:anywhere;
  }
- #content :is(.sy-operation-header,.services-page-head,.sy-directory-heading) p{
+ #content :is(.sy-operation-header,.services-page-head,.sy-directory-heading,.sy-report-page-heading) p{
   margin:5px 0 0;
   color:#425e51;
   font-size:13px;
@@ -3220,6 +3260,9 @@ body.sy-menu-palette-open{overflow:hidden}
  }
  #content .sy-operation-result-head{flex-wrap:wrap}
  #content .sy-operation-result-head [role="status"]{color:#425e51;font-size:12px}
+ #content .report-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,205px),1fr));gap:12px}
+ #content .report-item{min-width:0;border-color:var(--line,#dce7da)}
+ #content .report-item button{min-height:44px}
  #content>.sy-page-state{
   min-height:90px;
   align-content:center;
@@ -3241,7 +3284,22 @@ body.sy-menu-palette-open{overflow:hidden}
  #content .sy-operation-header .sy-operation-actions>button{flex:1 1 132px;width:auto}
  #content .sy-operation-header .sy-operation-actions>[role="status"]{flex-basis:100%}
  #content :is(form.directory-filters,form.sy-operation-filters) :is(input,select){font-size:16px;min-height:44px;max-height:none}
+ #content>.panel :is(form,fieldset).form-grid:not(.sy-statement-period){
+  grid-template-columns:minmax(0,1fr);
+ }
+ #content>.panel :is(form,fieldset).form-grid>label{min-width:0}
+ #content>.panel :is(form,fieldset).form-grid :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea){
+  max-width:100%;font-size:16px;
+ }
+ #content>.panel>.page-intro>:is(a,button){flex:1 1 120px}
+ #content .report-filters{
+  grid-template-columns:minmax(0,1fr);
+ }
+ #content .report-filters .wide{grid-column:auto}
+ #content .report-filters :is(input,select){font-size:16px;min-height:44px;max-width:100%;min-width:0}
 }
+
+@media print{.sy-skip-link{display:none!important}}
 
 /* Shared record dialogs and the service pricing step */
 @media screen {
