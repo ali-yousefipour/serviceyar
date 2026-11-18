@@ -224,6 +224,13 @@ try{
  $autoInvoice=$p->prepare('SELECT i.amount FROM student_service_debt_invoices m JOIN invoices i ON i.id=m.invoice_id WHERE m.agency_id=? AND m.student_id=?');
  $autoInvoice->execute([$feeAgency,$feeStudent['id']]);$automaticDebt=(float)$autoInvoice->fetchColumn();
  check($automaticDebt>0,'Assignment creates a linked annual service invoice');
+ $unbilledStudent=insertFixture('students',['uuid'=>Uuid::v4(),'agency_id'=>$feeAgency,'school_id'=>$feeSchool['id'],'first_name'=>'بدهکار','last_name'=>'بدون فاکتور','mobile'=>'09120000993','academic_year'=>'1405/1406','monthly_fee'=>2000000,'service_status'=>'assigned']);
+ $p->prepare('INSERT INTO service_students(service_id,student_id) VALUES(?,?)')->execute([$feeService['id'],$unbilledStudent]);
+ $unbilledReport=\ServiceYar\Domain\StudentDebtors::report($uid,$feeAgency,['academicYear'=>'1405-1406','student'=>'بدون فاکتور']);
+ check(count($unbilledReport['items'])===1 && $unbilledReport['items'][0]['balance_source']==='unbilled_service' && (float)$unbilledReport['items'][0]['debt']===18000000.0,'Active service without invoice appears as explicitly unbilled annual balance');
+ $p->prepare('DELETE FROM service_students WHERE student_id=?')->execute([$unbilledStudent]);
+ $p->prepare('DELETE FROM students WHERE id=?')->execute([$unbilledStudent]);
+
  $listed=D::list($uid,$feeAgency,'students',[])['items'][0];
  $debtorFilter=['academicYear'=>'1405/1406','schoolId'=>$feeSchool['id'],'minDebt'=>(string)$listed['outstanding_fee']];
  $debtors=\ServiceYar\Domain\StudentDebtors::report($uid,$feeAgency,$debtorFilter);
