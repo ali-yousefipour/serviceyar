@@ -149,22 +149,7 @@ final class DomainService {
   $q=$pdo->prepare("SELECT id,agency_id,plate,model,vehicle_trim,vehicle_type,tariff_vehicle_class,capacity
     FROM vehicles WHERE is_active=1 AND $condition
     ORDER BY (agency_id=:agency) DESC,id DESC LIMIT 80");
-  $q->execute(['q'=>$any?'^'.implode('',$pattern).','agency'=>$aid]);
-  $out=[];$seen=[];
-  while($row=$q->fetch(\PDO::FETCH_ASSOC)){
-   $normalized=preg_replace('/[\s\-\/ـ]+/u','',strtr((string)$row['plate'],['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9']))??'';
-   if(isset($seen[$normalized]))continue;
-   $seen[$normalized]=true;
-   $local=(int)$row['agency_id']===$aid;
-   $out[]=['id'=>$local?(int)$row['id']:null,'plate'=>$row['plate'],
-    'model'=>$row['vehicle_trim']?:$row['model'],'vehicleType'=>$row['vehicle_type'],
-    'tariffVehicleClass'=>$row['tariff_vehicle_class'],'capacity'=>$row['capacity'],
-    'inCurrentAgency'=>$local,'source'=>$local?'company':'shared_registry'];
-   if(count($out)>=25)break;
-  }
-  return $out;
- }
-:'%'.addcslashes($term,'%_\\').'%','agency'=>$aid]);
+  $q->execute(['q'=>$any?'^'.implode('',$pattern).'$':'%'.addcslashes($term,'%_\\').'%','agency'=>$aid]);
   $out=[];$seen=[];
   while($row=$q->fetch(\PDO::FETCH_ASSOC)){
    $normalized=preg_replace('/[\s\-\/ـ]+/u','',strtr((string)$row['plate'],['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9']))??'';
