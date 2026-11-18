@@ -4342,7 +4342,7 @@ async function newServicePage(token,initialDriverId){
    newModelPicker=picker;
    if(driverId&&picker)picker.setVehicle(vehicleFor(drivers.find(d=>Number(d.id)===driverId)));
    refreshSave();
-  });
+  }).catch(error=>{if(form.isConnected){refreshSave();if(!vehicleFor(drivers.find(d=>Number(d.id)===driverId)))saveFeedback.textContent='دریافت فهرست خودروها ناموفق بود: '+error.message;}});
  const driverVehicleCache=new Map();
  const vehicleFor=driver=>vehicles.find(v=>Number(v.id)===Number(driver?.vehicle_id))||driverVehicleCache.get(Number(driver?.vehicle_id));
  const loadDriverVehicle=async driver=>{
@@ -4369,8 +4369,34 @@ async function newServicePage(token,initialDriverId){
   if(valid)input.value=persianDigits(value.replace(/\B(?=(\d{3})+(?!\d))/g,'٬'));
   return valid;
  };
- const canSubmit=()=>Boolean(driverId&&newModelPicker?.valid&&['1','2','3'].includes(String(form.elements.vehicleClass.value))&&selectedSchools.length&&chosen.size&&!saving&&form.elements.title.value.trim()&&form.elements.capacity.checkValidity()&&chosen.size<=Number(form.elements.capacity.value)&&(form.elements.feeSource.value!=='agreed'||syncAgreed()));
- const refreshSave=()=>{save.disabled=!canSubmit();};
+ const validationIssues=()=>{
+  const issues=[],driver=drivers.find(d=>Number(d.id)===driverId),vehicle=vehicleFor(driver);
+  const model=form.elements.vehicleModel.value.trim(),cls=String(form.elements.vehicleClass.value);
+  const registered=String(vehicle?.vehicle_trim||vehicle?.model||vehicle?.vehicle_system||'').trim();
+  const unchanged=!!vehicle&&!!registered&&model===registered&&cls===String(vehicle.tariff_vehicle_class);
+  if(!selectedSchools.length)issues.push('مدرسه سرویس را انتخاب کنید.');
+  if(!driverId)issues.push('راننده سرویس را انتخاب کنید.');
+  else if(!vehicle)issues.push('اطلاعات خودروی راننده دریافت نشده یا خودرو ثبت نشده است.');
+  if(vehicle&&Number(vehicle.is_active??1)!==1)issues.push('خودروی راننده غیرفعال است.');
+  if(!model)issues.push('نوع خودرو را مشخص کنید.');
+  else if(!unchanged&&!newModelPicker?.valid)issues.push('مدل جدید خودرو را از نتایج فهرست مدل‌های تأییدشده انتخاب کنید.');
+  if(!['1','2','3'].includes(cls))issues.push('کلاس تعرفه خودرو را انتخاب کنید.');
+  if(!chosen.size)issues.push('حداقل یک دانش‌آموز انتخاب کنید.');
+  if(!form.elements.title.value.trim())issues.push('عنوان سرویس را وارد کنید.');
+  if(!form.elements.capacity.checkValidity())issues.push('ظرفیت باید عدد صحیح بین ۱ تا ۲۰۰ باشد.');
+  else if(chosen.size>Number(form.elements.capacity.value))issues.push('تعداد دانش‌آموزان بیشتر از ظرفیت سرویس است.');
+  if(form.elements.feeSource.value==='agreed'&&!syncAgreed())issues.push('مبلغ توافقی راننده را به‌صورت عدد صحیح ریالی وارد کنید.');
+  return issues;
+ };
+ const saveFeedback=document.createElement('div');
+ saveFeedback.id='serviceSaveFeedback';saveFeedback.className='sy-service-save-feedback';saveFeedback.setAttribute('role','status');saveFeedback.setAttribute('aria-live','polite');
+ save.parentElement.before(saveFeedback);save.setAttribute('aria-describedby',saveFeedback.id);
+ const refreshSave=()=>{
+  const issues=validationIssues();
+  save.disabled=saving||issues.length>0;
+  saveFeedback.textContent=saving?'در حال ثبت سرویس…':issues.length?'موارد لازم برای فعال شدن ثبت: '+issues.join(' · '):'اطلاعات لازم تکمیل است؛ سرویس آماده ثبت است.';
+  saveFeedback.dataset.state=saving?'busy':issues.length?'warning':'ready';
+ };
  const sync=()=>{
   const agreedMode=form.elements.feeSource.value==='agreed';
   form.elements.agreedAmountDisplay.closest('label').hidden=!agreedMode;
@@ -4471,6 +4497,8 @@ async function newServicePage(token,initialDriverId){
   };render();name.focus();
  };
  form.elements.title.addEventListener('input',refreshSave);
+ form.elements.vehicleModel.addEventListener('input',refreshSave);
+ form.elements.vehicleClass.addEventListener('change',refreshSave);
  form.elements.agreedAmountDisplay.addEventListener('input',()=>{syncAgreed();refreshSave();});
 
  $('changeServiceStudents').onclick=()=>show.click();
@@ -4527,8 +4555,8 @@ async function newServicePage(token,initialDriverId){
   if(form.elements.feeSource.value!=='agreed')body.agreedAmount='0';
   const version=revision;saving=true;save.disabled=true;
   try{await write('/api/v1/services',body);lookupCache={};if(form.isConnected){notify('سرویس و دانش‌آموزان ثبت شدند؛ در صورت افزایش ظرفیت، مشخصات خودرو نیز به‌روزرسانی شد.');location.hash=initialDriverId?'drivers':'services';}}
-  catch(err){if(form.isConnected&&version===revision){notify(err.message,true);save.disabled=false;}}
-  finally{saving=false;}
+  catch(err){if(form.isConnected){notify(err.message,true);saveFeedback.textContent='ثبت سرویس انجام نشد: '+err.message;saveFeedback.dataset.state='warning';}}
+  finally{saving=false;if(form.isConnected){save.disabled=validationIssues().length>0;}}
  };
 }
 
