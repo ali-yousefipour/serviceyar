@@ -3378,3 +3378,16 @@ body.sy-menu-palette-open{overflow:hidden}
 #content .sy-student-school-option{width:100%;text-align:start;white-space:normal;border:0;min-height:39px;background:transparent;color:#234638;padding:8px;border-radius:6px}
 #content .sy-student-school-option:hover,#content .sy-student-school-option:focus-visible,#content .sy-student-school-option[aria-pressed=true]{background:#e5f2e9;color:#07583c}
 @media(max-width:600px){#content .sy-student-school-dropdown{min-width:0}}
+
+/* Student directory filter layout, without the redundant sort-direction control. */
+#content #gridFilters.sy-student-filters-v2{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:end}
+#content #gridFilters.sy-student-filters-v2>*{grid-column:auto;grid-row:auto;min-width:0;margin:0}
+#content #gridFilters.sy-student-filters-v2 .sy-grid-sort-controls{display:block}
+#content #gridFilters.sy-student-filters-v2 .sy-grid-sort-controls [hidden]{display:none!important}
+#content #gridFilters.sy-student-filters-v2 label{min-width:0}
+#content #gridFilters.sy-student-filters-v2 :is(input:not([type=hidden]),select,button){min-height:40px}
+#content .sy-student-lookup{position:relative}
+#content .sy-student-lookup .sy-student-school-dropdown{max-height:290px;overflow:auto}
+#content .sy-student-lookup .sy-student-school-option{display:block}
+@media(max-width:1000px){#content #gridFilters.sy-student-filters-v2{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:540px){#content #gridFilters.sy-student-filters-v2{grid-template-columns:minmax(0,1fr)}}
