@@ -47,7 +47,7 @@ final class StudentDebtorsWorkbook
             $title=$full || count($schools??[])===1?'گزارش مالی بدهکاران مدرسه '.$school:'گزارش مالی بدهکاران · '.$school;
             $label=static fn(string $v): string => htmlspecialchars(ExcelLocalization::digits($v),ENT_XML1|ENT_QUOTES,'UTF-8');
             $border=' border="thin#CDDED2"';
-            $head=['نام و نام خانوادگی دانش‌آموز','شماره تماس ولی','مسافت','مبلغ ماهیانه سرویس (ریال)','مبلغ سالیانه سرویس (ریال)','مبلغ پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'];
+            $head=['نام و نام خانوادگی دانش‌آموز','شماره تماس ولی','سرویس / راننده','مبنای بدهی','مسافت','مبلغ ماهیانه سرویس (ریال)','مبلغ سالیانه سرویس (ریال)','مبلغ پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'];
             if (!$full) array_splice($head,2,0,['مدرسه']);
             $moneyHead=array_slice($head,-4);
             $rows=[
@@ -60,6 +60,8 @@ final class StudentDebtorsWorkbook
             foreach ($group['items'] as $item) {
                 $row=[$item['student'],(string)$item['guardian_mobile']];
                 if (!$full) $row[]=$item['school'];
+                $row[]=implode(' / ',array_filter([$item['service_names']??'', $item['driver_names']??'']))?:'—';
+                $row[]=($item['balance_source']??'invoiced')==='unbilled_service'?'برآوردی؛ فاقد فاکتور':'فاکتور ثبت‌شده';
                 $distance=$item['tariff_distance_km']??null;
                 $row[]=$distance===null?'—':(string)(int)round((float)$distance);
                 $values=array_map(static fn($field)=>(string)$item[$field],['monthly_fee','annual_fee','paid','debt']);
@@ -86,7 +88,7 @@ final class StudentDebtorsWorkbook
             $book->addSheet($rows,$name)->mergeCells("A1:{$end}1")->mergeCells("A2:{$end}2")->mergeCells("A3:{$end}3")
                 ->freezePanes('A5')->a4Landscape($last<=28);
             if ($last>4) $book->autoFilter("A4:$end$last");
-            $widths=$full?[30,17,9,21,21,21,21]:[26,16,20,9,19,19,19,20];
+            $widths=$full?[25,16,24,18,8,17,17,17,17]:[22,15,18,23,18,8,16,16,16,17];
             foreach ($widths as $i=>$width) $book->setColWidth($i+1,$width);
             for ($i=1;$i<=count($moneyHead);$i++) $book->hideColumn(chr(ord($end)+$i));
         }
