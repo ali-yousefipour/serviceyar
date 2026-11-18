@@ -4382,8 +4382,10 @@ async function newServicePage(token,initialDriverId){
   $('serviceStudentSelection').hidden=show.disabled;$('serviceSetupDetails').hidden=!chosen.size;
   $('selectedServiceStudents').textContent=chosen.size?students.filter(s=>chosen.has(Number(s.id))).map(person).join('، '):'دانش‌آموزان این سرویس را انتخاب کنید.';
   const capacity=Number(form.elements.capacity.value),exceeded=chosen.size>capacity;
-  const warning=$('serviceCapacityWarning');warning.hidden=!exceeded;
-  warning.textContent=exceeded?'تعداد دانش‌آموزان ('+number(chosen.size)+') بیشتر از ظرفیت سرویس ('+number(capacity)+') است.':'';
+  const warning=$('serviceCapacityWarning');const registeredVehicle=vehicleFor(drivers.find(d=>Number(d.id)===driverId)||{});
+  const expands=registeredVehicle&&capacity>Number(registeredVehicle.capacity);
+  warning.hidden=!exceeded&&!expands;
+  warning.textContent=exceeded?'تعداد دانش‌آموزان ('+number(chosen.size)+') بیشتر از ظرفیت سرویس ('+number(capacity)+') است.':expands?'با ثبت سرویس، ظرفیت ثبت‌شده خودرو از '+number(registeredVehicle.capacity)+' به '+number(capacity)+' نفر افزایش می‌یابد.':'';
   $('serviceStudentsCount').textContent=number(chosen.size)+' دانش‌آموز انتخاب شده · ظرفیت '+number(capacity);
   $('serviceSetupProgress').textContent=!driverId||!selectedSchools.length?'مرحله ۱ از ۳ · انتخاب مدرسه و راننده':!chosen.size?'مرحله ۲ از ۳ · انتخاب دانش‌آموزان':'مرحله ۳ از ۳ · بازبینی مشخصات و مبلغ';
   revision++;result.textContent='برای مشاهده برآورد هزینه و مسیر، «دریافت قیمت و مسیر» را انتخاب کنید. ثبت سرویس بدون دریافت پیش‌نمایش نیز امکان‌پذیر است.';
@@ -4403,7 +4405,7 @@ async function newServicePage(token,initialDriverId){
   const vehicle=vehicleFor(driver);
   driverId=Number(driver.id);
   const vehicleMax=vehicle&&Number.isInteger(Number(vehicle.capacity))&&Number(vehicle.capacity)>0?Math.min(200,Number(vehicle.capacity)):200;
-  form.elements.capacity.max=vehicleMax;
+  form.elements.capacity.max=200;
   form.elements.capacity.value=vehicle?vehicleMax:4;
   if(newModelPicker)newModelPicker.setVehicle(vehicle);
   else{
@@ -4417,7 +4419,7 @@ async function newServicePage(token,initialDriverId){
    if(!form.isConnected||Number(driver.id)!==driverId)return;
    if(newModelPicker)newModelPicker.setVehicle(loaded);
    const vehicleMax=loaded&&Number(loaded.capacity)>0?Math.min(200,Number(loaded.capacity)):200;
-   form.elements.capacity.max=vehicleMax;form.elements.capacity.value=vehicleMax;
+   form.elements.capacity.max=200;form.elements.capacity.value=vehicleMax;
    $('serviceDriverSummary').textContent=driverCaption(driver)+' · ظرفیت '+number(vehicleMax);
    sync();
   }).catch(e=>{if(form.isConnected)notify('دریافت مشخصات خودرو ناموفق بود: '+e.message,true);});
@@ -4524,7 +4526,7 @@ async function newServicePage(token,initialDriverId){
   const body=Object.fromEntries(new FormData(form));body.driverId=driverId;body.schoolIds=schoolIds();body.studentIds=[...chosen];
   if(form.elements.feeSource.value!=='agreed')body.agreedAmount='0';
   const version=revision;saving=true;save.disabled=true;
-  try{await write('/api/v1/services',body);lookupCache={};if(form.isConnected){notify('سرویس و دانش‌آموزان ثبت شدند.');location.hash=initialDriverId?'drivers':'services';}}
+  try{await write('/api/v1/services',body);lookupCache={};if(form.isConnected){notify('سرویس و دانش‌آموزان ثبت شدند؛ در صورت افزایش ظرفیت، مشخصات خودرو نیز به‌روزرسانی شد.');location.hash=initialDriverId?'drivers':'services';}}
   catch(err){if(form.isConnected&&version===revision){notify(err.message,true);save.disabled=false;}}
   finally{saving=false;}
  };
