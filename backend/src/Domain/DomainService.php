@@ -244,6 +244,21 @@ final class DomainService {
   foreach($resource==='services'?[]:['schoolId'=>'school_id','driverId'=>'driver_id','packId'=>'pack_id','status'=>'status','serviceStatus'=>'service_status','academicYear'=>'academic_year','schoolType'=>'school_type','active'=>'is_active','mobile'=>'mobile'] as $key=>$column){
    if(isset($q[$key]) && $q[$key]!=='' && in_array($column,$c['fields'],true)){$where.=" AND $column=:filter_$column";$params['filter_'.$column]=(string)$q[$key];}
   }
+  if($resource==='students'){
+   foreach(['studentName','nationalCode'] as $field){
+    $term=$q[$field]??'';if(!is_string($term)||trim($term)==='')continue;
+    $term=strtr(trim($term),['ي'=>'ی','ى'=>'ی','ك'=>'ک','۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']);
+    $term=preg_replace('/[\s\x{200c}\x{200d}]+/u','',$term);
+    $column=$field==='studentName'?"REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(CONCAT_WS('',students.first_name,students.last_name),'ي','ی'),'ى','ی'),'ك','ک'),' ',''),'‌','')":"students.national_code";
+    $where.=" AND $column LIKE :$field ESCAPE '!'";
+    $params[$field]='%'.strtr($term,['!'=>'!!','%'=>'!%','_'=>'!_']).'%';
+   }
+   foreach(['distanceMin'=>'>=','distanceMax'=>'<='] as $field=>$op){
+    $value=$q[$field]??'';if($value==='')continue;
+    if(!is_scalar($value)||!is_numeric($value)||(float)$value<0||(float)$value>1000)throw new AuthException(422,'مسافت فیلتر نامعتبر است.','VALIDATION_ERROR');
+    $where.=" AND students.tariff_distance_km $op :$field";$params[$field]=$value;
+   }
+  }
   if($resource==='vehicles'){
    $driverSearch=trim((string)($q['driverSearch']??''));
    $driverSearch=preg_replace('/[\s\x{200c}\x{200d}]+/u',' ',$driverSearch)??$driverSearch;
@@ -358,6 +373,7 @@ final class DomainService {
   if($resource==='students')$select="students.*,
    (CASE WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'ابتدایی|دبستان|primary|elementary' THEN 8.5 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR TRIM(COALESCE(students.grade,'')) IN ('1','2','3','4','5','6','۱','۲','۳','۴','۵','۶') THEN 8.5 ELSE 9 END) AS annual_months,
    ".self::studentAnnualFeeSql()." AS annual_fee,
+   (SELECT sv.id FROM service_students ss JOIN services sv ON sv.id=ss.service_id WHERE ss.student_id=students.id AND sv.agency_id=students.agency_id AND sv.is_active=1 AND sv.status<>'cancelled' ORDER BY sv.id LIMIT 1) AS assigned_service_id,
    (SELECT CONCAT(d.first_name,' ',d.last_name) FROM service_students ss JOIN services sv ON sv.id=ss.service_id JOIN drivers d ON d.id=sv.driver_id AND d.agency_id=students.agency_id WHERE ss.student_id=students.id AND sv.agency_id=students.agency_id AND sv.is_active=1 LIMIT 1) driver_name,
    (SELECT CONCAT(d.first_name,' ',d.last_name) FROM school_service_import_fees f JOIN drivers d ON d.id=f.driver_id AND d.agency_id=f.agency_id
     WHERE f.agency_id=students.agency_id AND f.student_national_code=students.national_code AND f.period='Mehr'
