@@ -2474,7 +2474,7 @@ async function downloadDebtorPdfs(report,onProgress){
  const amount=new Intl.NumberFormat('fa-IR',{maximumFractionDigits:2});
  const date=new Intl.DateTimeFormat('fa-IR',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  const persian=value=>String(value??'').replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);
- const headings=['نام و نام خانوادگی دانش‌آموز','شماره تماس ولی','مسافت','مبلغ ماهیانه سرویس (ریال)','مبلغ سالیانه سرویس (ریال)','مبلغ پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'];
+ const headings=['نام و نام خانوادگی دانش‌آموز','شماره تماس ولی','سرویس / راننده','مبنای بدهی','مسافت','مبلغ ماهیانه سرویس (ریال)','مبلغ سالیانه سرویس (ریال)','مبلغ پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'];
  const cell='border:1px solid #cdded2;padding:6px 5px;overflow-wrap:anywhere;';
  const wrap=document.createElement('div');
  wrap.style.cssText='position:fixed;top:0;left:0;z-index:-1;pointer-events:none';
@@ -2501,11 +2501,11 @@ async function downloadDebtorPdfs(report,onProgress){
     sheet.innerHTML='<h1 style="background:#005b35;color:white;text-align:center;margin:0;padding:12px;font-size:21px">گزارش مالی بدهکاران مدرسه '+esc(persian(school))+'</h1>'+
      '<p style="text-align:center;margin:7px 0 0">تاریخ گزارش‌گیری '+esc(date)+' · سال تحصیلی '+esc(persian(report.academicYear))+'</p>'+
      '<p style="text-align:center;margin:3px 0 10px;font-weight:bold">'+esc(persian(report.agencyName))+' - سامانه سرویس یار</p>'+
-     '<table style="width:100%;border-collapse:collapse;table-layout:fixed;text-align:center"><colgroup>'+[23,13,8,14,14,14,14].map(width=>'<col style="width:'+width+'%">').join('')+'</colgroup>'+
+     '<table style="width:100%;border-collapse:collapse;table-layout:fixed;text-align:center"><colgroup>'+[17,11,14,10,6,10,10,10,12].map(width=>'<col style="width:'+width+'%">').join('')+'</colgroup>'+
      '<thead><tr>'+headings.map(label=>'<th style="'+cell+'background:#087447;color:white">'+label+'</th>').join('')+'</tr></thead><tbody>'+
      page.map((row,index)=>{
       const distance=row.tariff_distance_km==null?'—':persian(Math.round(Number(row.tariff_distance_km)));
-      const values=[persian(row.student),persian(row.guardian_mobile)||'—',distance,...['monthly_fee','annual_fee','paid','debt'].map(key=>amount.format(row[key]))];
+      const values=[persian(row.student),persian(row.guardian_mobile)||'—',[row.service_names,row.driver_names].filter(Boolean).join(' / ')||'—',row.balance_source==='unbilled_service'?'برآوردی؛ فاقد فاکتور':'فاکتور ثبت‌شده',distance,...['monthly_fee','annual_fee','paid','debt'].map(key=>amount.format(row[key]))];
       return '<tr style="background:'+(index%2?'#f3f8f4':'#fff')+'">'+values.map((value,column)=>'<td style="'+cell+(column===0?'text-align:right;':'text-align:center;')+'">'+esc(value)+'</td>').join('')+'</tr>';
      }).join('')+'</tbody>'+(last?'<tfoot><tr style="background:#e8f5ed;color:#005b35;font-weight:bold"><td colspan="'+(headings.length-1)+'" style="'+cell+'">مجموع بدهی</td><td style="'+cell+'">'+amount.format(total)+'</td></tr></tfoot>':'')+'</table>'+
      '<p style="text-align:center;margin:7px 0 0">صفحه '+amount.format(start/pageSize+1)+' از '+amount.format(Math.ceil(rows.length/pageSize))+'</p>';
@@ -2614,7 +2614,7 @@ async function representativesPage(token){
 function studentDebtorsPage(token){
  if(!can('students'))throw new Error('مشاهده گزارش بدهکاران به مجوز دانش‌آموزان نیاز دارد.');
  $('content').innerHTML=`<section class="panel sy-operation-page">
-  <header class="sy-operation-header"><div><h2>گزارش بدهکاران</h2><p>مانده حساب دانش‌آموز بر اساس فاکتورها و پرداخت‌های ثبت‌شده در فهرست دانش‌آموزان.</p></div>
+  <header class="sy-operation-header"><div><h2>گزارش بدهکاران</h2><p>مانده حساب بر اساس فاکتورها و دریافت‌های ثبت‌شده؛ بدهی برآوردی سرویس فعال فاقد فاکتور نیز جداگانه مشخص می‌شود.</p></div>
    ${can('reports')?'<div class="sy-operation-actions"><button type="button" id="debtorFiltered" disabled>اکسل نتایج</button><button type="button" id="debtorFull">اکسل کامل مدارس</button></div>':''}</header>
   <form id="debtorFilters" class="filters sy-operation-filters" aria-label="فیلتر گزارش بدهکاران">
    <label>سال تحصیلی<input name="academicYear" value="${esc(year())}" maxlength="9" required></label>
@@ -2669,9 +2669,9 @@ function studentDebtorsPage(token){
    const data=await api(scoped('/api/v1/operations/debtors?'+params));
    if(token!==pageToken||current!==revision)return;
    applied=params;
-   status.textContent=number(data.items.length)+' بدهکار · مجموع بدهی '+amount.format(data.total)+' ریال';
-   results.innerHTML=simpleTable(['نام و نام خانوادگی دانش‌آموز','مدرسه','شماره تماس ولی','مسافت (کیلومتر)','مبلغ ماهیانه سرویس (ریال)','مبلغ سالیانه سرویس (ریال)','پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'],
-    data.items.map(row=>[row.student,row.school,String(row.guardian_mobile||'—').replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]),row.tariff_distance_km==null?'—':kilometers.format(row.tariff_distance_km),amount.format(row.monthly_fee),amount.format(row.annual_fee),amount.format(row.paid),amount.format(row.debt)]));
+   status.textContent=number(data.items.length)+' بدهکار · مجموع بدهی '+amount.format(data.total)+' ریال'+(data.unbilledCount?' · '+number(data.unbilledCount)+' مورد فاقد فاکتور ('+amount.format(data.unbilledTotal)+' ریال برآوردی)':'');
+   results.innerHTML=simpleTable(['نام و نام خانوادگی دانش‌آموز','مدرسه','سرویس / راننده','مبنای بدهی','شماره تماس ولی','مسافت (کیلومتر)','مبلغ ماهیانه سرویس (ریال)','مبلغ سالیانه سرویس (ریال)','پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'],
+    data.items.map(row=>[row.student,row.school,[row.service_names,row.driver_names].filter(Boolean).join(' / ')||'—',row.balance_source==='unbilled_service'?'برآوردی؛ فاقد فاکتور':'فاکتور ثبت‌شده',String(row.guardian_mobile||'—').replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]),row.tariff_distance_km==null?'—':kilometers.format(row.tariff_distance_km),amount.format(row.monthly_fee),amount.format(row.annual_fee),amount.format(row.paid),amount.format(row.debt)]));
    if(filtered)filtered.disabled=false;
   }catch(err){if(token===pageToken&&current===revision)status.textContent=err.message;}
  };
