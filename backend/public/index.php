@@ -929,7 +929,7 @@ try {
   $term=$_GET['search']??'';
   if(!is_string($term))throw new AuthException(422,'عبارت جستجوی پلاک نامعتبر است.','INVALID_PLATE_QUERY');
   header('Cache-Control: no-store, max-age=0');
-  Response::json(['ok'=>true,'data'=>DomainService::searchVehicleRegistry($s['id'],$aid,$term)]);
+  Response::json(['ok'=>true,'data'=>DomainService::searchVehicleRegistry($s['id'],$aid,$term,$_GET)]);
  }
  if($path==='/api/v1/vehicles/lookup-by-plate'&&$method==='GET'){
   $value=$_GET['plate']??'';
