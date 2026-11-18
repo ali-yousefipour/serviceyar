@@ -611,9 +611,12 @@ try{
  check($historical['mehr_driver_name']==='تخصیص آزمون'&&(int)$historical['mehr_driver_id']===(int)$ad['id']&&$historical['driver_name']===null,'Imported driver history is separate from active assignment');
  $wizard=['title'=>'سرویس چند مدرسه','capacity'=>2,'schoolIds'=>[$school['id'],$secondSchool['id']],'studentIds'=>[$tariffStudent['id'],$secondStudent['id']]];
  rejected(fn()=>D::save($uid,$a,'services',$wizard),'VALIDATION_ERROR');
- rejected(fn()=>D::save($uid,$a,'services',['capacity'=>5,'driverId'=>$ad['id']]+$wizard),'CAPACITY_EXCEEDED');
+
  $p->prepare('UPDATE students SET monthly_fee=0 WHERE id=?')->execute([$tariffStudent['id']]);
- $newService=D::save($uid,$a,'services',$wizard+['driverId'=>$ad['id']]);
+ $newService=D::save($uid,$a,'services',['capacity'=>5,'driverId'=>$ad['id']]+$wizard);
+ check((int)D::get($uid,$a,'vehicles',(int)$av['id'])['capacity']===5,'New service expands registered vehicle capacity');
+ check((int)$newService['capacity']===5,'New service retains expanded capacity');
+ D::save($uid,$a,'vehicles',['capacity'=>4],(int)$av['id']);
  check((int)$newService['driver_id']===(int)$ad['id'],'New service retains the selected driver');
  check(count(D::serviceStudents($uid,$a,(int)$newService['id']))===2,'New service saves selected schools and students together');
  $memberFees=array_column(D::serviceStudents($uid,$a,(int)$newService['id']),'monthly_fee');
