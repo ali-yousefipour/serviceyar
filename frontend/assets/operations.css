@@ -3407,3 +3407,41 @@ body.sy-menu-palette-open{overflow:hidden}
 #content .sy-inline-student-index{font-variant-numeric:tabular-nums;color:#527064}
 #content .sy-inline-student-results button{color:#07583c;background:#e7f3ea;border-color:#c7dfcf}
 @media(max-width:600px){#content :is(.sy-inline-student-table,.sy-inline-student-results) article{flex-wrap:wrap;gap:8px}#content .sy-inline-student-picker .service-picker-tools{display:grid;grid-template-columns:1fr}#content :is(.sy-inline-student-table,.sy-inline-student-results) button{min-height:44px}}
+
+/* Debtor report: isolated RTL layout and accessible searchable school list. */
+#content .sy-debtors-page{min-width:0;max-width:100%}
+#content .sy-debtors-page .sy-operation-filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));align-items:end;gap:14px;padding:16px;border:1px solid #dce8df;border-radius:12px;background:#f8fbf9;overflow:visible}
+#content .sy-debtors-page .sy-operation-filters>label,#content .sy-debtor-school{min-width:0;max-width:none;display:grid;gap:6px;align-self:start}
+#content .sy-debtors-page .sy-operation-filters :is(input,button){min-height:44px;max-width:100%}
+#content .sy-debtor-combo{position:relative;display:flex;min-width:0}
+#content .sy-debtor-combo input{flex:1;min-width:0;width:100%;border-start-end-radius:0;border-end-end-radius:0}
+#content .sy-debtor-combo button{flex:0 0 44px;border-start-start-radius:0;border-end-start-radius:0}
+#content #debtorSchoolOptions:not([hidden]){display:block;position:absolute;inset-inline:0;top:calc(100% + 5px);z-index:30;max-height:280px;overflow:auto;background:#fff;border:1px solid #cbded1;border-radius:8px;box-shadow:0 8px 24px #213b2926}
+#content #debtorSchoolOptions[hidden]{display:none}
+#content #debtorSchoolOptions [role=option]{padding:10px 12px;cursor:pointer;line-height:1.6;overflow-wrap:anywhere}
+#content #debtorSchoolOptions [role=option]:is(:hover,[data-active],[aria-selected=true]){background:#e4f2e9;color:#174b2d}
+#content #debtorSchoolStatus{color:#526b5c;font-size:12px}
+#content .sy-debtors-page .sy-operation-result-head{display:flex;flex-wrap:wrap;gap:10px;margin-block:20px 12px}
+#content .sy-debtors-page #debtorStatus{line-height:1.8;overflow-wrap:anywhere}
+#content .sy-debtors-page .sy-debtor-table-scroll{min-width:0;max-width:100%;overflow:hidden;border:1px solid #dce8df;border-radius:12px}
+#content .sy-debtors-page .sy-report-table-wrap{max-width:100%;max-height:65vh;overflow:auto}
+#content .sy-debtors-page .sy-report-table{table-layout:auto;min-width:1450px;width:100%;border-collapse:separate}
+#content .sy-debtors-page .sy-report-table :is(th,td){box-sizing:border-box;padding:12px;line-height:1.75;vertical-align:top;white-space:normal;overflow-wrap:anywhere;text-align:start}
+#content .sy-debtors-page .sy-report-table :is(th,td):nth-child(1){min-width:165px}
+#content .sy-debtors-page .sy-report-table :is(th,td):nth-child(2){min-width:160px}
+#content .sy-debtors-page .sy-report-table :is(th,td):nth-child(3){min-width:240px;max-width:340px}
+#content .sy-debtors-page .sy-report-table :is(th,td):nth-child(n+4){min-width:110px}
+#content .sy-debtors-page .sy-report-table td:nth-child(n+5){white-space:nowrap;font-variant-numeric:tabular-nums}
+#content .sy-debtors-page .sy-report-table td:last-child{font-weight:800;color:#8c302e;background:#fff5f3}
+#content .sy-debtors-page .sy-report-table tbody tr:nth-child(even){background:#f8fbf9}
+@media(max-width:760px){
+ #content .sy-debtors-page .sy-operation-filters{grid-template-columns:minmax(0,1fr);padding:12px}
+ #content .sy-debtors-page .sy-report-table-wrap{max-height:none;overflow:visible}
+ #content .sy-debtors-page .sy-report-table{display:block;min-width:0!important;width:100%}
+ #content .sy-debtors-page .sy-report-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+ #content .sy-debtors-page .sy-report-table tbody{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding:8px}
+ #content .sy-debtors-page .sy-report-table tbody tr{display:grid;min-width:0;padding:12px;border:1px solid #dce8df;border-radius:10px}
+ #content .sy-debtors-page .sy-report-table tbody td:nth-child(n){display:grid;grid-template-columns:minmax(0,42%) minmax(0,1fr);min-width:0;max-width:none;white-space:normal;overflow-wrap:anywhere;gap:10px;padding:8px 0;border-bottom:1px solid #e8eee9}
+ #content .sy-debtors-page .sy-report-table tbody td::before{content:attr(data-label);color:#526b5c;font-size:12px;font-weight:700}
+ #content .sy-debtors-page .sy-report-table tbody td:last-child{padding:10px;border-radius:6px;border:0}
+}
