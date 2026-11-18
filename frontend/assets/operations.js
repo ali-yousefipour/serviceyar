@@ -1589,7 +1589,7 @@ async function attachDriverVehiclePicker(form,row){
   const shell=document.createElement('div');shell.className='sy-driver-vehicle-overlay';
   shell.innerHTML='<section class="sy-driver-vehicle-dialog" role="dialog" aria-modal="true" aria-label="جستجو یا ثبت خودروی راننده" tabindex="-1">'+
    '<header><div><span>مدیریت خودروی راننده</span><h3>جستجو و جایگزینی خودرو</h3></div><button type="button" data-vehicle-close aria-label="بستن پنجره">×</button></header>'+
-   '<div class="sy-driver-vehicle-content"><div class="sy-driver-vehicle-actions"><label>جستجوی پلاک در خودروهای شرکت و سوابق سپند<input type="search" data-vehicle-search autocomplete="off" placeholder="شماره یا بخش‌هایی از پلاک را وارد کنید"></label><button type="button" class="primary" data-vehicle-new>ثبت خودروی جدید</button></div>'+
+   '<div class="sy-driver-vehicle-content"><div class="sy-driver-vehicle-actions"><label>جستجوی پلاک در خودروهای شرکت و سوابق سپند<div data-vehicle-search>'+iranPlateInput('edit')+'</div></label><button type="button" class="primary" data-vehicle-new>ثبت خودروی جدید</button></div>'+
    '<div data-vehicle-status role="status" aria-live="polite"></div><div data-vehicle-results></div><div data-vehicle-registration hidden></div></div></section>';
   parent.append(shell);
   const popup=shell.querySelector('[role=dialog]'),status=shell.querySelector('[data-vehicle-status]'),results=shell.querySelector('[data-vehicle-results]'),search=shell.querySelector('[data-vehicle-search]'),registration=shell.querySelector('[data-vehicle-registration]');
@@ -1603,14 +1603,16 @@ async function attachDriverVehiclePicker(form,row){
    const raw=normalize(v),match=raw.match(/^(\d{2})([آ-یA-Za-z])(\d{3})(\d{2})$/u)||(()=>{const m=raw.match(/^(\d{2})(\d{3})([آ-یA-Za-z])(\d{2})$/u);return m?[m[0],m[1],m[3],m[2],m[4]]:null;})();
    return match?[match[1],match[2],match[3],match[4]]:null;
   };
+  const plateFields=['first','letter','middle','region'].map(part=>search.querySelector('[data-plate-'+part+']'));
+  const searchParts=()=>plateFields.map(field=>normalize(field.value));
   let sequence=0,wait=0;
   const find=async()=>{
-   const ticket=++sequence,term=normalize(search.value);
+   const ticket=++sequence,parts=searchParts(),term=parts.join('');
    registration.hidden=true;results.hidden=false;
-   if(term.length<2){status.textContent='حداقل دو رقم یا حرف از پلاک را وارد کنید.';results.replaceChildren();return;}
+   if(!term.length){status.textContent='حداقل یکی از بخش‌های پلاک را وارد کنید.';results.replaceChildren();return;}
    status.textContent='در حال جستجو در سوابق خودروها…';
    try{
-    const found=await api(scoped('/api/v1/vehicles/registry-search?search='+encodeURIComponent(term)));
+    const found=await api(scoped('/api/v1/vehicles/registry-search?'+new URLSearchParams({plateFirst:parts[0],plateLetter:parts[1],plateMiddle:parts[2],plateRegion:parts[3]})));
     if(ticket!==sequence||!shell.isConnected)return;
     status.textContent=found.length?number(found.length)+' خودرو یافت شد.':'خودرویی یافت نشد؛ می‌توانید خودروی جدید ثبت کنید.';
     results.innerHTML=found.length?'<div class="sy-driver-vehicle-list">'+found.map((vehicle,i)=>
@@ -1633,7 +1635,7 @@ async function attachDriverVehiclePicker(form,row){
     });
    }catch(e){if(ticket===sequence&&shell.isConnected){status.textContent='خطا در جستجوی خودرو: '+e.message;results.replaceChildren();}}
   };
-  search.addEventListener('input',()=>{clearTimeout(wait);wait=setTimeout(find,300);});
+  search.addEventListener('input',()=>{sequence++;clearTimeout(wait);wait=setTimeout(find,300);});
   const registrationForm=(prefill=null)=>{
    results.hidden=true;registration.hidden=false;status.textContent=prefill?'اطلاعات خودرو از سوابق مشترک فراخوانی شد؛ برای اتصال به راننده باید یک نسخه در شرکت جاری ثبت شود.':'مشخصات خودروی جدید را تکمیل کنید.';
    registration.innerHTML='<form class="sy-driver-vehicle-new"><h4>'+(prefill?'ثبت خودروی فراخوانی‌شده':'ثبت خودروی جدید')+'</h4>'+
@@ -1655,7 +1657,7 @@ async function attachDriverVehiclePicker(form,row){
     '<footer><button type="button" data-register-back>بازگشت به جستجو</button><button class="primary" type="submit">ثبت خودرو و انتخاب برای راننده</button></footer></form>';
    const newForm=registration.querySelector('form'),plate=registration.querySelector('fieldset');
    const [first,letter,middle,region]=[plate.querySelector('[data-plate-first]'),plate.querySelector('[data-plate-letter]'),plate.querySelector('[data-plate-middle]'),plate.querySelector('[data-plate-region]')];
-   const original=toParts(prefill?.plate||search.value);
+   const original=prefill?toParts(prefill.plate):searchParts();
    if(original){first.value=persianDigits(original[0]);letter.value=original[1];middle.value=persianDigits(original[2]);region.value=persianDigits(original[3]);}
    if(prefill?.capacity)newForm.elements.capacity.value=prefill.capacity;
    if(prefill?.tariffVehicleClass)newForm.elements.tariffVehicleClass.value=prefill.tariffVehicleClass;
@@ -1691,7 +1693,9 @@ async function attachDriverVehiclePicker(form,row){
   };
   shell.querySelector('[data-vehicle-new]').onclick=()=>registrationForm();
   popup.focus();
-  if(search.value.trim().length>=2)void find();
+  const initialParts=toParts(plateCache.get(select.value)?.plate);
+  if(initialParts)plateFields.forEach((field,i)=>{field.value=initialParts[i];});
+  if(searchParts().some(Boolean))void find();
  };
  label.querySelector('.sy-driver-plate-edit').onclick=launch;
 }
