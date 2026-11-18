@@ -64,13 +64,19 @@ final class ServicePricing {
         $class=(string)($body['vehicleClass']??'');
         if($model===''||!in_array($class,['1','2','3'],true))
             throw new AuthException(422,'نوع خودرو و کلاس تعرفه را از فهرست انتخاب و بررسی کنید.','VEHICLE_SELECTION_REQUIRED');
-        if(!VehicleClassCatalog::validSelection($pdo,$model))
-            throw new AuthException(422,'این نوع خودرو در فهرست تأییدشده تعریف نشده است. ابتدا از تنظیمات ادمین کل مدل را اضافه کنید.','VEHICLE_MODEL_NOT_APPROVED');
-        $q=$pdo->prepare("SELECT v.id,v.tariff_vehicle_class FROM drivers d
+        $q=$pdo->prepare("SELECT v.id,v.tariff_vehicle_class,v.model,v.vehicle_trim,v.vehicle_system FROM drivers d
           JOIN vehicles v ON v.id=d.vehicle_id AND v.agency_id=d.agency_id AND v.is_active=1
           WHERE d.id=? AND d.agency_id=? AND d.is_active=1 FOR UPDATE");
         $q->execute([$driverId,$agencyId]);$vehicle=$q->fetch(PDO::FETCH_ASSOC);
         if(!$vehicle)throw new AuthException(422,'برای راننده انتخاب‌شده خودروی فعال و معتبر ثبت نشده است.','DRIVER_VEHICLE_REQUIRED');
+        $registered=trim((string)($vehicle['vehicle_trim']?:($vehicle['model']?:$vehicle['vehicle_system'])));
+        if(!VehicleClassCatalog::validSelection($pdo,$model)){
+            if($registered!==$model || (string)$vehicle['tariff_vehicle_class']!==$class)
+                throw new AuthException(422,'مدل یا کلاس جدید خودرو باید از فهرست تأییدشده انتخاب شود.','VEHICLE_MODEL_NOT_APPROVED');
+            // An unchanged legacy vehicle with an explicit valid class is
+            // already registered; no catalog edit or vehicle rewrite is needed.
+            return;
+        }
         $previous=(string)($vehicle['tariff_vehicle_class']??'');
         $pdo->prepare('UPDATE vehicles SET model=?,vehicle_trim=?,tariff_vehicle_class=? WHERE id=? AND agency_id=?')
             ->execute([$model,$model,(int)$class,(int)$vehicle['id'],$agencyId]);
