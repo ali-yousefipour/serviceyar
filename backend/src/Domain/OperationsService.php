@@ -230,7 +230,7 @@ final class OperationsService
             $u=$p->prepare("UPDATE students SET monthly_fee=:v,driver_base_monthly=:base,fee_source='agreed' WHERE id=:id AND agency_id=:a");
             foreach($rows as $r){$old=(float)$r['monthly_fee'];$new=match($mode){'set'=>(float)$value,'increase'=>$old+(float)$value,'decrease'=>$old-(float)$value,'percent'=>$old*(1+(float)$value/100)};
                 if($new<0||$new>999999999999999)throw new AuthException(422,'نتیجه تغییر هزینه خارج از محدوده است.','VALIDATION_ERROR');
-                $amount=round($new,2);$u->execute(['v'=>$amount,'base'=>round($amount),'id'=>$r['id'],'a'=>$aid]);}
+                $amount=round($new,2);$u->execute(['v'=>$amount,'base'=>round($amount),'id'=>$r['id'],'a'=>$aid]);StudentServiceBilling::sync($p,$aid,(int)$r['id']);}
             $serviceIds=$p->prepare('SELECT DISTINCT ss.service_id FROM service_students ss JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=? AND sv.is_active=1 WHERE ss.student_id IN ('.implode(',',array_fill(0,count($ids),'?')).')');
             $serviceIds->execute(array_merge([$aid],$ids));
             foreach($serviceIds->fetchAll(PDO::FETCH_COLUMN) as $serviceId){
