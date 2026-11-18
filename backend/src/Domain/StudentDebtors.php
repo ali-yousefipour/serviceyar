@@ -68,14 +68,22 @@ final class StudentDebtors
                    CONCAT_WS(' ',students.first_name,students.last_name) student, students.mobile guardian_mobile,
                    students.tariff_distance_km,
                    COALESCE(students.monthly_fee,0) monthly_fee,
+                   (SELECT COUNT(*) FROM invoices i WHERE i.agency_id=students.agency_id AND i.party_type='student' AND i.party_id=students.id) invoice_count,
+                   (SELECT COUNT(*) FROM service_students ss JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=students.agency_id WHERE ss.student_id=students.id AND sv.is_active=1 AND sv.status='active') active_service_count,
+                   (SELECT GROUP_CONCAT(DISTINCT sv.title ORDER BY sv.title SEPARATOR '، ') FROM service_students ss JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=students.agency_id WHERE ss.student_id=students.id AND sv.is_active=1 AND sv.status<>'cancelled') service_names,
+                   (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS(' ',dr.first_name,dr.last_name) ORDER BY dr.last_name SEPARATOR '، ') FROM service_students ss JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=students.agency_id JOIN drivers dr ON dr.id=sv.driver_id AND dr.agency_id=sv.agency_id WHERE ss.student_id=students.id AND sv.is_active=1 AND sv.status<>'cancelled') driver_names,
                    ".DomainService::studentAnnualFeeSql()." annual_fee,
                    ".DomainService::studentInvoiceTotalSql()." invoice_total,
                    ".DomainService::studentPaidTotalSql()." paid
             FROM students
             LEFT JOIN schools sc ON sc.id=students.school_id AND sc.agency_id=students.agency_id
             WHERE students.agency_id=:agency AND students.is_active=1
-              AND REPLACE(students.academic_year,'/','-')=:year
-        ), debtors AS (SELECT balances.*, GREATEST(0,ROUND(invoice_total-paid)) debt FROM balances)
+              AND REPLACE(TRIM(students.academic_year),'/','-')=:year
+        ), basis AS (SELECT balances.*,
+              CASE WHEN invoice_count=0 AND active_service_count=1 AND annual_fee>0 THEN annual_fee ELSE invoice_total END debt_basis,
+              CASE WHEN invoice_count=0 AND active_service_count=1 AND annual_fee>0 THEN 'unbilled_service' ELSE 'invoiced' END balance_source
+              FROM balances),
+              debtors AS (SELECT basis.*, GREATEST(0,ROUND(debt_basis-paid)) debt FROM basis)
         SELECT debtors.*, SUM(debt) OVER () total_debt FROM debtors WHERE ".implode(' AND ',$where)
             .' ORDER BY school,school_id,debt DESC,student,id';
         $query=Connection::get()->prepare($sql);
@@ -86,6 +94,6 @@ final class StudentDebtors
         unset($row);
         $agency=Connection::get()->prepare('SELECT name FROM agencies WHERE id=?');
         $agency->execute([$aid]);
-        return ['items'=>$rows,'total'=>$total,'academicYear'=>$year,'agencyName'=>$agency->fetchColumn()?:'شرکت'];
+        return ['items'=>$rows,'total'=>$total,'unbilledCount'=>count(array_filter($rows,static fn($r)=>$r['balance_source']==='unbilled_service')),'unbilledTotal'=>array_sum(array_map(static fn($r)=>$r['balance_source']==='unbilled_service'?(float)$r['debt']:0,$rows)),'academicYear'=>$year,'agencyName'=>$agency->fetchColumn()?:'شرکت'];
     }
 }
