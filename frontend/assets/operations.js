@@ -1433,7 +1433,7 @@ document.addEventListener('keydown',e=>{if(e.defaultPrevented)return;const modal
 function resourceWizard(form,key){
  const definitions={students:[['اطلاعات ولی',['mobile','guardianFirstName','guardianLastName','guardianNationalCode','guardianRelation','emergencyPhone']],['مشخصات دانش‌آموز',['firstName','lastName','gender','nationality','nationalCode','fatherName','healthStatus']],['نشانی و مدرسه',['address','returnAddress','latitude','longitude','schoolId','grade','shift','academicYear']],['وضعیت و هزینه',['serviceStatus','tariffDistanceKm','tariffVehicleClass','monthlyFee']]],drivers:[['مشخصات راننده',['firstName','lastName','nationalCode','mobile','status']],['خودرو و نشانی',['vehicleId','isRepresentative','address']],['اطلاعات بانکی',['bankName','bankAccount','iban']]],services:[['مشخصات سرویس',['title','capacity','shift','status']],['مدرسه و راننده',['schoolId','driverId','vehicleModel','packId']],['مسیر و مبالغ',['startAddress','endAddress','feeSource','agreedAmount']]]};
  definitions.cheques=[['مشخصات چک',['bankName','branchName','serialNo','bankAccount']],['دریافت و سررسید',['receivedFrom','accountId','amount','receivedDate','dueDate','description','counterAccountId']]];
- definitions.vehicles=[['پلاک و فراخوانی اطلاعات',['plate']],['مشخصات خودرو',['ownerName','ownerNationalCode','vehicleType','vehicleSystem','vehicleTrim','model','tariffVehicleClass','capacity']],['اطلاعات تکمیلی',['vin','makeYear','fuelType','color','engineNumber','chassisNumber','insuranceNumber','sepandStatus','isActive']]];
+ definitions.vehicles=[['پلاک و فراخوانی اطلاعات',['plate']],['مشخصات خودرو',['ownerName','ownerNationalCode','vehicleType','vehicleSystem','vehicleTrim','model','tariffVehicleClass','capacity']],['اطلاعات تکمیلی',['driverId','vin','makeYear','fuelType','color','engineNumber','chassisNumber','insuranceNumber','sepandStatus','isActive']]];
  const groups=definitions[key];if(!groups)return;const grid=form.querySelector('.form-grid'),fields=[...grid.children],steps=[];form.classList.add('sy-record-wizard',`sy-record-wizard--${key}`);
  const progress=document.createElement('nav');progress.className='wizard-progress';progress.setAttribute('aria-label','مراحل تکمیل فرم');form.prepend(progress);
  for(const [title,names] of groups){const section=document.createElement('section');section.className='wizard-step';const heading=document.createElement('h4');heading.textContent=title;section.append(heading);const content=document.createElement('div');content.className='form-grid sy-wizard-fields';section.append(content);for(const name of names){const field=fields.find(l=>l.querySelector(`[name="${name}"]`));if(field)content.append(field);}steps.push({title,section,fields:names});grid.before(section);}
@@ -1839,18 +1839,18 @@ async function formResource(key,id,onSaved){
   field.className='sy-vehicle-driver-control';
   field.innerHTML='<span>راننده تخصیص‌یافته</span><input type="search" data-vehicle-driver-search placeholder="جستجوی نام، نام خانوادگی یا کد ملی راننده" autocomplete="off">'+
    '<select name="driverId" aria-label="راننده تخصیص‌یافته"><option value="">فاقد راننده (حذف تخصیص)</option></select>'+
-   '<small>مالک خودرو و راننده دو مشخصه مستقل هستند. فقط رانندگان همین شرکت قابل انتخاب‌اند. خودرو باید فعال باشد.</small>';
+   '<small>مالک خودرو و راننده دو مشخصه مستقل هستند. راننده را از شرکت انتخاب کنید یا با کد ملی از سوابق مشترک فراخوانی کنید. خودرو باید فعال باشد.</small>';
   parent?.append(field);
   const select=field.querySelector('select'),search=field.querySelector('input');
   try{
    const drivers=await lookup('drivers',true);
    if(!form.isConnected)return;
-   const assigned=drivers.filter(d=>String(d.vehicle_id||'')===String(id||'')&&Number(d.is_active??1)===1);
+   const assigned=drivers.filter(d=>id&&String(d.vehicle_id||'')===String(id)&&Number(d.is_active??1)===1);
    const original=assigned[0]||null;
    let selectedDriverId=String(original?.id||'');
    const fill=term=>{
-    const q=String(term||'').trim().toLocaleLowerCase('fa');
-    const items=drivers.filter(d=>Number(d.is_active??1)===1 && (!q||(person(d)+' '+(d.national_code||'')).toLocaleLowerCase('fa').includes(q)));
+    const q=normalizeServiceSearch(term);
+    const items=drivers.filter(d=>Number(d.is_active??1)===1 && (!q||normalizeServiceSearch(person(d)+' '+(d.national_code||'')+' '+(d.mobile||'')).includes(q)));
     const chosen=selectedDriverId;
     select.replaceChildren(new Option('فاقد راننده (حذف تخصیص)',''));
     for(const d of items.slice(0,250))select.add(new Option(person(d)+' · '+(d.national_code||'بدون کد ملی'),String(d.id)));
@@ -1861,6 +1861,48 @@ async function formResource(key,id,onSaved){
     select.value=chosen;
    };
    fill('');
+   const tools=document.createElement('div');tools.className='member-actions';
+   tools.innerHTML='<button type="button" data-driver-registry>فراخوانی راننده با کد ملی</button><button type="button" class="primary" data-driver-register>ثبت راننده جدید</button>';
+   field.append(tools);
+   const openRegistration=async(prefill={})=>{
+    if(!form.isConnected)return;
+    const parent=form.closest('.modal'),shell=document.createElement('div');
+    shell.className='sy-driver-vehicle-overlay';
+    shell.innerHTML='<section class="sy-driver-vehicle-dialog" role="dialog" aria-modal="true" aria-label="ثبت راننده" tabindex="-1"><header><h3>ثبت راننده برای شرکت</h3><button type="button" data-close-driver aria-label="بستن">×</button></header><div class="sy-driver-vehicle-content"><form><div class="form-grid"><label>نام<input name="firstName" required maxlength="100"></label><label>نام خانوادگی<input name="lastName" required maxlength="100"></label><label>کد ملی<input name="nationalCode" inputmode="numeric" maxlength="10" required></label><label>موبایل<input name="mobile" inputmode="tel" maxlength="11"></label><label>نشانی<textarea name="address"></textarea></label></div><p class="muted">راننده در شرکت جاری ثبت می‌شود؛ تخصیص خودرو با ذخیره فرم اصلی انجام خواهد شد.</p><p data-driver-error role="alert"></p><button class="primary" type="submit">ثبت و انتخاب راننده</button></form></div></section>';
+    parent.append(shell);
+    const child=shell.querySelector('form'),error=shell.querySelector('[data-driver-error]'),save=child.querySelector('[type=submit]');
+    const close=()=>{if(save.disabled)return;shell.remove();tools.querySelector('[data-driver-register]').focus();};
+    shell.querySelector('[data-close-driver]').onclick=close;
+    shell.onkeydown=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();}};
+    for(const key of ['firstName','lastName','nationalCode','mobile'])child.elements[key].value=prefill[key]||'';
+    child.onsubmit=async e=>{
+     e.preventDefault();e.stopPropagation();save.disabled=true;error.textContent='';
+     try{
+      const body=Object.fromEntries(new FormData(child));body.nationalCode=ServiceYarDates.digits(body.nationalCode.trim());body.mobile=ServiceYarDates.digits(body.mobile.trim());
+      const existing=drivers.find(d=>String(d.national_code)===body.nationalCode);
+      if(existing&&Number(existing.is_active??1)!==1)throw Error('راننده قبلاً ثبت شده ولی غیرفعال است؛ ابتدا وضعیت او را بررسی کنید.');
+      const saved=existing||await write('/api/v1/drivers',{...body,status:'pending'},'POST');
+      if(!saved?.id)throw Error('شناسه راننده ثبت‌شده دریافت نشد.');
+      if(!existing)drivers.push({...saved,first_name:body.firstName,last_name:body.lastName,national_code:body.nationalCode,is_active:1});
+      selectedDriverId=String(saved.id);lookupCache={};fill('');select.dispatchEvent(new Event('change',{bubbles:true}));shell.remove();notify('راننده ثبت و انتخاب شد؛ خودرو را ذخیره کنید.');
+     }catch(e){error.textContent=e.message;}finally{save.disabled=false;}
+    };
+    child.elements.firstName.focus();
+   };
+   tools.querySelector('[data-driver-register]').onclick=()=>openRegistration();
+   tools.querySelector('[data-driver-registry]').onclick=async()=>{
+    const code=ServiceYarDates.digits(search.value.trim());
+    if(!/^\d{10}$/.test(code)){notify('کد ملی ده‌رقمی راننده را در کادر جستجو وارد کنید.',true);search.focus();return;}
+    const button=tools.querySelector('[data-driver-registry]');button.disabled=true;
+    try{
+     const local=drivers.find(d=>String(d.national_code)===code);
+     if(local){if(Number(local.is_active??1)!==1)throw Error('راننده غیرفعال است.');selectedDriverId=String(local.id);fill('');select.dispatchEvent(new Event('change',{bubbles:true}));return;}
+     const preview=await api(scoped('/api/v1/vehicles/owner-driver-preview?nationalCode='+encodeURIComponent(code)));
+     if(!form.isConnected)return;
+     if(preview.found){if(preview.inCurrentAgency)throw Error('راننده در شرکت وجود دارد؛ فهرست را دوباره باز کنید.');await openRegistration({...preview,nationalCode:code});}
+     else{notify('راننده در سوابق یافت نشد؛ اطلاعات را ثبت کنید.');await openRegistration({nationalCode:code});}
+    }catch(e){notify(e.message,true);}finally{button.disabled=false;}
+   };
    if(assigned.length>1){
     field.querySelector('small').textContent='هشدار: این خودرو به چند راننده مرتبط است؛ ابتدا ارتباط‌های تکراری را اصلاح کنید.';
    }
