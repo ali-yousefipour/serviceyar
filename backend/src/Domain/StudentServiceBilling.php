@@ -35,6 +35,7 @@ final class StudentServiceBilling {
    $pdo->prepare("UPDATE invoices SET title=?,amount=?,status=CASE WHEN status='cancelled' THEN 'open' ELSE status END
      WHERE id=? AND agency_id=? AND party_type='student' AND party_id=?")
     ->execute([$title,$amount,$existing,$agencyId,$studentId]);
+   $pdo->prepare('UPDATE student_service_debt_invoices SET service_id=? WHERE agency_id=? AND student_id=? AND academic_year=?')->execute([(int)$assigned[0]['id'],$agencyId,$studentId,$year]);
    return ['invoiceId'=>(int)$existing,'amount'=>$amount,'months'=>$months,'created'=>false];
   }
   $pdo->prepare("INSERT INTO invoices(agency_id,title,party_type,party_id,amount,status,issue_date)
