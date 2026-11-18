@@ -1223,8 +1223,39 @@ async function resourcePage(key,token=pageToken,options={}){
    }catch(e){if(token===pageToken)notify(e.message,true);}
   }));
   if(token!==pageToken)return;
- }else if(schoolFilter){try{const schools=await lookup('schools');if(token!==pageToken)return;filterForm.elements.schoolId.innerHTML='<option value="">همه مدارس</option>'+schools.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');}catch(e){notify(e.message,true);}}
+  }else if(schoolFilter){try{const schools=await lookup('schools');if(token!==pageToken)return;const select=filterForm.elements.schoolId;select.replaceChildren(new Option('همه مدارس',''));for(const school of [...schools].sort((a,b)=>a.name.localeCompare(b.name,'fa')))select.add(new Option(school.name,String(school.id)));if(isStudents)attachStudentSchoolDropdown(select,schools);}catch(e){notify(e.message,true);}}
  await loadResource(key);
+}
+/** Search within the student directory school filter; the native select
+ * remains the sole submitted value and works as a fallback without JS. */
+function attachStudentSchoolDropdown(select,schools){
+ const form=select.form,outer=select.closest('label');
+ if(!form||!outer)return;
+ const wrap=document.createElement('div');wrap.className='sy-student-school-picker';
+ const button=document.createElement('button');button.type='button';button.className='sy-student-school-trigger';button.setAttribute('aria-label','انتخاب مدرسه');button.setAttribute('aria-expanded','false');button.setAttribute('aria-controls','studentSchoolDropdown');
+ const panel=document.createElement('div');panel.className='sy-student-school-dropdown';panel.id='studentSchoolDropdown';panel.hidden=true;
+ const search=document.createElement('input');search.type='search';search.placeholder='نام یا کد مدرسه را جستجو کنید…';search.autocomplete='off';search.setAttribute('aria-label','جستجوی لحظه‌ای مدرسه');
+ const list=document.createElement('div');list.className='sy-student-school-options';list.setAttribute('role','group');list.setAttribute('aria-label','مدارس قابل انتخاب');
+ const status=document.createElement('small');status.setAttribute('role','status');
+ panel.append(search,status,list);wrap.append(button,panel);outer.replaceWith(wrap);
+ const caption=document.createElement('span');caption.className='sy-student-school-caption';caption.textContent='مدرسه';wrap.prepend(caption);
+ select.hidden=true;wrap.append(select);
+ const rows=[...schools].sort((a,b)=>a.name.localeCompare(b.name,'fa'));
+ const sync=()=>{button.textContent=(select.selectedOptions[0]?.textContent||'همه مدارس')+' ▾';};
+ const close=(focus=false)=>{panel.hidden=true;button.setAttribute('aria-expanded','false');if(focus)button.focus();};
+ const render=()=>{
+  const q=normalizeServiceSearch(search.value),matches=rows.filter(r=>normalizeServiceSearch(r.name+' '+(r.code||'')).includes(q));
+  list.replaceChildren();status.textContent=number(matches.length)+' مدرسه';
+  const add=(id,label)=>{const item=document.createElement('button');item.type='button';item.className='sy-student-school-option';item.textContent=label;item.setAttribute('aria-pressed',String(select.value===String(id)));item.onclick=()=>{select.value=String(id);sync();close(true);select.dispatchEvent(new Event('change',{bubbles:true}));};list.append(item);};
+  add('','همه مدارس');for(const row of matches)add(row.id,row.name+(row.code?' · '+persianDigits(String(row.code)):''));
+  if(!matches.length){const empty=document.createElement('p');empty.textContent='مدرسه‌ای یافت نشد.';list.append(empty);}
+ };
+ button.onclick=()=>{if(!panel.hidden){close();return;}panel.hidden=false;button.setAttribute('aria-expanded','true');search.value='';render();search.focus();};
+ search.addEventListener('input',render);
+ wrap.addEventListener('keydown',e=>{if(e.key==='Escape'&&!panel.hidden){e.preventDefault();close(true);}else if(e.key==='ArrowDown'&&e.target===search){e.preventDefault();list.querySelector('button')?.focus();}else if(e.key==='Enter'&&e.target===search){e.preventDefault();}});
+ wrap.addEventListener('focusout',e=>{if(e.relatedTarget&&!wrap.contains(e.relatedTarget))close();});
+ form.addEventListener('reset',()=>setTimeout(()=>{sync();close();},0));
+ select.addEventListener('change',sync);sync();
 }
 function bulkServiceStatusDialog(){
  if(gridState?.key!=='services')return;
