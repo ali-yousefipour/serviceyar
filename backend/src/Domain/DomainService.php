@@ -529,13 +529,17 @@ final class DomainService {
    if(count($driverIds)!==1)throw new AuthException(422,'راننده سرویس را انتخاب کنید.','DRIVER_REQUIRED');
    $driverId=$driverIds[0];
    $pdo=Connection::get();
-   $driver=$pdo->prepare("SELECT v.capacity FROM drivers d LEFT JOIN vehicles v ON v.id=d.vehicle_id AND v.agency_id=d.agency_id AND v.is_active=1
+   $driver=$pdo->prepare("SELECT v.id AS vehicle_id,v.capacity FROM drivers d LEFT JOIN vehicles v ON v.id=d.vehicle_id AND v.agency_id=d.agency_id AND v.is_active=1
     WHERE d.id=? AND d.agency_id=? AND d.is_active=1 AND d.status='active' FOR UPDATE");
    $driver->execute([$driverId,$aid]);
-   $vehicleCapacity=$driver->fetchColumn();
-   if($vehicleCapacity===false)throw new AuthException(422,'راننده تأییدشده و فعال را انتخاب کنید.','DRIVER_NOT_ELIGIBLE');
-   if($vehicleCapacity!==null&&(int)($b['capacity']??4)>(int)$vehicleCapacity)
-    throw new AuthException(422,'ظرفیت سرویس از ظرفیت ثبت‌شده خودرو بیشتر است.','CAPACITY_EXCEEDED');
+   $vehicle=$driver->fetch(\PDO::FETCH_ASSOC);
+   if(!$vehicle)throw new AuthException(422,'راننده تأییدشده و فعال را انتخاب کنید.','DRIVER_NOT_ELIGIBLE');
+   if($vehicle['vehicle_id']!==null && $capacity>(int)$vehicle['capacity']){
+    // Capacity is an explicit change to the registered vehicle. Require the
+    // same permission as its normal editor and keep every write atomic.
+    Authorization::requirePermission($uid,'drivers.manage');
+    self::saveRecord($uid,$aid,'vehicles',['capacity'=>$capacity],(int)$vehicle['vehicle_id']);
+   }
    // The chosen vehicle model and manually adjustable class belong to the
    // driver's registered vehicle, not to an unrelated student record.
    ServicePricing::setDriverVehicleType($pdo,$aid,$driverId,$b);
