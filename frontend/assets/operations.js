@@ -2669,14 +2669,13 @@ async function representativesPage(token){
 }
 function studentDebtorsPage(token){
  if(!can('students'))throw new Error('مشاهده گزارش بدهکاران به مجوز دانش‌آموزان نیاز دارد.');
- $('content').innerHTML=`<section class="panel sy-operation-page">
+ $('content').innerHTML=`<section class="panel sy-operation-page sy-debtors-page">
   <header class="sy-operation-header"><div><h2>گزارش بدهکاران</h2><p>مانده حساب بر اساس فاکتورها و دریافت‌های ثبت‌شده؛ بدهی برآوردی سرویس فعال فاقد فاکتور نیز جداگانه مشخص می‌شود.</p></div>
    ${can('reports')?'<div class="sy-operation-actions"><button type="button" id="debtorFiltered" disabled>اکسل نتایج</button><button type="button" id="debtorFull">اکسل کامل مدارس</button></div>':''}</header>
   <form id="debtorFilters" class="filters sy-operation-filters" aria-label="فیلتر گزارش بدهکاران">
    <label>سال تحصیلی<input name="academicYear" value="${esc(year())}" maxlength="9" required></label>
    <label>نام دانش‌آموز<input type="search" name="student" maxlength="200"></label>
-   <label>جست‌وجوی مدرسه<input type="search" name="schoolName" placeholder="بخشی از نام مدرسه" autocomplete="off" maxlength="200"></label>
-   <label>انتخاب مدرسه<select name="schoolId" aria-describedby="debtorSchoolStatus" disabled><option value="">مدرسه را انتخاب کنید</option></select><small id="debtorSchoolStatus" role="status">در حال دریافت مدارس شرکت…</small></label>
+   <div class="sy-debtor-school"><label for="debtorSchoolSearch">مدرسه دارای بدهی</label><input type="hidden" name="schoolId"><div class="sy-debtor-combo"><input id="debtorSchoolSearch" type="search" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="debtorSchoolOptions" autocomplete="off" placeholder="همه مدارس · جستجوی نام مدرسه" disabled><button type="button" id="debtorSchoolToggle" aria-label="نمایش فهرست مدارس" disabled>⌄</button><div id="debtorSchoolOptions" role="listbox" hidden></div></div><small id="debtorSchoolStatus" role="status">در حال دریافت مدارس بدهکار…</small></div>
    <label>حداقل بدهی (ریال)<input name="minDebt" inputmode="decimal" maxlength="19"></label>
    <label>حداکثر بدهی (ریال)<input name="maxDebt" inputmode="decimal" maxlength="19"></label>
    <button class="primary">نمایش بدهکاران</button>
@@ -2688,32 +2687,43 @@ function studentDebtorsPage(token){
  const form=$('debtorFilters'),status=$('debtorStatus'),results=$('debtorResults'),filtered=$('debtorFiltered'),full=$('debtorFull');
  const amount=new Intl.NumberFormat('fa-IR',{maximumFractionDigits:2});
  const kilometers=new Intl.NumberFormat('fa-IR',{maximumFractionDigits:0});
- const schoolSearch=form.elements.schoolName,schoolSelect=form.elements.schoolId,schoolStatus=$('debtorSchoolStatus');
- let schools=null;
- const renderSchools=()=>{
-  if(!schools)return;
-  const term=normalizeServiceSearch(schoolSearch.value);
-  const matches=schools.filter(school=>normalizeServiceSearch(school.name).includes(term));
-  schoolSelect.replaceChildren(new Option(term?'انتخاب از نتایج':'همه مدارس',''));
-  for(const school of matches){
-   const label=[school.name,school.code||school.address].filter(Boolean).join(' · ');
-   schoolSelect.add(new Option(label,String(school.id)));
-  }
-  schoolSelect.disabled=matches.length===0;
-  schoolStatus.textContent=matches.length?number(matches.length)+' مدرسه':'مدرسه‌ای یافت نشد.';
+ const schoolSearch=$('debtorSchoolSearch'),schoolSelect=form.elements.schoolId,schoolStatus=$('debtorSchoolStatus'),options=$('debtorSchoolOptions'),toggle=$('debtorSchoolToggle');
+ let schools=[],schoolRevision=0,active=-1,visible=[];
+ const closeSchools=()=>{options.hidden=true;schoolSearch.setAttribute('aria-expanded','false');schoolSearch.removeAttribute('aria-activedescendant');active=-1;};
+ const chooseSchool=id=>{const school=schools.find(s=>String(s.id)===String(id));schoolSelect.value=school?String(school.id):'';schoolSearch.value=school?.name||'';closeSchools();};
+ const renderSchools=(all=false)=>{
+  const term=all?'':normalizeServiceSearch(schoolSearch.value);
+  visible=[{id:'',name:'همه مدارس'},...schools.filter(s=>normalizeServiceSearch(s.name).includes(term))];
+  active=-1;schoolSearch.removeAttribute('aria-activedescendant');
+  options.innerHTML=visible.map((s,i)=>'<div role="option" id="debtorSchoolOption'+i+'" data-school-index="'+i+'" aria-selected="'+(String(s.id)===schoolSelect.value)+'">'+esc(s.name)+'</div>').join('');
+  options.hidden=false;schoolSearch.setAttribute('aria-expanded','true');
  };
- schoolSearch.addEventListener('input',renderSchools);
- lookup('schools',true).then(rows=>{
-  if(token!==pageToken||!form.isConnected)return;
-  schools=rows.slice().sort((a,b)=>a.name.localeCompare(b.name,'fa'));
-  renderSchools();
- }).catch(()=>{
-  if(token===pageToken&&form.isConnected)schoolStatus.textContent='فهرست مدارس در دسترس نیست. می‌توانید با وارد کردن نام مدرسه گزارش بگیرید.';
- });
+ schoolSearch.addEventListener('focus',()=>renderSchools(true));
+ schoolSearch.addEventListener('input',()=>{schoolSelect.value='';renderSchools();});
+ toggle.onclick=()=>{if(options.hidden){schoolSearch.focus();renderSchools(true);}else closeSchools();};
+ options.onpointerdown=e=>e.preventDefault();
+ options.onclick=e=>{const item=e.target.closest('[data-school-index]');if(item)chooseSchool(visible[Number(item.dataset.schoolIndex)].id);};
+ schoolSearch.onblur=()=>{chooseSchool(schoolSelect.value);};
+ schoolSearch.onkeydown=e=>{
+  if(e.key==='Escape'){chooseSchool(schoolSelect.value);return;}
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(options.hidden)renderSchools(true);active=Math.max(0,Math.min(visible.length-1,active+(e.key==='ArrowDown'?1:-1)));const node=$('debtorSchoolOption'+active);options.querySelectorAll('[data-active]').forEach(n=>n.removeAttribute('data-active'));node?.setAttribute('data-active','true');node?.scrollIntoView({block:'nearest'});schoolSearch.setAttribute('aria-activedescendant','debtorSchoolOption'+active);}
+  if(e.key==='Enter'&&!options.hidden){e.preventDefault();if(active>=0)chooseSchool(visible[active].id);}
+ };
+ const loadSchools=async()=>{
+  const current=++schoolRevision,academicYear=ServiceYarDates.digits(form.elements.academicYear.value.trim());
+  schools=[];chooseSchool('');schoolSearch.disabled=toggle.disabled=true;schoolStatus.textContent='در حال دریافت مدارس بدهکار…';
+  try{
+   const data=await api(scoped('/api/v1/operations/debtors?'+new URLSearchParams({academicYear})));
+   if(token!==pageToken||current!==schoolRevision||!form.isConnected)return;
+   schools=[...new Map(data.items.filter(r=>Number(r.debt)>0&&Number(r.school_id)>0).map(r=>[String(r.school_id),{id:r.school_id,name:r.school}])).values()].sort((a,b)=>a.name.localeCompare(b.name,'fa'));
+   schoolSearch.disabled=toggle.disabled=!schools.length;schoolStatus.textContent=number(schools.length)+' مدرسه دارای بدهی';
+  }catch(error){if(current===schoolRevision&&form.isConnected)schoolStatus.textContent='دریافت مدارس ناموفق بود: '+error.message;}
+ };
+ form.elements.academicYear.addEventListener('change',loadSchools);
  let applied=null,revision=0;
  const request=()=>{
   const params=new URLSearchParams(new FormData(form));
-  if(params.get('schoolId'))params.delete('schoolName');
+
   for(const key of ['academicYear','minDebt','maxDebt'])params.set(key,ServiceYarDates.digits(params.get(key).trim()).replace(/[٬,]/g,'').replace('٫','.'));
   return params;
  };
@@ -2726,13 +2736,13 @@ function studentDebtorsPage(token){
    if(token!==pageToken||current!==revision)return;
    applied=params;
    status.textContent=number(data.items.length)+' بدهکار · مجموع بدهی '+amount.format(data.total)+' ریال'+(data.unbilledCount?' · '+number(data.unbilledCount)+' مورد فاقد فاکتور ('+amount.format(data.unbilledTotal)+' ریال برآوردی)':'');
-   results.innerHTML=simpleTable(['نام و نام خانوادگی دانش‌آموز','مدرسه','سرویس / راننده','مبنای بدهی','شماره تماس ولی','مسافت (کیلومتر)','مبلغ ماهیانه سرویس (ریال)','مبلغ سالیانه سرویس (ریال)','پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'],
-    data.items.map(row=>[row.student,row.school,[row.service_names,row.driver_names].filter(Boolean).join(' / ')||'—',row.balance_source==='unbilled_service'?'برآوردی؛ فاقد فاکتور':'فاکتور ثبت‌شده',String(row.guardian_mobile||'—').replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]),row.tariff_distance_km==null?'—':kilometers.format(row.tariff_distance_km),amount.format(row.monthly_fee),amount.format(row.annual_fee),amount.format(row.paid),amount.format(row.debt)]));
+   results.innerHTML=data.items.length?'<div class="sy-debtor-table-scroll">'+simpleTable(['نام و نام خانوادگی دانش‌آموز','مدرسه','سرویس / راننده','مبنای بدهی','شماره تماس ولی','مسافت (کیلومتر)','مبلغ ماهیانه سرویس (ریال)','مبلغ سالیانه سرویس (ریال)','پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'],
+    data.items.map(row=>[row.student,row.school,[row.service_names,row.driver_names].filter(Boolean).join(' / ')||'—',row.balance_source==='unbilled_service'?'برآوردی؛ فاقد فاکتور':'فاکتور ثبت‌شده',String(row.guardian_mobile||'—').replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]),row.tariff_distance_km==null?'—':kilometers.format(row.tariff_distance_km),amount.format(row.monthly_fee),amount.format(row.annual_fee),amount.format(row.paid),amount.format(row.debt)]))+'</div>':'<p class="empty">بدهکاری مطابق فیلترهای انتخاب‌شده یافت نشد.</p>';
    if(filtered)filtered.disabled=false;
   }catch(err){if(token===pageToken&&current===revision)status.textContent=err.message;}
  };
  form.onsubmit=e=>{e.preventDefault();load();};
- form.onreset=()=>setTimeout(()=>{if(form.isConnected){renderSchools();load();}},0);
+ form.onreset=()=>setTimeout(()=>{if(form.isConnected){loadSchools();load();}},0);
  if(filtered)filtered.onclick=()=>downloadFile('/api/v1/reports/debtors.xlsx?'+applied,'بدهکاران-نتایج.xlsx');
  if(full)full.onclick=()=>downloadFile('/api/v1/reports/debtors.xlsx?'+new URLSearchParams({scope:'all',academicYear:request().get('academicYear')}),'بدهکاران-همه-مدارس.xlsx');
  if(full){
@@ -2754,7 +2764,7 @@ function studentDebtorsPage(token){
    finally{pdf.disabled=false;}
   };
  }
- return load();
+ void loadSchools();return load();
 }
 function serviceFinanceRange(academicYear){
  const y=ServiceYarDates.digits(String(academicYear)).match(/^(1[34]\d{2})[-/](1[34]\d{2})$/);
