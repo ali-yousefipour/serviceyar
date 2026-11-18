@@ -3,8 +3,8 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../frontend/assets/operations.js'),'utf8');
-const start=source.indexOf(' const normalizeAgreed=',source.indexOf('async function newServicePage('));
-const end=source.indexOf(' const validationIssues=',start);
+const start=source.indexOf('const normalizeAgreed=',source.indexOf('async function newServicePage('));
+const end=source.indexOf('const validationIssues=',start);
 assert(start>=0&&end>start,'New-service amount validators are missing');
 const ctx={form:{elements:{agreedAmountDisplay:{value:'',setCustomValidity(message){this.error=message;}},agreedAmount:{value:''}}},persianDigits:value=>String(value).replace(/[0-9]/g,d=>'۰۱۲۳۴۵۶۷۸۹'[Number(d)])};
 vm.runInNewContext(source.slice(start,end)+'\nthis.syncAgreed=syncAgreed;this.validAgreed=validAgreed;',ctx);
@@ -29,4 +29,7 @@ assert(!wizard.includes("dialog('افزودن دانش‌آموز'"),'New servic
 assert(source.includes('id="syServiceAddStudent"')&&source.includes('canAssign&&free>0'),'Member modal must expose add-student action when seats are available');
 assert(source.includes("form.scrollIntoView({behavior:")&&source.includes("form.querySelector('#memberSearch')?.focus"),'Add-student action must open the assignment form');
 assert(source.includes("Number(service.capacity)-rows.length"),'Available seats must derive from current service capacity');
+assert(wizard.includes('id="editServiceVehicle"'),'Missing selected vehicle editor');
+assert(wizard.includes("formResource('vehicles',vehicleId,")&&wizard.includes('driverVehicleCache.set(vehicleId,updated)'),'Vehicle editor must reload saved vehicle');
+assert(wizard.includes('driverId!==selectedId')&&wizard.includes('selectDriver(driver);'),'Vehicle refresh must guard driver changes and synchronize capacity');
 console.log('New-service wizard financial and capacity checks passed');
