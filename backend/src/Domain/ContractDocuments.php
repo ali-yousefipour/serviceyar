@@ -386,7 +386,19 @@ HTML;
   });
  }
  public static function issue(int $uid,int $agencyId,string $kind,array $input): array {
-  self::scope($uid,$agencyId,true);$pdo=Connection::get();self::ensureSchema($pdo);ContractSchemaMaintenance::requireReady($pdo);
+  self::scope($uid,$agencyId,true);
+  return self::issueInternal($uid,$agencyId,$kind,$input);
+ }
+ /** Offline migration only: use the same validated issuance and billing transaction. */
+ public static function issueAssignedStudentForMigration(int $agencyId,int $studentId): array {
+  if(PHP_SAPI!=='cli')throw new \LogicException('CLI migration only');
+  $pdo=Connection::get();
+  $data=self::data($pdo,$agencyId,'parent',$studentId);
+  $defaults=ContractBilling::defaults($data['academicYear'],ServiceFinancialBasis::monthsOfStudent(['grade'=>$data['grade'],'school_type'=>$data['schoolType']])===8.5);
+  return self::issueInternal(0,$agencyId,'parent',['partyId'=>$studentId]+$defaults);
+ }
+ private static function issueInternal(int $uid,int $agencyId,string $kind,array $input): array {
+  $pdo=Connection::get();self::ensureSchema($pdo);ContractSchemaMaintenance::requireReady($pdo);
   if(!in_array($kind,['parent','driver'],true))throw new AuthException(422,'نوع قرارداد نامعتبر است.','INVALID_CONTRACT_TYPE');
   $partyId=filter_var($input['partyId']??null,FILTER_VALIDATE_INT);
   if($partyId===false||$partyId<1)throw new AuthException(422,'طرف قرارداد را انتخاب کنید.','INVALID_CONTRACT_PARTY');

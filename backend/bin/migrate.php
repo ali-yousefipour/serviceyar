@@ -9,7 +9,7 @@ use ServiceYar\Database\Connection;
 $pdo = Connection::get();
 $directory = dirname(__DIR__, 2) . '/database/migrations';
 
-$files = glob($directory . '/*.sql') ?: [];
+$files = array_merge(glob($directory . '/*.sql') ?: [], glob($directory . '/*.php') ?: []);
 sort($files, SORT_STRING);
 
 $pdo->exec(
@@ -41,7 +41,13 @@ foreach ($files as $file) {
     try {
         // MySQL commits DDL implicitly. Only mark a migration after every
         // statement succeeds; wrapping DDL in a PDO transaction is misleading.
-        $pdo->exec($sql);
+        if (pathinfo($file, PATHINFO_EXTENSION) === 'php') {
+            $migration = require $file;
+            if (!is_callable($migration)) throw new RuntimeException('Invalid PHP migration: '.$name);
+            $migration($pdo);
+        } else {
+            $pdo->exec($sql);
+        }
         $statement = $pdo->prepare('INSERT INTO migrations (migration) VALUES (:migration)');
         $statement->execute(['migration' => $name]);
     } catch (Throwable $e) {
