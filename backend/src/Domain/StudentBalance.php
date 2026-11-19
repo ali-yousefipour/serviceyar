@@ -19,6 +19,27 @@ final class StudentBalance {
  public static function receiptsSql(): string {
   return "((SELECT COALESCE(SUM(p.amount),0) FROM payments p JOIN invoices i ON i.id=p.invoice_id AND i.agency_id=p.agency_id WHERE i.party_type='student' AND i.party_id=students.id AND p.agency_id=students.agency_id) + (SELECT COALESCE(SUM(CASE WHEN le.direction='receipt' THEN le.amount ELSE -le.amount END),0) FROM ledger_entries le WHERE le.agency_id=students.agency_id AND le.party_type='student' AND le.party_id=students.id AND le.is_active=1))";
  }
+ /** Explicit contract/legacy invoice year; unknown documents remain unallocated. */
+ public static function invoiceYearSql(string $alias='i'): string {
+  if(!preg_match('/^[a-z][a-z0-9_]*$/D',$alias))throw new \InvalidArgumentException('Invalid SQL alias');
+  return "COALESCE((SELECT ".self::yearSql('m.academic_year')." FROM student_contract_invoices m WHERE m.invoice_id=$alias.id AND m.agency_id=$alias.agency_id AND m.student_id=$alias.party_id),(SELECT ".self::yearSql('l.academic_year')." FROM student_service_debt_invoices l WHERE l.invoice_id=$alias.id AND l.agency_id=$alias.agency_id AND l.student_id=$alias.party_id))";
+ }
+ public static function annualBreakdown(PDO $pdo,int $agency,int $student): array {
+  $year=self::invoiceYearSql('i');
+  $q=$pdo->prepare("SELECT $year academic_year, SUM(CASE WHEN i.status<>'cancelled' THEN i.amount ELSE 0 END) invoiced, SUM((SELECT COALESCE(SUM(p.amount),0) FROM payments p WHERE p.invoice_id=i.id AND p.agency_id=i.agency_id)) received FROM invoices i WHERE i.agency_id=? AND i.party_type='student' AND i.party_id=? GROUP BY academic_year");
+  $q->execute([$agency,$student]);$groups=[];
+  foreach($q->fetchAll(PDO::FETCH_ASSOC) as $row){
+   try{$key=ContractBilling::year((string)$row['academic_year']);}catch(\ServiceYar\Auth\AuthException $e){$key='unallocated';}
+   if(!isset($groups[$key]))$groups[$key]=['invoiced'=>0.0,'received'=>0.0];
+   $groups[$key]['invoiced']+=(float)$row['invoiced'];$groups[$key]['received']+=(float)$row['received'];
+  }
+  $q=$pdo->prepare("SELECT COALESCE(SUM(CASE WHEN direction='receipt' THEN amount ELSE -amount END),0) FROM ledger_entries WHERE agency_id=? AND party_type='student' AND party_id=? AND is_active=1");
+  $q->execute([$agency,$student]);$ledger=(float)$q->fetchColumn();
+  if($ledger!==0.0){$groups['unallocated']??=['invoiced'=>0.0,'received'=>0.0];$groups['unallocated']['received']+=$ledger;}
+  ksort($groups);
+  foreach($groups as $key=>$row)$groups[$key]=self::totals($row['invoiced'],$row['received']);
+  return $groups;
+ }
  public static function totals(float $invoiced,float $received): array {
   $net=round($invoiced-$received,2);
   return ['invoiced'=>$invoiced,'received'=>$received,'balance'=>max(0,$net),'credit'=>max(0,-$net),'net'=>$net];
