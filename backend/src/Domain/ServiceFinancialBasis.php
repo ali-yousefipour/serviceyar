@@ -55,7 +55,7 @@ final class ServiceFinancialBasis
 
     private static function normalizeEducation(string $value): string
     {
-        return trim(strtr(mb_strtolower($value,'UTF-8'),['ي'=>'ی','ك'=>'ک','‌'=>' ','۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']));
+        return trim(strtr(strtolower($value),['ي'=>'ی','ك'=>'ک','‌'=>' ','۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']));
     }
 
     public static function monthsOfStudent(array $student): float
@@ -80,4 +80,21 @@ final class ServiceFinancialBasis
         if(preg_match('/^(?:پایه\s*)?(چهارم|پنجم|ششم)$/u',$grade))return 8.5;
         throw new AuthException(422,'مقطع تحصیلی دانش‌آموز مشخص نیست؛ پایه و مقطع مدرسه را اصلاح کنید.','EDUCATION_LEVEL_REQUIRED');
     }
+    /** SQL equivalent of stage resolution for bulk reports; NULL means review required.
+     * Arguments are trusted internal SQL expressions, never request parameters. */
+    public static function monthsSql(string $grade,string $levels,string $legacy): string
+    {
+        $norm=static function(string $x): string {
+            $x="LOWER(TRIM(COALESCE($x,'')))";
+            foreach(['ي'=>'ی','ك'=>'ک','‌'=>' ','۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9'] as $a=>$b)$x="REPLACE($x,'$a','$b')";
+            return $x;
+        };
+        $g=$norm($grade);$l=$norm($levels);$t=$norm($legacy);
+        $p="'ابتدایی|دبستان|primary|elementary'";$s="'متوسطه|دبیرستان|راهنمایی|secondary|high.school|middle.school'";
+        $cases="WHEN $g REGEXP $p AND NOT ($g REGEXP $s) THEN 8.5 WHEN $g REGEXP $s AND NOT ($g REGEXP $p) THEN 9 ";
+        $cases.="WHEN $l REGEXP $p AND NOT ($l REGEXP $s) THEN 8.5 WHEN $l REGEXP $s AND NOT ($l REGEXP $p) THEN 9 ";
+        $cases.="WHEN NOT ($l REGEXP $p AND $l REGEXP $s) AND $t REGEXP $p AND NOT ($t REGEXP $s) THEN 8.5 WHEN NOT ($l REGEXP $p AND $l REGEXP $s) AND $t REGEXP $s AND NOT ($t REGEXP $p) THEN 9 ";
+        return "(CASE $cases WHEN $g REGEXP '^(پایه[[:space:]]*)?([1-6]|چهارم|پنجم|ششم)$' THEN 8.5 WHEN $g REGEXP '^(پایه[[:space:]]*)?(7|8|9|10|11|12|هفتم|هشتم|نهم|دهم|یازدهم|دوازدهم)$' THEN 9 ELSE NULL END)";
+    }
+
 }
