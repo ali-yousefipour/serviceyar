@@ -46,18 +46,14 @@ final class StudentServiceBilling {
   $monthly=(float)array_sum(array_column($services,'monthly_fee'));
   // Full academic-year driver entitlement is based on each student's driver
   // tariff and actual school duration, with agency deductions applied once.
-  $grossQuery=$pdo->prepare("SELECT
-   COALESCE(SUM(st.monthly_fee *
-     (CASE WHEN sc.school_type REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9
-           WHEN sc.school_type REGEXP 'ابتدایی|دبستان|primary|elementary' THEN 8.5
-           WHEN st.grade REGEXP 'ابتدایی|دبستان|primary|elementary' OR st.grade IN ('1','2','3','4','5','6','۱','۲','۳','۴','۵','۶') THEN 8.5
-           ELSE 9 END)),0)
+  $grossQuery=$pdo->prepare("SELECT st.grade,sc.school_type,sc.education_levels,COALESCE(st.driver_base_monthly,st.monthly_fee) base_monthly
    FROM service_students ss JOIN services sv ON sv.id=ss.service_id
    JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id
    JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id
    WHERE sv.agency_id=? AND sv.driver_id=? AND sv.is_active=1 AND sv.status='active' AND st.is_active=1");
   $grossQuery->execute([$agencyId,$driverId]);
-  $annualGross=(float)$grossQuery->fetchColumn();
+  $annualGross=0;
+  foreach($grossQuery->fetchAll(PDO::FETCH_ASSOC) as $row)$annualGross+=(int)round((float)$row['base_monthly']*ServiceFinancialBasis::monthsOfStudent($row));
   $deductions=OperationsService::driverDeductions($annualGross,$agencyId);
   $annualNet=(float)$deductions['net_earned'];
   $p=$pdo->prepare('SELECT id,amount,payment_date,reference_no FROM driver_payments WHERE agency_id=? AND driver_id=? ORDER BY payment_date DESC,id DESC');
