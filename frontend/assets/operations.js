@@ -984,17 +984,32 @@ async function contractsPage(token=pageToken){
    const personLabel=p=>kind==='parent'
      ?[p.first_name,p.last_name].filter(Boolean).join(' ')+(p.national_code?' · '+persianDigits(p.national_code):'')
      :[p.first_name,p.last_name].filter(Boolean).join(' ')+(p.national_code?' · '+persianDigits(p.national_code):'');
-   body.innerHTML=(can('contracts','manage')?'<details class="sy-contract-create" open><summary>ثبت قرارداد جدید '+(kind==='parent'?'با ولی دانش‌آموز':'با راننده')+'</summary>'+
+   body.innerHTML=(can('contracts','manage')?'<dialog class="sy-contract-new-dialog" aria-labelledby="syContractNewTitle"><header class="sy-contract-new-head"><h3 id="syContractNewTitle">ثبت قرارداد جدید '+(kind==='parent'?'با ولی دانش‌آموز':'با راننده')+'</h3><button type="button" data-close-contract aria-label="بستن">×</button></header>'+
     '<form id="syContractCreateForm" class="form-grid sy-contract-create-grid">'+
     '<label>'+(kind==='parent'?'دانش‌آموز':'راننده')+'<input type="search" id="syContractPersonSearch" placeholder="جستجوی نام یا کد ملی" autocomplete="off"><select name="partyId" required><option value="">انتخاب کنید</option>'+available.map(p=>'<option value="'+Number(p.id)+'">'+esc(personLabel(p))+'</option>').join('')+'</select></label>'+
     '<label>تاریخ شروع<input name="startDate" type="date" required></label><label>تاریخ پایان<input name="endDate" type="date" required></label>'+
     '<label>'+(kind==='driver'?'مبلغ خالص سالانه قرارداد راننده (ریال)':'مبلغ کل قرارداد (ریال)')+'<input name="amount" type="text" inputmode="numeric" required '+'readonly aria-readonly="true" '+'placeholder="'+(kind==='driver'?'محاسبه خودکار پس از انتخاب راننده':'مبلغ صحیح بدون اعشار')+'"></label>'+
     '<section class="sy-contract-draft-data" id="syContractDraftData" aria-live="polite">برای مشاهده و تکمیل اطلاعات طرفین، ابتدا شخص را انتخاب کنید.</section>'+
-    '<div class="sy-contract-create-actions"><button class="primary" type="submit">صدور و ثبت قرارداد</button><span id="syContractCreateStatus" aria-live="polite"></span></div></form></details>':'')+
-    '<header class="sy-settings-section-head"><div><h3>قراردادهای صادرشده</h3><p>مشاهده و چاپ نسخه ذخیره‌شده قراردادها.</p></div></header>'+
-    '<div class="table-wrap"><table><thead><tr><th>شماره</th><th>عنوان قرارداد</th><th>تاریخ شروع</th><th>تاریخ پایان</th><th>مبلغ (ریال)</th><th>عملیات</th></tr></thead><tbody>'+
+    '<div class="sy-contract-create-actions"><button class="primary" type="submit">صدور و ثبت قرارداد</button><span id="syContractCreateStatus" aria-live="polite"></span></div></form></dialog>':'')+
+    '<header class="sy-settings-section-head"><div><h3>قراردادهای صادرشده</h3><p>مشاهده و چاپ نسخه ذخیره‌شده قراردادها.</p></div>'+(can('contracts','manage')?'<button type="button" class="primary" data-new-contract>＋ قرارداد جدید</button>':'')+'</header>'+
+    '<form class="sy-contract-filters"><label>جست‌وجوی قرارداد<input name="search" type="search" autocomplete="off" placeholder="نام، شماره قرارداد، عنوان یا کد ملی"></label><label>وضعیت<select name="status"><option value="">همه وضعیت‌ها</option><option value="active">فعال</option><option value="cancelled">ابطال‌شده</option></select></label><label>نسخه چاپی<select name="printable"><option value="">همه</option><option value="1">دارای نسخه چاپی</option><option value="0">فاقد نسخه چاپی</option></select></label><label>شروع از<input type="date" name="from"></label><label>شروع تا<input type="date" name="to"></label><div class="sy-contract-filter-actions"><button type="reset">پاک کردن فیلترها</button><span data-contract-count role="status"></span></div></form>'+
+    '<div class="table-wrap sy-contract-list"><table><thead><tr><th>شماره</th><th>عنوان قرارداد</th><th>تاریخ شروع</th><th>تاریخ پایان</th><th>مبلغ (ریال)</th><th>عملیات</th></tr></thead><tbody>'+
     (docs.length?docs.map(c=>'<tr><td>'+esc(persianDigits(c.contract_no||'—'))+'</td><td>'+esc(c.title||'—')+'</td><td>'+esc(fmtDate(c.start_date))+'</td><td>'+esc(fmtDate(c.end_date))+'</td><td>'+number(c.amount)+'</td><td><button type="button" data-contract-print="'+Number(c.id)+'" data-contract-legacy="'+(Number(c.printable)?'0':'1')+'">'+(Number(c.printable)?'مشاهده و چاپ مجدد':'بازسازی و چاپ با هشدار')+'</button>'+(c.status==='cancelled'?'<span class="muted">ابطال‌شده</span>':(can('contracts','manage')&&can('finance','manage')?'<button type="button" data-contract-edit="'+Number(c.id)+'">ویرایش</button><button type="button" class="danger" data-contract-delete="'+Number(c.id)+'">حذف</button>':''))+'</td></tr>').join(''):'<tr><td colspan="6">قراردادی در این بخش ثبت نشده است.</td></tr>')+
     '</tbody></table></div>';
+   const filters=body.querySelector('.sy-contract-filters');
+   const normalize=value=>String(ServiceYarDates.digits(String(value??''))).replace(/[يى]/g,'ی').replace(/ك/g,'ک').replace(/[\s\u200c]+/g,'').toLowerCase();
+   const rows=[...body.querySelectorAll('.sy-contract-list tbody tr')];
+   const peopleById=new Map(people.map(p=>[Number(p.id),p]));
+   const searchable=docs.map(c=>{const p=peopleById.get(Number(c.party_id));return normalize([c.title,c.contract_no,p?.first_name,p?.last_name,p?.national_code].join(' '));});
+   const empty=document.createElement('tr');empty.hidden=true;empty.innerHTML='<td colspan="6">قراردادی با این فیلترها پیدا نشد.</td>';body.querySelector('.sy-contract-list tbody').append(empty);
+   const updateFilters=()=>{const values=new FormData(filters),term=normalize(values.get('search')),from=values.get('from'),to=values.get('to');let count=0;
+    docs.forEach((c,i)=>{const visible=(!term||searchable[i].includes(term))&&(!values.get('status')||c.status===values.get('status'))&&(!values.get('printable')||String(Number(c.printable))===values.get('printable'))&&(!from||String(c.start_date)>=from)&&(!to||String(c.start_date)<=to);rows[i].hidden=!visible;if(visible)count++;});
+    empty.hidden=count>0||!docs.length;filters.querySelector('[data-contract-count]').textContent=number(count)+' قرارداد از '+number(docs.length);
+   };
+   filters.addEventListener('input',updateFilters);filters.addEventListener('change',updateFilters);filters.addEventListener('submit',e=>{e.preventDefault();updateFilters();});filters.addEventListener('reset',()=>setTimeout(updateFilters,0));updateFilters();
+   const newDialog=body.querySelector('.sy-contract-new-dialog');
+   body.querySelector('[data-new-contract]')?.addEventListener('click',()=>newDialog.showModal());
+   newDialog?.querySelector('[data-close-contract]')?.addEventListener('click',()=>newDialog.close());
    const form=body.querySelector('#syContractCreateForm');
    if(form){
     const search=form.querySelector('#syContractPersonSearch'),select=form.elements.partyId;
@@ -1093,7 +1108,7 @@ async function contractsPage(token=pageToken){
       const record=await write('/api/v1/contract-documents/'+kind,{partyId:Number(select.value),startDate:form.elements.startDate.value,endDate:form.elements.endDate.value,...(kind==='parent'?{amount}:{}),overrides});
       status.textContent='قرارداد '+persianDigits(record.contractNo)+' صادر شد.'+(record.invoiceId?' فاکتور '+number(record.invoiceId)+' ثبت شد.':'');
       notify(status.textContent);
-      await render();
+      newDialog?.close();await render();
      }catch(error){status.textContent=error.message;submit.disabled=false;}
     };
    }
