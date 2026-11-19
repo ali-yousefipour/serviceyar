@@ -16,7 +16,7 @@ final class StudentDebtorsWorkbook
         'guardian_mobile'=>['شماره تماس ولی',17],
         'tariff_distance_km'=>['مسافت (کیلومتر)',12],
         'monthly_fee'=>['مبلغ ماهیانه سرویس (ریال)',19],
-        'annual_fee'=>['مبلغ سالیانه سرویس (ریال)',19],
+        'annual_fee'=>['مبلغ سالانه سرویس (غیرمبنای مانده)',19],
         'paid'=>['پرداخت‌شده (ریال)',19],
         'debt'=>['بدهی باقی‌مانده (ریال)',19],
         'national_code'=>['کد ملی دانش‌آموز',16],
@@ -40,19 +40,19 @@ final class StudentDebtorsWorkbook
         'academic_year'=>['سال تحصیلی',15],
         'service_status'=>['وضعیت سرویس',18],
         'tariff_vehicle_class'=>['کلاس خودرو',14],
-        'invoice_total'=>['جمع فاکتورها (ریال)',19],
+        'invoice_total'=>['جمع فاکتورهای معتبر (ریال)',19],
     ];
     private const MONEY = ['monthly_fee','annual_fee','paid','debt','invoice_total'];
     public static function columns(?string $raw=null): array
     {
         $keys=$raw===null?[]:explode(',',$raw);
         $keys=array_values(array_unique(array_filter($keys,static fn($k)=>isset(self::COLUMNS[$k]))));
-        return $keys?:array_slice(array_keys(self::COLUMNS),0,10);
+        return $keys?:['student','school','service','basis','guardian_mobile','tariff_distance_km','monthly_fee','invoice_total','paid','debt'];
     }
     private static function value(array $row,string $key): string
     {
         if ($key==='service') return implode(' / ',array_filter([$row['service_names']??'', $row['driver_names']??'']))?:'—';
-        if ($key==='basis') return ($row['balance_source']??'invoiced')==='unbilled_service'?'برآوردی؛ فاقد فاکتور':'فاکتور ثبت‌شده';
+        if ($key==='basis') return match($row['balance_source']??''){ 'invoiced'=>'فاکتور ثبت‌شده', 'refund_balance'=>'مانده ناشی از خالص پرداخت / استرداد', default=>'نیازمند بررسی' };
         $v=$row[$key]??null;
         if ($v===null||$v==='') return '—';
         if (in_array($key,self::MONEY,true)) return self::persianMoney((string)$v);

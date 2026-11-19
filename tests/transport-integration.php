@@ -248,7 +248,10 @@ try{
  $debtors=\ServiceYar\Domain\StudentDebtors::report($uid,$feeAgency,$debtorFilter);
  check(count($debtors['items'])===1&&(float)$debtors['items'][0]['debt']===(float)$listed['outstanding_fee']
    &&(float)$debtors['items'][0]['paid']===(float)$listed['paid_total']&&(float)$debtors['items'][0]['paid']>0
-   &&(float)$debtors['items'][0]['monthly_fee']===(float)$listed['monthly_fee'],
+   &&(float)$debtors['items'][0]['monthly_fee']===(float)$listed['monthly_fee']
+   &&(float)$debtors['items'][0]['invoice_total']===(float)$listed['invoice_total']
+   &&(float)$debtors['items'][0]['debt_basis']===(float)$listed['invoice_total']
+   &&$debtors['items'][0]['balance_source']==='invoiced',
    'Debtor report matches list balances and includes payments outside the linked annual invoice');
  $receipt=insertFixture('ledger_entries',['agency_id'=>$feeAgency,'party_type'=>'student','party_id'=>$feeStudent['id'],
    'direction'=>'receipt','amount'=>'250.50','entry_date'=>'2026-10-01','created_by'=>$uid]);

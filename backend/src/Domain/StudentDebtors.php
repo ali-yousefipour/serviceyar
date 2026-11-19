@@ -29,7 +29,7 @@ final class StudentDebtors
             Authorization::requirePermission($uid,'students.view');
         }
 
-        $year = is_string($filter['academicYear'] ?? null) ? str_replace('/','-',$filter['academicYear']) : '';
+        $year = ContractBilling::year(is_string($filter['academicYear'] ?? null)?$filter['academicYear']:'');
         if (!preg_match('/\A(1[34]\d{2})-(1[34]\d{2})\z/', $year, $parts) || (int)$parts[1]+1 !== (int)$parts[2]) {
             throw new AuthException(422,'سال تحصیلی معتبر وارد کنید.','VALIDATION_ERROR');
         }
@@ -88,7 +88,7 @@ final class StudentDebtors
               AND ".StudentBalance::yearSql('students.academic_year')."=CONVERT(:year USING utf8mb4) COLLATE utf8mb4_unicode_ci
         ), basis AS (SELECT balances.*,
               invoice_total debt_basis,
-              'invoiced' balance_source
+              CASE WHEN invoice_count>0 THEN 'invoiced' ELSE 'refund_balance' END balance_source
               FROM balances),
               debtors AS (SELECT basis.*, GREATEST(0,ROUND(debt_basis-paid,2)) debt FROM basis)
         SELECT debtors.*, SUM(debt) OVER () total_debt FROM debtors WHERE ".implode(' AND ',$where)
