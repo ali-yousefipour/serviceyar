@@ -755,8 +755,8 @@ try{
  $taxiService=D::save($uid,$a,'services',['title'=>'سرویس نرخ مصوب','schoolId'=>$taxiSchool['id'],'capacity'=>1,'status'=>'active']);
  D::assignStudent($uid,$a,(int)$taxiService['id'],(int)$taxiStudent['id']);
  $tuition=D::get($uid,$a,'students',(int)$taxiStudent['id']);
- check((int)$tuition['paid_total']===1000000&&(int)$tuition['outstanding_fee']===101769837,
-   'Assignment automatically issues annual tuition invoice and subtracts prior receipt');
+ check((int)$tuition['paid_total']===1000000&&(int)$tuition['invoice_total']===0&&(int)$tuition['outstanding_fee']===0&&(int)$tuition['student_credit']===1000000,
+   'Assignment alone preserves receipt credit without issuing tuition before contract approval');
  \ServiceYar\Domain\TaxiOrganizationTariffs::save($uid,['district'=>1,'vehicleClass'=>'economy',
    'rows'=>[['distanceKm'=>3,'driverMonthly'=>11000000,'parentMonthly'=>14000000]]]);
  check((int)\ServiceYar\Domain\TaxiOrganizationTariffs::quote($p,1,'economy',3)['parentMonthly']===14000000,'Admin rate overrides the selected district');
