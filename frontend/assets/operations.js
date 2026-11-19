@@ -2895,7 +2895,7 @@ function financialReconciliationPage(token){
  if(!can('finance')||!can('students'))throw new Error('مجوز مشاهده مالی و دانش‌آموزان لازم است.');
  $('content').innerHTML=`<section class="panel sy-operation-page sy-reconciliation" dir="rtl">
  <header class="sy-operation-header"><div><h2>تطبیق و مغایرت‌های مالی</h2><p>پیش‌نمایش اختلاف اسناد؛ مبلغ قطعی قرارداد بدون بررسی تغییر نمی‌کند.</p></div></header>
- <form id="reconciliationFilters" class="filters sy-operation-filters"><label>سال تحصیلی<input name="academicYear" required value="${esc(year())}"></label><label>نام دانش‌آموز<input name="student" type="search"></label><label>مدرسه<select name="schoolId"><option value="">همه مدارس</option></select></label><button class="primary">بررسی مغایرت‌ها</button></form>
+ <form id="reconciliationFilters" class="filters sy-operation-filters"><label>سال تحصیلی<input name="academicYear" required value="${esc(year())}"></label><label>نام دانش‌آموز<input name="student" type="search"></label><label>مدرسه<select name="schoolId"><option value="">همه مدارس</option></select></label><button class="primary">بررسی مغایرت‌ها</button><button type="button" id="reconciliationExport">خروجی اکسل</button></form>
  <div id="reconciliationSummary" role="status"></div><div id="reconciliationResults" class="sy-operation-result"></div></section>`;
  const form=$('reconciliationFilters'),summary=$('reconciliationSummary'),results=$('reconciliationResults');
  let revision=0;
@@ -2903,10 +2903,15 @@ function financialReconciliationPage(token){
  const run=async()=>{const current=++revision;summary.textContent='در حال بررسی…';results.replaceChildren();
   const params=new URLSearchParams(new FormData(form));params.set('academicYear',ServiceYarDates.digits(params.get('academicYear').trim()));
   try{const report=await api(scoped('/api/v1/operations/financial-reconciliation?'+params));if(current!==revision||token!==pageToken||!form.isConnected)return;
+   const schoolSelect=form.elements.schoolId,selected=schoolSelect.value;
+   schoolSelect.replaceChildren(new Option('همه مدارس',''),...(report.schools||[]).map(sc=>new Option(sc.name,String(sc.id))));
+   schoolSelect.value=selected;
    summary.textContent=number(report.scanned)+' پرونده بررسی شد · '+number(report.count)+' پرونده نیازمند بررسی';
    results.innerHTML=report.items.length?report.items.map(row=>'<details class="panel sy-reconciliation-item"><summary><strong>'+esc(row.student)+'</strong> · '+esc(row.school||'مدرسه نامشخص')+'</summary><div class="sy-reconciliation-metrics"><span>تعرفه ماهانه: '+fmt(row.monthly_fee)+'</span><span>برآورد کامل: '+fmt(row.expected)+'</span><span>فاکتورهای نیازمند تطبیق: '+fmt(row.invoice_total)+'</span><span>اختلاف برآورد: '+fmt(row.difference)+'</span></div><p>'+row.issues.map(esc).join(' · ')+'</p><h4>قراردادها</h4>'+simpleTable(['شناسه','مبلغ','شروع','پایان'],row.contracts.map(c=>[number(c.id),fmt(c.amount),debtorColumnValue({contract_start:c.start_date},'contract_start'),debtorColumnValue({contract_end:c.end_date},'contract_end')]))+'<h4>فاکتورها</h4>'+simpleTable(['شناسه','عنوان','مبلغ'],row.invoices.map(i=>[number(i.id),i.title,fmt(i.amount)]))+'</details>').join(''):'<p class="empty">مغایرتی یافت نشد.</p>';
   }catch(e){if(current===revision&&form.isConnected)summary.textContent=e.message;}
  };
+ $('reconciliationExport').onclick=()=>{const params=new URLSearchParams(new FormData(form));params.set('academicYear',ServiceYarDates.digits(params.get('academicYear').trim()));downloadFile('/api/v1/reports/financial-reconciliation.xlsx?'+params,'مغایرت‌های-مالی.xlsx');};
+ form.elements.schoolId.addEventListener('change',()=>void run());
  form.onsubmit=e=>{e.preventDefault();void run();};
  return run();
 }
