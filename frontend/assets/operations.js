@@ -1104,6 +1104,8 @@ async function contractsPage(token=pageToken){
     try{
      const record=await api(scoped('/api/v1/contract-documents/'+encodeURIComponent(button.dataset.contractPrint)+'/print'));
      printWindow.document.open();printWindow.document.write(record.html);printWindow.document.close();
+     const printButton=printWindow.document.getElementById('syContractPrint')||printWindow.document.querySelector('button');
+     if(printButton)printButton.addEventListener('click',async()=>{await printWindow.document.fonts?.ready;printWindow.focus();printWindow.print();});
      printWindow.focus();
     }catch(error){printWindow.close();notify('چاپ قرارداد: '+error.message,true);}
    });

@@ -1,0 +1,24 @@
+@font-face{font-family:Vazirmatn;src:url('/assets/Vazirmatn-Regular.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@page{size:A4 portrait;margin:4mm}
+*{box-sizing:border-box}
+html{direction:rtl;background:#fff;color:#111}
+body{margin:0;font-family:"B Nazanin","BNazanin",Vazirmatn,Tahoma,sans-serif;font-size:10pt;line-height:1.43}
+.contract-toolbar{max-width:202mm;margin:8px auto;text-align:left}
+.contract-toolbar button{font:inherit;padding:6px 15px;cursor:pointer}
+.contract-sheet{width:202mm;min-height:289mm;margin:0 auto 8mm;padding:5mm 4mm 3mm;border:0.25mm solid #111;overflow-wrap:anywhere;break-after:page;page-break-after:always}
+.contract-sheet:last-child{break-after:auto;page-break-after:auto}
+.contract-parent .contract-sheet{font-size:9.6pt;line-height:1.42}
+.contract-sheet h1{font-size:12pt;margin:0 0 2mm;text-align:center}
+.contract-sheet h2,.contract-sheet h3{font-size:inherit;font-weight:700;line-height:inherit;margin:0.7mm 0 0;break-after:avoid}
+.contract-sheet p{margin:0.25mm 0;text-align:justify;text-align-last:right}
+.contract-top,.contract-parent .contract-sheet>div:first-child{position:relative;min-height:9mm;margin-bottom:0.5mm;text-align:center}
+.contract-top strong,.contract-parent .contract-sheet>div:first-child>strong{display:block;font-size:11.5pt;font-weight:700}
+.contract-top>span,.contract-parent .contract-sheet>div:first-child>span{position:absolute;left:0;top:0;text-align:right;font-size:8pt;line-height:1.4;max-width:49mm}
+.contract-value{unicode-bidi:isolate}
+.contract-sheet .signatures,.contract-parent .contract-sheet>div:last-child:not(:first-child){display:grid;grid-template-columns:1fr 1fr;gap:8mm;margin-top:2mm;min-height:15mm;text-align:right;break-inside:avoid}
+.contract-sheet table{width:100%;border-collapse:collapse}
+.contract-sheet td,.contract-sheet th{border:1px solid #444;padding:2px}
+.contract-sheet ul,.contract-sheet ol{margin:0;padding-inline-start:5mm}
+.contract-warning{border:1px solid #a83232;padding:6px;margin:5px auto;max-width:202mm}
+@media screen{html{background:#eee}.contract-sheet{background:white;box-shadow:0 1px 8px #0002}}
+@media print{html,body{background:#fff;margin:0;padding:0}.contract-toolbar,button{display:none!important}.contract-sheet{margin:0;box-shadow:none;width:100%;min-height:288mm}}
