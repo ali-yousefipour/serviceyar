@@ -270,6 +270,20 @@ final class DomainService {
    if(isset($q[$key]) && $q[$key]!=='' && in_array($column,$c['fields'],true)){$where.=" AND $column=:filter_$column";$params['filter_'.$column]=(string)$q[$key];}
   }
   if($resource==='students'){
+   $paymentState=$q['studentPaymentState']??'';
+   if(!is_string($paymentState)||!in_array($paymentState,['','debt','credit','settled','unbilled'],true))
+    throw new AuthException(422,'وضعیت پرداخت دانش‌آموز نامعتبر است.','VALIDATION_ERROR');
+   if($paymentState!==''){
+    $invoiced=self::studentInvoiceTotalSql();$received=self::studentPaidTotalSql();
+    $net="ROUND(($invoiced)-($received),2)";
+    $condition=match($paymentState){
+     'debt'=>"$net>0",
+     'credit'=>"$net<0",
+     'settled'=>"$net=0 AND ($invoiced)>0",
+     'unbilled'=>"$net=0 AND ($invoiced)<=0"
+    };
+    $where.=" AND ($condition)";
+   }
    foreach(['studentName','nationalCode'] as $field){
     $term=$q[$field]??'';if(!is_string($term)||trim($term)==='')continue;
     $term=strtr(trim($term),['ي'=>'ی','ى'=>'ی','ك'=>'ک','۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']);
