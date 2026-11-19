@@ -586,6 +586,18 @@ try {
  if($method==='GET'&&$path==='/api/v1/operations/financial-reconciliation')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\FinancialReconciliation::report($s['id'],$aid,$_GET)]);
  if($method==='GET'&&$path==='/api/v1/operations/debtors')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\StudentDebtors::report($s['id'],$aid,$_GET)]);
  if($method==='GET'&&$path==='/api/v1/operations/dashboard/details')Response::json(['ok'=>true,'data'=>OperationsService::dashboardDetails($s['id'],$aid,$_GET)]);
+ if($method==='GET'&&$path==='/api/v1/reports/financial-reconciliation.xlsx'){
+  Authorization::requirePermission($s['id'],'reports.view');
+  $report=\ServiceYar\Domain\FinancialReconciliation::report($s['id'],$aid,$_GET);
+  require_once __DIR__.'/../src/Vendor/SimpleXLSXGen.php';
+  $rows=[['شناسه دانش‌آموز','نام دانش‌آموز','مدرسه','تعرفه ماهانه (ریال)','مدت استاندارد','برآورد سالانه (ریال)','فاکتورهای نیازمند تطبیق (ریال)','اختلاف (ریال)','علت مغایرت','شناسه قراردادها','شناسه فاکتورها']];
+  foreach($report['items'] as $row){
+   $safe=static fn($v)=>'<raw>'.htmlspecialchars((string)$v,ENT_XML1|ENT_QUOTES,'UTF-8').'</raw>';
+   $rows[]=[(int)$row['student_id'],$safe($row['student']),$safe($row['school']),$row['monthly_fee'],$row['annual_months'],$row['expected'],$row['invoice_total'],$row['difference'],$safe(implode('؛ ',$row['issues'])),$safe(implode('، ',array_column($row['contracts'],'id'))),$safe(implode('، ',array_column($row['invoices'],'id')))];
+  }
+  header('Cache-Control: private, no-store');
+  (new \Shuchkin\SimpleXLSXGen())->setDefaultFont('Vazirmatn')->rightToLeft()->addSheet($rows,'مغایرت‌های مالی')->freezePanes('A2')->downloadAs('financial-reconciliation.xlsx');exit;
+ }
  if($method==='GET'&&$path==='/api/v1/reports/debtors.xlsx')\ServiceYar\Reports\StudentDebtorsWorkbook::download($s['id'],$aid,$_GET,($_GET['scope']??'')==='all');
  if($method==='GET'&&preg_match('#^/api/v1/students/(\d+)/service-finance$#',$path,$m))Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ServiceFinanceReport::report($s['id'],$aid,$_GET,(int)$m[1])]);
  if($method==='GET'&&$path==='/api/v1/operations/school-statement/rules'){Authorization::requirePermission($s['id'],'finance.view');Response::json(['ok'=>true,'data'=>json_decode(file_get_contents(__DIR__.'/../src/Domain/school-statement-template-1405.json'),true,512,JSON_THROW_ON_ERROR)]);}
