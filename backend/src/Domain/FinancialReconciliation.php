@@ -64,4 +64,43 @@ final class FinancialReconciliation {
   $schools->execute([$aid]);
   return ['academicYear'=>$year,'scanned'=>count($students),'items'=>$items,'count'=>count($items),'schools'=>$schools->fetchAll(PDO::FETCH_ASSOC),'readOnly'=>true];
  }
+ public static function linkBatch(int $uid,int $aid,array $body): array {
+  Authorization::requireAgencyAccess($uid,$aid);Authorization::requirePermission($uid,'finance.manage');Authorization::requirePermission($uid,'students.view');
+  $year=ContractBilling::year((string)($body['academicYear']??''));
+  $items=$body['items']??null;
+  if(($body['confirmation']??'')!=='LINK_EXISTING_DOCUMENTS'||!is_array($items)||!$items||count($items)>100)throw new AuthException(422,'تأیید اتصال و انتخاب حداکثر ۱۰۰ پرونده لازم است.','VALIDATION_ERROR');
+  foreach($items as $item){
+   if(!is_array($item))throw new AuthException(422,'پرونده نامعتبر است.','VALIDATION_ERROR');
+   foreach(['studentId','contractId','invoiceId','amount'] as $k)if(!isset($item[$k])||!is_scalar($item[$k])||!ctype_digit((string)$item[$k])||(int)$item[$k]<=0)throw new AuthException(422,'اطلاعات پیش‌نمایش نامعتبر است.','VALIDATION_ERROR');
+  }
+  usort($items,static fn($a,$b)=>(int)$a['studentId']<=>(int)$b['studentId']);
+  return OperationsService::transaction(function(PDO $p)use($uid,$aid,$year,$items){
+   $linked=0;$existing=0;
+   foreach($items as $item){
+    $sid=(int)$item['studentId'];$cid=(int)$item['contractId'];$iid=(int)$item['invoiceId'];$amount=(int)$item['amount'];
+    $st=ContractBilling::lockStudent($p,$aid,$sid);
+    if(ContractBilling::year((string)$st['academic_year'])!==$year)throw new AuthException(409,'سال پرونده تغییر کرده است.','RECONCILIATION_CHANGED');
+    $q=$p->prepare("SELECT amount,start_date,end_date,status FROM contracts WHERE id=? AND agency_id=? AND party_type='student' AND party_id=? FOR UPDATE");$q->execute([$cid,$aid,$sid]);$c=$q->fetch(PDO::FETCH_ASSOC);
+    $q=$p->prepare("SELECT amount,status FROM invoices WHERE id=? AND agency_id=? AND party_type='student' AND party_id=? FOR UPDATE");$q->execute([$iid,$aid,$sid]);$inv=$q->fetch(PDO::FETCH_ASSOC);
+    if(!$c||!$inv||$c['status']!=='active'||$inv['status']==='cancelled'||(float)$c['amount']!==(float)$amount||(float)$inv['amount']!==(float)$amount)throw new AuthException(409,'اسناد تغییر کرده‌اند یا هم‌مبلغ نیستند.','RECONCILIATION_CHANGED');
+    ContractBilling::quote($year,(string)$c['start_date'],(string)$c['end_date'],0);
+    $q=$p->prepare('SELECT * FROM student_contract_invoices WHERE contract_id=? OR invoice_id=? OR (agency_id=? AND student_id=? AND academic_year=?) FOR UPDATE');$q->execute([$cid,$iid,$aid,$sid,$year]);$m=$q->fetchAll(PDO::FETCH_ASSOC);
+    if($m){
+     if(count($m)===1&&(int)$m[0]['agency_id']===$aid&&(int)$m[0]['student_id']===$sid&&(int)$m[0]['contract_id']===$cid&&(int)$m[0]['invoice_id']===$iid&&$m[0]['academic_year']===$year){++$existing;continue;}
+     throw new AuthException(409,'ارتباط مالی دیگری وجود دارد.','RECONCILIATION_CONFLICT');
+    }
+    $q=$p->prepare('SELECT * FROM student_service_debt_invoices WHERE invoice_id=? FOR UPDATE');$q->execute([$iid]);$legacy=$q->fetch(PDO::FETCH_ASSOC);
+    if($legacy&&((int)$legacy['agency_id']!==$aid||(int)$legacy['student_id']!==$sid||ContractBilling::year($legacy['academic_year'])!==$year))throw new AuthException(409,'فاکتور متعلق به سال دیگری است.','RECONCILIATION_CONFLICT');
+    $q=$p->prepare("SELECT id FROM contracts WHERE agency_id=? AND party_type='student' AND party_id=? AND status='active' AND id<>? AND start_date<=? AND end_date>=? LIMIT 1 FOR UPDATE");$q->execute([$aid,$sid,$cid,$c['end_date'],$c['start_date']]);
+    if($q->fetchColumn())throw new AuthException(409,'قرارداد هم‌پوشان وجود دارد.','RECONCILIATION_CONFLICT');
+    $q=$p->prepare("SELECT id FROM invoices WHERE agency_id=? AND party_type='student' AND party_id=? AND status<>'cancelled' AND id<>? LIMIT 1 FOR UPDATE");$q->execute([$aid,$sid,$iid]);
+    if($q->fetchColumn())throw new AuthException(409,'فاکتور دیگری وجود دارد؛ بررسی دستی لازم است.','RECONCILIATION_CONFLICT');
+    $p->prepare('INSERT INTO student_contract_invoices(agency_id,student_id,academic_year,contract_id,invoice_id) VALUES(?,?,?,?,?)')->execute([$aid,$sid,$year,$cid,$iid]);
+    $p->prepare('INSERT INTO activity_logs(agency_id,user_id,action,entity_type,entity_id,metadata) VALUES(?,?,?,?,?,?)')->execute([$aid,$uid,'financial_reconciliation_link','student',$sid,json_encode(['academicYear'=>$year,'contractId'=>$cid,'invoiceId'=>$iid,'amount'=>$amount],JSON_THROW_ON_ERROR)]);
+    ++$linked;
+   }
+   return ['linked'=>$linked,'alreadyLinked'=>$existing];
+  });
+ }
+
 }
