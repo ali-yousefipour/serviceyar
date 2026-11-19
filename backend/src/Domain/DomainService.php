@@ -270,6 +270,10 @@ final class DomainService {
    if(isset($q[$key]) && $q[$key]!=='' && in_array($column,$c['fields'],true)){$where.=" AND $column=:filter_$column";$params['filter_'.$column]=(string)$q[$key];}
   }
   if($resource==='students'){
+   $contractState=$q['studentContractState']??'';
+   if(!is_string($contractState)||!in_array($contractState,['','has_contract','no_contract'],true))
+    throw new AuthException(422,'وضعیت قرارداد دانش‌آموز نامعتبر است.','VALIDATION_ERROR');
+   if($contractState!=='')$where.=" AND ".($contractState==='no_contract'?'NOT ':'').self::studentHasContractSql();
    $paymentState=$q['studentPaymentState']??'';
    if(!is_string($paymentState)||!in_array($paymentState,['','debt','credit','settled','unbilled'],true))
     throw new AuthException(422,'وضعیت پرداخت دانش‌آموز نامعتبر است.','VALIDATION_ERROR');
@@ -407,7 +411,7 @@ final class DomainService {
    ROUND((SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id AND st.is_active=1 WHERE ss.service_id=services.id)*0.07,0) AS overhead_deduction,
    ROUND((SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=services.agency_id AND st.is_active=1 WHERE ss.service_id=services.id)*0.078,0) AS insurance_deduction";
   if($resource==='vehicles')$select="vehicles.*, (SELECT GROUP_CONCAT(CONCAT_WS(' ',vd.first_name,vd.last_name) ORDER BY vd.id DESC SEPARATOR '، ') FROM drivers vd WHERE vd.vehicle_id=vehicles.id AND vd.agency_id=vehicles.agency_id AND vd.is_active=1) AS driver_name, COALESCE(NULLIF(TRIM(vehicles.owner_name),''),(SELECT NULLIF(TRIM(CONCAT_WS(' ',vd.first_name,vd.last_name)),'') FROM drivers vd WHERE vd.vehicle_id=vehicles.id AND vd.agency_id=vehicles.agency_id AND vd.is_active=1 ORDER BY vd.id DESC LIMIT 1)) AS effective_owner_name";
-  if($resource==='students')$select="students.*,
+  if($resource==='students')$select="students.*, ".self::studentHasContractSql()." AS has_contract,
    ".self::studentAnnualMonthsSql()." AS annual_months,
    ".self::studentAnnualFeeSql()." AS annual_fee, ".self::studentContractAmountSql()." AS contract_amount,
    (SELECT sv.id FROM service_students ss JOIN services sv ON sv.id=ss.service_id WHERE ss.student_id=students.id AND sv.agency_id=students.agency_id AND sv.is_active=1 AND sv.status<>'cancelled' ORDER BY sv.id LIMIT 1) AS assigned_service_id,
@@ -427,6 +431,10 @@ final class DomainService {
    $summary=$pdo->prepare("SELECT COUNT(*) records,COALESCE(SUM(CASE WHEN invoices.status<>'cancelled' THEN invoices.amount ELSE 0 END),0) amount,COALESCE(SUM((SELECT COALESCE(SUM(p.amount),0) FROM payments p WHERE p.invoice_id=invoices.id AND p.agency_id=invoices.agency_id)),0) paid,COALESCE(SUM(CASE WHEN invoices.status='cancelled' THEN 0 ELSE GREATEST(0,invoices.amount-(SELECT COALESCE(SUM(p.amount),0) FROM payments p WHERE p.invoice_id=invoices.id AND p.agency_id=invoices.agency_id)) END),0) remaining FROM invoices WHERE $where");$summary->execute($params);$result['summary']=$summary->fetch();
   }
   return $result;
+ }
+ public static function studentHasContractSql(): string {
+  // Include imported contracts without invoice mappings; ignore cancelled contracts.
+  return "EXISTS (SELECT 1 FROM contracts c WHERE c.agency_id=students.agency_id AND c.party_type='student' AND c.party_id=students.id AND c.status='active')";
  }
  public static function studentAnnualMonthsSql(): string {
   $school=static fn(string $field): string => "(SELECT sc.$field FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1)";
