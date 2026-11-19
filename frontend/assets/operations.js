@@ -3130,6 +3130,33 @@ async function schoolStatementPage(token){
   <h3>بهای خدمات دانش‌آموزان</h3>
   <div class="table-wrap sy-statement-students">${simpleTable(['دانش‌آموز','مدرسه','راننده','حق‌الزحمه مبنا','بیمه','بهای خدمات اولیا','مبنای تعرفه'],(d.items||[]).map(x=>[x.student_name,x.school_name,x.driver_name,fmt(x.reference?.driver_fee??x.gross),fmt(x.reference?.insurance_fee),fmt(x.reference?.parent_total),x.reference_tariff_verified===false?'نیازمند اصلاح':'نرخ‌نامه مرجع']))}</div>`;
  };
+ const exportStatement=async (button,path,options={},filename='صورت-وضعیت.xlsx')=>{
+  if(document.querySelector('[data-statement-export-progress]'))return;
+  const token=Array.from(crypto.getRandomValues(new Uint8Array(16)),n=>n.toString(16).padStart(2,'0')).join('');
+  const target=new URL(path,location.origin);target.searchParams.set('progressToken',token);
+  const box=document.createElement('div');box.dataset.statementExportProgress='1';box.className='panel';
+  box.setAttribute('role','status');box.setAttribute('aria-live','polite');
+  box.innerHTML='<strong>در حال ساخت فایل اکسل ۱۴ شیتی…</strong><p data-export-stage>آماده‌سازی اطلاعات · ۰٪</p><progress max="100" value="0" aria-label="پیشرفت ساخت فایل اکسل"></progress>';
+  button.insertAdjacentElement('afterend',box);
+  const bar=box.querySelector('progress'),label=box.querySelector('[data-export-stage]');
+  const labels={PREPARE:'آماده‌سازی اطلاعات',TEMPLATE_COPY:'بررسی قالب اصلی',BUILD_SOURCE_ROWS:'آماده‌سازی ردیف‌ها',NORMALIZE_FORMULAS:'تنظیم فرمول‌ها',REPLACE_DATA_SHEETS:'تکمیل شیت‌ها',UPDATE_HEADINGS:'تنظیم عنوان‌ها و جمع‌ها',SYNC_TABLES:'هماهنگ‌سازی جدول‌ها',PRINT_AREAS:'تنظیم چاپ',ZIP_FINALIZE:'بسته‌بندی فایل',DOWNLOAD:'دریافت فایل'};
+  let done=false,timer,percent=0;
+  const paint=(p,stage)=>{percent=Math.max(percent,Math.min(100,Number(p)||0));bar.value=percent;label.textContent=(labels[stage]||stage)+' · '+number(percent)+'٪';};
+  const poll=async()=>{try{const data=await api(scoped('/api/v1/reports/school-statements/progress?token='+token));if(!done)paint(data.percent,data.stage);}catch(_){}finally{if(!done)timer=setTimeout(poll,1000);}};
+  button.setAttribute('aria-disabled','true');button.setAttribute('aria-busy','true');if(button.tagName==='BUTTON')button.disabled=true;
+  poll();
+  try{
+   const response=await fetch(target.href,{credentials:'same-origin',...options});
+   if(!response.ok){const error=await response.json().catch(()=>({}));throw new Error(error?.error?.message||'تهیه فایل اکسل انجام نشد.');}
+   const blob=await response.blob();
+   if(blob.size<200||!String(response.headers.get('Content-Type')||'').includes('spreadsheetml'))throw new Error('پاسخ سرور فایل Excel معتبر نیست.');
+   paint(100,'DOWNLOAD');
+   const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+   notify('فایل اکسل آماده شد.');
+  }catch(err){notify(err.message,true);}
+  finally{done=true;clearTimeout(timer);box.remove();button.removeAttribute('aria-disabled');button.removeAttribute('aria-busy');if(button.tagName==='BUTTON')button.disabled=false;}
+ };
+ const bindStatementExports=root=>root.querySelectorAll('a[href*="/reports/school-statements/"][href*=".xlsx"]').forEach(link=>link.onclick=e=>{e.preventDefault();if(link.getAttribute('aria-disabled')==='true')return;exportStatement(link,link.href,{},'صورت-وضعیت-'+(link.href.match(/(\d+)\.xlsx/)?.[1]||'نهایی')+'.xlsx');});
  const showDetail=async id=>{
   const opener=document.activeElement;
   try{
@@ -3157,6 +3184,7 @@ async function schoolStatementPage(token){
     if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
     else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
    });
+   bindStatementExports(modal);
    modal.querySelector('#statementClose').focus();
   }catch(e){notify(e.message,true);}
  };
@@ -3178,6 +3206,7 @@ async function schoolStatementPage(token){
   $('statementArchiveCount').textContent=number(filtered.length)+' صورت‌وضعیت از '+number(storedStatements.length)+' سابقه';
   archive.innerHTML=filtered.length?`<table class="sy-statement-table"><thead><tr><th scope="col">ردیف</th><th scope="col">ماه</th><th scope="col">بازه</th><th scope="col">دانش‌آموز</th><th scope="col">راننده</th><th scope="col">حق‌الزحمه رانندگان</th><th scope="col">بهای خدمات اولیا</th><th scope="col">جمع صورت‌وضعیت</th><th scope="col">وضعیت</th><th scope="col">عملیات</th></tr></thead><tbody>${filtered.map((r,i)=>`<tr><td data-label="ردیف">${number(i+1)}</td><td data-label="ماه"><strong>${esc(months[Number(r.jalali_month)-1]||'—')} ${number(r.jalali_year)}</strong></td><td data-label="بازه">${esc(dateText(r.period_start))} تا ${esc(dateText(r.period_end))}</td><td data-label="دانش‌آموز">${number(r.totals?.students)}</td><td data-label="راننده">${number(r.totals?.drivers)}</td><td data-label="حق‌الزحمه رانندگان" class="sy-financial-number">${number(r.reference_totals?.driver_fee??r.totals?.gross)}</td><td data-label="بهای خدمات اولیا" class="sy-financial-number">${r.reference_totals?.parent_total!=null?number(r.reference_totals.parent_total):'—'}</td><td data-label="جمع صورت‌وضعیت" class="sy-financial-number"><strong>${statementAmount(r)===null?'—':number(statementAmount(r))}</strong></td><td data-label="وضعیت"><span class="sy-statement-state ${r.status==='deleted'?'is-deleted':'is-final'}">${r.status==='deleted'?'حذف‌شده':'نهایی'}</span></td><td data-label="عملیات"><div class="member-actions"><button type="button" data-statement-detail="${r.id}">جزئیات</button>${r.status==='final'?'<a href="'+esc(scoped('/api/v1/reports/school-statements/'+r.id+'.xlsx'))+'">خروجی اکسل</a>':''}${allowed?`<button type="button" data-statement-toggle="${r.id}" data-statement-action="${r.status==='deleted'?'restore':'delete'}">${r.status==='deleted'?'بازیابی':'حذف'}</button>`:''}</div></td></tr>`).join('')}</tbody></table>`:'<div class="sy-statement-empty"><strong>صورت‌وضعیتی با این فیلتر پیدا نشد.</strong><p>ماه، سال یا وضعیت انتخابی را تغییر دهید.</p></div>';
   archive.removeAttribute('aria-busy');
+  bindStatementExports(archive);
   archive.querySelectorAll('[data-statement-detail]').forEach(b=>b.onclick=()=>showDetail(Number(b.dataset.statementDetail)));
   archive.querySelectorAll('[data-statement-toggle]').forEach(b=>b.onclick=async()=>{
    const restore=b.dataset.statementAction==='restore';
@@ -3209,25 +3238,11 @@ async function schoolStatementPage(token){
     if(Number(form.elements.year.value)!==payload.year||Number(form.elements.month.value)!==payload.month||form.elements.from.value!==payload.from||form.elements.to.value!==payload.to){
      notify('دوره تغییر کرده است؛ پیش‌نمایش تازه تهیه کنید.',true);return;
     }
-    const btn=$('downloadStatementPreviewXlsx');btn.disabled=true;btn.textContent='در حال ساخت اکسل آزمایشی…';
-    try{
-     const response=await fetch(scoped('/api/v1/reports/school-statements/preview.xlsx'),{
-      method:'POST',credentials:'same-origin',
+    await exportStatement($('downloadStatementPreviewXlsx'),scoped('/api/v1/reports/school-statements/preview.xlsx'),{
+      method:'POST',
       headers:{'Content-Type':'application/json','Accept':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','X-CSRF-Token':session.csrfToken},
       body:JSON.stringify({...payload,approvalDigest:d.approval_digest})
-     });
-     if(!response.ok){
-      const error=await response.json().catch(()=>({}));
-      throw new Error(error?.error?.message||'تهیه فایل آزمایشی انجام نشد.');
-     }
-     const blob=await response.blob();
-     if(blob.size<200||!String(response.headers.get('Content-Type')||'').includes('spreadsheetml'))throw new Error('پاسخ سرور فایل Excel معتبر نیست.');
-     const url=URL.createObjectURL(blob),link=document.createElement('a');
-     link.href=url;link.download='پیش‌نمایش-صورت‌وضعیت-'+payload.year+'-'+String(payload.month).padStart(2,'0')+'.xlsx';
-     document.body.appendChild(link);link.click();link.remove();
-     setTimeout(()=>URL.revokeObjectURL(url),60000);
-    }catch(err){notify(err.message,true);}
-    finally{if(btn.isConnected){btn.disabled=false;btn.textContent='دریافت اکسل آزمایشی ۱۴ شیتی';}}
+    },'پیش‌نمایش-صورت‌وضعیت-'+payload.year+'-'+String(payload.month).padStart(2,'0')+'.xlsx');
    });
    $('finalizeStatement')?.addEventListener('click',async()=>{if(Number(form.elements.year.value)!==payload.year||Number(form.elements.month.value)!==payload.month){notify('دوره تغییر کرده است؛ پیش‌نمایش تازه تهیه کنید.',true);return;}if(!confirm('صورت‌وضعیت این ماه با مبالغ نمایش‌داده‌شده نهایی و ثبت شود؟'))return;const b=$('finalizeStatement');b.disabled=true;try{const result=await write('/api/v1/operations/school-statements',{...payload,approvalDigest:d.approval_digest},'POST');preview.innerHTML='<p class="ok">صورت‌وضعیت ماهانه ثبت شد.</p>';notify('صورت‌وضعیت نهایی ثبت شد.');await load();showDetail(result.id);}catch(err){notify(err.message,true);b.disabled=false;}});
   }catch(err){preview.innerHTML='<p class="error">'+esc(err.message)+'</p>';}finally{button.disabled=false;}

@@ -13,6 +13,16 @@ use ServiceYar\Domain\SchoolServiceStatement;
  */
 final class ReferenceMonthlyStatementWorkbook
 {
+    // libzip versions differ in whether newly replaced entries are readable
+    // before close(). Keep the latest worksheet XML for subsequent passes.
+    private static array $pendingSheets=[];
+    private static function saveSheet(\ZipArchive $zip,int $sheet,\DOMDocument $doc): void
+    {
+        $xml=$doc->saveXML();
+        if(!is_string($xml)||!$zip->addFromString('xl/worksheets/sheet'.$sheet.'.xml',$xml))
+            throw new \RuntimeException('Cannot write worksheet '.$sheet);
+        self::$pendingSheets[$sheet]=$xml;
+    }
     private const TEMPLATE=__DIR__.'/templates/school-statement-reference.xlsx';
     private const NS='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
 
@@ -76,7 +86,7 @@ final class ReferenceMonthlyStatementWorkbook
 
     private static function document(\ZipArchive $zip,int $sheet): \DOMDocument
     {
-        $xml=$zip->getFromName('xl/worksheets/sheet'.$sheet.'.xml');
+        $xml=self::$pendingSheets[$sheet]??$zip->getFromName('xl/worksheets/sheet'.$sheet.'.xml');
         if(!is_string($xml))throw new \RuntimeException('Reference sheet missing: '.$sheet);
         $doc=new \DOMDocument('1.0','UTF-8');
         $doc->preserveWhiteSpace=false;
@@ -177,7 +187,7 @@ final class ReferenceMonthlyStatementWorkbook
             while($formula->firstChild)$formula->removeChild($formula->firstChild);
             $formula->appendChild($doc->createTextNode((string)$expanded));
         }
-        $zip->addFromString('xl/worksheets/sheet'.$sheet.'.xml',$doc->saveXML());
+        self::saveSheet($zip,$sheet,$doc);
     }
 
     /**
@@ -354,7 +364,7 @@ final class ReferenceMonthlyStatementWorkbook
             $last=max($start+count($records)+($sheet===6||$withTotal?0:-1),$sheet===7?$footerEnd:2);
             $dimension->setAttribute('ref','A1:'.($bounds[$sheet]??'Z').$last);
         }
-        $zip->addFromString('xl/worksheets/sheet'.$sheet.'.xml',$doc->saveXML());
+        self::saveSheet($zip,$sheet,$doc);
     }
 
     private static function replaceCells(\ZipArchive $zip,int $sheet,array $values): void
@@ -400,7 +410,7 @@ final class ReferenceMonthlyStatementWorkbook
             });
             foreach($cells as $cell)$row->appendChild($cell);
         }
-        $zip->addFromString('xl/worksheets/sheet'.$sheet.'.xml',$doc->saveXML());
+        self::saveSheet($zip,$sheet,$doc);
     }
 
     /** Whether this month fits the reference template's fixed data ranges. */
@@ -413,8 +423,11 @@ final class ReferenceMonthlyStatementWorkbook
             && count($d['reference_drivers']??$d['drivers']??[])<=1048559;
     }
 
-    public static function downloadIfAvailable(array $d,string $agency,int $statementId,bool $preview=false): bool
+    public static function downloadIfAvailable(array $d,string $agency,int $statementId,bool $preview=false,?callable $progress=null): bool
     {
+        self::$pendingSheets=[];
+        $progress??=static function(int $percent,string $stage): void {};
+        $progress(8,'TEMPLATE_COPY');
         if(!self::available())return false;
         if(!self::fitsTemplateCapacity($d)){
             throw new \RuntimeException('تعداد ردیف‌ها از سقف فیزیکی Excel بیشتر است.');
@@ -439,7 +452,7 @@ final class ReferenceMonthlyStatementWorkbook
             $stage='ZIP_OPEN';
             if($zip->open($temp)!==true)throw new \RuntimeException('Cannot open reference XLSX');
             try{
-                $stage='BUILD_SOURCE_ROWS';
+                $stage='BUILD_SOURCE_ROWS';$progress(15,$stage);
                 $items=$d['items'];
                 $students=[];$drivers=[];$parents=[];$final=[];$archive=[];
                 $driverRowNumber=[];$driverCounter=0;
@@ -547,16 +560,16 @@ final class ReferenceMonthlyStatementWorkbook
                         'E'=>['formula'=>"D{$r}*3%"],'F'=>['formula'=>"D{$r}*1%"],
                         'G'=>['formula'=>"D{$r}*7%"],'H'=>['formula'=>"SUM(D{$r}:G{$r})"]];
                 }
-                $stage='REPLACE_DATA_SHEETS';
-                self::replaceRows($zip,3,2,$archive);
-                self::replaceRows($zip,4,3,$students);
-                self::replaceRows($zip,5,3,$drivers);
-                self::replaceRows($zip,6,3,$parents);
-                self::replaceRows($zip,7,4,$final,true);
-                $stage='NORMALIZE_FORMULAS';
+                $stage='NORMALIZE_FORMULAS';$progress(28,$stage);
                 self::normalizeSharedFormulas($zip,7);
                 self::normalizeSharedFormulas($zip,12);
-                $stage='UPDATE_HEADINGS';
+                $stage='REPLACE_DATA_SHEETS';$progress(35,$stage);
+                self::replaceRows($zip,3,2,$archive);$progress(44,$stage);
+                self::replaceRows($zip,4,3,$students);$progress(51,$stage);
+                self::replaceRows($zip,5,3,$drivers);$progress(57,$stage);
+                self::replaceRows($zip,6,3,$parents);$progress(65,$stage);
+                self::replaceRows($zip,7,4,$final,true);
+                $stage='UPDATE_HEADINGS';$progress(70,$stage);
                 require_once __DIR__.'/ExcelLocalization.php';
                 $periodLabel=ExcelLocalization::digits($d['month_name'].' '.$d['year']);
                 // Show the month/year in worksheet titles, not merely in the
@@ -630,13 +643,13 @@ final class ReferenceMonthlyStatementWorkbook
                         'A2'=>'این فایل فقط برای بررسی محاسبات ماه انتخابی است و سند مالی نهایی محسوب نمی‌شود.'
                     ]);
                 }
-                $stage='SYNC_TABLES';
+                $stage='SYNC_TABLES';$progress(84,$stage);
                 self::synchronizeTableHeaders($zip);
-                $stage='PRINT_AREAS';
+                $stage='PRINT_AREAS';$progress(90,$stage);
                 self::expandPrintAreas($zip,count($students),count($drivers));
                 // Do not invent journal voucher account codes or contract IDs.
                 // The reference accounting sheet remains unposted until mapped.
-                $stage='ZIP_FINALIZE';
+                $stage='ZIP_FINALIZE';$progress(94,$stage);
                 if(!$zip->close())throw new \RuntimeException('Failed to finalize XLSX ZIP');
             }catch(\Throwable $e){
                 if($zip->status===\ZipArchive::ER_OK)$zip->close();
@@ -647,8 +660,10 @@ final class ReferenceMonthlyStatementWorkbook
             header('Content-Disposition: attachment; filename="'.($preview?'preview-':'').'school-statement-reference-'.$d['year'].'-'.str_pad((string)$d['month'],2,'0',STR_PAD_LEFT).($preview?'':'-'.$statementId).'.xlsx"');
             header('Cache-Control: private, no-store');
             header('X-Content-Type-Options: nosniff');
+            $progress(98,'DOWNLOAD');
+            header('Content-Length: '.filesize($temp));
             readfile($temp);
-        }finally{if(is_file($temp))@unlink($temp);}
+        }finally{self::$pendingSheets=[];if(is_file($temp))@unlink($temp);}
         exit;
     }
 }

@@ -51,7 +51,7 @@ final class MonthlyStatementWorkbook
         Authorization::requirePermission($uid,'finance.view');
         $d=MonthlyStatements::get($uid,$aid,$id);
         if($d['status']!=='final')throw new AuthException(409,'برای دریافت فایل، صورت‌وضعیت باید فعال باشد.','STATEMENT_DELETED');
-        self::render($d,$aid,$id,false);
+        self::render($d,$aid,$id,false,$uid);
     }
 
     /** Download a temporary 14-sheet workbook without writing a monthly statement. */
@@ -64,11 +64,11 @@ final class MonthlyStatementWorkbook
             throw new AuthException(409,'اطلاعات از زمان پیش‌نمایش تغییر کرده است؛ دوباره محاسبه کنید.','STATEMENT_PREVIEW_CHANGED');
         }
         if(empty($d['items']))throw new AuthException(422,'برای این ماه اطلاعات قابل تهیه وجود ندارد.','STATEMENT_EMPTY');
-        self::render($d,$aid,0,true);
+        self::render($d,$aid,0,true,$uid);
     }
 
     /** Identical workbook generation for archived and temporary previews. */
-    private static function render(array $d,int $aid,int $id,bool $preview): never
+    private static function render(array $d,int $aid,int $id,bool $preview,int $uid): never
     {
         if(!class_exists(\ZipArchive::class))throw new AuthException(500,'افزونه ZIP برای اکسل فعال نیست.','EXPORT_DEPENDENCY_MISSING');
         $q=Connection::get()->prepare('SELECT name FROM agencies WHERE id=?');$q->execute([$aid]);$agency=(string)$q->fetchColumn();
@@ -86,7 +86,7 @@ final class MonthlyStatementWorkbook
                 'STATEMENT_REFERENCE_TEMPLATE_CAPACITY');
         }
         try{
-            ReferenceMonthlyStatementWorkbook::downloadIfAvailable($d,$agency,$id,$preview);
+            ReferenceMonthlyStatementWorkbook::downloadIfAvailable($d,$agency,$id,$preview,static fn(int $p,string $stage)=>StatementExportProgress::write($uid,$aid,$p,$stage));
         }catch(\RuntimeException $e){
             error_log('[ServiceYar][statement-export] Exact reference workbook failed: '.$e->getMessage()
                 .' previous: '.($e->getPrevious()?->getMessage()??'none'));
