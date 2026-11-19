@@ -436,6 +436,44 @@ HTML;
    return ['id'=>$id,'contractNo'=>$contractNo,'templateVersion'=>$template['version'],'title'=>$title,'amount'=>$amount,'invoiceId'=>$invoiceId];
   });
  }
+ public static function cancel(int $uid,int $aid,int $id): array {
+  self::scope($uid,$aid,true);Authorization::requirePermission($uid,'finance.manage');
+  ContractSchemaMaintenance::requireReady(Connection::get());
+  return OperationsService::transaction(function(PDO $pdo)use($uid,$aid,$id){
+   $q=$pdo->prepare('SELECT * FROM contracts WHERE id=? AND agency_id=? FOR UPDATE');$q->execute([$id,$aid]);$old=$q->fetch(PDO::FETCH_ASSOC);
+   if(!$old)throw new AuthException(404,'قرارداد یافت نشد.','NOT_FOUND');
+   if($old['status']==='cancelled')return ['id'=>$id,'cancelled'=>true,'alreadyCancelled'=>true];
+   if(!in_array($old['status'],['active','draft'],true))throw new AuthException(409,'قرارداد در این وضعیت قابل حذف نیست.','CONTRACT_NOT_CANCELLABLE');
+   $invoice=null;$mapping=null;
+   if($old['party_type']==='student'){
+    ContractBilling::lockStudent($pdo,$aid,(int)$old['party_id']);
+    $q=$pdo->prepare('SELECT * FROM student_contract_invoices WHERE agency_id=? AND contract_id=? FOR UPDATE');$q->execute([$aid,$id]);$mapping=$q->fetch(PDO::FETCH_ASSOC);
+    if($mapping){
+     $q=$pdo->prepare("SELECT * FROM invoices WHERE id=? AND agency_id=? AND party_type='student' AND party_id=? FOR UPDATE");$q->execute([$mapping['invoice_id'],$aid,$old['party_id']]);$invoice=$q->fetch(PDO::FETCH_ASSOC);
+     if(!$invoice)throw new AuthException(409,'فاکتور مرتبط معتبر نیست.','CONTRACT_INVOICE_CONFLICT');
+     $q=$pdo->prepare('SELECT id FROM payments WHERE invoice_id=? AND agency_id=? LIMIT 1 FOR UPDATE');$q->execute([$invoice['id'],$aid]);
+     if($q->fetchColumn()||$invoice['status']==='paid')throw new AuthException(409,'برای فاکتور قرارداد پرداخت ثبت شده است؛ ابتدا تسویه یا استرداد را از مسیر مالی بررسی کنید.','CONTRACT_HAS_PAYMENTS');
+     $tables=$pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
+     if(in_array('payment_intents',$tables,true)){
+      $q=$pdo->prepare("SELECT id FROM payment_intents WHERE invoice_id=? AND agency_id=? AND status IN ('sending','pending','uncertain','paid') LIMIT 1 FOR UPDATE");$q->execute([$invoice['id'],$aid]);
+      if($q->fetchColumn())throw new AuthException(409,'درخواست پرداخت مرتبط نیازمند تعیین تکلیف است.','CONTRACT_PAYMENT_PENDING');
+     }
+    }else{
+     $q=$pdo->prepare("SELECT id FROM invoices WHERE agency_id=? AND party_type='student' AND party_id=? AND status<>'cancelled' LIMIT 1 FOR UPDATE");$q->execute([$aid,$old['party_id']]);
+     if($q->fetchColumn())throw new AuthException(409,'قرارداد قدیمی فاکتور مرتبط مشخص ندارد؛ ابتدا تطبیق مالی انجام دهید.','LEGACY_CONTRACT_INVOICE_REQUIRED');
+    }
+   }
+   $archive=$old;$archive['revisionAction']='cancel';$archive['invoiceBeforeCancellation']=$invoice;$archive['invoiceMapping']=$mapping;
+   $pdo->prepare('INSERT INTO contract_revisions(agency_id,contract_id,edited_by,previous_json) VALUES(?,?,?,?)')->execute([$aid,$id,$uid,json_encode($archive,JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE|JSON_THROW_ON_ERROR)]);
+   if($invoice){
+    $pdo->prepare("UPDATE invoices SET status='cancelled' WHERE id=? AND agency_id=?")->execute([$invoice['id'],$aid]);
+    $pdo->prepare('DELETE FROM student_service_debt_invoices WHERE agency_id=? AND student_id=? AND invoice_id=?')->execute([$aid,$old['party_id'],$invoice['id']]);
+    $pdo->prepare('DELETE FROM student_contract_invoices WHERE agency_id=? AND contract_id=?')->execute([$aid,$id]);
+   }
+   $pdo->prepare("UPDATE contracts SET status='cancelled' WHERE id=? AND agency_id=?")->execute([$id,$aid]);
+   return ['id'=>$id,'cancelled'=>true,'invoiceCancelled'=>(bool)$invoice];
+  });
+ }
  public static function listing(int $uid,int $agencyId,string $kind): array {
   self::scope($uid,$agencyId);if(!in_array($kind,['parent','driver'],true))throw new AuthException(422,'نوع قرارداد نامعتبر است.','INVALID_CONTRACT_TYPE');
   $pdo=Connection::get();self::ensureSchema($pdo);

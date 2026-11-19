@@ -967,6 +967,10 @@ try {
   if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::editData($s['id'],$aid,(int)$match[1])]);
   if($method==='PUT'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::edit($s['id'],$aid,(int)$match[1],Request::json())]);}
  }
+ if($method==='DELETE'&&preg_match('#^/api/v1/contract-documents/([0-9]+)$#',$path,$match)){
+  $auth->requireCsrf($s);
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::cancel($s['id'],$aid,(int)$match[1])]);
+ }
  if($method==='GET'&&preg_match('#^/api/v1/contract-documents/([0-9]+)/print$#',$path,$match)){
   header('Cache-Control: no-store');
   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::printable($s['id'],$aid,(int)$match[1])]);

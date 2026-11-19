@@ -992,7 +992,7 @@ async function contractsPage(token=pageToken){
     '<div class="sy-contract-create-actions"><button class="primary" type="submit">صدور و ثبت قرارداد</button><span id="syContractCreateStatus" aria-live="polite"></span></div></form></details>':'')+
     '<header class="sy-settings-section-head"><div><h3>قراردادهای صادرشده</h3><p>برای هر قرارداد نسخه چاپی ذخیره‌شده زمان صدور استفاده می‌شود.</p></div></header>'+
     '<div class="table-wrap"><table><thead><tr><th>شماره</th><th>عنوان قرارداد</th><th>تاریخ شروع</th><th>تاریخ پایان</th><th>مبلغ (ریال)</th><th>عملیات</th></tr></thead><tbody>'+
-    (docs.length?docs.map(c=>'<tr><td>'+esc(persianDigits(c.contract_no||'—'))+'</td><td>'+esc(c.title||'—')+'</td><td>'+esc(fmtDate(c.start_date))+'</td><td>'+esc(fmtDate(c.end_date))+'</td><td>'+number(c.amount)+'</td><td><button type="button" data-contract-print="'+Number(c.id)+'" data-contract-legacy="'+(Number(c.printable)?'0':'1')+'">'+(Number(c.printable)?'مشاهده و چاپ مجدد':'بازسازی و چاپ با هشدار')+'</button>'+(can('contracts','manage')?'<button type="button" data-contract-edit="'+Number(c.id)+'">ویرایش</button>':'')+'</td></tr>').join(''):'<tr><td colspan="6">قراردادی در این بخش ثبت نشده است.</td></tr>')+
+    (docs.length?docs.map(c=>'<tr><td>'+esc(persianDigits(c.contract_no||'—'))+'</td><td>'+esc(c.title||'—')+'</td><td>'+esc(fmtDate(c.start_date))+'</td><td>'+esc(fmtDate(c.end_date))+'</td><td>'+number(c.amount)+'</td><td><button type="button" data-contract-print="'+Number(c.id)+'" data-contract-legacy="'+(Number(c.printable)?'0':'1')+'">'+(Number(c.printable)?'مشاهده و چاپ مجدد':'بازسازی و چاپ با هشدار')+'</button>'+(c.status==='cancelled'?'<span class="muted">ابطال‌شده</span>':(can('contracts','manage')&&can('finance','manage')?'<button type="button" data-contract-edit="'+Number(c.id)+'">ویرایش</button><button type="button" class="danger" data-contract-delete="'+Number(c.id)+'">حذف</button>':''))+'</td></tr>').join(''):'<tr><td colspan="6">قراردادی در این بخش ثبت نشده است.</td></tr>')+
     '</tbody></table></div>';
    const form=body.querySelector('#syContractCreateForm');
    if(form){
@@ -1096,6 +1096,13 @@ async function contractsPage(token=pageToken){
      }catch(error){status.textContent=error.message;submit.disabled=false;}
     };
    }
+   body.querySelectorAll('[data-contract-delete]').forEach(button=>button.onclick=async()=>{
+    const id=Number(button.dataset.contractDelete),record=docs.find(c=>Number(c.id)===id);
+    if(!window.confirm('قرارداد '+persianDigits(record?.contract_no||id)+' ابطال شود؟ فاکتور بدون پرداخت مرتبط نیز ابطال می‌شود. نسخه قبلی برای سوابق باقی می‌ماند.'))return;
+    button.disabled=true;
+    try{await write('/api/v1/contract-documents/'+id,{},'DELETE');notify('قرارداد ابطال شد.');await render();}
+    catch(error){notify(error.message,true);button.disabled=false;}
+   });
    body.querySelectorAll('[data-contract-edit]').forEach(button=>button.onclick=async()=>{
     try{
      const id=Number(button.dataset.contractEdit),record=await api(scoped('/api/v1/contract-documents/'+id+'/edit'));
