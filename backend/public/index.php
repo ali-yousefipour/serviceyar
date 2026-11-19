@@ -583,6 +583,7 @@ try {
      Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolRepresentatives::save((int)$s['id'],$aid,Request::json())]);
    }
  }
+ if($method==='GET'&&$path==='/api/v1/operations/financial-reconciliation')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\FinancialReconciliation::report($s['id'],$aid,$_GET)]);
  if($method==='GET'&&$path==='/api/v1/operations/debtors')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\StudentDebtors::report($s['id'],$aid,$_GET)]);
  if($method==='GET'&&$path==='/api/v1/operations/dashboard/details')Response::json(['ok'=>true,'data'=>OperationsService::dashboardDetails($s['id'],$aid,$_GET)]);
  if($method==='GET'&&$path==='/api/v1/reports/debtors.xlsx')\ServiceYar\Reports\StudentDebtorsWorkbook::download($s['id'],$aid,$_GET,($_GET['scope']??'')==='all');
