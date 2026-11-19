@@ -113,9 +113,15 @@ HTML;
 HTML;
  }
  private static function cleanHtml(string $html): string {
-  // Fixed semantic tags only, stripped of all attributes (including event handlers).
-  $html=strip_tags($html,'<h1><h2><h3><p><div><span><strong><b><em><i><ul><ol><li><table><thead><tbody><tr><td><th><br><hr>');
-  return preg_replace('/<([a-z][a-z0-9]*)(?:\s+[^>]*)?>/i','<$1>',$html)??'';
+  return ContractTemplateMarkup::sanitize($html);
+ }
+ public static function previewTemplate(int $uid,string $kind,array $body): array {
+  if(!Authorization::isSuperAdmin($uid))throw new AuthException(403,'فقط مدیر کل مجاز است.','SUPER_ADMIN_REQUIRED');
+  $html=(string)($body['html']??'');
+  if(strlen($html)>800000)throw new AuthException(422,'حجم قالب بیش از حد مجاز است.','INVALID_CONTRACT_TEMPLATE');
+  $values=['contractNo'=>'100000','issueDate'=>'۱۴۰۵/۰۷/۰۱','startDate'=>'۱۴۰۵/۰۷/۰۱','endDate'=>'۱۴۰۶/۰۳/۳۱','durationMonths'=>'۹','academicYear'=>'۱۴۰۵-۱۴۰۶','companyName'=>'شرکت نمونه','guardianName'=>'ولی دانش‌آموز','managerName'=>'مدیر شرکت','totalAmount'=>'۱۲٬۵۰۰٬۰۰۰','distanceKm'=>'۶','payment40'=>'۵٬۰۰۰٬۰۰۰','payment20'=>'۲٬۵۰۰٬۰۰۰','driverName'=>'راننده نمونه'];
+  if($kind==='parent')$values['studentName']='دانش‌آموز نمونه';
+  return ['html'=>self::document(self::cleanHtml($html),$values)];
  }
  private static function template(PDO $pdo,string $kind): array {
   $q=$pdo->prepare('SELECT * FROM contract_templates WHERE kind=? ORDER BY version DESC LIMIT 1');
@@ -141,7 +147,7 @@ HTML;
   if(!Authorization::isSuperAdmin($uid))throw new AuthException(403,'ویرایش قالب تنها برای ادمین کل مجاز است.','SUPER_ADMIN_REQUIRED');
   if(!in_array($kind,['parent','driver'],true))throw new AuthException(422,'نوع قرارداد نامعتبر است.','INVALID_CONTRACT_TYPE');
   $html=(string)($body['html']??'');$title=trim((string)($body['title']??''));
-  if(mb_strlen($html)>150000||mb_strlen($html)<100||$title===''||mb_strlen($title)>200)throw new AuthException(422,'عنوان یا متن قالب قرارداد نامعتبر است.','INVALID_CONTRACT_TEMPLATE');
+  if(strlen($html)>800000||mb_strlen($html)<100||$title===''||mb_strlen($title)>200)throw new AuthException(422,'عنوان یا متن قالب قرارداد نامعتبر است.','INVALID_CONTRACT_TEMPLATE');
   $html=self::cleanHtml($html);
   $pdo=Connection::get();self::ensureSchema($pdo);
   return OperationsService::transaction(function(PDO $pdo)use($uid,$kind,$html,$title) {
@@ -211,7 +217,7 @@ HTML;
   if(!$agency)throw new AuthException(404,'شرکت یافت نشد.','NOT_FOUND');
   $settings=$pdo->prepare('SELECT setting_key,setting_value FROM agency_settings WHERE agency_id=?');$settings->execute([$agencyId]);
   $setting=[];foreach($settings->fetchAll(PDO::FETCH_ASSOC) as $item)$setting[$item['setting_key']]=$item['setting_value'];
-  $values=['companyName'=>$agency['name'],'companyNationalId'=>$setting['company_national_id']??$agency['sepand_national_id']??'',
+  $values=['companyLogoData'=>\ServiceYar\Agency\AgencyLogo::contractDataUri($agencyId),'companyName'=>$agency['name'],'companyNationalId'=>$setting['company_national_id']??$agency['sepand_national_id']??'',
    'companyRegistration'=>$setting['company_registration_number']??'','managerName'=>$setting['company_manager_name']??'',
    'managerTitle'=>$setting['company_manager_title']??'مدیرعامل',
    'managerNationalCode'=>$setting['company_manager_national_code']??'','companyAddress'=>$setting['company_address']??'',
@@ -291,6 +297,7 @@ HTML;
  }
  private static function document(string $html,array $values): string {
   $parent=array_key_exists('studentName',$values);
+  $html=ContractTemplateMarkup::resolveLogos($html,(string)($values['companyLogoData']??''));
   $html=strtr($html,['دانش آموز'=>'دانش‌آموز','دانشآموز'=>'دانش‌آموز','حملونقل'=>'حمل‌ونقل','میباشد'=>'می‌باشد','میگردد'=>'می‌گردد','میگردند'=>'می‌گردند','میخوانده'=>'می‌خوانده','خوانده میشود'=>'خوانده می‌شود','برنامهریزی'=>'برنامه‌ریزی','تحویلگیری'=>'تحویل‌گیری','بهرهمندی'=>'بهره‌مندی','مسئولیتهای'=>'مسئولیت‌های','کلاسها'=>'کلاس‌ها','بیماریهای'=>'بیماری‌های','همهگیر'=>'همه‌گیر','اعتصابهای'=>'اعتصاب‌های','تحریمها'=>'تحریم‌ها','آتشسوزی'=>'آتش‌سوزی','بهعلت'=>'به علت','بهطور'=>'به طور','یکماه'=>'یک ماه','هیچگونه'=>'هیچ‌گونه','درصورت'=>'در صورت','آبانماه'=>'آبان‌ماه','آذرماه'=>'آذرماه','بهمنماه'=>'بهمن‌ماه','اسفندماه'=>'اسفندماه','کدملی'=>'کد ملی','نرم افزار'=>'نرم‌افزار']);
   $html=preg_replace('/([\p{Arabic}])(?=\{\{)/u','$1 ',$html)??$html;
   $html=preg_replace('/(\}\})(?=[\p{Arabic}])/u','$1 ',$html)??$html;

@@ -10,6 +10,21 @@ final class AgencyLogo
     private static function directory(): string {return dirname(__DIR__,3).'/storage/uploads/agency-logos';}
     private static function filename(int $aid): string {return self::directory().'/agency-'.(int)$aid.'.img';}
 
+    /** Embed the logo at issuance so archived contracts do not change when branding changes. */
+    public static function contractDataUri(int $aid): string
+    {
+        $path=self::filename($aid);
+        if(!is_file($path)){
+            foreach([dirname(__DIR__,3).'/assets/logo.png',dirname(__DIR__,3).'/frontend/assets/logo.png'] as $fallback)
+                if(is_file($fallback)){$path=$fallback;break;}
+        }
+        if(!is_file($path)||filesize($path)>1048576)return '';
+        $mime=(string)(@getimagesize($path)['mime']??'');
+        if(!in_array($mime,['image/png','image/jpeg','image/webp'],true))return '';
+        $bytes=file_get_contents($path);
+        return $bytes===false?'':'data:'.$mime.';base64,'.base64_encode($bytes);
+    }
+
     public static function hasCustomLogo(int $aid): bool {return $aid>0 && is_file(self::filename($aid));}
 
     public static function upload(int $uid,int $aid,array $file): array

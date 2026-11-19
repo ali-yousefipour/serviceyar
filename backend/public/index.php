@@ -553,6 +553,10 @@ try {
  if(preg_match('#^/api/v1/contract-templates/(parent|driver)$#',$path,$match)){
   $kind=$match[1];
   if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::templateEditor($s['id'],$kind)]);
+  if($method==='POST'&&isset($_GET['preview'])){
+   $auth->requireCsrf($s);
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::previewTemplate($s['id'],$kind,Request::json())]);
+  }
   if($method==='POST'){
    $auth->requireCsrf($s);
    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::publishTemplate($s['id'],$kind,Request::json())],201);

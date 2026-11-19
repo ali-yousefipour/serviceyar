@@ -1150,7 +1150,8 @@ async function contractsPage(token=pageToken){
       const top=parsed.querySelector('.contract-sheet .contract-top');
       if(top){const meta=top.querySelector('span');if(meta){const content=meta.textContent;const idx=content.indexOf('تاریخ:');if(idx>=0){meta.replaceChildren(parsed.createTextNode(content.slice(0,idx).trim()),parsed.createElement('br'),parsed.createTextNode(content.slice(idx)));}}}
      }
-     for(const el of parsed.querySelectorAll('[style],[onclick]')){el.removeAttribute('style');el.removeAttribute('onclick');}
+     for(const el of parsed.querySelectorAll('[onclick]'))el.removeAttribute('onclick');
+     parsed.querySelectorAll('link[rel="stylesheet"]').forEach(link=>link.href=new URL('/assets/contract-print.css?v=4',window.location.origin).href);
      printWindow.document.open();printWindow.document.write('<!doctype html>'+parsed.documentElement.outerHTML);printWindow.document.close();
      const printStyle=printWindow.document.querySelector('link[rel="stylesheet"]');
      if(printStyle)printStyle.addEventListener('error',()=>notify('بارگذاری قالب چاپ ناموفق بود؛ صفحه را بازخوانی کنید.',true));
@@ -4688,89 +4689,60 @@ async function adminDashboardPage(token){
 
 function adminContractTemplatePage(token){
  if(!session?.roles?.includes('super_admin')||session.impersonation)return;
- $('content').replaceChildren();
- $('content').classList.add('sy-super-admin-workspace');
-  const editor=document.createElement('section');editor.className='panel sy-contract-template-admin';
-  editor.innerHTML='<header class="sy-settings-section-head"><div><h2>مدیریت قالب قراردادهای سامانه</h2><p>انتشار هر ویرایش، نسخه جدید می‌سازد؛ قراردادهای صادرشده قبلی با محتوای ذخیره‌شده خود باقی می‌مانند.</p></div></header>'+
-   '<div class="sy-contract-tabs"><button type="button" class="primary" data-template-kind="parent">قالب قرارداد با ولی</button><button type="button" data-template-kind="driver">قالب قرارداد با راننده</button></div>'+
-   '<form id="syContractTemplateForm"><p id="syContractTemplateVersion" role="status"></p>'+
-   '<label>عنوان قالب<input name="title" maxlength="200" required></label>'+
-   '<div class="sy-template-editor-toolbar"><button type="button" data-editor-mode="visual">ویرایش دیداری</button><button type="button" data-editor-mode="source" class="primary">کد قالب</button><button type="button" data-editor-action="bold">متن درشت</button><button type="button" data-editor-action="heading">عنوان</button><label>افزودن متغیر <select id="syTemplateVariable"><option value="">انتخاب کنید</option><option value="studentName">نام دانش‌آموز</option><option value="guardianName">نام ولی</option><option value="guardianNationalCode">کد ملی ولی</option><option value="driverName">نام راننده</option><option value="managerName">نام مدیر</option><option value="companyName">نام شرکت</option><option value="totalAmount">مبلغ قرارداد</option><option value="contractNo">شماره قرارداد</option><option value="issueDate">تاریخ صدور</option><option value="startDate">تاریخ شروع</option><option value="endDate">تاریخ پایان</option><option value="durationMonths">مدت قرارداد</option><option value="academicYear">سال تحصیلی</option><option value="studentNationalCode">کد ملی دانش‌آموز</option><option value="schoolName">مدرسه</option><option value="schoolRegion">ناحیه</option><option value="guardianFatherName">نام پدر ولی</option><option value="guardianMobile">موبایل ولی</option><option value="guardianAddress">نشانی ولی</option><option value="companyRegistration">شماره ثبت شرکت</option><option value="companyNationalId">شناسه ملی شرکت</option><option value="managerTitle">سمت مدیر</option><option value="managerNationalCode">کد ملی مدیر</option><option value="companyAddress">نشانی شرکت</option><option value="companyPhone">تلفن شرکت</option><option value="bankName">بانک</option><option value="bankAccount">شماره حساب</option><option value="distanceKm">مسافت</option><option value="payment40">پیش‌پرداخت ۴۰ درصد</option><option value="payment20">قسط ۲۰ درصد</option><option value="driverNationalCode">کد ملی راننده</option><option value="driverMobile">موبایل راننده</option><option value="grossAnnual">ناخالص سالانه راننده</option><option value="deductionsAnnual">کسورات سالانه</option><option value="driverDeductionRate">درصد کسورات</option><option value="driverServicesSummary">ریز سرویس راننده</option></select></label></div>'+
-   '<label id="syTemplateSourceLabel">متن و ساختار HTML قالب (برچسب‌های مجاز: h1, h2, p, table و سایر عناصر متنی؛ بدون اسکریپت)<textarea name="html" rows="17" required spellcheck="false" dir="rtl"></textarea></label>'+
-   '<div id="syTemplateVisualEditor" class="sy-template-visual-editor" contenteditable="true" role="textbox" aria-label="ویرایش دیداری متن قرارداد" aria-multiline="true" hidden></div>'+
-   '<p>فیلدهای پویا را با قالب <code>{{studentName}}</code>، <code>{{guardianName}}</code>، <code>{{managerName}}</code>، <code>{{companyName}}</code>، <code>{{totalAmount}}</code> وارد کنید.</p>'+
-   '<button type="button" id="syContractTemplatePreviewBtn">نمایش پیش‌نمایش صفحه A4</button><iframe id="syContractTemplatePreview" title="پیش‌نمایش ایزوله قالب قرارداد" sandbox hidden></iframe>'+
-   '<button type="submit" class="primary">انتشار نسخه جدید قالب</button> <span id="syContractTemplateStatus" role="status"></span></form>';
-  $('content').append(editor);
-  const form=editor.querySelector('form'),buttons=[...editor.querySelectorAll('[data-template-kind]')];
-  let kind='parent',serial=0,visualMode=false,loaded=false;
-  const submit=form.querySelector('[type=submit]');submit.disabled=true;
-  const visual=editor.querySelector('#syTemplateVisualEditor'),sourceLabel=editor.querySelector('#syTemplateSourceLabel');
-  const source=form.elements.html;
-  const switchMode=mode=>{
-   const wantVisual=mode==='visual';
-   if(wantVisual===visualMode)return;
-   if(wantVisual){
-    const fragment=new DOMParser().parseFromString(source.value,'text/html');
-    fragment.querySelectorAll('script,style,iframe,object,embed,svg,link').forEach(n=>n.remove());
-    fragment.querySelectorAll('*').forEach(n=>[...n.attributes].forEach(a=>n.removeAttribute(a.name)));
-    visual.innerHTML=fragment.body.innerHTML;
-   }else source.value=visual.innerHTML;
-   visualMode=wantVisual;visual.hidden=!wantVisual;sourceLabel.hidden=wantVisual;
-   editor.querySelectorAll('[data-editor-mode]').forEach(button=>button.classList.toggle('primary',button.dataset.editorMode===mode));
-  };
-  editor.querySelectorAll('[data-editor-mode]').forEach(button=>button.onclick=()=>switchMode(button.dataset.editorMode));
-  editor.querySelectorAll('[data-editor-action]').forEach(button=>button.onclick=()=>{
-   if(!visualMode)switchMode('visual');
-   visual.focus();document.execCommand(button.dataset.editorAction==='bold'?'bold':'formatBlock',false,button.dataset.editorAction==='bold'?null:'h2');
-  });
-  const picker=editor.querySelector('#syTemplateVariable');
-  picker.onchange=()=>{
-   if(!picker.value)return;
-   const value='{{'+picker.value+'}}';
-   if(visualMode){visual.focus();document.execCommand('insertText',false,value);}
-   else {const begin=source.selectionStart||0,end=source.selectionEnd||0;source.setRangeText(value,begin,end,'end');source.focus();}
-   picker.value='';
-  };
-  editor.querySelector('#syContractTemplatePreviewBtn').onclick=()=>{
-   const html=visualMode?visual.innerHTML:source.value;
-   const preview=editor.querySelector('#syContractTemplatePreview');
-   const sample={studentName:'نام دانش‌آموز',guardianName:'نام ولی',driverName:'نام راننده',managerName:'مدیر شرکت',companyName:'نام شرکت',totalAmount:'۱۲٬۵۰۰٬۰۰۰',contractNo:'۱۰۰۰۰۰',startDate:'۱۴۰۵/۰۷/۰۱',endDate:'۱۴۰۶/۰۳/۳۱',durationMonths:'۹',issueDate:'۱۴۰۵/۰۷/۰۱',academicYear:'۱۴۰۵-۱۴۰۶',distanceKm:'۶',payment40:'۵٬۰۰۰٬۰۰۰',payment20:'۲٬۵۰۰٬۰۰۰'};
-   const clean=new DOMParser().parseFromString(html,'text/html');clean.querySelectorAll('script,style,iframe,object,embed,svg,link,img,meta,base,form').forEach(n=>n.remove());clean.querySelectorAll('*').forEach(n=>[...n.attributes].forEach(a=>n.removeAttribute(a.name)));
-   const filled=clean.body.innerHTML.replace(/\{\{([a-zA-Z0-9]+)\}\}/g,(_,key)=>esc(sample[key]||'نمونه'));
-   preview.srcdoc='<!doctype html><html lang="fa" dir="rtl"><meta charset="utf-8"><style>body{font:9pt/1.45 Tahoma,sans-serif;max-width:190mm;margin:10mm auto;padding:10mm;background:white;color:#222}h1,h2{text-align:right}p{text-align:justify}table{border-collapse:collapse;width:100%}td,th{border:1px solid;padding:4px}</style>'+filled+'</html>';
-   preview.hidden=false;
-  };
-  const load=async()=>{
-   loaded=false;submit.disabled=true;
-   const current=++serial;buttons.forEach(b=>b.classList.toggle('primary',b.dataset.templateKind===kind));
-   form.querySelector('#syContractTemplateStatus').textContent='در حال دریافت قالب…';
-   try{
-    const data=await api('/api/v1/contract-templates/'+kind);
-    if(current!==serial||token!==pageToken||!form.isConnected)return;
-    if(visualMode)switchMode('source');
-    form.elements.title.value=data.title||'';
-    form.elements.html.value=data.html||'';
-    editor.querySelector('#syContractTemplatePreview').hidden=true;
-    form.querySelector('#syContractTemplateVersion').textContent='نسخه فعال: '+number(data.version)+' · انتشار نسخه جدید تنها برای قراردادهای بعدی اعمال می‌شود.';
-    form.querySelector('#syContractTemplateStatus').textContent='';loaded=true;submit.disabled=false;
-   }catch(error){form.querySelector('#syContractTemplateStatus').textContent=error.message;}
-  };
-  buttons.forEach(b=>b.onclick=()=>{kind=b.dataset.templateKind;void load();});
-  form.onsubmit=async e=>{
-   e.preventDefault();if(!loaded)return;
-   if(visualMode)source.value=visual.innerHTML;
-   if(!window.confirm('نسخه جدید قالب قرارداد منتشر شود؟ قراردادهای صادرشده قبلی بدون تغییر باقی می‌مانند.'))return;
-   const button=form.querySelector('[type=submit]');button.disabled=true;buttons.forEach(b=>b.disabled=true);
-   try{
-    const data=await api('/api/v1/contract-templates/'+kind,{method:'POST',headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify({title:form.elements.title.value,html:form.elements.html.value})});
-    form.querySelector('#syContractTemplateStatus').textContent='نسخه '+number(data.version)+' منتشر شد.';
-    form.querySelector('#syContractTemplateVersion').textContent='نسخه فعال: '+number(data.version);
-   }catch(error){form.querySelector('#syContractTemplateStatus').textContent=error.message;}
-   finally{button.disabled=!loaded;buttons.forEach(b=>b.disabled=false);}
-  };
-  void load();
- }
+ const root=$('content');root.replaceChildren();root.classList.add('sy-super-admin-workspace');
+ const editor=document.createElement('section');editor.className='panel sy-contract-template-admin sy-template-studio';
+ const tools=[['undo','↶','واگرد'],['redo','↷','بازانجام'],['bold','B','درشت'],['italic','I','مورب'],['underline','U','زیرخط'],['strikeThrough','S','خط‌خورده'],['justifyRight','≡','راست‌چین'],['justifyCenter','≡','وسط‌چین'],['justifyLeft','≡','چپ‌چین'],['justifyFull','≡','تراز دوطرفه'],['insertUnorderedList','•','فهرست نشانه‌دار'],['insertOrderedList','۱.','فهرست شماره‌دار'],['indent','⇥','افزایش تورفتگی'],['outdent','⇤','کاهش تورفتگی'],['removeFormat','Tx','حذف قالب‌بندی']];
+ editor.innerHTML='<header class="sy-settings-section-head"><div><h2>استودیو طراحی قرارداد</h2><p>صفحه‌آرایی قراردادهای سامانه، درج لوگو و متغیرها؛ هر انتشار یک نسخه جدید می‌سازد.</p></div><span id="syContractTemplateVersion" role="status"></span></header>'+
+ '<div class="sy-contract-tabs"><button type="button" class="primary" data-template-kind="parent">قرارداد اولیا</button><button type="button" data-template-kind="driver">قرارداد رانندگان</button></div>'+
+ '<form id="syContractTemplateForm"><label>عنوان قالب<input name="title" required maxlength="200"></label>'+
+ '<div class="sy-template-studio-toolbar"><div class="sy-template-tool-group"><button type="button" data-editor-mode="visual" class="primary">ویرایش دیداری</button><button type="button" data-editor-mode="source">HTML</button></div>'+
+ '<div class="sy-template-tool-group">'+tools.map(([cmd,icon,label])=>'<button type="button" data-command="'+cmd+'" title="'+label+'" aria-label="'+label+'">'+icon+' <small>'+label+'</small></button>').join('')+'</div>'+
+ '<div class="sy-template-tool-group"><label>نوع متن<select data-select-command="formatBlock"><option value="p">متن معمولی</option><option value="h1">عنوان اصلی</option><option value="h2">عنوان ماده</option><option value="h3">زیرعنوان</option></select></label><label>فونت<select data-select-command="fontName"><option>Vazirmatn</option><option>Tahoma</option><option>B Nazanin</option><option>Arial</option></select></label><label>اندازه<select data-select-command="fontSize">'+[1,2,3,4,5,6,7].map((v,i)=>'<option value="'+v+'">'+[8,10,12,14,18,22,28][i]+'</option>').join('')+'</select></label><label>رنگ متن<input type="color" data-select-command="foreColor" value="#161616"></label><label>رنگ زمینه<input type="color" data-select-command="hiliteColor" value="#ffffff"></label></div>'+
+ '<div class="sy-template-tool-group"><button type="button" data-insert="fixed">لوگوی ثابت سامانه</button><button type="button" data-insert="company">لوگوی پویای شرکت</button><button type="button" data-insert="upload">بارگذاری لوگوی ثابت</button><input type="file" accept="image/png,image/jpeg,image/webp" id="syTemplateLogoFile" hidden><label>عرض لوگو<select id="syTemplateLogoWidth"><option value="60">کوچک</option><option value="100" selected>متوسط</option><option value="150">بزرگ</option><option value="220">خیلی بزرگ</option></select></label><button type="button" data-insert="table">جدول ۲×۲</button><button type="button" data-insert="page">شکست صفحه</button></div>'+
+ '<div class="sy-template-tool-group"><label>افزودن متغیر<select id="syTemplateVariable"><option value="">انتخاب کنید</option><option value="studentName">نام دانش‌آموز</option><option value="guardianName">نام ولی</option><option value="guardianNationalCode">کد ملی ولی</option><option value="driverName">نام راننده</option><option value="managerName">نام مدیر</option><option value="companyName">نام شرکت</option><option value="totalAmount">مبلغ قرارداد</option><option value="contractNo">شماره قرارداد</option><option value="issueDate">تاریخ صدور</option><option value="startDate">تاریخ شروع</option><option value="endDate">تاریخ پایان</option><option value="durationMonths">مدت قرارداد</option><option value="academicYear">سال تحصیلی</option><option value="studentNationalCode">کد ملی دانش‌آموز</option><option value="schoolName">مدرسه</option><option value="schoolRegion">ناحیه</option><option value="guardianFatherName">نام پدر ولی</option><option value="guardianMobile">موبایل ولی</option><option value="guardianAddress">نشانی ولی</option><option value="companyRegistration">شماره ثبت شرکت</option><option value="companyNationalId">شناسه ملی شرکت</option><option value="managerTitle">سمت مدیر</option><option value="managerNationalCode">کد ملی مدیر</option><option value="companyAddress">نشانی شرکت</option><option value="companyPhone">تلفن شرکت</option><option value="bankName">بانک</option><option value="bankAccount">شماره حساب</option><option value="distanceKm">مسافت</option><option value="payment40">پیش‌پرداخت ۴۰ درصد</option><option value="payment20">قسط ۲۰ درصد</option><option value="driverNationalCode">کد ملی راننده</option><option value="driverMobile">موبایل راننده</option><option value="grossAnnual">ناخالص سالانه راننده</option><option value="deductionsAnnual">کسورات سالانه</option><option value="driverDeductionRate">درصد کسورات</option><option value="driverServicesSummary">ریز سرویس راننده</option></select></label><button type="button" id="syContractTemplatePreviewBtn">پیش‌نمایش چاپ A4</button></div></div>'+
+ '<div class="sy-template-paper-area"><label id="syTemplateSourceLabel" hidden>کد HTML<textarea name="html" rows="24" spellcheck="false" dir="ltr"></textarea></label><div id="syTemplateVisualEditor" class="sy-template-visual-editor" contenteditable="true" role="textbox" aria-label="ویرایش متن قرارداد" aria-multiline="true"></div></div>'+
+ '<iframe id="syContractTemplatePreview" title="پیش‌نمایش چاپ قرارداد" sandbox hidden></iframe><footer class="sy-template-studio-footer"><span id="syContractTemplateStatus" role="status"></span><button type="submit" class="primary" disabled>انتشار نسخه جدید قالب</button></footer></form>';
+ root.append(editor);
+ const form=editor.querySelector('form'),source=form.elements.html,visual=editor.querySelector('#syTemplateVisualEditor'),sourceLabel=editor.querySelector('#syTemplateSourceLabel'),status=editor.querySelector('#syContractTemplateStatus'),submit=form.querySelector('[type=submit]'),buttons=[...editor.querySelectorAll('[data-template-kind]')],preview=editor.querySelector('iframe');
+ let kind='parent',serial=0,visualMode=true,loaded=false,dirty=false,savedRange=null;
+ const safeFragment=html=>{
+  const doc=new DOMParser().parseFromString(html,'text/html');
+  doc.querySelectorAll('script,style,iframe,object,embed,svg,math,link,meta,base,form,template').forEach(n=>n.remove());
+  const allowed=new Set(['h1','h2','h3','h4','p','div','span','strong','b','em','i','u','s','strike','sub','sup','ul','ol','li','table','thead','tbody','tfoot','tr','td','th','br','hr','img','blockquote','font']);
+  for(const n of [...doc.body.querySelectorAll('*')]){
+   if(!allowed.has(n.localName)){n.replaceWith(...n.childNodes);continue;}
+   for(const attr of [...n.attributes]){
+    if(!['class','style','align','dir','colspan','rowspan','width','alt','src','data-contract-logo','face','size','color'].includes(attr.name))n.removeAttribute(attr.name);
+    else if(attr.name==='style'&&/url\s*\(|expression\s*\(|@import|position\s*:|behavior\s*:|javascript:/i.test(attr.value))n.removeAttribute('style');
+   }
+   if(n.localName==='img'&&!/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(n.getAttribute('src')||'')&&n.getAttribute('src')!=='/assets/logo.png')n.remove();
+  }
+  return doc.body.innerHTML;
+ };
+ const remember=()=>{const sel=window.getSelection();if(sel?.rangeCount&&visual.contains(sel.anchorNode)&&visual.contains(sel.focusNode))savedRange=sel.getRangeAt(0).cloneRange();};
+ visual.addEventListener('mouseup',remember);visual.addEventListener('keyup',remember);visual.addEventListener('input',()=>{dirty=true;remember();});
+ visual.addEventListener('paste',e=>{e.preventDefault();document.execCommand('insertText',false,e.clipboardData?.getData('text/plain')||'');});
+ source.oninput=()=>{dirty=true;};form.elements.title.oninput=()=>{dirty=true;};
+ const focusSelection=()=>{visual.focus();if(savedRange&&visual.contains(savedRange.startContainer)){const sel=window.getSelection();sel.removeAllRanges();sel.addRange(savedRange);}};
+ const switchMode=mode=>{const want=mode==='visual';if(want===visualMode)return;if(want){visual.innerHTML=safeFragment(source.value);savedRange=null;}else source.value=visual.innerHTML;visualMode=want;visual.hidden=!want;sourceLabel.hidden=want;editor.querySelectorAll('[data-editor-mode]').forEach(b=>b.classList.toggle('primary',b.dataset.editorMode===mode));};
+ const command=(cmd,value=null)=>{if(!loaded)return;if(!visualMode)switchMode('visual');focusSelection();document.execCommand(cmd,false,value);dirty=true;remember();};
+ editor.querySelectorAll('[data-command],[data-insert]').forEach(b=>b.addEventListener('mousedown',e=>e.preventDefault()));
+ editor.querySelectorAll('[data-command]').forEach(b=>b.onclick=()=>command(b.dataset.command));
+ editor.querySelectorAll('[data-select-command]').forEach(el=>{el.addEventListener('pointerdown',remember);el.onchange=()=>command(el.dataset.selectCommand,el.value);});
+ editor.querySelectorAll('[data-editor-mode]').forEach(b=>b.onclick=()=>switchMode(b.dataset.editorMode));
+ const insert=html=>command('insertHTML',html);
+ const logo=(type,src)=>insert('<img '+(type?'data-contract-logo="'+type+'" ':'')+'src="'+esc(src)+'" alt="'+(type==='company'?'لوگوی شرکت':'لوگو')+'" width="'+Number(editor.querySelector('#syTemplateLogoWidth').value)+'" class="contract-logo">');
+ editor.querySelectorAll('[data-insert]').forEach(b=>b.onclick=()=>{if(!loaded)return;const type=b.dataset.insert;if(type==='fixed'||type==='company')logo(type,'/assets/logo.png');else if(type==='upload')editor.querySelector('#syTemplateLogoFile').click();else if(type==='table')insert('<table><tbody><tr><td>متن</td><td>متن</td></tr><tr><td>متن</td><td>متن</td></tr></tbody></table><p><br></p>');else insert('<hr><p><br></p>');});
+ editor.querySelector('#syTemplateLogoFile').onchange=e=>{const file=e.target.files?.[0];if(!file)return;if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>500000){status.textContent='لوگو باید PNG، JPG یا WebP و حداکثر ۵۰۰ کیلوبایت باشد.';e.target.value='';return;}const reader=new FileReader();reader.onload=()=>{logo('',String(reader.result));e.target.value='';};reader.readAsDataURL(file);};
+ const picker=editor.querySelector('#syTemplateVariable');picker.onchange=()=>{if(!picker.value)return;const val='{{'+picker.value+'}}';if(visualMode)command('insertText',val);else{source.setRangeText(val,source.selectionStart,source.selectionEnd,'end');dirty=true;}picker.value='';};
+ const currentHtml=()=>visualMode?visual.innerHTML:source.value;
+ const request=async(path,body)=>api(path,{method:'POST',headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify(body)});
+ editor.querySelector('#syContractTemplatePreviewBtn').onclick=async()=>{if(!loaded)return;try{const data=await request('/api/v1/contract-templates/'+kind+'?preview=1',{html:currentHtml()});const doc=new DOMParser().parseFromString(data.html,'text/html');doc.querySelector('.contract-toolbar')?.remove();doc.querySelectorAll('link[rel="stylesheet"]').forEach(link=>{link.href=new URL(link.getAttribute('href'),window.location.origin).href;});doc.querySelectorAll('img[src^="/"]').forEach(img=>{img.src=new URL(img.getAttribute('src'),window.location.origin).href;});preview.srcdoc='<!doctype html>'+doc.documentElement.outerHTML;preview.hidden=false;preview.scrollIntoView({block:'nearest'});}catch(error){status.textContent=error.message;}};
+ const load=async()=>{loaded=false;submit.disabled=true;const current=++serial;buttons.forEach(b=>b.classList.toggle('primary',b.dataset.templateKind===kind));status.textContent='در حال دریافت قالب…';try{const data=await api('/api/v1/contract-templates/'+kind);if(current!==serial||token!==pageToken||!form.isConnected)return;form.elements.title.value=data.title||'';source.value=data.html||'';visual.innerHTML=safeFragment(source.value);savedRange=null;visualMode=true;visual.hidden=false;sourceLabel.hidden=true;editor.querySelectorAll('[data-editor-mode]').forEach(b=>b.classList.toggle('primary',b.dataset.editorMode==='visual'));preview.hidden=true;editor.querySelector('#syContractTemplateVersion').textContent='نسخه فعال '+number(data.version);status.textContent='قالب آماده ویرایش است.';loaded=true;dirty=false;submit.disabled=false;}catch(error){status.textContent=error.message;}};
+ buttons.forEach(b=>b.onclick=()=>{if(b.dataset.templateKind===kind)return;if(dirty&&!window.confirm('تغییرات ذخیره‌نشده کنار گذاشته شود؟'))return;kind=b.dataset.templateKind;void load();});
+ form.onsubmit=async e=>{e.preventDefault();if(!loaded||!window.confirm('نسخه جدید قالب منتشر شود؟'))return;submit.disabled=true;buttons.forEach(b=>b.disabled=true);try{const data=await request('/api/v1/contract-templates/'+kind,{title:form.elements.title.value,html:currentHtml()});dirty=false;status.textContent='نسخه '+number(data.version)+' منتشر شد.';editor.querySelector('#syContractTemplateVersion').textContent='نسخه فعال '+number(data.version);}catch(error){status.textContent=error.message;}finally{submit.disabled=false;buttons.forEach(b=>b.disabled=false);}};
+ void load();
+}
 
 async function adminSectionPage(key,token){
  if(key==='admin-contract-templates')return adminContractTemplatePage(token);
