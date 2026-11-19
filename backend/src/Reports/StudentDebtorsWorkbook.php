@@ -40,9 +40,13 @@ final class StudentDebtorsWorkbook
         'academic_year'=>['سال تحصیلی',15],
         'service_status'=>['وضعیت سرویس',18],
         'tariff_vehicle_class'=>['کلاس خودرو',14],
+        'contract_amount'=>['مبلغ قطعی قرارداد (ریال)',20],
+        'annual_months'=>['مدت استاندارد سال تحصیلی',20],
+        'credit'=>['بستانکاری (ریال)',20],
+        'reconciliation_status'=>['وضعیت تطبیق مالی',32],
         'invoice_total'=>['جمع فاکتورهای معتبر (ریال)',19],
     ];
-    private const MONEY = ['monthly_fee','annual_fee','paid','debt','invoice_total'];
+    private const MONEY = ['monthly_fee','annual_fee','paid','debt','invoice_total','contract_amount','credit'];
     public static function columns(?string $raw=null): array
     {
         $keys=$raw===null?[]:explode(',',$raw);
