@@ -793,6 +793,10 @@ try {
       $s['id'],true,(string)(Request::json()['confirm']??''))]);
    }
  }
+ if($path==='/api/v1/admin/contracts/schema'){
+   if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractSchemaMaintenance::status($s['id'])]);
+   if($method==='POST'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractSchemaMaintenance::repair($s['id'],(string)(Request::json()['confirm']??''))]);}
+ }
  if($path==='/api/v1/admin/sepand-registry/schema'){
    if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SepandSchemaMaintenance::status($s['id'])]);
    if($method==='POST'){

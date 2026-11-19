@@ -326,7 +326,7 @@ HTML;
   unset($row['snapshot_json']);return $row+['values'=>$values,'kind'=>$kind];
  }
  public static function edit(int $uid,int $aid,int $id,array $input): array {
-  self::scope($uid,$aid,true);Authorization::requirePermission($uid,'finance.manage');
+  self::scope($uid,$aid,true);Authorization::requirePermission($uid,'finance.manage');ContractSchemaMaintenance::requireReady(Connection::get());
   $start=(string)($input['startDate']??'');$end=(string)($input['endDate']??'');
   if(!OperationsService::validDate($start)||!OperationsService::validDate($end)||$end<$start)throw new AuthException(422,'بازه قرارداد نامعتبر است.','INVALID_CONTRACT_DATES');
   if(!is_array($input['overrides']??null))throw new AuthException(422,'مشخصات نامعتبر است.','INVALID_CONTRACT_OVERRIDE');
@@ -379,7 +379,7 @@ HTML;
   });
  }
  public static function issue(int $uid,int $agencyId,string $kind,array $input): array {
-  self::scope($uid,$agencyId,true);$pdo=Connection::get();self::ensureSchema($pdo);
+  self::scope($uid,$agencyId,true);$pdo=Connection::get();self::ensureSchema($pdo);ContractSchemaMaintenance::requireReady($pdo);
   if(!in_array($kind,['parent','driver'],true))throw new AuthException(422,'نوع قرارداد نامعتبر است.','INVALID_CONTRACT_TYPE');
   $partyId=filter_var($input['partyId']??null,FILTER_VALIDATE_INT);
   if($partyId===false||$partyId<1)throw new AuthException(422,'طرف قرارداد را انتخاب کنید.','INVALID_CONTRACT_PARTY');

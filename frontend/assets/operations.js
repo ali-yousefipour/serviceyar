@@ -4745,6 +4745,14 @@ async function adminDashboardPage(token){
    (recent.length?'<div class="sy-admin-recent-companies">'+recent.map(a=>'<div><span class="sy-admin-company-mark">'+esc((a.name||'ش').trim().slice(0,1))+'</span><span><b>'+esc(a.name)+'</b><small>'+(a.code?'کد '+esc(a.code):'شناسه '+number(a.id))+'</small></span><em>فعال</em></div>').join('')+'</div>':'<div class="empty">هنوز شرکت فعالی ثبت نشده است.</div>')+
    '<div class="sy-admin-company-summary"><span>کل شرکت‌ها</span><b>'+number(companies.length)+'</b><span>غیرفعال</span><b>'+number(companies.length-active.length)+'</b></div></div></section>';
   $('syDashboardImpersonate').onclick=openAdminImpersonationDialog;
+  const maintenance=document.createElement('section');maintenance.className='panel';
+  maintenance.innerHTML='<h3>آمادگی دیتابیس قراردادها</h3><p data-contract-schema-status aria-live="polite">در حال بررسی ساختار…</p><button type="button" class="primary" data-contract-schema-repair hidden>آماده‌سازی دیتابیس قراردادها</button>';
+  $('content').append(maintenance);
+  const status=maintenance.querySelector('[data-contract-schema-status]'),repair=maintenance.querySelector('[data-contract-schema-repair]');
+  const showSchema=data=>{status.textContent=data.ready?'ساختار قراردادها آماده است.':'ساختار قراردادها ناقص است: '+(data.missing||[]).join('، ');repair.hidden=!!data.ready;};
+  api('/api/v1/admin/contracts/schema').then(showSchema).catch(error=>{status.textContent=error.message;});
+  repair.onclick=async()=>{if(!window.confirm('پس از تهیه نسخه پشتیبان، ایجاد جداول موردنیاز قراردادها را تأیید می‌کنید؟'))return;repair.disabled=true;try{showSchema(await write('/api/v1/admin/contracts/schema',{confirm:'REPAIR_CONTRACT_SCHEMA'},'POST'));notify('ساختار قراردادها آماده شد.');}catch(error){status.textContent=error.message;}finally{repair.disabled=false;}};
+
  }catch(error){if(token===pageToken)$('content').innerHTML='<div class="error">'+esc(error.message)+'</div>';}
 }
 
