@@ -977,6 +977,10 @@ try {
   $auth->requireCsrf($s);
   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::cancel($s['id'],$aid,(int)$match[1],(Request::json()['contractOnly']??false)===true)]);
  }
+ if($method==='POST'&&$path==='/api/v1/contract-documents/archive-imported'){
+  $auth->requireCsrf($s);
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::archiveImportedBatch($s['id'],$aid,(int)(Request::json()['after']??0))]);
+ }
  if($method==='GET'&&preg_match('#^/api/v1/contract-documents/([0-9]+)/print$#',$path,$match)){
   header('Cache-Control: no-store');
   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::printable($s['id'],$aid,(int)$match[1])]);

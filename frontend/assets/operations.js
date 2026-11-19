@@ -991,10 +991,24 @@ async function contractsPage(token=pageToken){
     '<label>'+(kind==='driver'?'مبلغ خالص سالانه قرارداد راننده (ریال)':'مبلغ کل قرارداد (ریال)')+'<input name="amount" type="text" inputmode="numeric" required '+'readonly aria-readonly="true" '+'placeholder="'+(kind==='driver'?'محاسبه خودکار پس از انتخاب راننده':'مبلغ صحیح بدون اعشار')+'"></label>'+
     '<section class="sy-contract-draft-data" id="syContractDraftData" aria-live="polite">برای مشاهده و تکمیل اطلاعات طرفین، ابتدا شخص را انتخاب کنید.</section>'+
     '<div class="sy-contract-create-actions"><button class="primary" type="submit">صدور و ثبت قرارداد</button><span id="syContractCreateStatus" aria-live="polite"></span></div></form></details>':'')+
-    '<header class="sy-settings-section-head"><div><h3>قراردادهای صادرشده</h3><p>برای هر قرارداد نسخه چاپی ذخیره‌شده زمان صدور استفاده می‌شود.</p></div></header>'+
+    '<header class="sy-settings-section-head"><div><h3>قراردادهای صادرشده</h3><p>نسخه چاپی ذخیره‌شده یا نسخه بازسازی‌شده با ذکر منشأ.</p></div>'+(kind==='parent'&&can('contracts','manage')&&can('finance','manage')?'<button type="button" class="primary" data-archive-imported>تکمیل نسخه چاپی قراردادهای واردشده</button><span data-archive-status role="status"></span>':'')+'</header>'+
     '<div class="table-wrap"><table><thead><tr><th>شماره</th><th>عنوان قرارداد</th><th>تاریخ شروع</th><th>تاریخ پایان</th><th>مبلغ (ریال)</th><th>عملیات</th></tr></thead><tbody>'+
     (docs.length?docs.map(c=>'<tr><td>'+esc(persianDigits(c.contract_no||'—'))+'</td><td>'+esc(c.title||'—')+'</td><td>'+esc(fmtDate(c.start_date))+'</td><td>'+esc(fmtDate(c.end_date))+'</td><td>'+number(c.amount)+'</td><td><button type="button" data-contract-print="'+Number(c.id)+'" data-contract-legacy="'+(Number(c.printable)?'0':'1')+'">'+(Number(c.printable)?'مشاهده و چاپ مجدد':'بازسازی و چاپ با هشدار')+'</button>'+(c.status==='cancelled'?'<span class="muted">ابطال‌شده</span>':(can('contracts','manage')&&can('finance','manage')?'<button type="button" data-contract-edit="'+Number(c.id)+'">ویرایش</button><button type="button" class="danger" data-contract-delete="'+Number(c.id)+'">حذف</button>':''))+'</td></tr>').join(''):'<tr><td colspan="6">قراردادی در این بخش ثبت نشده است.</td></tr>')+
     '</tbody></table></div>';
+   const archive=body.querySelector('[data-archive-imported]');
+   if(archive)archive.onclick=async()=>{
+    archive.disabled=true;const status=body.querySelector('[data-archive-status]');let after=0,total=0,errors=[];
+    try{
+     let result;
+     do{
+      result=await write('/api/v1/contract-documents/archive-imported',{after},'POST');
+      total+=Number(result.archived||0);errors.push(...(result.errors||[]));after=Number(result.after);
+      status.textContent='نسخه ذخیره‌شده: '+persianDigits(total)+'؛ ناموفق: '+persianDigits(errors.length);
+     }while(result.more&&body.isConnected&&request===serial);
+     notify('نسخه چاپی '+persianDigits(total)+' قرارداد ذخیره شد.'+(errors.length?' موارد ناموفق: '+errors.map(e=>e.id+' '+e.message).join('؛ '):''),errors.length>0);
+     await render();
+    }catch(error){status.textContent=error.message;notify(error.message,true);archive.disabled=false;}
+   };
    const form=body.querySelector('#syContractCreateForm');
    if(form){
     const search=form.querySelector('#syContractPersonSearch'),select=form.elements.partyId;

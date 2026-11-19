@@ -517,7 +517,7 @@ HTML;
   self::scope($uid,$agencyId);if(!in_array($kind,['parent','driver'],true))throw new AuthException(422,'نوع قرارداد نامعتبر است.','INVALID_CONTRACT_TYPE');
   $pdo=Connection::get();self::ensureSchema($pdo);
   $q=$pdo->prepare("SELECT id,title,contract_no,party_type,party_id,start_date,end_date,amount,status,issued_at,
-    CASE WHEN rendered_html IS NULL THEN 0 ELSE 1 END AS printable
+    CASE WHEN rendered_html IS NULL OR rendered_html='' THEN 0 ELSE 1 END AS printable
     FROM contracts WHERE agency_id=? AND party_type=? ORDER BY id DESC LIMIT 250");
   $q->execute([$agencyId,$kind==='parent'?'student':'driver']);
   return $q->fetchAll(PDO::FETCH_ASSOC);
@@ -525,9 +525,25 @@ HTML;
  /** Freeze a reconstructed copy of a SQL-imported student contract without issuing new debt. */
  public static function archiveImportedStudentContract(int $id): bool {
   if(PHP_SAPI!=='cli')throw new \LogicException('CLI migration only');
-  return OperationsService::transaction(function(PDO $pdo)use($id){
-   $q=$pdo->prepare("SELECT c.*,m.academic_year AS billing_year,m.invoice_id FROM contracts c JOIN student_contract_invoices m ON m.contract_id=c.id AND m.agency_id=c.agency_id AND m.student_id=c.party_id WHERE c.id=? AND c.party_type='student' AND (c.rendered_html IS NULL OR c.rendered_html='') FOR UPDATE");
-   $q->execute([$id]);$row=$q->fetch(PDO::FETCH_ASSOC);if(!$row)return false;
+  return self::archiveImportedInternal($id,null);
+ }
+ public static function archiveImportedBatch(int $uid,int $agencyId,int $after): array {
+  self::scope($uid,$agencyId,true);
+  Authorization::requirePermission($uid,'finance.manage');
+  $pdo=Connection::get();self::ensureSchema($pdo);ContractSchemaMaintenance::requireReady($pdo);
+  $q=$pdo->prepare("SELECT c.id FROM contracts c JOIN student_contract_invoices m ON m.contract_id=c.id AND m.agency_id=c.agency_id AND m.student_id=c.party_id WHERE c.agency_id=? AND c.id>? AND c.party_type='student' AND (c.rendered_html IS NULL OR c.rendered_html='') ORDER BY c.id LIMIT 20");
+  $q->execute([$agencyId,max(0,$after)]);$ids=$q->fetchAll(PDO::FETCH_COLUMN);$done=0;$errors=[];
+  foreach($ids as $id){
+   $after=(int)$id;
+   try{if(self::archiveImportedInternal($after,$agencyId))++$done;}
+   catch(AuthException $e){$errors[]=['id'=>$after,'message'=>$e->getMessage()];}
+  }
+  return ['archived'=>$done,'errors'=>$errors,'after'=>$after,'more'=>count($ids)===20];
+ }
+ private static function archiveImportedInternal(int $id,?int $agencyId): bool {
+  return OperationsService::transaction(function(PDO $pdo)use($id,$agencyId){
+   $q=$pdo->prepare("SELECT c.*,m.academic_year AS billing_year,m.invoice_id FROM contracts c JOIN student_contract_invoices m ON m.contract_id=c.id AND m.agency_id=c.agency_id AND m.student_id=c.party_id WHERE c.id=? AND c.party_type='student' AND (c.rendered_html IS NULL OR c.rendered_html='') AND (? IS NULL OR c.agency_id=?) FOR UPDATE");
+   $q->execute([$id,$agencyId,$agencyId]);$row=$q->fetch(PDO::FETCH_ASSOC);if(!$row)return false;
    $aid=(int)$row['agency_id'];$old=(string)$row['contract_no'];$number=$old;
    if(preg_match('/^([0-9]+)\\.0+$/D',$old,$match)){
     $number=$match[1];
