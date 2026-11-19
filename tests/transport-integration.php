@@ -36,7 +36,7 @@ try{
  $sepandReady=\ServiceYar\Domain\SepandSchemaMaintenance::repair($uid,'REPAIR_SEPAND_SCHEMA');
  check(($sepandReady['alreadyReady']??false)===true,'Sepand schema preparation is safely idempotent');
  $operator=(int)$p->query("SELECT id FROM roles WHERE name='operator'")->fetchColumn();$p->prepare('INSERT INTO user_roles(user_id,role_id) VALUES(?,?)')->execute([$viewer,$operator]);$p->prepare('INSERT INTO agency_users(agency_id,user_id) VALUES(?,?)')->execute([$a,$viewer]);
- $school=D::save($uid,$a,'schools',['name'=>'مدرسه الف']);$otherSchool=D::save($uid,$b,'schools',['name'=>'مدرسه ب']);
+ $school=D::save($uid,$a,'schools',['name'=>'مدرسه الف','schoolType'=>'متوسطه']);$otherSchool=D::save($uid,$b,'schools',['name'=>'مدرسه ب','schoolType'=>'متوسطه']);
  $plan=[['name'=>'شیفت یک','pattern'=>'odd_weeks','start'=>'07:10','end'=>'12:30','holidays'=>[6]]];
  check(\ServiceYar\Domain\SchoolShifts::save($uid,$a,(int)$school['id'],['shifts'=>$plan])===$plan,'School shift schedule round trips');
  rejected(fn()=>\ServiceYar\Domain\SchoolShifts::save($viewer,$a,(int)$school['id'],['shifts'=>[]]),'FORBIDDEN');
