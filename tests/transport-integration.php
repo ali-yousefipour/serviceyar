@@ -604,6 +604,10 @@ try{
  $planBody=['studentId'=>$s1['id'],'requestKey'=>'installments-test-'.$tag,'total'=>'100','advance'=>'10','count'=>3,'issueDate'=>'2026-10-01','dates'=>['2026-11-01','2026-12-01','2027-01-01']];
  rejected(fn()=>\ServiceYar\Domain\InstallmentPlan::create($uid,$a,$planBody),'INSTALLMENT_PREVIEW_REQUIRED');
  $planBody['approvalDigest']=\ServiceYar\Domain\InstallmentPlan::preview($planBody)['approvalDigest'];
+ rejected(fn()=>\ServiceYar\Domain\InstallmentPlan::create($uid,$a,$planBody),'INSTALLMENT_EXISTING_INVOICE');
+ $installmentStudent=D::save($uid,$a,'students',['schoolId'=>$school['id'],'firstName'=>'اقساط','lastName'=>'آزمایشی','mobile'=>'09120000088']);
+ $planBody['studentId']=$installmentStudent['id'];
+ $planBody['approvalDigest']=\ServiceYar\Domain\InstallmentPlan::preview($planBody)['approvalDigest'];
  $plan=\ServiceYar\Domain\InstallmentPlan::create($uid,$a,$planBody);check(count($plan['invoiceIds'])===4,'Installments create advance and three invoice debts');
  $again=\ServiceYar\Domain\InstallmentPlan::create($uid,$a,$planBody);check($again===$plan,'Retry does not create duplicate invoices');
  rejected(fn()=>\ServiceYar\Domain\InstallmentPlan::create($uid,$a,array_merge($planBody,['total'=>'101'])),'INSTALLMENT_PREVIEW_CHANGED');
