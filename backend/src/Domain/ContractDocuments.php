@@ -443,18 +443,38 @@ HTML;
    return ['id'=>$id,'contractNo'=>$contractNo,'templateVersion'=>$template['version'],'title'=>$title,'amount'=>$amount,'invoiceId'=>$invoiceId];
   });
  }
- public static function cancel(int $uid,int $aid,int $id): array {
+ public static function cancel(int $uid,int $aid,int $id,bool $contractOnly=false): array {
   self::scope($uid,$aid,true);Authorization::requirePermission($uid,'finance.manage');
   ContractSchemaMaintenance::requireReady(Connection::get());
-  return OperationsService::transaction(function(PDO $pdo)use($uid,$aid,$id){
+  return OperationsService::transaction(function(PDO $pdo)use($uid,$aid,$id,$contractOnly){
    $q=$pdo->prepare('SELECT * FROM contracts WHERE id=? AND agency_id=? FOR UPDATE');$q->execute([$id,$aid]);$old=$q->fetch(PDO::FETCH_ASSOC);
    if(!$old)throw new AuthException(404,'قرارداد یافت نشد.','NOT_FOUND');
    if($old['status']==='cancelled')return ['id'=>$id,'cancelled'=>true,'alreadyCancelled'=>true];
    if(!in_array($old['status'],['active','draft'],true))throw new AuthException(409,'قرارداد در این وضعیت قابل حذف نیست.','CONTRACT_NOT_CANCELLABLE');
-   $invoice=null;$mapping=null;
+   $invoice=null;$mapping=null;$legacyPreserved=false;
    if($old['party_type']==='student'){
     ContractBilling::lockStudent($pdo,$aid,(int)$old['party_id']);
     $q=$pdo->prepare('SELECT * FROM student_contract_invoices WHERE agency_id=? AND contract_id=? FOR UPDATE');$q->execute([$aid,$id]);$mapping=$q->fetch(PDO::FETCH_ASSOC);
+    if(!$mapping){
+     // Only a uniquely identified automatic tuition invoice in the contract's own year may be cancelled.
+     $snapshot=json_decode((string)$old['snapshot_json'],true)?:[];
+     $years=[$snapshot['values']['academicYear']??''];
+     $student=ContractBilling::lockStudent($pdo,$aid,(int)$old['party_id']);$years[]=$student['academic_year'];
+     $year=null;
+     foreach($years as $candidate){
+      try{$normalized=ContractBilling::year((string)$candidate);ContractBilling::quote($normalized,(string)$old['start_date'],(string)$old['end_date'],0);$year=$normalized;break;}catch(AuthException $ignore){}
+     }
+     if($year!==null){
+      $q=$pdo->prepare("SELECT m.*,i.amount AS invoice_amount FROM student_service_debt_invoices m JOIN invoices i ON i.id=m.invoice_id AND i.agency_id=m.agency_id AND i.party_type='student' AND i.party_id=m.student_id WHERE m.agency_id=? AND m.student_id=? AND i.status<>'cancelled' AND NOT EXISTS(SELECT 1 FROM student_contract_invoices c WHERE c.invoice_id=m.invoice_id) FOR UPDATE");
+      $q->execute([$aid,$old['party_id']]);$candidates=[];
+      foreach($q->fetchAll(PDO::FETCH_ASSOC) as $row){
+       try{if(ContractBilling::year((string)$row['academic_year'])===$year&&(string)$row['invoice_amount']===(string)$old['amount'])$candidates[]=$row;}catch(AuthException $ignore){}
+      }
+      $q=$pdo->prepare("SELECT id FROM contracts WHERE agency_id=? AND party_type='student' AND party_id=? AND id<>? AND status='active' AND start_date<=? AND end_date>=? LIMIT 1 FOR UPDATE");
+      $q->execute([$aid,$old['party_id'],$id,$old['end_date'],$old['start_date']]);
+      if(count($candidates)===1&&!$q->fetchColumn()&&!$contractOnly)$mapping=$candidates[0];
+     }
+    }
     if($mapping){
      $q=$pdo->prepare("SELECT * FROM invoices WHERE id=? AND agency_id=? AND party_type='student' AND party_id=? FOR UPDATE");$q->execute([$mapping['invoice_id'],$aid,$old['party_id']]);$invoice=$q->fetch(PDO::FETCH_ASSOC);
      if(!$invoice)throw new AuthException(409,'فاکتور مرتبط معتبر نیست.','CONTRACT_INVOICE_CONFLICT');
@@ -467,10 +487,10 @@ HTML;
      }
     }else{
      $q=$pdo->prepare("SELECT id FROM invoices WHERE agency_id=? AND party_type='student' AND party_id=? AND status<>'cancelled' LIMIT 1 FOR UPDATE");$q->execute([$aid,$old['party_id']]);
-     if($q->fetchColumn())throw new AuthException(409,'قرارداد قدیمی فاکتور مرتبط مشخص ندارد؛ ابتدا تطبیق مالی انجام دهید.','LEGACY_CONTRACT_INVOICE_REQUIRED');
+     if($q->fetchColumn()){if(!$contractOnly)throw new AuthException(409,'فاکتور قطعی این قرارداد قدیمی مشخص نیست. می‌توانید فقط قرارداد را ابطال کنید؛ فاکتورها و مانده بدهی بدون تغییر باقی می‌مانند.','LEGACY_CONTRACT_INVOICE_REQUIRED');$legacyPreserved=true;}
     }
    }
-   $archive=$old;$archive['revisionAction']='cancel';$archive['invoiceBeforeCancellation']=$invoice;$archive['invoiceMapping']=$mapping;
+   $archive=$old;$archive['revisionAction']='cancel';$archive['invoiceBeforeCancellation']=$invoice;$archive['invoiceMapping']=$mapping;$archive['legacyInvoicesPreserved']=$legacyPreserved;
    $pdo->prepare('INSERT INTO contract_revisions(agency_id,contract_id,edited_by,previous_json) VALUES(?,?,?,?)')->execute([$aid,$id,$uid,json_encode($archive,JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE|JSON_THROW_ON_ERROR)]);
    if($invoice){
     $pdo->prepare("UPDATE invoices SET status='cancelled' WHERE id=? AND agency_id=?")->execute([$invoice['id'],$aid]);
@@ -478,7 +498,7 @@ HTML;
     $pdo->prepare('DELETE FROM student_contract_invoices WHERE agency_id=? AND contract_id=?')->execute([$aid,$id]);
    }
    $pdo->prepare("UPDATE contracts SET status='cancelled' WHERE id=? AND agency_id=?")->execute([$id,$aid]);
-   return ['id'=>$id,'cancelled'=>true,'invoiceCancelled'=>(bool)$invoice];
+   return ['id'=>$id,'cancelled'=>true,'invoiceCancelled'=>(bool)$invoice,'legacyInvoicesPreserved'=>$legacyPreserved];
   });
  }
  public static function listing(int $uid,int $agencyId,string $kind): array {

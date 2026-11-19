@@ -1101,8 +1101,15 @@ async function contractsPage(token=pageToken){
     const id=Number(button.dataset.contractDelete),record=docs.find(c=>Number(c.id)===id);
     if(!window.confirm('قرارداد '+persianDigits(record?.contract_no||id)+' ابطال شود؟ فاکتور بدون پرداخت مرتبط نیز ابطال می‌شود. نسخه قبلی برای سوابق باقی می‌ماند.'))return;
     button.disabled=true;
-    try{await write('/api/v1/contract-documents/'+id,{},'DELETE');notify('قرارداد ابطال شد.');await render();}
-    catch(error){notify(error.message,true);button.disabled=false;}
+    try{let result;
+     try{result=await write('/api/v1/contract-documents/'+id,{},'DELETE');}
+     catch(error){
+      if(!String(error.message).includes('فاکتور قطعی این قرارداد قدیمی مشخص نیست'))throw error;
+      if(!window.confirm(error.message+'\nآیا فقط قرارداد ابطال شود؟')){button.disabled=false;return;}
+      result=await write('/api/v1/contract-documents/'+id,{contractOnly:true},'DELETE');
+     }
+     notify(result.legacyInvoicesPreserved?'قرارداد ابطال شد؛ فاکتورها و بدهی قبلی بدون تغییر باقی ماند.':'قرارداد ابطال شد.');await render();
+    }catch(error){notify(error.message,true);button.disabled=false;}
    });
    body.querySelectorAll('[data-contract-edit]').forEach(button=>button.onclick=async()=>{
     try{
