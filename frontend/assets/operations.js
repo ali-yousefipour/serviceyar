@@ -2641,7 +2641,38 @@ function debtorPdfArchive(files){
  return new Blob([...local,...central,end.buffer],{type:'application/zip'});
 }
 
-async function downloadDebtorPdfs(report,onProgress){
+const debtorColumns={"student":{"label":"نام و نام خانوادگی دانش‌آموز","width":25},"school":{"label":"مدرسه","width":20},"service":{"label":"سرویس / راننده","width":24},"basis":{"label":"مبنای بدهی","width":18},"guardian_mobile":{"label":"شماره تماس ولی","width":17},"tariff_distance_km":{"label":"مسافت (کیلومتر)","width":12},"monthly_fee":{"label":"مبلغ ماهیانه سرویس (ریال)","width":19},"annual_fee":{"label":"مبلغ سالیانه سرویس (ریال)","width":19},"paid":{"label":"پرداخت‌شده (ریال)","width":19},"debt":{"label":"بدهی باقی‌مانده (ریال)","width":19},"national_code":{"label":"کد ملی دانش‌آموز","width":16},"father_name":{"label":"نام پدر","width":16},"education_levels":{"label":"مقطع تحصیلی مدرسه","width":20},"grade":{"label":"پایه تحصیلی","width":15},"region":{"label":"ناحیه مدرسه","width":15},"address":{"label":"نشانی منزل","width":32},"guardian_name":{"label":"نام ولی","width":24},"guardian_national_code":{"label":"کد ملی ولی","width":16},"plate":{"label":"شماره پلاک خودرو","width":20},"contract_start":{"label":"تاریخ شروع قرارداد","width":18},"contract_end":{"label":"تاریخ پایان قرارداد","width":18},"contract_no":{"label":"شماره قرارداد","width":20},"guardian_relation":{"label":"نسبت ولی","width":15},"emergency_phone":{"label":"شماره اضطراری","width":20},"return_address":{"label":"نشانی برگشت","width":32},"gender":{"label":"جنسیت","width":12},"nationality":{"label":"ملیت","width":14},"shift":{"label":"شیفت","width":14},"academic_year":{"label":"سال تحصیلی","width":15},"service_status":{"label":"وضعیت سرویس","width":18},"tariff_vehicle_class":{"label":"کلاس خودرو","width":14},"invoice_total":{"label":"جمع فاکتورها (ریال)","width":19}};
+const debtorDefaultColumns=Object.keys(debtorColumns).slice(0,10);
+function debtorColumnValue(row,key){
+ const value=row[key];
+ if(key==='service')return [row.service_names,row.driver_names].filter(Boolean).join(' / ')||'—';
+ if(key==='basis')return row.balance_source==='unbilled_service'?'برآوردی؛ فاقد فاکتور':'فاکتور ثبت‌شده';
+ if(value==null||value==='')return '—';
+ if(['monthly_fee','annual_fee','paid','debt','invoice_total','tariff_distance_km'].includes(key))return new Intl.NumberFormat('fa-IR',{maximumFractionDigits:0}).format(value);
+ if(['contract_start','contract_end'].includes(key)){const d=new Date(value+'T12:00:00Z');if(!isNaN(d))return new Intl.DateTimeFormat('fa-IR',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit'}).format(d);}
+ return String(value).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);
+}
+function editDebtorColumns(selected,onSave){
+ const dialog=document.createElement('dialog');dialog.className='sy-debtor-columns';dialog.dir='rtl';
+ let order=[...selected,...Object.keys(debtorColumns).filter(k=>!selected.includes(k))], active=new Set(selected), dragged=null;
+ dialog.innerHTML='<header><h3>تنظیم ستون‌ها</h3><button type="button" data-close aria-label="بستن">×</button></header><p>ستون‌ها را انتخاب و برای تغییر ترتیب جابه‌جا کنید.</p><input type="search" placeholder="جستجوی ستون‌ها" aria-label="جستجوی ستون‌ها"><div class="sy-debtor-column-actions"><button type="button" data-all>انتخاب همه</button><button type="button" data-none>لغو انتخاب همه</button><button type="button" data-reset>پیش‌فرض</button><span role="status"></span></div><div class="sy-debtor-column-list"></div><footer><button type="button" data-close>انصراف</button><button type="button" class="primary" data-save>ذخیره تنظیمات</button></footer>';
+ const list=dialog.querySelector('.sy-debtor-column-list'),search=dialog.querySelector('input'),save=dialog.querySelector('[data-save]');
+ const render=()=>{list.innerHTML=order.filter(k=>debtorColumns[k].label.includes(search.value.trim())).map(k=>'<div draggable="true" data-key="'+k+'"><span aria-hidden="true">⠿</span><label><input type="checkbox" '+(active.has(k)?'checked':'')+'> '+esc(debtorColumns[k].label)+'</label><button type="button" data-move="-1" aria-label="انتقال به بالا">↑</button><button type="button" data-move="1" aria-label="انتقال به پایین">↓</button></div>').join('');dialog.querySelector('[role=status]').textContent=number(active.size)+' ستون فعال';save.disabled=!active.size;};
+ list.onchange=e=>{const k=e.target.closest('[data-key]')?.dataset.key;if(k){e.target.checked?active.add(k):active.delete(k);dialog.querySelector('[role=status]').textContent=number(active.size)+' ستون فعال';save.disabled=!active.size;}};
+ const move=(from,to)=>{if(from===to||to<0||to>=order.length)return;order.splice(to,0,order.splice(from,1)[0]);render();};
+ list.onclick=e=>{const b=e.target.closest('[data-move]');if(b){const i=order.indexOf(b.closest('[data-key]').dataset.key);move(i,i+Number(b.dataset.move));}};
+ list.ondragstart=e=>{dragged=e.target.closest('[data-key]')?.dataset.key;if(dragged)e.dataTransfer.setData('text/plain',dragged);};
+ list.ondragover=e=>{if(dragged&&e.target.closest('[data-key]'))e.preventDefault();};
+ list.ondrop=e=>{e.preventDefault();const k=e.target.closest('[data-key]')?.dataset.key;if(dragged&&k)move(order.indexOf(dragged),order.indexOf(k));dragged=null;};
+ list.ondragend=()=>{dragged=null;};search.oninput=render;
+ dialog.querySelector('[data-all]').onclick=()=>{active=new Set(order);render();};
+ dialog.querySelector('[data-none]').onclick=()=>{active.clear();render();};
+ dialog.querySelector('[data-reset]').onclick=()=>{order=Object.keys(debtorColumns);active=new Set(debtorDefaultColumns);render();};
+ dialog.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>dialog.close());
+ save.onclick=()=>{onSave(order.filter(k=>active.has(k)));dialog.close();};
+ dialog.addEventListener('close',()=>dialog.remove(),{once:true});document.body.append(dialog);render();dialog.showModal();
+}
+async function downloadDebtorPdfs(report,onProgress,columns=debtorDefaultColumns){
  await loadHtml2Pdf();
  const groups=new Map();
  for(const row of report.items){
@@ -2651,7 +2682,7 @@ async function downloadDebtorPdfs(report,onProgress){
  const amount=new Intl.NumberFormat('fa-IR',{maximumFractionDigits:2});
  const date=new Intl.DateTimeFormat('fa-IR',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  const persian=value=>String(value??'').replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);
- const headings=['نام و نام خانوادگی دانش‌آموز','شماره تماس ولی','سرویس / راننده','مبنای بدهی','مسافت','مبلغ ماهیانه سرویس (ریال)','مبلغ سالیانه سرویس (ریال)','مبلغ پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'];
+ const headings=columns.map(k=>debtorColumns[k].label);
  const cell='border:1px solid #cdded2;padding:6px 5px;overflow-wrap:anywhere;';
  const wrap=document.createElement('div');
  wrap.style.cssText='position:fixed;top:0;left:0;z-index:-1;pointer-events:none';
@@ -2671,20 +2702,19 @@ async function downloadDebtorPdfs(report,onProgress){
    names.add(name.toLowerCase());
    onProgress(files.length+1,groups.size);
    let pdf;
-   const pageSize=14;
+   const pageSize=columns.length>15?8:14;
    for(let start=0;start<rows.length;start+=pageSize){
     const page=rows.slice(start,start+pageSize);
     const last=start+pageSize>=rows.length;
     sheet.innerHTML='<h1 style="background:#005b35;color:white;text-align:center;margin:0;padding:12px;font-size:21px">گزارش مالی بدهکاران مدرسه '+esc(persian(school))+'</h1>'+
      '<p style="text-align:center;margin:7px 0 0">تاریخ گزارش‌گیری '+esc(date)+' · سال تحصیلی '+esc(persian(report.academicYear))+'</p>'+
      '<p style="text-align:center;margin:3px 0 10px;font-weight:bold">'+esc(persian(report.agencyName))+' - سامانه سرویس یار</p>'+
-     '<table style="width:100%;border-collapse:collapse;table-layout:fixed;text-align:center"><colgroup>'+[17,11,14,10,6,10,10,10,12].map(width=>'<col style="width:'+width+'%">').join('')+'</colgroup>'+
+     '<table style="width:100%;border-collapse:collapse;table-layout:fixed;text-align:center"><colgroup>'+columns.map(k=>debtorColumns[k].width*100/columns.reduce((sum,k)=>sum+debtorColumns[k].width,0)).map(width=>'<col style="width:'+width+'%">').join('')+'</colgroup>'+
      '<thead><tr>'+headings.map(label=>'<th style="'+cell+'background:#087447;color:white">'+label+'</th>').join('')+'</tr></thead><tbody>'+
      page.map((row,index)=>{
-      const distance=row.tariff_distance_km==null?'—':persian(Math.round(Number(row.tariff_distance_km)));
-      const values=[persian(row.student),persian(row.guardian_mobile)||'—',[row.service_names,row.driver_names].filter(Boolean).join(' / ')||'—',row.balance_source==='unbilled_service'?'برآوردی؛ فاقد فاکتور':'فاکتور ثبت‌شده',distance,...['monthly_fee','annual_fee','paid','debt'].map(key=>amount.format(row[key]))];
+      const values=columns.map(key=>debtorColumnValue(row,key));
       return '<tr style="background:'+(index%2?'#f3f8f4':'#fff')+'">'+values.map((value,column)=>'<td style="'+cell+(column===0?'text-align:right;':'text-align:center;')+'">'+esc(value)+'</td>').join('')+'</tr>';
-     }).join('')+'</tbody>'+(last?'<tfoot><tr style="background:#e8f5ed;color:#005b35;font-weight:bold"><td colspan="'+(headings.length-1)+'" style="'+cell+'">مجموع بدهی</td><td style="'+cell+'">'+amount.format(total)+'</td></tr></tfoot>':'')+'</table>'+
+     }).join('')+'</tbody>'+(last&&columns.includes('debt')?'<tfoot><tr style="background:#e8f5ed;color:#005b35;font-weight:bold">'+columns.map(k=>'<td style="'+cell+'">'+(k==='debt'?'مجموع: '+amount.format(total):'')+'</td>').join('')+'</tr></tfoot>':'')+'</table>'+
      '<p style="text-align:center;margin:7px 0 0">صفحه '+amount.format(start/pageSize+1)+' از '+amount.format(Math.ceil(rows.length/pageSize))+'</p>';
     await document.fonts?.ready;
     const worker=window.html2pdf().set({
@@ -2792,7 +2822,7 @@ function studentDebtorsPage(token){
  if(!can('students'))throw new Error('مشاهده گزارش بدهکاران به مجوز دانش‌آموزان نیاز دارد.');
  $('content').innerHTML=`<section class="panel sy-operation-page sy-debtors-page">
   <header class="sy-operation-header"><div><h2>گزارش بدهکاران</h2><p>مانده حساب بر اساس فاکتورها و دریافت‌های ثبت‌شده؛ سرویس بدون فاکتور بدهی قطعی محسوب نمی‌شود.</p></div>
-   ${can('reports')?'<div class="sy-operation-actions"><button type="button" id="debtorFiltered" disabled>اکسل نتایج</button><button type="button" id="debtorFull">اکسل کامل مدارس</button></div>':''}</header>
+   <div class="sy-operation-actions"><button type="button" id="debtorColumnSettings">تنظیم ستون‌ها</button>${can('reports')?'<button type="button" id="debtorFiltered" disabled>اکسل نتایج</button><button type="button" id="debtorFull">اکسل کامل مدارس</button>':''}</div></header>
   <form id="debtorFilters" class="filters sy-operation-filters" aria-label="فیلتر گزارش بدهکاران">
    <label>سال تحصیلی<input name="academicYear" value="${esc(year())}" maxlength="9" required></label>
    <label>نام دانش‌آموز<input type="search" name="student" maxlength="200"></label>
@@ -2841,7 +2871,13 @@ function studentDebtorsPage(token){
   }catch(error){if(current===schoolRevision&&form.isConnected)schoolStatus.textContent='دریافت مدارس ناموفق بود: '+error.message;}
  };
  form.elements.academicYear.addEventListener('change',loadSchools);
- let applied=null,revision=0;
+ let applied=null,revision=0,lastReport=null;
+ const storageKey='sy.debtors.columns.v1.'+String(session?.id??session?.user?.id??session?.username??'unknown')+'.'+currentAgency.id;
+ let selectedColumns=[...debtorDefaultColumns];
+ try{const saved=JSON.parse(localStorage.getItem(storageKey));if(Array.isArray(saved)){const valid=[...new Set(saved.filter(k=>Object.hasOwn(debtorColumns,k)))];if(valid.length)selectedColumns=valid;}}catch(_){}
+ const renderResults=()=>{if(!lastReport)return;results.innerHTML=lastReport.items.length?'<div class="sy-debtor-table-scroll">'+simpleTable(selectedColumns.map(k=>debtorColumns[k].label),lastReport.items.map(row=>selectedColumns.map(k=>debtorColumnValue(row,k))))+'</div>':'<p class="empty">بدهکاری مطابق فیلترهای انتخاب‌شده یافت نشد.</p>';};
+ $('debtorColumnSettings').onclick=()=>editDebtorColumns(selectedColumns,columns=>{selectedColumns=columns;try{localStorage.setItem(storageKey,JSON.stringify(columns));}catch(_){}renderResults();});
+ const exportParams=params=>{const p=new URLSearchParams(params);p.set('columns',selectedColumns.join(','));return p;};
  const request=()=>{
   const params=new URLSearchParams(new FormData(form));
 
@@ -2851,21 +2887,20 @@ function studentDebtorsPage(token){
  const load=async()=>{
   const current=++revision,params=request();
   if(filtered)filtered.disabled=true;
-  results.replaceChildren();status.textContent='در حال دریافت…';
+  lastReport=null;results.replaceChildren();status.textContent='در حال دریافت…';
   try{
    const data=await api(scoped('/api/v1/operations/debtors?'+params));
    if(token!==pageToken||current!==revision)return;
    applied=params;
    status.textContent=number(data.items.length)+' بدهکار · مجموع بدهی '+amount.format(data.total)+' ریال'+(data.unbilledCount?' · '+number(data.unbilledCount)+' مورد فاقد فاکتور ('+amount.format(data.unbilledTotal)+' ریال برآوردی)':'');
-   results.innerHTML=data.items.length?'<div class="sy-debtor-table-scroll">'+simpleTable(['نام و نام خانوادگی دانش‌آموز','مدرسه','سرویس / راننده','مبنای بدهی','شماره تماس ولی','مسافت (کیلومتر)','مبلغ ماهیانه سرویس (ریال)','مبلغ سالیانه سرویس (ریال)','پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'],
-    data.items.map(row=>[row.student,row.school,[row.service_names,row.driver_names].filter(Boolean).join(' / ')||'—',row.balance_source==='unbilled_service'?'برآوردی؛ فاقد فاکتور':'فاکتور ثبت‌شده',String(row.guardian_mobile||'—').replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]),row.tariff_distance_km==null?'—':kilometers.format(row.tariff_distance_km),amount.format(row.monthly_fee),amount.format(row.annual_fee),amount.format(row.paid),amount.format(row.debt)]))+'</div>':'<p class="empty">بدهکاری مطابق فیلترهای انتخاب‌شده یافت نشد.</p>';
+   lastReport=data;renderResults();
    if(filtered)filtered.disabled=false;
   }catch(err){if(token===pageToken&&current===revision)status.textContent=err.message;}
  };
  form.onsubmit=e=>{e.preventDefault();load();};
  form.onreset=()=>setTimeout(()=>{if(form.isConnected){loadSchools();load();}},0);
- if(filtered)filtered.onclick=()=>downloadFile('/api/v1/reports/debtors.xlsx?'+applied,'بدهکاران-نتایج.xlsx');
- if(full)full.onclick=()=>downloadFile('/api/v1/reports/debtors.xlsx?'+new URLSearchParams({scope:'all',academicYear:request().get('academicYear')}),'بدهکاران-همه-مدارس.xlsx');
+ if(filtered)filtered.onclick=()=>downloadFile('/api/v1/reports/debtors.xlsx?'+exportParams(applied),'بدهکاران-نتایج.xlsx');
+ if(full)full.onclick=()=>downloadFile('/api/v1/reports/debtors.xlsx?'+exportParams({scope:'all',academicYear:request().get('academicYear')}),'بدهکاران-همه-مدارس.xlsx');
  if(full){
   const pdf=document.createElement('button'),pdfStatus=document.createElement('span');
   pdf.type='button';
@@ -2873,13 +2908,14 @@ function studentDebtorsPage(token){
   pdfStatus.setAttribute('role','status');
   full.after(pdf,pdfStatus);
   pdf.onclick=async()=>{
+   const pdfColumns=[...selectedColumns];
    pdf.disabled=true;
    pdfStatus.textContent='در حال دریافت بدهکاران مدارس…';
    try{
     const params=new URLSearchParams({academicYear:request().get('academicYear')});
     const report=await api(scoped('/api/v1/operations/debtors?'+params));
     if(!report.items.length){pdfStatus.textContent='در این سال تحصیلی بدهکاری یافت نشد.';return;}
-    await downloadDebtorPdfs(report,(index,count)=>{pdfStatus.textContent='در حال آماده‌سازی مدرسه '+number(index)+' از '+number(count)+'…';});
+    await downloadDebtorPdfs(report,(index,count)=>{pdfStatus.textContent='در حال آماده‌سازی مدرسه '+number(index)+' از '+number(count)+'…';},pdfColumns);
     pdfStatus.textContent='فایل ZIP آماده شد.';
    }catch(error){pdfStatus.textContent=error.message||'خطا در ساخت خروجی PDF.';}
    finally{pdf.disabled=false;}

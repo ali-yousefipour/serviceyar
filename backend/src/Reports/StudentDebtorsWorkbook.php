@@ -8,19 +8,77 @@ use Shuchkin\SimpleXLSXGen;
 
 final class StudentDebtorsWorkbook
 {
+    private const COLUMNS = [
+        'student'=>['نام و نام خانوادگی دانش‌آموز',25],
+        'school'=>['مدرسه',20],
+        'service'=>['سرویس / راننده',24],
+        'basis'=>['مبنای بدهی',18],
+        'guardian_mobile'=>['شماره تماس ولی',17],
+        'tariff_distance_km'=>['مسافت (کیلومتر)',12],
+        'monthly_fee'=>['مبلغ ماهیانه سرویس (ریال)',19],
+        'annual_fee'=>['مبلغ سالیانه سرویس (ریال)',19],
+        'paid'=>['پرداخت‌شده (ریال)',19],
+        'debt'=>['بدهی باقی‌مانده (ریال)',19],
+        'national_code'=>['کد ملی دانش‌آموز',16],
+        'father_name'=>['نام پدر',16],
+        'education_levels'=>['مقطع تحصیلی مدرسه',20],
+        'grade'=>['پایه تحصیلی',15],
+        'region'=>['ناحیه مدرسه',15],
+        'address'=>['نشانی منزل',32],
+        'guardian_name'=>['نام ولی',24],
+        'guardian_national_code'=>['کد ملی ولی',16],
+        'plate'=>['شماره پلاک خودرو',20],
+        'contract_start'=>['تاریخ شروع قرارداد',18],
+        'contract_end'=>['تاریخ پایان قرارداد',18],
+        'contract_no'=>['شماره قرارداد',20],
+        'guardian_relation'=>['نسبت ولی',15],
+        'emergency_phone'=>['شماره اضطراری',20],
+        'return_address'=>['نشانی برگشت',32],
+        'gender'=>['جنسیت',12],
+        'nationality'=>['ملیت',14],
+        'shift'=>['شیفت',14],
+        'academic_year'=>['سال تحصیلی',15],
+        'service_status'=>['وضعیت سرویس',18],
+        'tariff_vehicle_class'=>['کلاس خودرو',14],
+        'invoice_total'=>['جمع فاکتورها (ریال)',19],
+    ];
+    private const MONEY = ['monthly_fee','annual_fee','paid','debt','invoice_total'];
+    public static function columns(?string $raw=null): array
+    {
+        $keys=$raw===null?[]:explode(',',$raw);
+        $keys=array_values(array_unique(array_filter($keys,static fn($k)=>isset(self::COLUMNS[$k]))));
+        return $keys?:array_slice(array_keys(self::COLUMNS),0,10);
+    }
+    private static function value(array $row,string $key): string
+    {
+        if ($key==='service') return implode(' / ',array_filter([$row['service_names']??'', $row['driver_names']??'']))?:'—';
+        if ($key==='basis') return ($row['balance_source']??'invoiced')==='unbilled_service'?'برآوردی؛ فاقد فاکتور':'فاکتور ثبت‌شده';
+        $v=$row[$key]??null;
+        if ($v===null||$v==='') return '—';
+        if (in_array($key,self::MONEY,true)) return self::persianMoney((string)$v);
+        if ($key==='tariff_distance_km') return (string)(int)round((float)$v);
+        if (in_array($key,['contract_start','contract_end'],true)) return ExcelLocalization::jalali((string)$v);
+        return (string)$v;
+    }
+    private static function col(int $n): string
+    {
+        $s=''; while($n>0){$n--; $s=chr(65+$n%26).$s; $n=intdiv($n,26);} return $s;
+    }
+
     public static function download(int $uid,int $aid,array $filter,bool $full): never
     {
         Authorization::requirePermission($uid,'reports.view');
         $report=StudentDebtors::report($uid,$aid,$full?array_intersect_key($filter,['academicYear'=>true]):$filter);
         header('Cache-Control: private, no-store');
-        self::build($report,$full)->downloadAs($full?'school-debtors-all.xlsx':'school-debtors-filtered.xlsx');
+        self::build($report,$full,self::columns(is_string($filter['columns']??null)?$filter['columns']:null))->downloadAs($full?'school-debtors-all.xlsx':'school-debtors-filtered.xlsx');
         exit;
     }
 
-    public static function build(array $report,bool $full): SimpleXLSXGen
+    public static function build(array $report,bool $full,?array $columns=null): SimpleXLSXGen
     {
         require_once __DIR__.'/../Vendor/SimpleXLSXGen.php';
         $book=(new SimpleXLSXGen())->setDefaultFont('Vazirmatn')->setDefaultFontSize(10)->rightToLeft();
+        $columns=self::columns($columns===null?null:implode(',',$columns));
         $groups=[];
         if ($full) {
             foreach ($report['items'] as $row) {
@@ -47,9 +105,9 @@ final class StudentDebtorsWorkbook
             $title=$full || count($schools??[])===1?'گزارش مالی بدهکاران مدرسه '.$school:'گزارش مالی بدهکاران · '.$school;
             $label=static fn(string $v): string => htmlspecialchars(ExcelLocalization::digits($v),ENT_XML1|ENT_QUOTES,'UTF-8');
             $border=' border="thin#CDDED2"';
-            $head=['نام و نام خانوادگی دانش‌آموز','شماره تماس ولی','سرویس / راننده','مبنای بدهی','مسافت','مبلغ ماهیانه سرویس (ریال)','مبلغ سالیانه سرویس (ریال)','مبلغ پرداخت‌شده (ریال)','بدهی باقی‌مانده (ریال)'];
-            if (!$full) array_splice($head,2,0,['مدرسه']);
-            $moneyHead=array_slice($head,-4);
+            $head=array_map(static fn($key)=>self::COLUMNS[$key][0],$columns);
+            $moneyKeys=array_values(array_intersect($columns,self::MONEY));
+            $moneyHead=array_map(static fn($key)=>self::COLUMNS[$key][0],$moneyKeys);
             $rows=[
                 ['<center><b><style font-size="14" height="27" bgcolor="#005B35" color="#FFFFFF">'.$label($title).'</style></b></center>'],
                 ['<center><style height="17" color="#005B35">'.$label('تاریخ گزارش‌گیری '.$date.' · سال تحصیلی '.$report['academicYear']).'</style></center>'],
@@ -58,14 +116,8 @@ final class StudentDebtorsWorkbook
             ];
             $total=0;
             foreach ($group['items'] as $item) {
-                $row=[$item['student'],(string)$item['guardian_mobile']];
-                if (!$full) $row[]=$item['school'];
-                $row[]=implode(' / ',array_filter([$item['service_names']??'', $item['driver_names']??'']))?:'—';
-                $row[]=($item['balance_source']??'invoiced')==='unbilled_service'?'برآوردی؛ فاقد فاکتور':'فاکتور ثبت‌شده';
-                $distance=$item['tariff_distance_km']??null;
-                $row[]=$distance===null?'—':(string)(int)round((float)$distance);
-                $values=array_map(static fn($field)=>(string)$item[$field],['monthly_fee','annual_fee','paid','debt']);
-                foreach ($values as $value) $row[]=self::persianMoney($value);
+                $row=array_map(static fn($key)=>self::value($item,$key),$columns);
+                $values=array_map(static fn($key)=>(string)($item[$key]??0),$moneyKeys);
                 $background=count($rows)%2===0?'#FFFFFF':'#F3F8F4';
                 $style='<style bgcolor="'.$background.'"'.$border.'>';
                 $row=array_map(static fn(string $value,int $index): string =>
@@ -75,22 +127,26 @@ final class StudentDebtorsWorkbook
                 $rows[]=array_merge($row,$values);
             }
             $last=count($rows);
-            $end=chr(64+count($head));
+            $end=self::col(count($head));
             $number=number_format($total/100,2,'.','');
             $footerStyle='<b><style bgcolor="#E8F5ED" color="#005B35"'.$border.'>';
-            $footer=array_fill(0,count($head),$footerStyle.'</style></b>');
-            $footer[0]=$footerStyle.'مجموع بدهی</style></b>';
-            $debtColumn=chr(ord($end)+4);
-            $formula=$last>4?"SUM({$debtColumn}5:{$debtColumn}{$last})":'0';
-            $footer[count($head)-1]='<center>'.$footerStyle.self::persianMoney($number).'</style></b></center>';
-            array_push($footer,'','','','<f v="'.$number.'">'.$formula.'</f>');
+            $footer=array_fill(0,count($head)+count($moneyKeys),$footerStyle.'</style></b>');
+            $debtIndex=array_search('debt',$columns,true);
+            if ($debtIndex!==false) {
+                if ($debtIndex!==0) $footer[0]=$footerStyle.'مجموع بدهی</style></b>';
+                $footer[$debtIndex]=$footerStyle.($debtIndex===0?'مجموع: ':'').self::persianMoney($number).'</style></b>';
+                $rawIndex=count($head)+array_search('debt',$moneyKeys,true);
+                $debtColumn=self::col($rawIndex+1);
+                $formula=$last>4?"SUM({$debtColumn}5:{$debtColumn}{$last})":'0';
+                $footer[$rawIndex]='<f v="'.$number.'">'.$formula.'</f>';
+            }
             $rows[]=$footer;
-            $book->addSheet($rows,$name)->mergeCells("A1:{$end}1")->mergeCells("A2:{$end}2")->mergeCells("A3:{$end}3")
-                ->freezePanes('A5')->a4Landscape($last<=28);
+            $book->addSheet($rows,$name);
+            if(count($head)>1) $book->mergeCells("A1:{$end}1")->mergeCells("A2:{$end}2")->mergeCells("A3:{$end}3");
+            $book->freezePanes('A5')->a4Landscape($last<=28);
             if ($last>4) $book->autoFilter("A4:$end$last");
-            $widths=$full?[25,16,24,18,8,17,17,17,17]:[22,15,18,23,18,8,16,16,16,17];
-            foreach ($widths as $i=>$width) $book->setColWidth($i+1,$width);
-            for ($i=1;$i<=count($moneyHead);$i++) $book->hideColumn(chr(ord($end)+$i));
+            foreach ($columns as $i=>$key) $book->setColWidth($i+1,self::COLUMNS[$key][1]);
+            for ($i=1;$i<=count($moneyHead);$i++) $book->hideColumn(self::col(count($head)+$i));
         }
         return $book;
     }

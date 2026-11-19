@@ -63,10 +63,17 @@ final class StudentDebtors
             $where[]="REPLACE(REPLACE(REPLACE(REPLACE($column,'ي','ی'),'ك','ک'),'‌',''),' ','') LIKE :$key ESCAPE '!'";
             $params[$key]='%'.strtr($normalize($value),['!'=>'!!','%'=>'!%','_'=>'!_']).'%';
         }
+        $extra=$representative?'':"students.national_code, students.father_name, sc.education_levels, students.grade, sc.region, students.address,
+                   CONCAT_WS(' ',students.guardian_first_name,students.guardian_last_name) guardian_name, students.guardian_national_code,
+                   students.guardian_relation, students.emergency_phone, students.return_address, students.gender, students.nationality, students.shift, students.academic_year, students.service_status, students.tariff_vehicle_class,
+                   (SELECT GROUP_CONCAT(DISTINCT v.plate ORDER BY v.plate SEPARATOR '، ') FROM service_students ss JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=students.agency_id JOIN drivers dr ON dr.id=sv.driver_id AND dr.agency_id=sv.agency_id JOIN vehicles v ON v.id=dr.vehicle_id AND v.agency_id=sv.agency_id WHERE ss.student_id=students.id AND sv.is_active=1 AND sv.status<>'cancelled') plate,
+                   (SELECT c.start_date FROM contracts c WHERE c.agency_id=students.agency_id AND c.party_type='student' AND c.party_id=students.id ORDER BY c.id DESC LIMIT 1) contract_start,
+                   (SELECT c.end_date FROM contracts c WHERE c.agency_id=students.agency_id AND c.party_type='student' AND c.party_id=students.id ORDER BY c.id DESC LIMIT 1) contract_end,
+                   (SELECT c.contract_no FROM contracts c WHERE c.agency_id=students.agency_id AND c.party_type='student' AND c.party_id=students.id ORDER BY c.id DESC LIMIT 1) contract_no,";
         $sql="WITH balances AS (
             SELECT students.id, students.school_id, COALESCE(sc.name,'مدرسه نامشخص') school,
                    CONCAT_WS(' ',students.first_name,students.last_name) student, students.mobile guardian_mobile,
-                   students.tariff_distance_km,
+                   $extra students.tariff_distance_km,
                    COALESCE(students.monthly_fee,0) monthly_fee,
                    (SELECT COUNT(*) FROM invoices i WHERE i.agency_id=students.agency_id AND i.party_type='student' AND i.party_id=students.id) invoice_count,
                    (SELECT COUNT(*) FROM service_students ss JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=students.agency_id WHERE ss.student_id=students.id AND sv.is_active=1 AND sv.status='active') active_service_count,
