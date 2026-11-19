@@ -22,3 +22,6 @@ body{margin:0;font-family:"B Nazanin","BNazanin",Vazirmatn,Tahoma,sans-serif;fon
 .contract-warning{border:1px solid #a83232;padding:6px;margin:5px auto;max-width:202mm}
 @media screen{html{background:#eee}.contract-sheet{background:white;box-shadow:0 1px 8px #0002}}
 @media print{html,body{background:#fff;margin:0;padding:0}.contract-toolbar,button{display:none!important}.contract-sheet{margin:0;box-shadow:none;width:100%;min-height:288mm}}
+
+/* Old archived contracts have the same legal text but need the new print shell. */
+.contract-sheet .contract-top{display:block}.contract-sheet .contract-top>span{white-space:normal;overflow-wrap:anywhere}.contract-sheet:last-child{margin-bottom:0}

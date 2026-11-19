@@ -1103,7 +1103,35 @@ async function contractsPage(token=pageToken){
     printWindow.document.write('<html lang="fa" dir="rtl"><meta charset="utf-8"><body>در حال دریافت نسخه ذخیره‌شده قرارداد…</body></html>');printWindow.document.close();
     try{
      const record=await api(scoped('/api/v1/contract-documents/'+encodeURIComponent(button.dataset.contractPrint)+'/print'));
-     printWindow.document.open();printWindow.document.write(record.html);printWindow.document.close();
+     // Reformat the stored document for display without rewriting its legal text or snapshot.
+     const parsed=new DOMParser().parseFromString(record.html,'text/html');
+     const parent=kind==='parent';
+     parsed.querySelectorAll('style,link[rel="stylesheet"],script').forEach(el=>el.remove());
+     const stylesheet=parsed.createElement('link');stylesheet.rel='stylesheet';
+     stylesheet.href=new URL('/assets/contract-print.css?v=3',window.location.origin).href;parsed.head.append(stylesheet);
+     parsed.body.className=parent?'contract-parent':'contract-driver';
+     if(!parsed.querySelector('.contract-sheet')){
+      const oldButton=parsed.body.querySelector('button');if(oldButton)oldButton.remove();
+      const pages=[parsed.createElement('section')];pages[0].className='contract-sheet';
+      for(const child of [...parsed.body.childNodes]){
+       if(parent&&child.nodeName==='HR'){const page=parsed.createElement('section');page.className='contract-sheet';pages.push(page);child.remove();continue;}
+       pages[pages.length-1].append(child);
+      }
+      const toolbar=parsed.createElement('div');toolbar.className='contract-toolbar';
+      const print=parsed.createElement('button');print.type='button';print.id='syContractPrint';print.textContent='چاپ قرارداد / ذخیره PDF';toolbar.append(print);
+      parsed.body.append(toolbar,...pages);
+      // The old template placed whole articles in headings: separate heading and text.
+      if(parent)for(const heading of parsed.querySelectorAll('.contract-sheet h2')){
+       const match=heading.textContent.match(/^(ماده\s*[-–]?\s*(?:8|9|11|12|۸|۹|۱۱|۱۲)\s+[^:：]+[:：])\s*(.+)$/s);
+       if(match){heading.textContent=match[1];const paragraph=parsed.createElement('p');paragraph.textContent=match[2];heading.after(paragraph);}
+      }
+      const top=parsed.querySelector('.contract-sheet .contract-top');
+      if(top){const meta=top.querySelector('span');if(meta){const content=meta.textContent;const idx=content.indexOf('تاریخ:');if(idx>=0){meta.replaceChildren(parsed.createTextNode(content.slice(0,idx).trim()),parsed.createElement('br'),parsed.createTextNode(content.slice(idx)));}}}
+     }
+     for(const el of parsed.querySelectorAll('[style],[onclick]')){el.removeAttribute('style');el.removeAttribute('onclick');}
+     printWindow.document.open();printWindow.document.write('<!doctype html>'+parsed.documentElement.outerHTML);printWindow.document.close();
+     const printStyle=printWindow.document.querySelector('link[rel="stylesheet"]');
+     if(printStyle)printStyle.addEventListener('error',()=>notify('بارگذاری قالب چاپ ناموفق بود؛ صفحه را بازخوانی کنید.',true));
      const printButton=printWindow.document.getElementById('syContractPrint')||printWindow.document.querySelector('button');
      if(printButton)printButton.addEventListener('click',async()=>{await printWindow.document.fonts?.ready;printWindow.focus();printWindow.print();});
      printWindow.focus();
