@@ -50,7 +50,7 @@ const menus=[
  ['students','دانش‌آموزان',[['students/new','دانش‌آموز جدید'],['import','ثبت دانش‌آموز از اکسل'],['previous-students','دانش‌آموزان سال قبل'],['students','لیست دانش‌آموزان']]],
  ['drivers','رانندگان',[['drivers','مدیریت راننده‌ها'],['representatives','مدیریت نمایندگان'],['driver-ratings','امتیاز و گزارش'],['portal-vehicle-requests','درخواست‌های اصلاح خودرو'],['driver-work','گزارش عملکرد راننده'],['finance-report','دریافتی پرداختی رانندگان']]],
  ['services','سرویس‌ها',[['services/new','سرویس جدید'],['grouping','دسته‌بندی هوشمند'],['packs','پک‌های سرویس'],['services','عملیات سرویس‌ها'],['students/fees','تغییر سریع هزینه سرویس'],['service-charges','حق‌السرویس']]],
- ['accounts','مالی',[['accounts','تعاریف حسابداری'],['accounting-documents','اسناد حسابداری'],['agreements','ثبت مبلغ توافقی راننده'],['payroll','حقوق رانندگان'],['driver-payments','سند پرداخت حقوق راننده'],['finance-report','گزارش دریافتی پرداختی'],['invoices','گزارش وضعیت کلی پرداخت'],['debtors','گزارش بدهکاران'],['wallets','کیف پول'],['installments','پیش‌پرداخت و اقساط']]],
+ ['accounts','مالی',[['accounts','تعاریف حسابداری'],['accounting-documents','اسناد حسابداری'],['agreements','ثبت مبلغ توافقی راننده'],['payroll','حقوق رانندگان'],['driver-payments','سند پرداخت حقوق راننده'],['finance-report','گزارش دریافتی پرداختی'],['invoices','مدیریت و صدور فاکتورها'],['debtors','گزارش بدهکاران'],['wallets','کیف پول'],['installments','پیش‌پرداخت و اقساط']]],
  ['reports','امکانات',[['messages','پیام‌رسانی'],['monitoring','مانیتورینگ'],['distances','بررسی فاصله‌های ناجور'],['reports','خروجی گزارشات'],['settings','تنظیمات'],['vehicles','خودروها'],['driver-assignment','تخصیص پیشنهادی راننده'],['daily-schedule','برنامه روزانه و تداخل شیفت‌ها'],['driver-changes','تغییر راننده'],['contracts','قراردادها'],['accounting-documents/statement','گزارش حساب'],['accounting-documents/quick','سند سریع'],['accounting-documents/defaults','حساب‌های پیش‌فرض'],['accounting-documents/cheques','چک‌های دریافتی و عملیات چک'],['ledger','دریافت و پرداخت'],['school-statement','صورت‌وضعیت سرویس مدارس'],['bale-payments','پرداخت کیف پول بله'],['school-charges','بدهی مدارس'],['payments','پرداخت‌ها'],['parent-reports','گزارشات والدین']]]
 ];
 for(const [k,v] of Object.entries(resources))titles[k]=v[0];
@@ -987,7 +987,7 @@ async function contractsPage(token=pageToken){
     '<form id="syContractCreateForm" class="form-grid sy-contract-create-grid">'+
     '<label>'+(kind==='parent'?'دانش‌آموز':'راننده')+'<input type="search" id="syContractPersonSearch" placeholder="جستجوی نام یا کد ملی" autocomplete="off"><select name="partyId" required><option value="">انتخاب کنید</option>'+available.map(p=>'<option value="'+Number(p.id)+'">'+esc(personLabel(p))+'</option>').join('')+'</select></label>'+
     '<label>تاریخ شروع<input name="startDate" type="date" required></label><label>تاریخ پایان<input name="endDate" type="date" required></label>'+
-    '<label>'+(kind==='driver'?'مبلغ خالص سالانه قرارداد راننده (ریال)':'مبلغ کل قرارداد (ریال)')+'<input name="amount" type="text" inputmode="numeric" required '+(kind==='driver'?'readonly aria-readonly="true" ':'')+'placeholder="'+(kind==='driver'?'محاسبه خودکار پس از انتخاب راننده':'مبلغ صحیح بدون اعشار')+'"></label>'+
+    '<label>'+(kind==='driver'?'مبلغ خالص سالانه قرارداد راننده (ریال)':'مبلغ کل قرارداد (ریال)')+'<input name="amount" type="text" inputmode="numeric" required '+'readonly aria-readonly="true" '+'placeholder="'+(kind==='driver'?'محاسبه خودکار پس از انتخاب راننده':'مبلغ صحیح بدون اعشار')+'"></label>'+
     '<section class="sy-contract-draft-data" id="syContractDraftData" aria-live="polite">برای مشاهده و تکمیل اطلاعات طرفین، ابتدا شخص را انتخاب کنید.</section>'+
     '<div class="sy-contract-create-actions"><button class="primary" type="submit">صدور و ثبت قرارداد</button><span id="syContractCreateStatus" aria-live="polite"></span></div></form></details>':'')+
     '<header class="sy-settings-section-head"><div><h3>قراردادهای صادرشده</h3><p>برای هر قرارداد نسخه چاپی ذخیره‌شده زمان صدور استفاده می‌شود.</p></div></header>'+
@@ -1042,7 +1042,8 @@ async function contractsPage(token=pageToken){
        field.append(input);grid.append(field);
       }
       draftBox.replaceChildren(title,description,grid);
-      if((kind==='driver'||!money.value.trim())&&Number(result.suggestedTotal)>=0)
+      if(kind==='parent'&&result.period){form.elements.startDate.value=result.period.startDate;form.elements.endDate.value=result.period.endDate;}
+      if(Number(result.suggestedTotal)>=0)
        money.value=persianDigits(String(result.suggestedTotal).replace(/\B(?=(\d{3})+(?!\d))/g,'٬'));
       if(kind==='driver'&&result.driverAnnual){
        const data=result.driverAnnual,rateText=Object.entries(data.rates||{}).map(([k,v])=>({supervision:'مدیریت، نظارت و بازرسی',coordination:'اطلاع‌رسانی و هماهنگی',overhead:'بالاسری شرکت',insurance:'بیمه'}[k]||k)+': '+persianDigits(v)+'٪').join(' | ');
@@ -1059,12 +1060,25 @@ async function contractsPage(token=pageToken){
       }
       if(kind==='parent'){
        const hint=document.createElement('p');hint.className='muted';
-       hint.textContent='ضریب محاسبه پیشنهادی: '+persianDigits(result.academicMonths)+' ماه. مبلغ قرارداد را پیش از صدور بررسی کنید.';
+       hint.id='syContractPeriodHint';hint.textContent='مدت قرارداد: '+number(result.period?.days||0)+' روز مبنای مالی؛ فاکتور پس از صدور خودکار ثبت می‌شود.';
        draftBox.append(hint);
       }
      }catch(error){if(current===draftRequest&&draftBox.isConnected)draftBox.textContent='دریافت اطلاعات قرارداد ناموفق بود: '+error.message;}
     };
     select.addEventListener('change',()=>{money.value='';void loadDraft();});
+    let quoteRevision=0;
+    const quotePeriod=async()=>{
+     if(kind!=='parent'||!select.value||!form.elements.startDate.value||!form.elements.endDate.value)return;
+     const revision=++quoteRevision,party=select.value,start=form.elements.startDate.value,end=form.elements.endDate.value;
+     money.value='';
+     try{
+      const result=await api(scoped('/api/v1/contract-documents/parent/draft?'+new URLSearchParams({partyId:party,startDate:start,endDate:end})));
+      if(revision!==quoteRevision||!form.isConnected||select.value!==party||form.elements.startDate.value!==start||form.elements.endDate.value!==end)return;
+      money.value=number(result.suggestedTotal);
+      const hint=form.querySelector('#syContractPeriodHint');if(hint)hint.textContent='مدت قرارداد: '+number(result.period.days)+' روز مبنای مالی؛ فاکتور پس از صدور خودکار ثبت می‌شود.';
+     }catch(error){if(revision===quoteRevision&&form.isConnected){const hint=form.querySelector('#syContractPeriodHint');if(hint)hint.textContent=error.message;}}
+    };
+    if(kind==='parent')for(const f of [form.elements.startDate,form.elements.endDate])f.addEventListener('change',()=>void quotePeriod());
 
     form.onsubmit=async e=>{
      e.preventDefault();const submit=form.querySelector('[type=submit]'),status=form.querySelector('#syContractCreateStatus');
@@ -1076,7 +1090,8 @@ async function contractsPage(token=pageToken){
       form.querySelectorAll('[name^="override_"]').forEach(input=>{overrides[input.name.slice(9)]=input.value.trim();});
       if(!Object.keys(overrides).length)throw Error('ابتدا اطلاعات طرفین قرارداد را دریافت و بررسی کنید.');
       const record=await write('/api/v1/contract-documents/'+kind,{partyId:Number(select.value),startDate:form.elements.startDate.value,endDate:form.elements.endDate.value,...(kind==='parent'?{amount}:{}),overrides});
-      status.textContent='قرارداد '+persianDigits(record.contractNo)+' صادر شد.';
+      status.textContent='قرارداد '+persianDigits(record.contractNo)+' صادر شد.'+(record.invoiceId?' فاکتور '+number(record.invoiceId)+' ثبت شد.':'');
+      notify(status.textContent);
       await render();
      }catch(error){status.textContent=error.message;submit.disabled=false;}
     };
@@ -2716,7 +2731,7 @@ async function representativesPage(token){
 function studentDebtorsPage(token){
  if(!can('students'))throw new Error('مشاهده گزارش بدهکاران به مجوز دانش‌آموزان نیاز دارد.');
  $('content').innerHTML=`<section class="panel sy-operation-page sy-debtors-page">
-  <header class="sy-operation-header"><div><h2>گزارش بدهکاران</h2><p>مانده حساب بر اساس فاکتورها و دریافت‌های ثبت‌شده؛ بدهی برآوردی سرویس فعال فاقد فاکتور نیز جداگانه مشخص می‌شود.</p></div>
+  <header class="sy-operation-header"><div><h2>گزارش بدهکاران</h2><p>مانده حساب بر اساس فاکتورها و دریافت‌های ثبت‌شده؛ سرویس بدون فاکتور بدهی قطعی محسوب نمی‌شود.</p></div>
    ${can('reports')?'<div class="sy-operation-actions"><button type="button" id="debtorFiltered" disabled>اکسل نتایج</button><button type="button" id="debtorFull">اکسل کامل مدارس</button></div>':''}</header>
   <form id="debtorFilters" class="filters sy-operation-filters" aria-label="فیلتر گزارش بدهکاران">
    <label>سال تحصیلی<input name="academicYear" value="${esc(year())}" maxlength="9" required></label>

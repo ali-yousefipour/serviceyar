@@ -44,6 +44,8 @@ final class InstallmentPlan {
    $q=$p->prepare('SELECT id,payload_hash,result_json FROM installment_plans WHERE agency_id=? AND request_key=? FOR UPDATE');$q->execute([$aid,$key]);$row=$q->fetch();
    if(!hash_equals($row['payload_hash'],$hash))throw new AuthException(409,'این درخواست قبلاً با اطلاعات دیگری ثبت شده است.','REQUEST_CONFLICT');
    if($row['result_json']!==null)return json_decode($row['result_json'],true,512,JSON_THROW_ON_ERROR);
+   $q=$p->prepare("SELECT id FROM invoices WHERE agency_id=? AND party_type='student' AND party_id=? AND status<>'cancelled' LIMIT 1 FOR UPDATE");$q->execute([$aid,$student]);
+   if($q->fetchColumn())throw new AuthException(409,'دانش‌آموز فاکتور باز یا ثبت‌شده دارد؛ ثبت اقساط مستقل موجب بدهی تکراری می‌شود.','INSTALLMENT_EXISTING_INVOICE');
    $items=$plan['items'];if($plan['advance']>0)array_unshift($items,['number'=>0,'amount'=>$plan['advance'],'dueDate'=>$date]);$ids=[];
    foreach($items as $item){$invoice=DomainService::save($uid,$aid,'invoices',['title'=>'برنامه '.$row['id'].' · '.($item['number']===0?'پیش‌پرداخت':'قسط '.$item['number']),'partyType'=>'student','partyId'=>$student,'amount'=>$item['amount'],'issueDate'=>$date,'dueDate'=>$item['dueDate']]);$ids[]=$invoice['id'];}
    $result=['planId'=>(int)$row['id'],'invoiceIds'=>$ids,'total'=>$plan['total'],'created'=>true];$p->prepare('UPDATE installment_plans SET result_json=? WHERE id=?')->execute([json_encode($result),$row['id']]);OperationsService::audit($uid,$aid,'installment_plan_created','student',$student);return $result;

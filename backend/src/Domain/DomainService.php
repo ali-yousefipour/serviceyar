@@ -398,7 +398,7 @@ final class DomainService {
    $total=(int)$count->fetchColumn();$items=$s->fetchAll();if($resource==='services')foreach($items as &$item)self::attachServicePayable($item);if($resource==='students')foreach($items as &$item)self::attachStudentBalance($item);unset($item);return ['items'=>$items,'pagination'=>['page'=>$page,'limit'=>$limit,'total'=>$total,'pages'=>(int)ceil($total/$limit)]];
  }
  public static function studentAnnualFeeSql(): string {
-  return "ROUND(COALESCE(students.monthly_fee,0) * (CASE WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'ابتدایی|دبستان|primary|elementary' THEN 8.5 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR TRIM(COALESCE(students.grade,'')) IN ('1','2','3','4','5','6','۱','۲','۳','۴','۵','۶') THEN 8.5 ELSE 9 END),0)";
+  return "COALESCE((SELECT c.amount FROM student_contract_invoices m JOIN contracts c ON c.id=m.contract_id AND c.agency_id=m.agency_id WHERE m.agency_id=students.agency_id AND m.student_id=students.id AND m.academic_year=REPLACE(TRIM(students.academic_year),'/','-') LIMIT 1),ROUND(COALESCE(students.monthly_fee,0) * (CASE WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE((SELECT sc.school_type FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1),'')) REGEXP 'ابتدایی|دبستان|primary|elementary' THEN 8.5 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'متوسطه|دبیرستان|secondary|high.school' THEN 9 WHEN LOWER(COALESCE(students.grade,'')) REGEXP 'ابتدایی|دبستان|primary|elementary' OR TRIM(COALESCE(students.grade,'')) IN ('1','2','3','4','5','6','۱','۲','۳','۴','۵','۶') THEN 8.5 ELSE 9 END),0))";
  }
  public static function studentInvoiceTotalSql(): string {
   return "(SELECT COALESCE(SUM(i.amount),0) FROM invoices i WHERE i.party_type='student' AND i.party_id=students.id AND i.agency_id=students.agency_id AND i.status<>'cancelled')";
@@ -597,6 +597,7 @@ if($resource==='ledger'&&!in_array('company_account_id',thisColumns('ledger_entr
   if($resource==='vehicles'&&array_key_exists('owner_national_code',$data)&&!in_array('owner_national_code',thisColumns('vehicles',$pdo),true))
    throw new AuthException(503,'برای فراخوانی راننده با کد ملی، ابتدا مهاجرت دیتابیس 0106_vehicle_owner_national_code.sql را اجرا کنید.','VEHICLE_OWNER_SCHEMA_UPDATE_REQUIRED');
   if($id)FinancialPosting::assertEditable($aid,$resource,$id);
+  if($resource==='invoices'&&$id)ContractBilling::assertInvoiceEditable($pdo,$aid,$id);
   $existing=$id?self::get($uid,$aid,$resource,$id):[];
   if($resource==='contracts'&&$id&&!empty($existing['rendered_html']))
    throw new AuthException(409,'قرارداد صادرشده دارای نسخه چاپی ثابت است و امکان تغییر آن وجود ندارد. برای تغییر مفاد، قرارداد جدید صادر کنید.','ISSUED_CONTRACT_IMMUTABLE');

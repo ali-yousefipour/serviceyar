@@ -205,9 +205,10 @@ HTML;
    'companyPhone'=>$setting['company_phone']??'','bankName'=>$setting['company_bank_name']??'',
    'bankAccount'=>$setting['company_bank_account']??'','academicYear'=>$setting['academic_year']??'۱۴۰۵-۱۴۰۶'];
   if($kind==='parent'){
-   $q=$pdo->prepare('SELECT st.id,st.first_name,st.last_name,st.national_code,st.mobile,st.address,st.guardian_first_name,st.guardian_last_name,st.guardian_national_code,st.father_name,st.tariff_distance_km,st.monthly_fee,st.grade,sc.name AS school_name,sc.region,sc.school_type FROM students st JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id WHERE st.id=? AND st.agency_id=? AND st.is_active=1');
+   $q=$pdo->prepare('SELECT st.id,st.first_name,st.last_name,st.national_code,st.mobile,st.address,st.guardian_first_name,st.guardian_last_name,st.guardian_national_code,st.father_name,st.tariff_distance_km,st.monthly_fee,st.grade,st.academic_year,sc.name AS school_name,sc.region,sc.school_type FROM students st JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id WHERE st.id=? AND st.agency_id=? AND st.is_active=1');
    $q->execute([$partyId,$agencyId]);$row=$q->fetch(PDO::FETCH_ASSOC);
    if(!$row)throw new AuthException(404,'دانش‌آموز انتخاب‌شده در شرکت یافت نشد.','STUDENT_NOT_FOUND');
+   $values['academicYear']=ContractBilling::year((string)($row['academic_year']?:AgencySchoolTariffs::YEAR));
    $g=$pdo->prepare('SELECT name,mobile FROM guardians WHERE student_id=? ORDER BY is_primary DESC,id LIMIT 1');$g->execute([$partyId]);$guardian=$g->fetch(PDO::FETCH_ASSOC)?:[];
    $name=trim((string)($row['guardian_first_name']??'').' '.(string)($row['guardian_last_name']??''));
    $values+=['studentName'=>trim($row['first_name'].' '.$row['last_name']),'studentNationalCode'=>$row['national_code'],
@@ -229,7 +230,7 @@ HTML;
   * Read-only issuance preflight. Only source fields accessible to the company
   * are returned; no old contract, other tenant or bank secret is read.
   */
- public static function draftData(int $uid,int $agencyId,string $kind,int $partyId): array {
+ public static function draftData(int $uid,int $agencyId,string $kind,int $partyId,?string $start=null,?string $end=null): array {
   self::scope($uid,$agencyId);
   if(!in_array($kind,['parent','driver'],true)||$partyId<1)
    throw new AuthException(422,'نوع قرارداد یا طرف قرارداد معتبر نیست.','INVALID_CONTRACT_PARTY');
@@ -238,10 +239,14 @@ HTML;
    ?['guardianName','guardianNationalCode','guardianMobile','studentName','studentNationalCode','schoolName','schoolRegion','managerName','companyName']
    :['driverName','driverNationalCode','managerName','companyName'];
   $missing=[];foreach($required as $field)if(trim((string)($data[$field]??''))==='')$missing[]=$field;
-  $months=$kind==='parent'?(preg_match('/ابتدایی|دبستان|primary|elementary/u',(string)($data['schoolType']??'').(string)($data['grade']??''))?8.5:9):null;
   $annual=$kind==='driver'?self::driverAnnualAmount($pdo,$agencyId,$partyId):null;
-  return ['values'=>$data,'missing'=>$missing,'suggestedTotal'=>$kind==='parent'?(int)round((float)($data['monthlyFee']??0)*$months):$annual['netAnnual'],
-   'academicMonths'=>$months,'driverAnnual'=>$annual];
+  $period=null;
+  if($kind==='parent'){
+   $defaults=ContractBilling::defaults($data['academicYear'],ServiceFinancialBasis::monthsOfStudent(['grade'=>$data['grade'],'school_type'=>$data['schoolType']])===8.5);
+   $period=ContractBilling::quote($data['academicYear'],$start??$defaults['startDate'],$end??$defaults['endDate'],(int)round((float)$data['monthlyFee']));
+  }
+  return ['values'=>$data,'missing'=>$missing,'suggestedTotal'=>$period['amount']??$annual['netAnnual'],
+   'academicMonths'=>$period['months']??null,'period'=>$period,'driverAnnual'=>$annual];
  }
  private static function resolvedOverrides(array $body): array {
   $allowed=['guardianName','guardianNationalCode','guardianFatherName','guardianMobile','guardianAddress',
@@ -285,24 +290,37 @@ HTML;
   if($partyId===false||$partyId<1)throw new AuthException(422,'طرف قرارداد را انتخاب کنید.','INVALID_CONTRACT_PARTY');
   $start=(string)($input['startDate']??'');$end=(string)($input['endDate']??'');
   if(!OperationsService::validDate($start)||!OperationsService::validDate($end)||$end<$start)throw new AuthException(422,'بازه زمانی قرارداد نامعتبر است.','INVALID_CONTRACT_DATES');
-  $amount=$kind==='parent'?filter_var($input['amount']??null,FILTER_VALIDATE_INT):0;
-  if($kind==='parent'&&($amount===false||$amount<0||$amount>999999999999999))
-   throw new AuthException(422,'مبلغ قرارداد باید عدد صحیح ریالی باشد.','INVALID_CONTRACT_AMOUNT');
+  $amount=0;
   $values=self::data($pdo,$agencyId,$kind,(int)$partyId);
   $overrides=$input['overrides']??[];
   if(!is_array($overrides))throw new AuthException(422,'اطلاعات تکمیلی قرارداد معتبر نیست.','INVALID_CONTRACT_OVERRIDE');
+  $academicYear=$values['academicYear'];
   $values=array_replace($values,self::resolvedOverrides($overrides));
+  if($kind==='parent')$values['academicYear']=$academicYear;
   $required=$kind==='parent'?['guardianName','guardianNationalCode','guardianMobile','studentName','studentNationalCode','schoolName','managerName','companyName']:['driverName','driverNationalCode','managerName','companyName'];
   foreach($required as $field)if(trim((string)($values[$field]??''))==='')
    throw new AuthException(422,'اطلاعات اصلی طرفین قرارداد کامل نیست؛ ابتدا مشخصات تکمیلی را وارد کنید.','CONTRACT_REQUIRED_DATA_MISSING');
   $template=self::template($pdo,$kind);
   return OperationsService::transaction(function(PDO $pdo)use($uid,$agencyId,$kind,$partyId,$start,$end,$amount,$values,$template) {
    $annual=$kind==='driver'?self::driverAnnualAmount($pdo,$agencyId,(int)$partyId):null;
+   $period=null;
+   if($kind==='parent'){
+    $student=ContractBilling::lockStudent($pdo,$agencyId,(int)$partyId);
+    $year=ContractBilling::year((string)($student['academic_year']?:AgencySchoolTariffs::YEAR));
+    $period=ContractBilling::quote($year,$start,$end,(int)round((float)$student['monthly_fee']));
+    $amount=$period['amount'];
+    if($amount<=0)throw new AuthException(422,'ابتدا تعرفه ماهانه معتبر دانش‌آموز را ثبت کنید.','CONTRACT_FEE_REQUIRED');
+    $values['academicYear']=$year;
+    $values['monthlyFee']=$student['monthly_fee'];
+    $prior=ContractBilling::existing($pdo,$agencyId,(int)$partyId,$year,$start,$end,$amount);
+    if($prior)return $prior;
+   }
    if($annual!==null)$amount=$annual['netAnnual'];
    $contractNo='SY-'.$agencyId.'-'.date('ymd').'-'.strtoupper(bin2hex(random_bytes(4)));
-   $months=$kind==='parent'?(preg_match('/ابتدایی|دبستان|primary|elementary/u',(string)($values['schoolType']??'').(string)($values['grade']??''))?8.5:9):0;
+   $months=$period['months']??0;
+   unset($values['durationMonths']);
    $data=$values+['contractNo'=>self::persian($contractNo),'issueDate'=>self::jalali(date('Y-m-d')),'startDate'=>self::jalali($start),'endDate'=>self::jalali($end),
-    'durationMonths'=>self::persian((string)$months),'totalAmount'=>self::persian(number_format($amount,0,'.',',')),
+    'durationMonths'=>self::persian(rtrim(rtrim(number_format($months,2,'.',''),'0'),'.')),'totalAmount'=>self::persian(number_format($amount,0,'.',',')),
     'payment40'=>self::persian(number_format((int)round($amount*.4),0,'.',',')),
     'payment20'=>self::persian(number_format((int)round($amount*.2),0,'.',','))];
    if($annual!==null){
@@ -319,7 +337,8 @@ HTML;
     $agencyId,$title,$contractNo,$kind==='parent'?'student':'driver',$partyId,$start,$end,$amount,'active',$template['id'],$rendered,
     json_encode(['templateVersion'=>$template['version'],'kind'=>$kind,'values'=>$data,'driverAnnualCalculation'=>$annual],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
    $id=(int)$pdo->lastInsertId();
-   return ['id'=>$id,'contractNo'=>$contractNo,'templateVersion'=>$template['version'],'title'=>$title,'amount'=>$amount];
+   $invoiceId=$kind==='parent'?ContractBilling::invoice($pdo,$agencyId,(int)$partyId,$year,$id,$contractNo,$amount,$end):null;
+   return ['id'=>$id,'contractNo'=>$contractNo,'templateVersion'=>$template['version'],'title'=>$title,'amount'=>$amount,'invoiceId'=>$invoiceId];
   });
  }
  public static function listing(int $uid,int $agencyId,string $kind): array {

@@ -80,8 +80,8 @@ final class StudentDebtors
             WHERE students.agency_id=:agency AND students.is_active=1
               AND REPLACE(TRIM(students.academic_year),'/','-')=:year
         ), basis AS (SELECT balances.*,
-              CASE WHEN invoice_count=0 AND active_service_count=1 AND annual_fee>0 THEN annual_fee ELSE invoice_total END debt_basis,
-              CASE WHEN invoice_count=0 AND active_service_count=1 AND annual_fee>0 THEN 'unbilled_service' ELSE 'invoiced' END balance_source
+              invoice_total debt_basis,
+              'invoiced' balance_source
               FROM balances),
               debtors AS (SELECT basis.*, GREATEST(0,ROUND(debt_basis-paid)) debt FROM basis)
         SELECT debtors.*, SUM(debt) OVER () total_debt FROM debtors WHERE ".implode(' AND ',$where)

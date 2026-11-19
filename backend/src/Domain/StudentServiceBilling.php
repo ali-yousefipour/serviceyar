@@ -10,40 +10,9 @@ use ServiceYar\Database\Connection;
 /** A stable invoice per assigned student and academic year. Never alters received money. */
 final class StudentServiceBilling {
  public static function sync(PDO $pdo,int $agencyId,int $studentId): ?array {
-  $q=$pdo->prepare("SELECT st.id,st.agency_id,st.grade,st.school_id,st.academic_year,st.monthly_fee,sc.school_type
-   FROM students st JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id
-   WHERE st.id=? AND st.agency_id=? AND st.is_active=1 FOR UPDATE");
-  $q->execute([$studentId,$agencyId]);$student=$q->fetch(PDO::FETCH_ASSOC);
-  if(!$student)return null;
-  $services=$pdo->prepare("SELECT sv.id,sv.code FROM service_students ss JOIN services sv ON sv.id=ss.service_id
-   WHERE ss.student_id=? AND sv.agency_id=? AND sv.is_active=1 AND sv.status<>'cancelled' ORDER BY sv.id LIMIT 2");
-  $services->execute([$studentId,$agencyId]);$assigned=$services->fetchAll(PDO::FETCH_ASSOC);
-  if(!$assigned)return null;
-  if(count($assigned)>1)throw new AuthException(409,'دانش‌آموز بیش از یک سرویس فعال دارد.','DUPLICATE_SERVICE_ASSIGNMENT');
-  $fee=(float)$student['monthly_fee'];
-  // Legacy/imported draft assignments may not yet have a usable tariff.
-  // Never issue a zero-value invoice or block the assignment; a later tariff
-  // update will create the invoice idempotently.
-  if(!is_finite($fee)||$fee<=0)return null;
-  $months=ServiceFinancialBasis::monthsOfStudent($student);
-  $amount=(int)round($fee*$months);
-  $year=trim(str_replace('/','-',(string)($student['academic_year']?:AgencySchoolTariffs::YEAR)));
-  $map=$pdo->prepare('SELECT invoice_id FROM student_service_debt_invoices WHERE agency_id=? AND student_id=? AND academic_year=? FOR UPDATE');
-  $map->execute([$agencyId,$studentId,$year]);$existing=$map->fetchColumn();
-  $title='شهریه سرویس مدارس '.$year.' · سرویس '.($assigned[0]['code']?:$assigned[0]['id']);
-  if($existing){
-   $pdo->prepare("UPDATE invoices SET title=?,amount=?,status=CASE WHEN status='cancelled' THEN 'open' ELSE status END
-     WHERE id=? AND agency_id=? AND party_type='student' AND party_id=?")
-    ->execute([$title,$amount,$existing,$agencyId,$studentId]);
-   $pdo->prepare('UPDATE student_service_debt_invoices SET service_id=? WHERE agency_id=? AND student_id=? AND academic_year=?')->execute([(int)$assigned[0]['id'],$agencyId,$studentId,$year]);
-   return ['invoiceId'=>(int)$existing,'amount'=>$amount,'months'=>$months,'created'=>false];
-  }
-  $pdo->prepare("INSERT INTO invoices(agency_id,title,party_type,party_id,amount,status,issue_date)
-   VALUES(?,?,'student',?,?,'open',CURRENT_DATE())")->execute([$agencyId,$title,$studentId,$amount]);
-  $id=(int)$pdo->lastInsertId();
-  $pdo->prepare('INSERT INTO student_service_debt_invoices(agency_id,student_id,academic_year,invoice_id,service_id) VALUES(?,?,?,?,?)')
-   ->execute([$agencyId,$studentId,$year,$id,(int)$assigned[0]['id']]);
-  return ['invoiceId'=>$id,'amount'=>$amount,'months'=>$months,'created'=>true];
+  // Assignment/repricing no longer creates or changes tuition invoices.
+  // The immutable issued parent contract is the only automatic billing trigger.
+  return null;
  }
 
  public static function account(int $uid,int $agencyId,int $studentId): array {

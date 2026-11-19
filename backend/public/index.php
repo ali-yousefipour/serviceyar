@@ -949,7 +949,7 @@ try {
   $partyId=filter_var($_GET['partyId']??null,FILTER_VALIDATE_INT);
   if($partyId===false||$partyId<1)throw new AuthException(422,'طرف قرارداد نامعتبر است.','INVALID_CONTRACT_PARTY');
   header('Cache-Control: no-store');
-  Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::draftData($s['id'],$aid,$match[1],$partyId)]);
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::draftData($s['id'],$aid,$match[1],$partyId,isset($_GET['startDate'])?(string)$_GET['startDate']:null,isset($_GET['endDate'])?(string)$_GET['endDate']:null)]);
  }
  if(preg_match('#^/api/v1/contract-documents/(parent|driver)$#',$path,$match)){
   $kind=$match[1];
