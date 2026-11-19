@@ -212,7 +212,7 @@ HTML;
   return ['grossAnnual'=>$totalGross,'deductionsAnnual'=>$totalDeducted,
    'netAnnual'=>$totalNet,'rates'=>$rates,'services'=>$detail,'studentCount'=>count($rows)];
  }
- private static function data(PDO $pdo,int $agencyId,string $kind,int $partyId): array {
+ private static function data(PDO $pdo,int $agencyId,string $kind,int $partyId,?string $historicalYear=null): array {
   $q=$pdo->prepare('SELECT a.name,a.sepand_national_id FROM agencies a WHERE a.id=?');$q->execute([$agencyId]);$agency=$q->fetch(PDO::FETCH_ASSOC);
   if(!$agency)throw new AuthException(404,'شرکت یافت نشد.','NOT_FOUND');
   $settings=$pdo->prepare('SELECT setting_key,setting_value FROM agency_settings WHERE agency_id=?');$settings->execute([$agencyId]);
@@ -224,10 +224,10 @@ HTML;
    'companyPhone'=>$setting['company_phone']??'','bankName'=>$setting['company_bank_name']??'',
    'bankAccount'=>$setting['company_bank_account']??'','academicYear'=>$setting['academic_year']??'۱۴۰۵-۱۴۰۶'];
   if($kind==='parent'){
-   $q=$pdo->prepare('SELECT st.id,st.first_name,st.last_name,st.national_code,st.mobile,st.address,st.guardian_first_name,st.guardian_last_name,st.guardian_national_code,st.father_name,st.tariff_distance_km,st.monthly_fee,st.grade,st.academic_year,sc.name AS school_name,sc.region,sc.school_type FROM students st JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id WHERE st.id=? AND st.agency_id=? AND st.is_active=1');
+   $q=$pdo->prepare('SELECT st.id,st.first_name,st.last_name,st.national_code,st.mobile,st.address,st.guardian_first_name,st.guardian_last_name,st.guardian_national_code,st.father_name,st.tariff_distance_km,st.monthly_fee,st.grade,st.academic_year,sc.name AS school_name,sc.region,sc.school_type FROM students st LEFT JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id WHERE st.id=? AND st.agency_id=?'.($historicalYear===null?' AND st.is_active=1 AND sc.id IS NOT NULL':''));
    $q->execute([$partyId,$agencyId]);$row=$q->fetch(PDO::FETCH_ASSOC);
-   if(!$row)throw new AuthException(404,'دانش‌آموز انتخاب‌شده در شرکت یافت نشد.','STUDENT_NOT_FOUND');
-   $values['academicYear']=ContractBilling::year((string)($row['academic_year']?:AgencySchoolTariffs::YEAR));
+   if(!$row)throw new AuthException(404,$historicalYear===null?'دانش‌آموز انتخاب‌شده در شرکت یافت نشد.':'پرونده دانش‌آموز '.$partyId.' در شرکت '.$agencyId.' موجود نیست؛ ارتباط قرارداد باید بررسی شود.','STUDENT_NOT_FOUND');
+   $values['academicYear']=ContractBilling::year($historicalYear??(string)($row['academic_year']?:AgencySchoolTariffs::YEAR));
    $g=$pdo->prepare('SELECT name,mobile FROM guardians WHERE student_id=? ORDER BY is_primary DESC,id LIMIT 1');$g->execute([$partyId]);$guardian=$g->fetch(PDO::FETCH_ASSOC)?:[];
    $name=trim((string)($row['guardian_first_name']??'').' '.(string)($row['guardian_last_name']??''));
    $values+=['studentName'=>trim($row['first_name'].' '.$row['last_name']),'studentNationalCode'=>$row['national_code'],
@@ -542,8 +542,8 @@ HTML;
  }
  private static function archiveImportedInternal(int $id,?int $agencyId): bool {
   return OperationsService::transaction(function(PDO $pdo)use($id,$agencyId){
-   $q=$pdo->prepare("SELECT c.*,m.academic_year AS billing_year,m.invoice_id FROM contracts c JOIN student_contract_invoices m ON m.contract_id=c.id AND m.agency_id=c.agency_id AND m.student_id=c.party_id WHERE c.id=? AND c.party_type='student' AND (c.rendered_html IS NULL OR c.rendered_html='') AND (? IS NULL OR c.agency_id=?) FOR UPDATE");
-   $q->execute([$id,$agencyId,$agencyId]);$row=$q->fetch(PDO::FETCH_ASSOC);if(!$row)return false;
+   $q=$pdo->prepare("SELECT c.*,m.academic_year AS billing_year,m.invoice_id FROM contracts c JOIN student_contract_invoices m ON m.contract_id=c.id AND m.agency_id=c.agency_id AND m.student_id=c.party_id JOIN invoices i ON i.id=m.invoice_id AND i.agency_id=c.agency_id AND i.party_type='student' AND i.party_id=c.party_id WHERE c.id=? AND c.party_type='student' AND (c.rendered_html IS NULL OR c.rendered_html='') AND (? IS NULL OR c.agency_id=?) FOR UPDATE");
+   $q->execute([$id,$agencyId,$agencyId]);$row=$q->fetch(PDO::FETCH_ASSOC);if(!$row)throw new AuthException(409,'قرارداد یا ارتباط فاکتور معتبر نیست.','CONTRACT_INVOICE_CONFLICT');
    $aid=(int)$row['agency_id'];$old=(string)$row['contract_no'];$number=$old;
    if(preg_match('/^([0-9]+)\\.0+$/D',$old,$match)){
     $number=$match[1];
@@ -556,8 +556,8 @@ HTML;
     $pdo->prepare('UPDATE contract_number_sequence SET next_number=GREATEST(next_number,?) WHERE id=1')->execute([(int)$number+1]);
     $pdo->prepare('UPDATE invoices SET title=? WHERE id=? AND agency_id=? AND BINARY title=BINARY ?')->execute(['شهریه قرارداد '.$number.' · '.$row['billing_year'],$row['invoice_id'],$aid,'شهریه قرارداد '.$old.' · '.$row['billing_year']]);
    }
-   $data=self::data($pdo,$aid,'parent',(int)$row['party_id']);
    $year=ContractBilling::year((string)$row['billing_year']);
+   $data=self::data($pdo,$aid,'parent',(int)$row['party_id'],$year);
    $period=ContractBilling::quote($year,(string)$row['start_date'],(string)$row['end_date'],0);
    $total=(int)round((float)$row['amount']);
    $data['academicYear']=$year;
