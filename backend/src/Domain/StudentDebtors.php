@@ -80,6 +80,8 @@ final class StudentDebtors
                    (SELECT GROUP_CONCAT(DISTINCT sv.title ORDER BY sv.title SEPARATOR '، ') FROM service_students ss JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=students.agency_id WHERE ss.student_id=students.id AND sv.is_active=1 AND sv.status<>'cancelled') service_names,
                    (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS(' ',dr.first_name,dr.last_name) ORDER BY dr.last_name SEPARATOR '، ') FROM service_students ss JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=students.agency_id JOIN drivers dr ON dr.id=sv.driver_id AND dr.agency_id=sv.agency_id WHERE ss.student_id=students.id AND sv.is_active=1 AND sv.status<>'cancelled') driver_names,
                    ".DomainService::studentAnnualFeeSql()." annual_fee,
+                   ".DomainService::studentAnnualMonthsSql()." annual_months,
+                   ".DomainService::studentContractAmountSql()." contract_amount,
                    ".DomainService::studentInvoiceTotalSql()." invoice_total,
                    ".DomainService::studentPaidTotalSql()." paid
             FROM students
@@ -90,7 +92,7 @@ final class StudentDebtors
               invoice_total debt_basis,
               CASE WHEN invoice_count>0 THEN 'invoiced' ELSE 'refund_balance' END balance_source
               FROM balances),
-              debtors AS (SELECT basis.*, GREATEST(0,ROUND(debt_basis-paid,2)) debt FROM basis)
+              debtors AS (SELECT basis.*, GREATEST(0,ROUND(debt_basis-paid,2)) debt, GREATEST(0,ROUND(paid-debt_basis,2)) credit, CASE WHEN annual_months IS NULL THEN 'مقطع نامشخص' WHEN contract_amount IS NULL THEN 'بدون قرارداد مرتبط' WHEN contract_amount<>invoice_total THEN 'اختلاف قرارداد و فاکتور' WHEN annual_fee<>contract_amount THEN 'اختلاف تعرفه و قرارداد؛ نیازمند بررسی' ELSE 'منطبق' END reconciliation_status FROM basis)
         SELECT debtors.*, SUM(debt) OVER () total_debt FROM debtors WHERE ".implode(' AND ',$where)
             .' ORDER BY school,school_id,debt DESC,student,id';
         $query=Connection::get()->prepare($sql);
