@@ -89,6 +89,12 @@ try{
    && str_contains($legacyPrint['html'],'نسخه بازسازی‌شده'),
    'Old contracts without issuance snapshots are labeled as reconstructions, not originals');
  rejected(fn()=>D::save($uid,$a,'contracts',['amount'=>'1'],(int)$issued['id']),'ISSUED_CONTRACT_IMMUTABLE');
+ $contractAccount=\ServiceYar\Domain\StudentServiceBilling::account($uid,$a,(int)$s1['id']);
+ $contractListRow=D::get($uid,$a,'students',(int)$s1['id']);
+ check((float)$contractAccount['totals']['invoiced']===(float)$contractListRow['invoice_total']
+   &&(float)$contractAccount['totals']['balance']===(float)$contractListRow['outstanding_fee']
+   &&(float)$contractAccount['totals']['credit']===(float)$contractListRow['student_credit'],
+   'Contract charges are counted once and student detail agrees with financial account');
  $savedPrint=$docApi::printable($uid,$a,(int)$issued['id'])['html'];
  check(str_contains($savedPrint,'ولی آزمایشی')&&str_contains($savedPrint,'آرمان آزمایشی'),'Print snapshot contains substituted guardian and student data');
  check(str_contains($savedPrint,'ماده -12')&&str_contains($savedPrint,'ماده -11'),'Parent reference includes final legal clauses');
@@ -248,7 +254,7 @@ try{
    'direction'=>'receipt','amount'=>'250.50','entry_date'=>'2026-10-01','created_by'=>$uid]);
  $result=\ServiceYar\Domain\StudentDebtors::report($uid,$feeAgency,['academicYear'=>'1405-1406']);
  check((float)$result['items'][0]['paid']===(float)$listed['paid_total']+250.5
-   &&(float)$result['total']===(float)round($listed['invoice_total']-$listed['paid_total']-250.5)
+   &&(float)$result['total']===(float)round($listed['invoice_total']-$listed['paid_total']-250.5,2)
    &&\ServiceYar\Domain\StudentDebtors::report($uid,$feeAgency,$debtorFilter)['items']===[],
    'Ledger receipts increase payments and reduce the remaining debt used by the filter');
  $p->prepare('DELETE FROM ledger_entries WHERE id=?')->execute([$receipt]);

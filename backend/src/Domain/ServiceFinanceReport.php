@@ -30,7 +30,7 @@ final class ServiceFinanceReport
         $where = $studentId === null ? ' AND st.is_active=1 AND a.service_id IS NOT NULL' : ' AND st.id=:student';
         $params = [
             'assignment_agency' => $aid, 'invoice_agency' => $aid, 'student_agency' => $aid,
-            'from_date' => $from, 'to_date' => $to, 'paid_through' => $to,
+            'from_date' => $from, 'to_date' => $to, 'paid_through' => $to, 'payments_from'=>$from, 'payments_agency'=>$aid,
             'academic_year' => $year, 'months' => $months,
             'ledger_agency' => $aid, 'ledger_from' => $from, 'ledger_to' => $to,
         ];
@@ -43,17 +43,20 @@ final class ServiceFinanceReport
                 WHERE s.agency_id=:assignment_agency AND s.is_active=1 AND s.status='active'
                 GROUP BY ss.student_id
             ), invoice_rows AS (
-                SELECT i.party_id student_id, i.amount,
-                    COALESCE((SELECT SUM(p.amount) FROM payments p
-                        WHERE p.agency_id=i.agency_id AND p.invoice_id=i.id
-                          AND p.payment_date<=:paid_through),0) received
+                SELECT i.party_id student_id, i.amount
                 FROM invoices i
                 WHERE i.agency_id=:invoice_agency AND i.party_type='student'
-                    AND i.status IN ('open','paid','overdue')
+                    AND i.status<>'cancelled'
                     AND i.issue_date BETWEEN :from_date AND :to_date
             ), financial AS (
-                SELECT student_id, SUM(amount) invoiced, SUM(received) received
+                SELECT student_id, SUM(amount) invoiced
                 FROM invoice_rows GROUP BY student_id
+            ), payment_rows AS (
+                SELECT i.party_id student_id,SUM(p.amount) received
+                FROM payments p JOIN invoices i ON i.id=p.invoice_id AND i.agency_id=p.agency_id
+                WHERE i.agency_id=:payments_agency AND i.party_type='student'
+                  AND p.payment_date BETWEEN :payments_from AND :paid_through
+                GROUP BY i.party_id
             ), student_ledger AS (
                 SELECT party_id student_id,SUM(CASE WHEN direction='receipt' THEN amount ELSE -amount END) received
                 FROM ledger_entries
@@ -67,18 +70,19 @@ final class ServiceFinanceReport
                     NULLIF(st.monthly_fee,0) monthly_fee,
                     NULLIF(st.monthly_fee,0)*:months estimated_fee,
                     COALESCE(f.invoiced,0) invoiced,
-                    COALESCE(f.received,0)+COALESCE(l.received,0) received,
-                    COALESCE(f.invoiced,0)-COALESCE(f.received,0)-COALESCE(l.received,0) balance
+                    COALESCE(pr.received,0)+COALESCE(l.received,0) received,
+                    COALESCE(f.invoiced,0)-COALESCE(pr.received,0)-COALESCE(l.received,0) balance
                 FROM students st
                 LEFT JOIN assignments a ON a.student_id=st.id
                 LEFT JOIN services s ON s.id=a.service_id AND s.agency_id=st.agency_id AND a.assignment_count=1
                 LEFT JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id
                 LEFT JOIN drivers d ON d.id=s.driver_id AND d.agency_id=st.agency_id
                 LEFT JOIN financial f ON f.student_id=st.id
+                LEFT JOIN payment_rows pr ON pr.student_id=st.id
                 LEFT JOIN student_ledger l ON l.student_id=st.id
-                WHERE st.agency_id=:student_agency AND REPLACE(st.academic_year,'/','-')=:academic_year".$where."
+                WHERE st.agency_id=:student_agency AND ".StudentBalance::yearSql('st.academic_year')."=CONVERT(:academic_year USING utf8mb4) COLLATE utf8mb4_unicode_ci".$where."
             )
-            SELECT student_rows.*, COUNT(*) OVER () total_students,
+            SELECT student_rows.*, GREATEST(0,balance) debt,GREATEST(0,-balance) credit, COUNT(*) OVER () total_students,
                 COUNT(*) OVER () - COUNT(monthly_fee) OVER () missing_fees,
                 SUM(estimated_fee) OVER () total_estimated, SUM(invoiced) OVER () total_invoiced,
                 SUM(received) OVER () total_received, SUM(balance) OVER () total_balance

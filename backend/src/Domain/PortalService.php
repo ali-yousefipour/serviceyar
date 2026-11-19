@@ -238,16 +238,12 @@ final class PortalService {
                   'reference_no'=>$line['reference_no'],'source'=>'ledger'];
             }
             $total=array_sum(array_map(static fn($i)=>(float)$i['amount'],$invoices));
-            $available=max(0,$received);
-            for($i=count($invoices)-1;$i>=0;$i--){
-                $allocated=min($available,(float)$invoices[$i]['amount']);$available-=$allocated;
-                $invoices[$i]['paidAmount']=$allocated;
-                $invoices[$i]['remainingAmount']=max(0,(float)$invoices[$i]['amount']-$allocated);
-            }
+            StudentBalance::allocate($invoices,(float)$received);
+            $totals=StudentBalance::totals((float)$total,(float)$received);
             return $base+['student'=>$student,'guardian'=>$guardian,'services'=>$services,
                 'finance'=>['invoices'=>$invoices,'installments'=>$installments,'payments'=>$payments,
-                   'total'=>$total,'paid'=>$received,'balance'=>max(0,$total-$received),
-                   'credit'=>max(0,$received-$total)],
+                   'total'=>$total,'paid'=>$received,'balance'=>$totals['balance'],
+                   'credit'=>$totals['credit']],
                 'installmentsNote'=>'برنامه اقساط بر اساس سند قطعی شرکت نمایش داده می‌شود؛ برای تاریخ سررسید قطعی از شرکت استعلام کنید.'];
         }
         $driver=self::rows($pdo,"SELECT d.id,d.first_name,d.last_name,d.mobile,d.national_code,

@@ -75,7 +75,7 @@ final class StudentDebtors
                    CONCAT_WS(' ',students.first_name,students.last_name) student, students.mobile guardian_mobile,
                    $extra students.tariff_distance_km,
                    COALESCE(students.monthly_fee,0) monthly_fee,
-                   (SELECT COUNT(*) FROM invoices i WHERE i.agency_id=students.agency_id AND i.party_type='student' AND i.party_id=students.id) invoice_count,
+                   (SELECT COUNT(*) FROM invoices i WHERE i.agency_id=students.agency_id AND i.party_type='student' AND i.party_id=students.id AND i.status<>'cancelled') invoice_count,
                    (SELECT COUNT(*) FROM service_students ss JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=students.agency_id WHERE ss.student_id=students.id AND sv.is_active=1 AND sv.status='active') active_service_count,
                    (SELECT GROUP_CONCAT(DISTINCT sv.title ORDER BY sv.title SEPARATOR '، ') FROM service_students ss JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=students.agency_id WHERE ss.student_id=students.id AND sv.is_active=1 AND sv.status<>'cancelled') service_names,
                    (SELECT GROUP_CONCAT(DISTINCT CONCAT_WS(' ',dr.first_name,dr.last_name) ORDER BY dr.last_name SEPARATOR '، ') FROM service_students ss JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=students.agency_id JOIN drivers dr ON dr.id=sv.driver_id AND dr.agency_id=sv.agency_id WHERE ss.student_id=students.id AND sv.is_active=1 AND sv.status<>'cancelled') driver_names,
@@ -85,12 +85,12 @@ final class StudentDebtors
             FROM students
             LEFT JOIN schools sc ON sc.id=students.school_id AND sc.agency_id=students.agency_id
             WHERE students.agency_id=:agency AND students.is_active=1
-              AND REPLACE(TRIM(students.academic_year),'/','-')=:year
+              AND ".StudentBalance::yearSql('students.academic_year')."=CONVERT(:year USING utf8mb4) COLLATE utf8mb4_unicode_ci
         ), basis AS (SELECT balances.*,
               invoice_total debt_basis,
               'invoiced' balance_source
               FROM balances),
-              debtors AS (SELECT basis.*, GREATEST(0,ROUND(debt_basis-paid)) debt FROM basis)
+              debtors AS (SELECT basis.*, GREATEST(0,ROUND(debt_basis-paid,2)) debt FROM basis)
         SELECT debtors.*, SUM(debt) OVER () total_debt FROM debtors WHERE ".implode(' AND ',$where)
             .' ORDER BY school,school_id,debt DESC,student,id';
         $query=Connection::get()->prepare($sql);
