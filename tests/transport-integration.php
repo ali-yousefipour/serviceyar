@@ -99,8 +99,14 @@ try{
  check((int)$firstTemplate['version']===1,'Publishing first explicit parent template increments version from fallback');
  $afterPublish=$docApi::printable($uid,$a,(int)$issued['id'])['html'];
  check($savedPrint===$afterPublish,'Printing an issued contract stays byte-for-byte immutable after template publishing');
- $newDoc=$docApi::issue($uid,$a,'parent',[
+ $p->prepare('UPDATE students SET national_code=? WHERE id=? AND agency_id=?')->execute(['1234567891',$s2['id'],$a]);
+ $retry=$docApi::issue($uid,$a,'parent',[
   'partyId'=>(int)$s1['id'],'startDate'=>'2026-09-23','endDate'=>'2027-06-22','amount'=>76500000,
+  'overrides'=>['guardianName'=>'ولی آزمایشی','guardianNationalCode'=>'1234567890','guardianMobile'=>'09120000099','managerName'=>'مدیر نمونه']
+ ]);
+ check((int)$retry['id']===(int)$issued['id']&&!empty($retry['alreadyIssued']),'Same student and year issuance is idempotent after template publication');
+ $newDoc=$docApi::issue($uid,$a,'parent',[
+  'partyId'=>(int)$s2['id'],'startDate'=>'2026-09-23','endDate'=>'2027-06-22','amount'=>76500000,
   'overrides'=>['guardianName'=>'ولی آزمایشی','guardianNationalCode'=>'1234567890','guardianMobile'=>'09120000099','managerName'=>'مدیر نمونه']
  ]);
  $newPrint=$docApi::printable($uid,$a,(int)$newDoc['id'])['html'];

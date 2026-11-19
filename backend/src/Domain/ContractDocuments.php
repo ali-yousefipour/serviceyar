@@ -533,34 +533,7 @@ HTML;
     $number=$match[1];
     $pdo->exec("INSERT IGNORE INTO contract_number_sequence(id,next_number) VALUES(1,100000)");
     $seq=(int)$pdo->query("SELECT next_number FROM contract_number_sequence WHERE id=1 FOR UPDATE")->fetchColumn();
-    $collision=$pdo->prepare("SELECT id FROM contracts WHERE id<>? AND (contract_no=? OR (contract_no REGEXP '^[0-9]+[.]0+
-  self::scope($uid,$agencyId);$pdo=Connection::get();self::ensureSchema($pdo);
-  $q=$pdo->prepare('SELECT id,contract_no,rendered_html,party_type,party_id,start_date,end_date,amount FROM contracts WHERE id=? AND agency_id=?');
-  $q->execute([$contractId,$agencyId]);$row=$q->fetch(PDO::FETCH_ASSOC);
-  if(!$row)throw new AuthException(404,'قرارداد یافت نشد.','NOT_FOUND');
-  if($row['rendered_html'])return ['html'=>$row['rendered_html'],'contractNo'=>$row['contract_no'],'legacyReconstructed'=>false];
-  // Existing records before versioned issuance have no historical content.
-  // Provide an explicitly watermarked reconstruction, never claim it is the
-  // original and never overwrite the legal issuance snapshot column.
-  $kind=$row['party_type']==='student'?'parent':($row['party_type']==='driver'?'driver':null);
-  if(!$kind||!(int)$row['party_id'])throw new AuthException(409,'نوع یا طرف قرارداد قدیمی برای بازسازی مشخص نیست.','LEGACY_CONTRACT_DATA_MISSING');
-  $data=self::data($pdo,$agencyId,$kind,(int)$row['party_id']);
-  $total=(int)round((float)$row['amount']);
-  $months=$kind==='parent'?(preg_match('/ابتدایی|دبستان|primary|elementary/u',(string)($data['schoolType']??'').(string)($data['grade']??''))?8.5:9):0;
-  $values=$data+['contractNo'=>self::persian((string)($row['contract_no']??'—')),'issueDate'=>'نامشخص',
-   'startDate'=>self::jalali((string)($row['start_date']??'')),
-   'endDate'=>self::jalali((string)($row['end_date']??'')),
-   'durationMonths'=>self::persian((string)$months),
-   'totalAmount'=>self::persian(number_format($total,0,'.',',')),
-   'payment40'=>self::persian(number_format((int)round($total*.4),0,'.',',')),
-   'payment20'=>self::persian(number_format((int)round($total*.2),0,'.',','))];
-  $warning='<p class="contract-warning">نسخه بازسازی‌شده از اطلاعات فعلی سامانه؛ اصل قالب و محتوای زمان صدور این قرارداد قدیمی در آرشیو موجود نیست و این نسخه جایگزین نسخه اصلی نیست.</p>';
-  $html=self::document(self::template($pdo,$kind)['body_html'],$values);
-  $html=preg_replace('/(<body[^>]*>)/','$1'.$warning,$html,1)??$html;
-  return ['html'=>$html,'contractNo'=>$row['contract_no'],'legacyReconstructed'=>true];
- }
-}
- AND SUBSTRING_INDEX(contract_no,'.',1)=?)) LIMIT 1");
+    $collision=$pdo->prepare("SELECT id FROM contracts WHERE id<>? AND (contract_no=? OR (contract_no REGEXP '^[0-9]+[.]0+$' AND SUBSTRING_INDEX(contract_no,'.',1)=?)) LIMIT 1");
     $collision->execute([$id,$number,$number]);
     if($collision->fetchColumn())$number=self::nextNumber($pdo);
     $pdo->prepare('UPDATE contracts SET contract_no=? WHERE id=? AND agency_id=?')->execute([$number,$id,$aid]);
