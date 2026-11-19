@@ -165,7 +165,7 @@ HTML;
   */
  private static function driverAnnualAmount(PDO $pdo,int $agencyId,int $driverId): array {
   $query=$pdo->prepare("SELECT sv.id service_id,sv.title service_title,st.id student_id,
-   st.grade,sc.school_type,COALESCE(st.driver_base_monthly,st.monthly_fee) base_monthly
+   st.grade,sc.school_type,sc.education_levels,COALESCE(st.driver_base_monthly,st.monthly_fee) base_monthly
    FROM services sv
    JOIN service_students ss ON ss.service_id=sv.id
    JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id
@@ -177,15 +177,7 @@ HTML;
   $query->execute([$agencyId,$driverId]);$rows=$query->fetchAll(PDO::FETCH_ASSOC);
   $grouped=[];
   foreach($rows as $row){
-   $type=(string)($row['school_type']??'');$grade=(string)($row['grade']??'');
-   $secondary=(bool)preg_match('/متوسطه|دبیرستان|secondary|high.school/iu',$type);
-   $primary=(bool)preg_match('/ابتدایی|دبستان|primary|elementary/iu',$type);
-   if(!$secondary&&!$primary){
-    $secondary=(bool)preg_match('/متوسطه|دبیرستان|secondary|high.school/iu',$grade);
-    $primary=(bool)preg_match('/ابتدایی|دبستان|primary|elementary/iu',$grade)
-      ||(bool)preg_match('/^[۱-۶1-6]$/u',trim($grade));
-   }
-   $months=$secondary?9:($primary?8.5:9);
+   $months=ServiceFinancialBasis::monthsOfStudent($row);
    $key=(int)$row['service_id'].':'.$months;
    if(!isset($grouped[$key]))$grouped[$key]=['serviceId'=>(int)$row['service_id'],
     'serviceTitle'=>(string)$row['service_title'],'months'=>$months,'students'=>0,'grossMonthly'=>0];
@@ -224,7 +216,7 @@ HTML;
    'companyPhone'=>$setting['company_phone']??'','bankName'=>$setting['company_bank_name']??'',
    'bankAccount'=>$setting['company_bank_account']??'','academicYear'=>$setting['academic_year']??'۱۴۰۵-۱۴۰۶'];
   if($kind==='parent'){
-   $q=$pdo->prepare('SELECT st.id,st.first_name,st.last_name,st.national_code,st.mobile,st.address,st.guardian_first_name,st.guardian_last_name,st.guardian_national_code,st.father_name,st.tariff_distance_km,st.monthly_fee,st.grade,st.academic_year,sc.name AS school_name,sc.region,sc.school_type FROM students st LEFT JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id WHERE st.id=? AND st.agency_id=?'.($historicalYear===null?' AND st.is_active=1 AND sc.id IS NOT NULL':''));
+   $q=$pdo->prepare('SELECT st.id,st.first_name,st.last_name,st.national_code,st.mobile,st.address,st.guardian_first_name,st.guardian_last_name,st.guardian_national_code,st.father_name,st.tariff_distance_km,st.monthly_fee,st.grade,st.academic_year,sc.name AS school_name,sc.region,sc.school_type,sc.education_levels FROM students st LEFT JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id WHERE st.id=? AND st.agency_id=?'.($historicalYear===null?' AND st.is_active=1 AND sc.id IS NOT NULL':''));
    $q->execute([$partyId,$agencyId]);$row=$q->fetch(PDO::FETCH_ASSOC);
    if(!$row)throw new AuthException(404,$historicalYear===null?'دانش‌آموز انتخاب‌شده در شرکت یافت نشد.':'پرونده دانش‌آموز '.$partyId.' در شرکت '.$agencyId.' موجود نیست؛ ارتباط قرارداد باید بررسی شود.','STUDENT_NOT_FOUND');
    $values['academicYear']=ContractBilling::year($historicalYear??(string)($row['academic_year']?:AgencySchoolTariffs::YEAR));
@@ -235,7 +227,7 @@ HTML;
     'guardianNationalCode'=>$row['guardian_national_code'],'guardianFatherName'=>'',
     'guardianMobile'=>$guardian['mobile']??$row['mobile'],'guardianAddress'=>$row['address'],
     'distanceKm'=>$row['tariff_distance_km'],'monthlyFee'=>$row['monthly_fee'],'grade'=>$row['grade'],
-    'schoolType'=>$row['school_type']];
+    'schoolType'=>$row['school_type'],'educationLevels'=>$row['education_levels']];
   }else{
    $q=$pdo->prepare('SELECT first_name,last_name,national_code,mobile FROM drivers WHERE id=? AND agency_id=? AND is_active=1');
    $q->execute([$partyId,$agencyId]);$driver=$q->fetch(PDO::FETCH_ASSOC);
@@ -261,7 +253,7 @@ HTML;
   $annual=$kind==='driver'?self::driverAnnualAmount($pdo,$agencyId,$partyId):null;
   $period=null;
   if($kind==='parent'){
-   $defaults=ContractBilling::defaults($data['academicYear'],ServiceFinancialBasis::monthsOfStudent(['grade'=>$data['grade'],'school_type'=>$data['schoolType']])===8.5);
+   $defaults=ContractBilling::defaults($data['academicYear'],ServiceFinancialBasis::monthsOfStudent(['grade'=>$data['grade'],'school_type'=>$data['schoolType'],'education_levels'=>$data['educationLevels']??''])===8.5);
    $period=ContractBilling::quote($data['academicYear'],$start??$defaults['startDate'],$end??$defaults['endDate'],(int)round((float)$data['monthlyFee']));
   }
   return ['values'=>$data,'missing'=>$missing,'suggestedTotal'=>$period['amount']??$annual['netAnnual'],
@@ -394,7 +386,7 @@ HTML;
   if(PHP_SAPI!=='cli')throw new \LogicException('CLI migration only');
   $pdo=Connection::get();
   $data=self::data($pdo,$agencyId,'parent',$studentId);
-  $defaults=ContractBilling::defaults($data['academicYear'],ServiceFinancialBasis::monthsOfStudent(['grade'=>$data['grade'],'school_type'=>$data['schoolType']])===8.5);
+  $defaults=ContractBilling::defaults($data['academicYear'],ServiceFinancialBasis::monthsOfStudent(['grade'=>$data['grade'],'school_type'=>$data['schoolType'],'education_levels'=>$data['educationLevels']??''])===8.5);
   return self::issueInternal(0,$agencyId,'parent',['partyId'=>$studentId]+$defaults);
  }
  private static function issueInternal(int $uid,int $agencyId,string $kind,array $input): array {
