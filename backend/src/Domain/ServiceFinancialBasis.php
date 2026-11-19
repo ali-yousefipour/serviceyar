@@ -53,14 +53,31 @@ final class ServiceFinancialBasis
         return (int)round($monthly*$days/30);
     }
 
+    private static function normalizeEducation(string $value): string
+    {
+        return trim(strtr(mb_strtolower($value,'UTF-8'),['ي'=>'ی','ك'=>'ک','‌'=>' ','۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']));
+    }
+
     public static function monthsOfStudent(array $student): float
     {
-        $grade=(string)($student['grade']??'');
-        $schoolType=(string)($student['school_type']??'');
-        $primary=preg_match('/ابتدایی|دبستان|primary|elementary/ui',$schoolType)
-            ||(!preg_match('/متوسطه|دبیرستان|secondary|high.school/ui',$schoolType)
-                && (preg_match('/ابتدایی|دبستان|primary|elementary/ui',$grade)
-                    ||in_array($grade,['1','2','3','4','5','6','۱','۲','۳','۴','۵','۶'],true)));
-        return $primary?8.5:9.0;
+        $grade=self::normalizeEducation((string)($student['grade']??''));
+        $levels=$student['education_levels']??'';
+        $level=self::normalizeEducation(is_array($levels)?implode(' ',array_map('strval',$levels)):(string)$levels);
+        $legacy=self::normalizeEducation((string)($student['school_type']??''));
+        $primary='/ابتدایی|دبستان|primary|elementary/u';
+        $secondary='/متوسطه|دبیرستان|راهنمایی|secondary|high.school|middle.school/u';
+        // Explicit student education stage wins; a generic grade such as "اول"
+        // is not sufficient to distinguish first grade from first-year secondary.
+        $p=(bool)preg_match($primary,$grade);$s=(bool)preg_match($secondary,$grade);
+        if($p!==$s)return $p?8.5:9.0;
+        foreach([$level,$legacy] as $school){
+            $p=(bool)preg_match($primary,$school);$s=(bool)preg_match($secondary,$school);
+            if($p!==$s)return $p?8.5:9.0;
+            if($p&&$s)break;
+        }
+        if(preg_match('/^(?:پایه\s*)?(1[0-2]|[1-9])$/u',$grade,$m))return (int)$m[1]<=6?8.5:9.0;
+        if(preg_match('/^(?:پایه\s*)?(هفتم|هشتم|نهم|دهم|یازدهم|دوازدهم)$/u',$grade))return 9.0;
+        if(preg_match('/^(?:پایه\s*)?(چهارم|پنجم|ششم)$/u',$grade))return 8.5;
+        throw new AuthException(422,'مقطع تحصیلی دانش‌آموز مشخص نیست؛ پایه و مقطع مدرسه را اصلاح کنید.','EDUCATION_LEVEL_REQUIRED');
     }
 }
