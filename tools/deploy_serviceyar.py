@@ -4,7 +4,7 @@ Changed files are staged and checksum-verified before publication. A last-writte
 manifest records the complete release, so repeated deployments avoid the huge FTP
 round-trip cost of resending and rechecking every unchanged file.
 """
-from ftplib import FTP, error_perm
+from ftplib import FTP, error_perm, error_temp
 from hashlib import sha256
 from pathlib import Path
 import io
@@ -12,6 +12,7 @@ import json
 import os
 import posixpath
 import socket
+import time
 import ssl
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
@@ -67,10 +68,32 @@ def upload(ftp, source, destination):
 
 
 def verify(ftp, expected_hex, destination):
-    digest = sha256()
-    ftp.retrbinary("RETR " + destination, digest.update, blocksize=65536)
-    if digest.hexdigest() != expected_hex:
-        raise RuntimeError("Transferred file differs: " + destination)
+    def check(connection):
+        digest = sha256()
+        connection.retrbinary("RETR " + destination, digest.update, blocksize=65536)
+        if digest.hexdigest() != expected_hex:
+            raise RuntimeError("Transferred file differs: " + destination)
+
+    try:
+        check(ftp)
+        return
+    except (TimeoutError, ConnectionError, EOFError, error_temp) as error:
+        print(f"FTP verification interrupted for {destination}: {error}; reconnecting", flush=True)
+
+    # Retry only the read-only checksum, never blindly replay a rename.
+    # Restore the existing control session so subsequent publication can continue.
+    ftp.close()
+    for attempt in range(3):
+        try:
+            time.sleep(2 ** attempt)
+            ftp.connect(os.environ["FTP_HOST"], 21)
+            ftp.login(os.environ["FTP_USER"], os.environ["FTP_PASS"])
+            check(ftp)
+            return
+        except (TimeoutError, ConnectionError, EOFError, error_temp):
+            ftp.close()
+            if attempt == 2:
+                raise
 
 
 def previous_files(ftp):

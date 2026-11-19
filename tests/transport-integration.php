@@ -229,11 +229,11 @@ try{
  check($feeReport['totals']['student_count']===1&&(float)$item['estimated_fee']===13500000.0,'Annual estimate uses saved rate and explicit service months');
  $autoInvoice=$p->prepare('SELECT i.amount FROM student_service_debt_invoices m JOIN invoices i ON i.id=m.invoice_id WHERE m.agency_id=? AND m.student_id=?');
  $autoInvoice->execute([$feeAgency,$feeStudent['id']]);$automaticDebt=(float)$autoInvoice->fetchColumn();
- check($automaticDebt>0,'Assignment creates a linked annual service invoice');
+ check($automaticDebt===0.0,'Assignment alone does not create a tuition invoice');
  $unbilledStudent=insertFixture('students',['uuid'=>Uuid::v4(),'agency_id'=>$feeAgency,'school_id'=>$feeSchool['id'],'first_name'=>'بدهکار','last_name'=>'بدون فاکتور','mobile'=>'09120000993','academic_year'=>'1405/1406','monthly_fee'=>2000000,'service_status'=>'assigned']);
  $p->prepare('INSERT INTO service_students(service_id,student_id) VALUES(?,?)')->execute([$feeService['id'],$unbilledStudent]);
  $unbilledReport=\ServiceYar\Domain\StudentDebtors::report($uid,$feeAgency,['academicYear'=>'1405-1406','student'=>'بدون فاکتور']);
- check(count($unbilledReport['items'])===1 && $unbilledReport['items'][0]['balance_source']==='unbilled_service' && (float)$unbilledReport['items'][0]['debt']===18000000.0,'Active service without invoice appears as explicitly unbilled annual balance');
+ check($unbilledReport['items']===[],'An unbilled assignment is not an enforceable student debt');
  $p->prepare('DELETE FROM service_students WHERE student_id=?')->execute([$unbilledStudent]);
  $p->prepare('DELETE FROM students WHERE id=?')->execute([$unbilledStudent]);
 
@@ -255,7 +255,7 @@ try{
  check(abs((float)$item['invoiced']-($automaticDebt+1200000.50))<0.01
    &&$item['received']==='300000.25'
    &&abs((float)$item['balance']-($automaticDebt+900000.25))<0.01,
-   'Automatic student invoice and manual invoice each counted once; later payments excluded');
+   'Manual invoice counted once without estimated tuition; later payments excluded');
  rejected(fn()=>\ServiceYar\Domain\ServiceFinanceReport::report($viewer,$feeAgency,$filter),'SCOPE_FORBIDDEN');
  rejected(fn()=>\ServiceYar\Domain\ServiceFinanceReport::report($uid,$feeAgency,['months'=>13]+$filter),'VALIDATION_ERROR');
  rejected(fn()=>\ServiceYar\Domain\ServiceFinanceReport::report($uid,$feeAgency,$filter,(int)$foreign['id']),'NOT_FOUND');
@@ -780,9 +780,9 @@ try{
  $p->prepare("UPDATE agency_school_tariffs SET amount_irr=? WHERE agency_id=? AND vehicle_class=1 AND distance_km=5")
    ->execute([1800000,$feeAgency]);
  $agencyReprice=\ServiceYar\Domain\AgencySchoolTariffs::recalculate($uid,$feeAgency);
- check(($agencyReprice['updated']??0)>=1&&($agencyReprice['invoicesSynced']??0)>=1
+ check(($agencyReprice['updated']??0)>=1&&($agencyReprice['invoicesSynced']??0)===0
    &&($agencyReprice['servicesUpdated']??0)>=1,
-   'Agency reprice synchronizes students, invoices and driver services: '.json_encode($agencyReprice));
+   'Agency reprice synchronizes rates and driver services without issuing invoices: '.json_encode($agencyReprice));
  $recalculatedStudent=D::get($uid,$feeAgency,'students',(int)$repriceStudent['id']);
  check((int)$recalculatedStudent['monthly_fee']===1800000
    &&(int)$recalculatedStudent['driver_base_monthly']===1800000,
@@ -792,8 +792,8 @@ try{
    'Agency rate update synchronizes net monthly driver payable after deductions');
  $recalculatedInvoice=$p->prepare("SELECT i.amount FROM student_service_debt_invoices m JOIN invoices i ON i.id=m.invoice_id WHERE m.agency_id=? AND m.student_id=?");
  $recalculatedInvoice->execute([$feeAgency,$repriceStudent['id']]);
- check((int)$recalculatedInvoice->fetchColumn()===16200000,
-   'Agency rate update recalculates the nine-month student debt invoice');
+ check($recalculatedInvoice->fetchColumn()===false,
+   'Agency rate update does not issue an uncontracted tuition invoice');
  check((int)D::get($uid,$a,'students',(int)$taxiStudent['id'])['monthly_fee']===14000000,
    'Repricing one company never modifies official taxi tuition in another company');
  $repeat=\ServiceYar\Domain\AgencySchoolTariffs::recalculate($uid,$feeAgency);
