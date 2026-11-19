@@ -522,6 +522,71 @@ HTML;
   $q->execute([$agencyId,$kind==='parent'?'student':'driver']);
   return $q->fetchAll(PDO::FETCH_ASSOC);
  }
+ /** Freeze a reconstructed copy of a SQL-imported student contract without issuing new debt. */
+ public static function archiveImportedStudentContract(int $id): bool {
+  if(PHP_SAPI!=='cli')throw new \LogicException('CLI migration only');
+  return OperationsService::transaction(function(PDO $pdo)use($id){
+   $q=$pdo->prepare("SELECT c.*,m.academic_year AS billing_year,m.invoice_id FROM contracts c JOIN student_contract_invoices m ON m.contract_id=c.id AND m.agency_id=c.agency_id AND m.student_id=c.party_id WHERE c.id=? AND c.party_type='student' AND (c.rendered_html IS NULL OR c.rendered_html='') FOR UPDATE");
+   $q->execute([$id]);$row=$q->fetch(PDO::FETCH_ASSOC);if(!$row)return false;
+   $aid=(int)$row['agency_id'];$old=(string)$row['contract_no'];$number=$old;
+   if(preg_match('/^([0-9]+)\\.0+$/D',$old,$match)){
+    $number=$match[1];
+    $pdo->exec("INSERT IGNORE INTO contract_number_sequence(id,next_number) VALUES(1,100000)");
+    $seq=(int)$pdo->query("SELECT next_number FROM contract_number_sequence WHERE id=1 FOR UPDATE")->fetchColumn();
+    $collision=$pdo->prepare("SELECT id FROM contracts WHERE id<>? AND (contract_no=? OR (contract_no REGEXP '^[0-9]+[.]0+
+  self::scope($uid,$agencyId);$pdo=Connection::get();self::ensureSchema($pdo);
+  $q=$pdo->prepare('SELECT id,contract_no,rendered_html,party_type,party_id,start_date,end_date,amount FROM contracts WHERE id=? AND agency_id=?');
+  $q->execute([$contractId,$agencyId]);$row=$q->fetch(PDO::FETCH_ASSOC);
+  if(!$row)throw new AuthException(404,'قرارداد یافت نشد.','NOT_FOUND');
+  if($row['rendered_html'])return ['html'=>$row['rendered_html'],'contractNo'=>$row['contract_no'],'legacyReconstructed'=>false];
+  // Existing records before versioned issuance have no historical content.
+  // Provide an explicitly watermarked reconstruction, never claim it is the
+  // original and never overwrite the legal issuance snapshot column.
+  $kind=$row['party_type']==='student'?'parent':($row['party_type']==='driver'?'driver':null);
+  if(!$kind||!(int)$row['party_id'])throw new AuthException(409,'نوع یا طرف قرارداد قدیمی برای بازسازی مشخص نیست.','LEGACY_CONTRACT_DATA_MISSING');
+  $data=self::data($pdo,$agencyId,$kind,(int)$row['party_id']);
+  $total=(int)round((float)$row['amount']);
+  $months=$kind==='parent'?(preg_match('/ابتدایی|دبستان|primary|elementary/u',(string)($data['schoolType']??'').(string)($data['grade']??''))?8.5:9):0;
+  $values=$data+['contractNo'=>self::persian((string)($row['contract_no']??'—')),'issueDate'=>'نامشخص',
+   'startDate'=>self::jalali((string)($row['start_date']??'')),
+   'endDate'=>self::jalali((string)($row['end_date']??'')),
+   'durationMonths'=>self::persian((string)$months),
+   'totalAmount'=>self::persian(number_format($total,0,'.',',')),
+   'payment40'=>self::persian(number_format((int)round($total*.4),0,'.',',')),
+   'payment20'=>self::persian(number_format((int)round($total*.2),0,'.',','))];
+  $warning='<p class="contract-warning">نسخه بازسازی‌شده از اطلاعات فعلی سامانه؛ اصل قالب و محتوای زمان صدور این قرارداد قدیمی در آرشیو موجود نیست و این نسخه جایگزین نسخه اصلی نیست.</p>';
+  $html=self::document(self::template($pdo,$kind)['body_html'],$values);
+  $html=preg_replace('/(<body[^>]*>)/','$1'.$warning,$html,1)??$html;
+  return ['html'=>$html,'contractNo'=>$row['contract_no'],'legacyReconstructed'=>true];
+ }
+}
+ AND SUBSTRING_INDEX(contract_no,'.',1)=?)) LIMIT 1");
+    $collision->execute([$id,$number,$number]);
+    if($collision->fetchColumn())$number=self::nextNumber($pdo);
+    $pdo->prepare('UPDATE contracts SET contract_no=? WHERE id=? AND agency_id=?')->execute([$number,$id,$aid]);
+    $pdo->prepare('UPDATE contract_number_sequence SET next_number=GREATEST(next_number,?) WHERE id=1')->execute([(int)$number+1]);
+    $pdo->prepare('UPDATE invoices SET title=? WHERE id=? AND agency_id=? AND BINARY title=BINARY ?')->execute(['شهریه قرارداد '.$number.' · '.$row['billing_year'],$row['invoice_id'],$aid,'شهریه قرارداد '.$old.' · '.$row['billing_year']]);
+   }
+   $data=self::data($pdo,$aid,'parent',(int)$row['party_id']);
+   $year=ContractBilling::year((string)$row['billing_year']);
+   $period=ContractBilling::quote($year,(string)$row['start_date'],(string)$row['end_date'],0);
+   $total=(int)round((float)$row['amount']);
+   $data['academicYear']=$year;
+   $values=$data+['contractNo'=>self::persian($number),'issueDate'=>self::jalali((string)$row['created_at']),
+    'startDate'=>self::jalali((string)$row['start_date']),'endDate'=>self::jalali((string)$row['end_date']),
+    'durationMonths'=>self::persian(rtrim(rtrim(number_format($period['months'],2,'.',''),'0'),'.')),
+    'totalAmount'=>self::persian(number_format($total,0,'.',',')),
+    'payment40'=>self::persian(number_format((int)round($total*.4),0,'.',',')),
+    'payment20'=>self::persian(number_format((int)round($total*.2),0,'.',','))];
+   $template=self::template($pdo,'parent');
+   $html=self::document($template['body_html'],$values);
+   $note='<p class="contract-warning">نسخه چاپی تهیه‌شده از قرارداد ثبت‌شده در مهاجرت اطلاعات و مشخصات موجود در زمان بازسازی؛ تاریخ درج‌شده تاریخ ثبت سامانه است، نه گواهی امضای قرارداد.</p>';
+   $html=preg_replace('/(<section class="contract-sheet">)/','$1'.$note,$html,1)??$html;
+   $snapshot=['kind'=>'parent','templateVersion'=>$template['version'],'values'=>$values,'source'=>'sql_import_reconstruction','archivedAt'=>gmdate('c'),'previousContractNo'=>$old];
+   $pdo->prepare('UPDATE contracts SET rendered_html=?,snapshot_json=?,template_id=? WHERE id=? AND agency_id=?')->execute([$html,json_encode($snapshot,JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE|JSON_THROW_ON_ERROR),$template['id'],$id,$aid]);
+   return true;
+  });
+ }
  public static function printable(int $uid,int $agencyId,int $contractId): array {
   self::scope($uid,$agencyId);$pdo=Connection::get();self::ensureSchema($pdo);
   $q=$pdo->prepare('SELECT id,contract_no,rendered_html,party_type,party_id,start_date,end_date,amount FROM contracts WHERE id=? AND agency_id=?');
