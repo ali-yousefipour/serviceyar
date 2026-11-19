@@ -992,7 +992,7 @@ async function contractsPage(token=pageToken){
     '<div class="sy-contract-create-actions"><button class="primary" type="submit">صدور و ثبت قرارداد</button><span id="syContractCreateStatus" aria-live="polite"></span></div></form></details>':'')+
     '<header class="sy-settings-section-head"><div><h3>قراردادهای صادرشده</h3><p>برای هر قرارداد نسخه چاپی ذخیره‌شده زمان صدور استفاده می‌شود.</p></div></header>'+
     '<div class="table-wrap"><table><thead><tr><th>شماره</th><th>عنوان قرارداد</th><th>تاریخ شروع</th><th>تاریخ پایان</th><th>مبلغ (ریال)</th><th>عملیات</th></tr></thead><tbody>'+
-    (docs.length?docs.map(c=>'<tr><td>'+esc(persianDigits(c.contract_no||'—'))+'</td><td>'+esc(c.title||'—')+'</td><td>'+esc(fmtDate(c.start_date))+'</td><td>'+esc(fmtDate(c.end_date))+'</td><td>'+number(c.amount)+'</td><td><button type="button" data-contract-print="'+Number(c.id)+'" data-contract-legacy="'+(Number(c.printable)?'0':'1')+'">'+(Number(c.printable)?'مشاهده و چاپ مجدد':'بازسازی و چاپ با هشدار')+'</button></td></tr>').join(''):'<tr><td colspan="6">قراردادی در این بخش ثبت نشده است.</td></tr>')+
+    (docs.length?docs.map(c=>'<tr><td>'+esc(persianDigits(c.contract_no||'—'))+'</td><td>'+esc(c.title||'—')+'</td><td>'+esc(fmtDate(c.start_date))+'</td><td>'+esc(fmtDate(c.end_date))+'</td><td>'+number(c.amount)+'</td><td><button type="button" data-contract-print="'+Number(c.id)+'" data-contract-legacy="'+(Number(c.printable)?'0':'1')+'">'+(Number(c.printable)?'مشاهده و چاپ مجدد':'بازسازی و چاپ با هشدار')+'</button>'+(can('contracts','manage')?'<button type="button" data-contract-edit="'+Number(c.id)+'">ویرایش</button>':'')+'</td></tr>').join(''):'<tr><td colspan="6">قراردادی در این بخش ثبت نشده است.</td></tr>')+
     '</tbody></table></div>';
    const form=body.querySelector('#syContractCreateForm');
    if(form){
@@ -1096,6 +1096,20 @@ async function contractsPage(token=pageToken){
      }catch(error){status.textContent=error.message;submit.disabled=false;}
     };
    }
+   body.querySelectorAll('[data-contract-edit]').forEach(button=>button.onclick=async()=>{
+    try{
+     const id=Number(button.dataset.contractEdit),record=await api(scoped('/api/v1/contract-documents/'+id+'/edit'));
+     const dialog=document.createElement('dialog');dialog.className='sy-contract-create';dialog.style.maxWidth='min(850px,95vw)';dialog.style.maxHeight='90vh';
+     dialog.innerHTML='<form class="form-grid sy-contract-create-grid"><h3>ویرایش قرارداد '+esc(persianDigits(record.contract_no))+'</h3><label>تاریخ شروع<input type="date" name="startDate" required></label><label>تاریخ پایان<input type="date" name="endDate" required></label><p>مبلغ پس از کنترل فاکتور مرتبط در سرور محاسبه می‌شود. نسخه قبلی در سوابق محفوظ می‌ماند.</p><div class="sy-contract-draft-grid"></div><p role="alert" data-edit-error></p><button class="primary" type="submit">ذخیره ویرایش</button><button type="button" data-cancel>انصراف</button></form>';
+     document.body.append(dialog);const form=dialog.querySelector('form');form.elements.startDate.value=record.start_date;form.elements.endDate.value=record.end_date;
+     const fields=record.kind==='parent'?[['guardianName','نام ولی'],['guardianNationalCode','کد ملی ولی'],['guardianFatherName','نام پدر ولی'],['guardianMobile','همراه ولی'],['guardianAddress','نشانی ولی'],['bankName','بانک'],['bankAccount','شماره حساب']]:[];
+     fields.push(['companyName','شرکت'],['managerName','مدیر'],['managerTitle','سمت'],['managerNationalCode','کد ملی مدیر'],['companyRegistration','شماره ثبت'],['companyNationalId','شناسه ملی'],['companyAddress','نشانی شرکت'],['companyPhone','تلفن شرکت']);
+     for(const [key,label] of fields){const l=document.createElement('label');l.textContent=label;const input=document.createElement('input');input.name='override_'+key;input.value=record.values?.[key]??'';input.maxLength=500;l.append(input);dialog.querySelector('.sy-contract-draft-grid').append(l);}
+     dialog.querySelector('[data-cancel]').onclick=()=>dialog.close();dialog.addEventListener('close',()=>dialog.remove(),{once:true});
+     form.onsubmit=async e=>{e.preventDefault();const save=form.querySelector('[type=submit]');save.disabled=true;try{const overrides={};for(const input of form.querySelectorAll('[name^="override_"]'))overrides[input.name.slice(9)]=input.value.trim();await write('/api/v1/contract-documents/'+id+'/edit',{startDate:form.elements.startDate.value,endDate:form.elements.endDate.value,overrides},'PUT');dialog.close();notify('قرارداد ویرایش شد.');await render();}catch(error){dialog.querySelector('[data-edit-error]').textContent=error.message;save.disabled=false;}};
+     dialog.showModal();
+    }catch(error){notify(error.message,true);}
+   });
    body.querySelectorAll('[data-contract-print]').forEach(button=>button.onclick=async()=>{
     if(button.dataset.contractLegacy==='1'&&!window.confirm('این قرارداد قدیمی نسخه چاپی زمان صدور ندارد. آیا نسخه بازسازی‌شده از اطلاعات فعلی با هشدار مشخص چاپ شود؟'))return;
     const printWindow=window.open('','_blank');

@@ -58,7 +58,7 @@ HTML;
 <h2>ماده ۲- موضوع قرارداد:</h2>
 <p>ارائه خدمات حمل‌ونقل دانش‌آموز/دانش‌آموزان برابر ضوابط مندرج در آئیننامه اجرایی حمل‌ونقل دانش‌آموزی در ساعات رسمی آموزشی و مطابق با فرم ارائه خدمات پیوست با پرداخت بهای ارائه خدمات حمل‌ونقل دانش‌آموزی وفق مصوبه شماره /6/1404/20084 ش مورخه 1404/11/14 شورای اسلامی شهر مشهد مقدس.</p>
 <h2>ماده ۳- مدت قرارداد:</h2>
-<p>مدت قرارداد از تاریخ {{startDate}} به مدت {{durationMonths}} ماه شمسی می‌باشد.</p>
+<p>مدت قرارداد از تاریخ {{startDate}} لغایت {{endDate}} به مدت {{durationMonths}} ماه شمسی می‌باشد.</p>
 <h2>ماده ۴- مبلغ قرارداد:</h2>
 <p>مبلغ کل قرارداد برای ارائه خدمات حمل‌ونقل دانش‌آموزی بر مبنای مسافت {{distanceKm}} کیلومتر (میانگین مسافت رفت و برگشت) معادل {{totalAmount}} ریال می‌باشد که مستند به سوابق مندرج در سامانه سپند و فرم ارائه خدمات (پیوست) و بهاء ارائه خدمات حمل‌ونقل دانش‌آموزی (مشتمل بر نرخ خرید خدمات راننده به همراه هزینه‌های بالاسری از جمله آموزش ،تجهیز ناوگان به علائم ممیزه و غیره) که توسط ولی دانش‌آموز به حساب شرکت پرداخت می‌گردد.</p>
 <p><strong>تبصره ۲:</strong> در صورت درخواست ولی دانش‌آموز به دریافت ارائه خدمات در صرفاً یک مسیر (رفت یا برگشت) حداکثر تا میزان ۷۰٪ بهای خدمات وفق مصوبه شورای اسلامی شهر مشهد مقدس قابل دریافت خواهد بود.</p>
@@ -291,6 +291,9 @@ HTML;
  }
  private static function document(string $html,array $values): string {
   $parent=array_key_exists('studentName',$values);
+  $html=strtr($html,['دانش آموز'=>'دانش‌آموز','دانشآموز'=>'دانش‌آموز','حملونقل'=>'حمل‌ونقل','میباشد'=>'می‌باشد','میگردد'=>'می‌گردد','میگردند'=>'می‌گردند','میخوانده'=>'می‌خوانده','خوانده میشود'=>'خوانده می‌شود','برنامهریزی'=>'برنامه‌ریزی','تحویلگیری'=>'تحویل‌گیری','بهرهمندی'=>'بهره‌مندی','مسئولیتهای'=>'مسئولیت‌های','کلاسها'=>'کلاس‌ها','بیماریهای'=>'بیماری‌های','همهگیر'=>'همه‌گیر','اعتصابهای'=>'اعتصاب‌های','تحریمها'=>'تحریم‌ها','آتشسوزی'=>'آتش‌سوزی','بهعلت'=>'به علت','بهطور'=>'به طور','یکماه'=>'یک ماه','هیچگونه'=>'هیچ‌گونه','درصورت'=>'در صورت','آبانماه'=>'آبان‌ماه','آذرماه'=>'آذرماه','بهمنماه'=>'بهمن‌ماه','اسفندماه'=>'اسفندماه','کدملی'=>'کد ملی','نرم افزار'=>'نرم‌افزار']);
+  $html=preg_replace('/([\p{Arabic}])(?=\{\{)/u','$1 ',$html)??$html;
+  $html=preg_replace('/(\}\})(?=[\p{Arabic}])/u','$1 ',$html)??$html;
   if(isset($values['distanceKm'])&&is_numeric($values['distanceKm']))$values['distanceKm']=(string)round((float)$values['distanceKm']);
   $output=preg_replace_callback('/\{\{([a-zA-Z][a-zA-Z0-9]*)\}\}/',
    static function(array $match)use($values){
@@ -303,6 +306,71 @@ HTML;
   $body='';
   foreach($pages as $page)$body.='<section class="contract-sheet">'.$page.'</section>';
   return '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>قرارداد '.htmlspecialchars((string)($values['contractNo']??''),ENT_QUOTES,'UTF-8').'</title><link rel="stylesheet" href="/assets/contract-print.css?v=2"></head><body class="'.($parent?'contract-parent':'contract-driver').'"><div class="contract-toolbar"><button type="button" id="syContractPrint">چاپ قرارداد / ذخیره PDF</button></div>'.$body.'</body></html>';
+ }
+ private static function nextNumber(PDO $pdo): string {
+  $pdo->exec("INSERT IGNORE INTO contract_number_sequence(id,next_number) VALUES(1,100000)");
+  $n=(int)$pdo->query("SELECT next_number FROM contract_number_sequence WHERE id=1 FOR UPDATE")->fetchColumn();
+  $max=(int)$pdo->query("SELECT COALESCE(MAX(CAST(contract_no AS UNSIGNED)),99999) FROM contracts WHERE contract_no REGEXP '^[0-9]+$'")->fetchColumn();
+  $n=max(100000,$n,$max+1);
+  $pdo->prepare('UPDATE contract_number_sequence SET next_number=? WHERE id=1')->execute([$n+1]);
+  return (string)$n;
+ }
+ public static function editData(int $uid,int $aid,int $id): array {
+  self::scope($uid,$aid,true);$pdo=Connection::get();
+  $q=$pdo->prepare('SELECT id,contract_no,party_type,party_id,start_date,end_date,amount,status,snapshot_json FROM contracts WHERE id=? AND agency_id=?');
+  $q->execute([$id,$aid]);$row=$q->fetch(PDO::FETCH_ASSOC);
+  if(!$row)throw new AuthException(404,'قرارداد یافت نشد.','NOT_FOUND');
+  $snapshot=json_decode((string)$row['snapshot_json'],true);
+  $kind=$row['party_type']==='student'?'parent':'driver';
+  $values=$snapshot['values']??self::data($pdo,$aid,$kind,(int)$row['party_id']);
+  unset($row['snapshot_json']);return $row+['values'=>$values,'kind'=>$kind];
+ }
+ public static function edit(int $uid,int $aid,int $id,array $input): array {
+  self::scope($uid,$aid,true);Authorization::requirePermission($uid,'finance.manage');
+  $start=(string)($input['startDate']??'');$end=(string)($input['endDate']??'');
+  if(!OperationsService::validDate($start)||!OperationsService::validDate($end)||$end<$start)throw new AuthException(422,'بازه قرارداد نامعتبر است.','INVALID_CONTRACT_DATES');
+  if(!is_array($input['overrides']??null))throw new AuthException(422,'مشخصات نامعتبر است.','INVALID_CONTRACT_OVERRIDE');
+  $overrides=self::resolvedOverrides($input['overrides']);
+  return OperationsService::transaction(function(PDO $pdo)use($uid,$aid,$id,$start,$end,$overrides){
+   $q=$pdo->prepare('SELECT * FROM contracts WHERE id=? AND agency_id=? FOR UPDATE');$q->execute([$id,$aid]);$old=$q->fetch(PDO::FETCH_ASSOC);
+   if(!$old)throw new AuthException(404,'قرارداد یافت نشد.','NOT_FOUND');
+   if($old['status']!=='active')throw new AuthException(409,'تنها قرارداد فعال قابل ویرایش است.','CONTRACT_NOT_ACTIVE');
+   $kind=$old['party_type']==='student'?'parent':'driver';
+   $snapshot=json_decode((string)$old['snapshot_json'],true)?:[];
+   $values=$snapshot['values']??self::data($pdo,$aid,$kind,(int)$old['party_id']);
+   unset($overrides['academicYear'],$overrides['durationMonths']);
+   $values=array_replace($values,$overrides);
+   $amount=(int)$old['amount'];$invoice=null;
+   if($kind==='parent'){
+    $student=ContractBilling::lockStudent($pdo,$aid,(int)$old['party_id']);
+    $year=ContractBilling::year((string)($values['academicYear']??$student['academic_year']?:AgencySchoolTariffs::YEAR));
+    $rate=(int)round((float)($values['monthlyFee']??$student['monthly_fee']));
+    $period=ContractBilling::quote($year,$start,$end,$rate);
+    $changed=$start!==$old['start_date']||$end!==$old['end_date'];
+    if($changed)$amount=$period['amount'];
+    if($amount<=0)throw new AuthException(422,'مبلغ قرارداد نامعتبر است.','CONTRACT_FEE_REQUIRED');
+    $q=$pdo->prepare('SELECT invoice_id FROM student_contract_invoices WHERE agency_id=? AND contract_id=? FOR UPDATE');$q->execute([$aid,$id]);$invoice=(int)$q->fetchColumn();
+    if($changed){
+     if(!$invoice)throw new AuthException(409,'قرارداد قدیمی فاقد ارتباط مالی معتبر است؛ تغییر تاریخ نیازمند تطبیق فاکتور است.','LEGACY_CONTRACT_INVOICE_REQUIRED');
+     $q=$pdo->prepare("SELECT id,status FROM invoices WHERE id=? AND agency_id=? AND party_type='student' AND party_id=? FOR UPDATE");$q->execute([$invoice,$aid,$old['party_id']]);$inv=$q->fetch(PDO::FETCH_ASSOC);
+     if(!$inv||$inv['status']==='cancelled')throw new AuthException(409,'فاکتور مرتبط معتبر نیست.','CONTRACT_INVOICE_CONFLICT');
+     $pdo->prepare("UPDATE invoices SET amount=?,due_date=?,status=CASE WHEN (SELECT COALESCE(SUM(amount),0) FROM payments WHERE invoice_id=invoices.id AND agency_id=invoices.agency_id)>=? THEN 'paid' ELSE 'open' END WHERE id=? AND agency_id=?")->execute([$amount,$end,$amount,$invoice,$aid]);
+    }
+    $values['durationMonths']=self::persian(rtrim(rtrim(number_format($period['months'],2,'.',''),'0'),'.'));
+   }elseif($start!==$old['start_date']||$end!==$old['end_date']){
+    throw new AuthException(409,'تغییر تاریخ قرارداد راننده نیازمند بازبینی مستقل حقوق است.','DRIVER_CONTRACT_PERIOD_LOCKED');
+   }
+   $values['contractNo']=self::persian((string)$old['contract_no']);
+   $values['startDate']=self::jalali($start);$values['endDate']=self::jalali($end);
+   $values['totalAmount']=self::persian(number_format($amount,0,'.',','));
+   $values['payment40']=self::persian(number_format((int)round($amount*.4),0,'.',','));
+   $values['payment20']=self::persian(number_format((int)round($amount*.2),0,'.',','));
+   $template=self::template($pdo,$kind);
+   $pdo->prepare('INSERT INTO contract_revisions(agency_id,contract_id,edited_by,previous_json) VALUES(?,?,?,?)')->execute([$aid,$id,$uid,json_encode($old,JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE|JSON_THROW_ON_ERROR)]);
+   $snapshot['values']=$values;$snapshot['templateVersion']=$template['version'];
+   $pdo->prepare('UPDATE contracts SET start_date=?,end_date=?,amount=?,rendered_html=?,snapshot_json=?,template_id=? WHERE id=? AND agency_id=?')->execute([$start,$end,$amount,self::document($template['body_html'],$values),json_encode($snapshot,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$template['id'],$id,$aid]);
+   return ['id'=>$id,'contractNo'=>$old['contract_no'],'amount'=>$amount,'invoiceId'=>$invoice];
+  });
  }
  public static function issue(int $uid,int $agencyId,string $kind,array $input): array {
   self::scope($uid,$agencyId,true);$pdo=Connection::get();self::ensureSchema($pdo);
@@ -337,7 +405,7 @@ HTML;
     if($prior)return $prior;
    }
    if($annual!==null)$amount=$annual['netAnnual'];
-   $contractNo='SY-'.$agencyId.'-'.date('ymd').'-'.strtoupper(bin2hex(random_bytes(4)));
+   $contractNo=self::nextNumber($pdo);
    $months=$period['months']??0;
    unset($values['durationMonths']);
    $data=$values+['contractNo'=>self::persian($contractNo),'issueDate'=>self::jalali(date('Y-m-d')),'startDate'=>self::jalali($start),'endDate'=>self::jalali($end),

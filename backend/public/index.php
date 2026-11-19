@@ -959,6 +959,10 @@ try {
    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::issue($s['id'],$aid,$kind,Request::json())],201);
   }
  }
+ if(preg_match('#^/api/v1/contract-documents/([0-9]+)/edit$#',$path,$match)){
+  if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::editData($s['id'],$aid,(int)$match[1])]);
+  if($method==='PUT'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::edit($s['id'],$aid,(int)$match[1],Request::json())]);}
+ }
  if($method==='GET'&&preg_match('#^/api/v1/contract-documents/([0-9]+)/print$#',$path,$match)){
   header('Cache-Control: no-store');
   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::printable($s['id'],$aid,(int)$match[1])]);
