@@ -70,11 +70,30 @@ final class ContractTemplateMarkup {
      elseif(self::validImage($src))$child->setAttribute('src',$src);
      else{$node->removeChild($child);continue;}
      $child->setAttribute('alt',mb_substr($attrs['alt']??'لوگو',0,100));
+     $wrap=$attrs['data-logo-wrap']??'inline';
+     if(!in_array($wrap,['inline','right','left','above','below','front','behind'],true))$wrap='inline';
+     $child->setAttribute('data-logo-wrap',$wrap);
+     foreach(['data-logo-x','data-logo-y'] as $coordinate){
+      $raw=$attrs[$coordinate]??'0';
+      $limit=$coordinate==='data-logo-x'?100:100;
+      $child->setAttribute($coordinate,(string)max(0,min($limit,is_numeric($raw)?(float)$raw:0)));
+     }
      $width=(int)($attrs['width']??100);$child->setAttribute('width',(string)max(24,min(300,$width)));
     }
     $walk($child);
    }
   };$walk($body);$out='';foreach($body->childNodes as $child)$out.=$doc->saveHTML($child);return $out;
+ }
+ /** Convert bounded image coordinates into generated CSS, rather than accepting arbitrary positioning CSS. */
+ public static function positionLogos(string $html): string {
+  return preg_replace_callback('/<img\b[^>]*>/i',static function(array $m){
+   $tag=$m[0];
+   if(!preg_match('/data-logo-wrap="(front|behind)"/',$tag))return $tag;
+   $x=preg_match('/data-logo-x="([0-9.]+)"/',$tag,$a)?max(0,min(100,(float)$a[1])):0;
+   $y=preg_match('/data-logo-y="([0-9.]+)"/',$tag,$a)?max(0,min(100,(float)$a[1])):0;
+   $tag=preg_replace('/\sstyle="[^"]*"/i','',$tag)??$tag;
+   return substr($tag,0,-1).' style="left:'.$x.'%;top:'.$y.'%">';
+  },$html)??$html;
  }
  public static function resolveLogos(string $html,string $company): string {
   return preg_replace_callback('/<img\b[^>]*>/i',static function(array $m)use($company){

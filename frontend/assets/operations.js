@@ -4700,7 +4700,7 @@ function adminContractTemplatePage(token){
  '<div class="sy-template-tool-group"><label>نوع متن<select data-select-command="formatBlock"><option value="p">متن معمولی</option><option value="h1">عنوان اصلی</option><option value="h2">عنوان ماده</option><option value="h3">زیرعنوان</option></select></label><label>فونت<select data-select-command="fontName"><option>Vazirmatn</option><option>Tahoma</option><option>B Nazanin</option><option>Arial</option></select></label><label>اندازه<select data-select-command="fontSize">'+[1,2,3,4,5,6,7].map((v,i)=>'<option value="'+v+'">'+[8,10,12,14,18,22,28][i]+'</option>').join('')+'</select></label><label>رنگ متن<input type="color" data-select-command="foreColor" value="#161616"></label><label>رنگ زمینه<input type="color" data-select-command="hiliteColor" value="#ffffff"></label></div>'+
  '<div class="sy-template-tool-group"><button type="button" data-insert="fixed">لوگوی ثابت سامانه</button><button type="button" data-insert="company">لوگوی پویای شرکت</button><button type="button" data-insert="upload">بارگذاری لوگوی ثابت</button><input type="file" accept="image/png,image/jpeg,image/webp" id="syTemplateLogoFile" hidden><label>عرض لوگو<select id="syTemplateLogoWidth"><option value="60">کوچک</option><option value="100" selected>متوسط</option><option value="150">بزرگ</option><option value="220">خیلی بزرگ</option></select></label><button type="button" data-insert="table">جدول ۲×۲</button><button type="button" data-insert="page">شکست صفحه</button></div>'+
  '<div class="sy-template-tool-group"><label>افزودن متغیر<select id="syTemplateVariable"><option value="">انتخاب کنید</option><option value="studentName">نام دانش‌آموز</option><option value="guardianName">نام ولی</option><option value="guardianNationalCode">کد ملی ولی</option><option value="driverName">نام راننده</option><option value="managerName">نام مدیر</option><option value="companyName">نام شرکت</option><option value="totalAmount">مبلغ قرارداد</option><option value="contractNo">شماره قرارداد</option><option value="issueDate">تاریخ صدور</option><option value="startDate">تاریخ شروع</option><option value="endDate">تاریخ پایان</option><option value="durationMonths">مدت قرارداد</option><option value="academicYear">سال تحصیلی</option><option value="studentNationalCode">کد ملی دانش‌آموز</option><option value="schoolName">مدرسه</option><option value="schoolRegion">ناحیه</option><option value="guardianFatherName">نام پدر ولی</option><option value="guardianMobile">موبایل ولی</option><option value="guardianAddress">نشانی ولی</option><option value="companyRegistration">شماره ثبت شرکت</option><option value="companyNationalId">شناسه ملی شرکت</option><option value="managerTitle">سمت مدیر</option><option value="managerNationalCode">کد ملی مدیر</option><option value="companyAddress">نشانی شرکت</option><option value="companyPhone">تلفن شرکت</option><option value="bankName">بانک</option><option value="bankAccount">شماره حساب</option><option value="distanceKm">مسافت</option><option value="payment40">پیش‌پرداخت ۴۰ درصد</option><option value="payment20">قسط ۲۰ درصد</option><option value="driverNationalCode">کد ملی راننده</option><option value="driverMobile">موبایل راننده</option><option value="grossAnnual">ناخالص سالانه راننده</option><option value="deductionsAnnual">کسورات سالانه</option><option value="driverDeductionRate">درصد کسورات</option><option value="driverServicesSummary">ریز سرویس راننده</option></select></label><button type="button" id="syContractTemplatePreviewBtn">پیش‌نمایش چاپ A4</button></div></div>'+
- '<div class="sy-template-paper-area"><label id="syTemplateSourceLabel" hidden>کد HTML<textarea name="html" rows="24" spellcheck="false" dir="ltr"></textarea></label><div id="syTemplateVisualEditor" class="sy-template-visual-editor" contenteditable="true" role="textbox" aria-label="ویرایش متن قرارداد" aria-multiline="true"></div></div>'+
+ '<div class="sy-logo-position-tools" hidden><strong>تنظیم تصویر انتخاب‌شده</strong><label>قرارگیری<select id="syLogoWrap"><option value="inline">هم‌سطح متن</option><option value="right">کنار متن ـ راست</option><option value="left">کنار متن ـ چپ</option><option value="above">بالای متن</option><option value="below">پایین متن</option><option value="front">روی متن</option><option value="behind">پشت متن</option></select></label><label>عرض (پیکسل)<input id="syLogoSize" type="number" min="24" max="300" value="100"></label><label>موقعیت افقی (%)<input id="syLogoX" type="number" min="0" max="100" step="1"></label><label>موقعیت عمودی (%)<input id="syLogoY" type="number" min="0" max="100" step="1"></label><button type="button" id="syLogoRemove">حذف تصویر</button><small>تصویر را بکشید؛ در حالت روی متن و پشت متن موقعیت آزاد است.</small></div><div class="sy-template-paper-area"><label id="syTemplateSourceLabel" hidden>کد HTML<textarea name="html" rows="24" spellcheck="false" dir="ltr"></textarea></label><div id="syTemplateVisualEditor" class="sy-template-visual-editor" contenteditable="true" role="textbox" aria-label="ویرایش متن قرارداد" aria-multiline="true"></div></div>'+
  '<iframe id="syContractTemplatePreview" title="پیش‌نمایش چاپ قرارداد" sandbox hidden></iframe><footer class="sy-template-studio-footer"><span id="syContractTemplateStatus" role="status"></span><button type="submit" class="primary" disabled>انتشار نسخه جدید قالب</button></footer></form>';
  root.append(editor);
  const form=editor.querySelector('form'),source=form.elements.html,visual=editor.querySelector('#syTemplateVisualEditor'),sourceLabel=editor.querySelector('#syTemplateSourceLabel'),status=editor.querySelector('#syContractTemplateStatus'),submit=form.querySelector('[type=submit]'),buttons=[...editor.querySelectorAll('[data-template-kind]')],preview=editor.querySelector('iframe');
@@ -4712,30 +4712,91 @@ function adminContractTemplatePage(token){
   for(const n of [...doc.body.querySelectorAll('*')]){
    if(!allowed.has(n.localName)){n.replaceWith(...n.childNodes);continue;}
    for(const attr of [...n.attributes]){
-    if(!['class','style','align','dir','colspan','rowspan','width','alt','src','data-contract-logo','face','size','color'].includes(attr.name))n.removeAttribute(attr.name);
+    if(!['class','style','align','dir','colspan','rowspan','width','alt','src','data-contract-logo','data-logo-wrap','data-logo-x','data-logo-y','face','size','color'].includes(attr.name))n.removeAttribute(attr.name);
     else if(attr.name==='style'&&/url\s*\(|expression\s*\(|@import|position\s*:|behavior\s*:|javascript:/i.test(attr.value))n.removeAttribute('style');
    }
    if(n.localName==='img'&&!/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(n.getAttribute('src')||'')&&n.getAttribute('src')!=='/assets/logo.png')n.remove();
   }
   return doc.body.innerHTML;
  };
+ const logoTools=editor.querySelector('.sy-logo-position-tools'),wrapInput=editor.querySelector('#syLogoWrap'),sizeInput=editor.querySelector('#syLogoSize'),xInput=editor.querySelector('#syLogoX'),yInput=editor.querySelector('#syLogoY');
+ let selectedLogo=null,dragLogo=null;
+ const bounded=(v,min,max)=>Math.max(min,Math.min(max,Number(v)||0));
+ const floating=img=>['front','behind'].includes(img.dataset.logoWrap);
+ const applyLogoPosition=img=>{
+  if(!img)return;
+  if(floating(img)){img.style.left=bounded(img.dataset.logoX,0,100)+'%';img.style.top=bounded(img.dataset.logoY,0,100)+'%';}
+  else{img.style.removeProperty('left');img.style.removeProperty('top');}
+ };
+ const hydrateLogos=()=>visual.querySelectorAll('img').forEach(applyLogoPosition);
+ const selectLogo=img=>{
+  selectedLogo?.classList.remove('sy-logo-selected');selectedLogo=img;
+  logoTools.hidden=!img;if(!img)return;
+  img.classList.add('sy-logo-selected');wrapInput.value=img.dataset.logoWrap||'inline';sizeInput.value=Number(img.getAttribute('width'))||100;
+  xInput.value=Number(img.dataset.logoX)||0;yInput.value=Number(img.dataset.logoY)||0;
+  xInput.disabled=yInput.disabled=!floating(img);
+ };
+ const updateLogo=()=>{
+  if(!selectedLogo||!visual.contains(selectedLogo))return;
+  const img=selectedLogo,wasFloating=floating(img),before=img.getBoundingClientRect(),paper=visual.getBoundingClientRect();
+  img.dataset.logoWrap=wrapInput.value;img.setAttribute('width',String(bounded(sizeInput.value,24,300)));
+  if(floating(img)){
+   if(!wasFloating){xInput.value=Math.round(bounded((before.left-paper.left+visual.scrollLeft)/visual.clientWidth*100,0,100));yInput.value=Math.round(bounded((before.top-paper.top+visual.scrollTop)/Math.max(visual.scrollHeight,visual.clientHeight)*100,0,100));}
+   img.dataset.logoX=String(bounded(xInput.value,0,100));img.dataset.logoY=String(bounded(yInput.value,0,100));
+  }
+  xInput.disabled=yInput.disabled=!floating(img);applyLogoPosition(img);dirty=true;
+ };
+ [wrapInput,sizeInput,xInput,yInput].forEach(input=>input.addEventListener('change',updateLogo));
+ editor.querySelector('#syLogoRemove').onclick=()=>{if(selectedLogo){selectedLogo.remove();selectLogo(null);dirty=true;}};
+ visual.addEventListener('click',e=>{const img=e.target.closest('img');selectLogo(img&&visual.contains(img)?img:null);});
+ visual.addEventListener('pointerdown',e=>{
+  const img=e.target.closest('img');if(!img||!loaded||e.button!==0)return;
+  selectLogo(img);e.preventDefault();img.setPointerCapture(e.pointerId);
+  const rect=img.getBoundingClientRect();dragLogo={img,id:e.pointerId,x:e.clientX,y:e.clientY,dx:e.clientX-rect.left,dy:e.clientY-rect.top,moved:false};
+ });
+ visual.addEventListener('pointermove',e=>{
+  if(!dragLogo||dragLogo.id!==e.pointerId)return;
+  const drag=dragLogo;if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<5&&!drag.moved)return;drag.moved=true;
+  if(!floating(drag.img))return;
+  const paper=visual.getBoundingClientRect(),w=visual.clientWidth,H=Math.max(visual.scrollHeight,visual.clientHeight);
+  drag.img.dataset.logoX=String(Math.round(bounded((e.clientX-paper.left+visual.scrollLeft-drag.dx)/w*100,0,Math.max(0,100-drag.img.offsetWidth/w*100))));
+  drag.img.dataset.logoY=String(Math.round(bounded((e.clientY-paper.top+visual.scrollTop-drag.dy)/H*100,0,Math.max(0,100-drag.img.offsetHeight/H*100))));
+  applyLogoPosition(drag.img);xInput.value=drag.img.dataset.logoX;yInput.value=drag.img.dataset.logoY;dirty=true;
+ });
+ visual.addEventListener('pointerup',e=>{
+  if(!dragLogo||dragLogo.id!==e.pointerId)return;
+  const drag=dragLogo;dragLogo=null;
+  if(!drag.moved||floating(drag.img))return;
+  const target=document.elementFromPoint(e.clientX,e.clientY);
+  const block=target?.closest('p,h1,h2,h3,h4,li,td,th,blockquote');
+  if(block&&visual.contains(block)&&!block.contains(drag.img)){
+   const mode=drag.img.dataset.logoWrap||'inline';
+   if(mode==='above')block.parentNode.insertBefore(drag.img,block);
+   else if(mode==='below')block.after(drag.img);
+   else block.prepend(drag.img);
+   dirty=true;
+  }
+ });
+ visual.addEventListener('pointercancel',()=>{dragLogo=null;});
+ visual.addEventListener('dragstart',e=>{if(e.target.closest('img'))e.preventDefault();});
+ const exportVisual=()=>{const copy=visual.cloneNode(true);copy.querySelectorAll('.sy-logo-selected').forEach(n=>n.classList.remove('sy-logo-selected'));return copy.innerHTML;};
  const remember=()=>{const sel=window.getSelection();if(sel?.rangeCount&&visual.contains(sel.anchorNode)&&visual.contains(sel.focusNode))savedRange=sel.getRangeAt(0).cloneRange();};
  visual.addEventListener('mouseup',remember);visual.addEventListener('keyup',remember);visual.addEventListener('input',()=>{dirty=true;remember();});
  visual.addEventListener('paste',e=>{e.preventDefault();document.execCommand('insertText',false,e.clipboardData?.getData('text/plain')||'');});
  source.oninput=()=>{dirty=true;};form.elements.title.oninput=()=>{dirty=true;};
  const focusSelection=()=>{visual.focus();if(savedRange&&visual.contains(savedRange.startContainer)){const sel=window.getSelection();sel.removeAllRanges();sel.addRange(savedRange);}};
- const switchMode=mode=>{const want=mode==='visual';if(want===visualMode)return;if(want){visual.innerHTML=safeFragment(source.value);savedRange=null;}else source.value=visual.innerHTML;visualMode=want;visual.hidden=!want;sourceLabel.hidden=want;editor.querySelectorAll('[data-editor-mode]').forEach(b=>b.classList.toggle('primary',b.dataset.editorMode===mode));};
+ const switchMode=mode=>{const want=mode==='visual';if(want===visualMode)return;if(want){visual.innerHTML=safeFragment(source.value);selectLogo(null);hydrateLogos();savedRange=null;}else{source.value=exportVisual();selectLogo(null);}visualMode=want;visual.hidden=!want;sourceLabel.hidden=want;editor.querySelectorAll('[data-editor-mode]').forEach(b=>b.classList.toggle('primary',b.dataset.editorMode===mode));};
  const command=(cmd,value=null)=>{if(!loaded)return;if(!visualMode)switchMode('visual');focusSelection();document.execCommand(cmd,false,value);dirty=true;remember();};
  editor.querySelectorAll('[data-command],[data-insert]').forEach(b=>b.addEventListener('mousedown',e=>e.preventDefault()));
  editor.querySelectorAll('[data-command]').forEach(b=>b.onclick=()=>command(b.dataset.command));
  editor.querySelectorAll('[data-select-command]').forEach(el=>{el.addEventListener('pointerdown',remember);el.onchange=()=>command(el.dataset.selectCommand,el.value);});
  editor.querySelectorAll('[data-editor-mode]').forEach(b=>b.onclick=()=>switchMode(b.dataset.editorMode));
  const insert=html=>command('insertHTML',html);
- const logo=(type,src)=>insert('<img '+(type?'data-contract-logo="'+type+'" ':'')+'src="'+esc(src)+'" alt="'+(type==='company'?'لوگوی شرکت':'لوگو')+'" width="'+Number(editor.querySelector('#syTemplateLogoWidth').value)+'" class="contract-logo">');
+ const logo=(type,src)=>insert('<img '+(type?'data-contract-logo="'+type+'" ':'')+'src="'+esc(src)+'" alt="'+(type==='company'?'لوگوی شرکت':'لوگو')+'" width="'+Number(editor.querySelector('#syTemplateLogoWidth').value)+'" class="contract-logo" data-logo-wrap="inline">');
  editor.querySelectorAll('[data-insert]').forEach(b=>b.onclick=()=>{if(!loaded)return;const type=b.dataset.insert;if(type==='fixed'||type==='company')logo(type,'/assets/logo.png');else if(type==='upload')editor.querySelector('#syTemplateLogoFile').click();else if(type==='table')insert('<table><tbody><tr><td>متن</td><td>متن</td></tr><tr><td>متن</td><td>متن</td></tr></tbody></table><p><br></p>');else insert('<hr><p><br></p>');});
  editor.querySelector('#syTemplateLogoFile').onchange=e=>{const file=e.target.files?.[0];if(!file)return;if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>500000){status.textContent='لوگو باید PNG، JPG یا WebP و حداکثر ۵۰۰ کیلوبایت باشد.';e.target.value='';return;}const reader=new FileReader();reader.onload=()=>{logo('',String(reader.result));e.target.value='';};reader.readAsDataURL(file);};
  const picker=editor.querySelector('#syTemplateVariable');picker.onchange=()=>{if(!picker.value)return;const val='{{'+picker.value+'}}';if(visualMode)command('insertText',val);else{source.setRangeText(val,source.selectionStart,source.selectionEnd,'end');dirty=true;}picker.value='';};
- const currentHtml=()=>visualMode?visual.innerHTML:source.value;
+ const currentHtml=()=>visualMode?exportVisual():source.value;
  const request=async(path,body)=>api(path,{method:'POST',headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify(body)});
  editor.querySelector('#syContractTemplatePreviewBtn').onclick=async()=>{if(!loaded)return;try{const data=await request('/api/v1/contract-templates/'+kind+'?preview=1',{html:currentHtml()});const doc=new DOMParser().parseFromString(data.html,'text/html');doc.querySelector('.contract-toolbar')?.remove();doc.querySelectorAll('link[rel="stylesheet"]').forEach(link=>{link.href=new URL(link.getAttribute('href'),window.location.origin).href;});doc.querySelectorAll('img[src^="/"]').forEach(img=>{img.src=new URL(img.getAttribute('src'),window.location.origin).href;});preview.srcdoc='<!doctype html>'+doc.documentElement.outerHTML;preview.hidden=false;preview.scrollIntoView({block:'nearest'});}catch(error){status.textContent=error.message;}};
  const load=async()=>{loaded=false;submit.disabled=true;const current=++serial;buttons.forEach(b=>b.classList.toggle('primary',b.dataset.templateKind===kind));status.textContent='در حال دریافت قالب…';try{const data=await api('/api/v1/contract-templates/'+kind);if(current!==serial||token!==pageToken||!form.isConnected)return;form.elements.title.value=data.title||'';source.value=data.html||'';visual.innerHTML=safeFragment(source.value);savedRange=null;visualMode=true;visual.hidden=false;sourceLabel.hidden=true;editor.querySelectorAll('[data-editor-mode]').forEach(b=>b.classList.toggle('primary',b.dataset.editorMode==='visual'));preview.hidden=true;editor.querySelector('#syContractTemplateVersion').textContent='نسخه فعال '+number(data.version);status.textContent='قالب آماده ویرایش است.';loaded=true;dirty=false;submit.disabled=false;}catch(error){status.textContent=error.message;}};

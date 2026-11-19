@@ -311,7 +311,7 @@ HTML;
   // Explicit pages, rather than browser-dependent HR pagination.
   $pages=$parent?preg_split('/<hr\s*\/?>/i',$output):[$output];
   $body='';
-  foreach($pages as $page)$body.='<section class="contract-sheet">'.$page.'</section>';
+  foreach($pages as $page)$body.='<section class="contract-sheet">'.ContractTemplateMarkup::positionLogos($page).'</section>';
   return '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>قرارداد '.htmlspecialchars((string)($values['contractNo']??''),ENT_QUOTES,'UTF-8').'</title><link rel="stylesheet" href="/assets/contract-print.css?v=2"></head><body class="'.($parent?'contract-parent':'contract-driver').'"><div class="contract-toolbar"><button type="button" id="syContractPrint">چاپ قرارداد / ذخیره PDF</button></div>'.$body.'</body></html>';
  }
  private static function nextNumber(PDO $pdo): string {

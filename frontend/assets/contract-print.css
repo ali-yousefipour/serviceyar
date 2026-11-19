@@ -27,3 +27,12 @@ body{margin:0;font-family:"B Nazanin","BNazanin",Vazirmatn,Tahoma,sans-serif;fon
 .contract-sheet .contract-top{display:block}.contract-sheet .contract-top>span{white-space:normal;overflow-wrap:anywhere}.contract-sheet:last-child{margin-bottom:0}
 
 .contract-sheet img{max-width:100%;height:auto;vertical-align:middle;object-fit:contain}.contract-sheet [style*="text-align"]{text-align-last:auto}.contract-sheet .contract-logo{break-inside:avoid}.contract-sheet font{line-height:inherit}
+
+/* Image wrapping is stored as bounded semantic attributes. */
+.contract-sheet,.sy-template-visual-editor{position:relative;isolation:isolate}
+.contract-sheet img[data-logo-wrap="right"],.sy-template-visual-editor img[data-logo-wrap="right"]{float:right;margin:0 0 6px 8px}
+.contract-sheet img[data-logo-wrap="left"],.sy-template-visual-editor img[data-logo-wrap="left"]{float:left;margin:0 8px 6px 0}
+.contract-sheet img[data-logo-wrap="above"],.contract-sheet img[data-logo-wrap="below"],.sy-template-visual-editor img[data-logo-wrap="above"],.sy-template-visual-editor img[data-logo-wrap="below"]{display:block;clear:both;margin:5px auto}
+.contract-sheet img[data-logo-wrap="front"],.contract-sheet img[data-logo-wrap="behind"],.sy-template-visual-editor img[data-logo-wrap="front"],.sy-template-visual-editor img[data-logo-wrap="behind"]{position:absolute;max-width:90%;transform:translateX(-0%);margin:0;float:none}
+.contract-sheet img[data-logo-wrap="front"],.sy-template-visual-editor img[data-logo-wrap="front"]{z-index:2}
+.contract-sheet img[data-logo-wrap="behind"],.sy-template-visual-editor img[data-logo-wrap="behind"]{z-index:-1;opacity:.35}
