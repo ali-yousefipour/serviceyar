@@ -60,6 +60,8 @@ final class FinancialReconciliation {
    $total=(int)array_sum(array_column(array_merge($valid,$unknown),'amount'));
    $items[]=['student_id'=>(int)$st['id'],'student'=>trim($st['first_name'].' '.$st['last_name']),'school'=>$st['school'],'monthly_fee'=>(int)$st['monthly_fee'],'annual_months'=>$months,'expected'=>$expected,'invoice_total'=>$total,'difference'=>$expected===null?null:$expected-$total,'contracts'=>$contracts,'invoices'=>array_merge($valid,$unknown),'issues'=>array_values(array_unique($flags))];
   }
-  return ['academicYear'=>$year,'scanned'=>count($students),'items'=>$items,'count'=>count($items),'readOnly'=>true];
+  $schools=$pdo->prepare("SELECT id,name FROM schools WHERE agency_id=? ORDER BY name,id");
+  $schools->execute([$aid]);
+  return ['academicYear'=>$year,'scanned'=>count($students),'items'=>$items,'count'=>count($items),'schools'=>$schools->fetchAll(PDO::FETCH_ASSOC),'readOnly'=>true];
  }
 }
