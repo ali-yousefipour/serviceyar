@@ -549,6 +549,15 @@ try {
    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\TaxiOrganizationTariffs::save($s['id'],Request::json())]);
   }
  }
+ // Global contract templates must be handled before company scope resolution.
+ if(preg_match('#^/api/v1/contract-templates/(parent|driver)$#',$path,$match)){
+  $kind=$match[1];
+  if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::templateEditor($s['id'],$kind)]);
+  if($method==='POST'){
+   $auth->requireCsrf($s);
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::publishTemplate($s['id'],$kind,Request::json())],201);
+  }
+ }
  $aid=agencyId($s);
  if(preg_match('#^/api/v1/users/(\d+)/(password)$#',$path,$m)&&$method==='POST'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>UserService::changePassword($s['id'],$aid,(int)$m[1],Request::json())]);}
  if($method==='POST'&&$path==='/api/v1/operations/financial-preview'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>FinancialRules::preview($s['id'],$aid,Request::json())]);}
@@ -941,14 +950,7 @@ try {
   header('Cache-Control: no-store, max-age=0');
   Response::json(['ok'=>true,'data'=>DomainService::lookupVehicleByPlate($s['id'],$aid,$value)]);
  }
- if(preg_match('#^/api/v1/contract-templates/(parent|driver)$#',$path,$match)){
-  $kind=$match[1];
-  if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::templateEditor($s['id'],$kind)]);
-  if($method==='POST'){
-   $auth->requireCsrf($s);
-   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::publishTemplate($s['id'],$kind,Request::json())],201);
-  }
- }
+
  if($method==='GET'&&preg_match('#^/api/v1/contract-documents/(parent|driver)/draft$#',$path,$match)){
   $partyId=filter_var($_GET['partyId']??null,FILTER_VALIDATE_INT);
   if($partyId===false||$partyId<1)throw new AuthException(422,'طرف قرارداد نامعتبر است.','INVALID_CONTRACT_PARTY');

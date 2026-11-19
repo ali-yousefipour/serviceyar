@@ -4763,7 +4763,7 @@ function adminContractTemplatePage(token){
    if(!window.confirm('نسخه جدید قالب قرارداد منتشر شود؟ قراردادهای صادرشده قبلی بدون تغییر باقی می‌مانند.'))return;
    const button=form.querySelector('[type=submit]');button.disabled=true;buttons.forEach(b=>b.disabled=true);
    try{
-    const data=await write('/api/v1/contract-templates/'+kind,{title:form.elements.title.value,html:form.elements.html.value});
+    const data=await api('/api/v1/contract-templates/'+kind,{method:'POST',headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify({title:form.elements.title.value,html:form.elements.html.value})});
     form.querySelector('#syContractTemplateStatus').textContent='نسخه '+number(data.version)+' منتشر شد.';
     form.querySelector('#syContractTemplateVersion').textContent='نسخه فعال: '+number(data.version);
    }catch(error){form.querySelector('#syContractTemplateStatus').textContent=error.message;}
