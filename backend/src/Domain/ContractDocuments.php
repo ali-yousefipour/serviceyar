@@ -343,7 +343,13 @@ HTML;
    $amount=(int)$old['amount'];$invoice=null;
    if($kind==='parent'){
     $student=ContractBilling::lockStudent($pdo,$aid,(int)$old['party_id']);
-    $year=ContractBilling::year((string)($values['academicYear']??$student['academic_year']?:AgencySchoolTariffs::YEAR));
+    $year=null;
+    // Historical snapshots sometimes store 1405-06 instead of 1405-1406.
+    foreach([$values['academicYear']??'', $student['academic_year']??''] as $candidate){
+     try{$year=ContractBilling::year((string)$candidate);break;}catch(AuthException $ignore){}
+    }
+    if($year===null)throw new AuthException(422,'سال تحصیلی قرارداد و پرونده دانش‌آموز نامعتبر است؛ ابتدا پرونده را اصلاح کنید.','INVALID_CONTRACT_YEAR');
+    $values['academicYear']=$year;
     $rate=(int)round((float)($values['monthlyFee']??$student['monthly_fee']));
     $period=ContractBilling::quote($year,$start,$end,$rate);
     $changed=$start!==$old['start_date']||$end!==$old['end_date'];

@@ -9,6 +9,8 @@ use ServiceYar\Auth\AuthException;
 final class ContractBilling {
  public static function year(string $raw): string {
   $year=strtr(trim($raw),['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9','/'=>'-']);
+  $year=preg_replace('/\s+/u','',strtr($year,['–'=>'-','—'=>'-','−'=>'-']))??$year;
+  if(preg_match('/^(1[34]\d{2})-(\d{2})$/D',$year,$short))$year=$short[1].'-'.substr($short[1],0,2).$short[2];
   if(!preg_match('/^(1[34]\d{2})-(1[34]\d{2})$/D',$year,$m)||(int)$m[2] !== (int)$m[1]+1)
    throw new AuthException(422,'سال تحصیلی دانش‌آموز معتبر نیست.','INVALID_CONTRACT_YEAR');
   return $year;
