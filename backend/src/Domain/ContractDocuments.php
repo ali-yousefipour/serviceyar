@@ -569,8 +569,6 @@ HTML;
     'payment20'=>self::persian(number_format((int)round($total*.2),0,'.',','))];
    $template=self::template($pdo,'parent');
    $html=self::document($template['body_html'],$values);
-   $note='<p class="contract-provenance">نسخه بازسازی‌شده؛ تاریخ ثبت سامانه.</p>';
-   $html=preg_replace('/(<section class="contract-sheet">)/','$1'.$note,$html,1)??$html;
    $snapshot=['kind'=>'parent','templateVersion'=>$template['version'],'values'=>$values,'source'=>'sql_import_reconstruction','archivedAt'=>gmdate('c'),'previousContractNo'=>$old];
    $pdo->prepare('UPDATE contracts SET rendered_html=?,snapshot_json=?,template_id=? WHERE id=? AND agency_id=?')->execute([$html,json_encode($snapshot,JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE|JSON_THROW_ON_ERROR),$template['id'],$id,$aid]);
    return true;
@@ -583,7 +581,7 @@ HTML;
   if(!$row)throw new AuthException(404,'قرارداد یافت نشد.','NOT_FOUND');
   if($row['rendered_html']){
    // Presentation only: preserve stored snapshots and the distinction from original signed documents.
-   $html=str_replace('<p class="contract-warning">نسخه چاپی تهیه‌شده از قرارداد ثبت‌شده در مهاجرت اطلاعات و مشخصات موجود در زمان بازسازی؛ تاریخ درج‌شده تاریخ ثبت سامانه است، نه گواهی امضای قرارداد.</p>','<p class="contract-provenance">نسخه بازسازی‌شده؛ تاریخ ثبت سامانه.</p>',$row['rendered_html']);
+   $html=str_replace(['<p class="contract-warning">نسخه چاپی تهیه‌شده از قرارداد ثبت‌شده در مهاجرت اطلاعات و مشخصات موجود در زمان بازسازی؛ تاریخ درج‌شده تاریخ ثبت سامانه است، نه گواهی امضای قرارداد.</p>','<p class="contract-provenance">نسخه بازسازی‌شده؛ تاریخ ثبت سامانه.</p>'],'',$row['rendered_html']);
    return ['html'=>$html,'contractNo'=>$row['contract_no'],'legacyReconstructed'=>false];
   }
   // Existing records before versioned issuance have no historical content.
