@@ -1023,6 +1023,46 @@ if($resource==='ledger'&&!in_array('company_account_id',thisColumns('ledger_entr
  public static function serviceStudents(int $uid,int $aid,int $serviceId): array {
   Authorization::requirePermission($uid,'services.view');Authorization::requireAgencyAccess($uid,$aid);$q=Connection::get()->prepare('SELECT st.id,st.uuid,st.first_name,st.last_name,st.grade,st.national_code,st.is_active,st.tariff_distance_km,st.tariff_vehicle_class,st.monthly_fee,st.grade AS student_grade,sc.school_type AS school_type,ss.pickup_address,ss.pickup_order FROM service_students ss JOIN students st ON st.id=ss.student_id LEFT JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id JOIN services s ON s.id=ss.service_id WHERE ss.service_id=:s AND s.agency_id=:a ORDER BY ss.pickup_order,st.last_name,st.first_name');$q->execute(['s'=>$serviceId,'a'=>$aid]);return $q->fetchAll();
  }
+ /**
+  * Permanent erasure is only permitted for an inactive, unreferenced student.
+  * Never cascade into financial documents, contracts, attendance or services.
+  */
+ public static function permanentlyDeleteStudent(int $uid,int $aid,int $id): void {
+  Authorization::requirePermission($uid,'students.manage');
+  Authorization::requireAgencyAccess($uid,$aid);
+  OperationsService::transaction(function(\PDO $pdo)use($uid,$aid,$id){
+   $q=$pdo->prepare('SELECT id,is_active FROM students WHERE id=? AND agency_id=? FOR UPDATE');
+   $q->execute([$id,$aid]);$student=$q->fetch(\PDO::FETCH_ASSOC);
+   if(!$student)throw new AuthException(404,'دانش‌آموز یافت نشد.','NOT_FOUND');
+   if((int)$student['is_active']!==0)throw new AuthException(409,'برای حذف دائمی ابتدا دانش‌آموز را غیرفعال کنید.','STUDENT_DEACTIVATE_FIRST');
+   $references=[
+    ['service_students','student_id'],['contracts','party_id'],['invoices','party_id'],
+    ['ledger_entries','party_id'],['student_contract_invoices','student_id'],
+    ['student_service_debt_invoices','student_id'],['guardians','student_id'],
+    ['parent_reports','student_id']
+   ];
+   $tables=$pdo->query("SELECT TABLE_NAME,COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE()")->fetchAll(\PDO::FETCH_ASSOC);
+   $columns=[];
+   foreach($tables as $column)$columns[$column['TABLE_NAME']][$column['COLUMN_NAME']]=true;
+   // Include unforeseen foreign-key dependencies, including tables added later.
+   $fk=$pdo->query("SELECT TABLE_NAME,COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA=DATABASE() AND REFERENCED_TABLE_SCHEMA=DATABASE() AND REFERENCED_TABLE_NAME='students' AND REFERENCED_COLUMN_NAME='id'")->fetchAll(\PDO::FETCH_ASSOC);
+   foreach($fk as $row)$references[]=[$row['TABLE_NAME'],$row['COLUMN_NAME']];
+   $references=array_unique(array_map('json_encode',$references));
+   foreach($references as $ref){
+    [$table,$column]=json_decode($ref,true);
+    if($table==='students'||!isset($columns[$table][$column]))continue;
+    if(!preg_match('/^[a-zA-Z0-9_]+$/D',$table)||!preg_match('/^[a-zA-Z0-9_]+$/D',$column))continue;
+    $where='\`'.$column.'\`=?';
+    if($table==='contracts'||$table==='invoices'||$table==='ledger_entries')$where.=" AND party_type='student'";
+    if(isset($columns[$table]['agency_id']))$where.=" AND agency_id=?";
+    $check=$pdo->prepare("SELECT 1 FROM \`".$table."\` WHERE ".$where." LIMIT 1");
+    $check->execute(isset($columns[$table]['agency_id'])?[$id,$aid]:[$id]);
+    if($check->fetchColumn())throw new AuthException(409,'حذف دائمی ممکن نیست؛ این دانش‌آموز دارای اطلاعات مرتبط یا سوابق مالی است. ابتدا وابستگی‌ها را بررسی کنید.','STUDENT_HAS_DEPENDENCIES');
+   }
+   $pdo->prepare('DELETE FROM students WHERE id=? AND agency_id=? AND is_active=0')->execute([$id,$aid]);
+   self::activity($pdo,$aid,$uid,'permanent_delete','students',$id);
+  });
+ }
  public static function delete(int $uid,int $aid,string $resource,int $id): void {
   $c=self::cfg($resource);Authorization::requirePermission($uid,$c['permission'].'.manage');Authorization::requireAgencyAccess($uid,$aid);self::get($uid,$aid,$resource,$id);$pdo=Connection::get();$columns=thisColumns($c['table'],$pdo);
   if(!in_array('is_active',$columns,true))throw new AuthException(422,'این سابقه قابل غیرفعال‌سازی نیست؛ وضعیت آن را ویرایش کنید.','DELETE_UNSUPPORTED');
