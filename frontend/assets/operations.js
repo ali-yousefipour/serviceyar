@@ -2641,7 +2641,10 @@ async function serviceMembers(id,back){
   };
  }catch(err){if(token===pageToken)notify(err.message,true);}
 }
-async function downloadFile(url,name){try{const response=await fetch(scoped(url),{credentials:'same-origin'});if(!response.ok){const d=await response.json();throw new Error(d?.error?.message||'دریافت فایل انجام نشد.');}const blob=await response.blob(),link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000);}catch(e){notify(e.message,true);}}
+async function downloadFile(url,name){
+ try{await window.ServiceYarLoading.download(scoped(url),name);}
+ catch(e){notify(e.message,true);}
+}
 async function importPage(token){
  $('content').innerHTML=`<section class="panel sy-transfer-page"><header class="page-intro"><div><h2>ثبت دانش‌آموز از اکسل</h2><p>فایل XLSX یا CSV تا ۲۰۰ ردیف و ۲ مگابایت. شماره‌ها و کدهای دارای صفر ابتدایی را در Excel به‌شکل متن ذخیره کنید.</p></div><button type="button" id="templateDownload">دریافت نمونه CSV</button></header><form id="importForm" class="form-grid" aria-label="انتخاب مدرسه و فایل دانش‌آموزان"><label>مدرسه<select name="schoolId" required id="importSchool"></select></label><label>فایل دانش‌آموزان<input type="file" accept=".csv,.xlsx" name="file" required></label><button class="primary">پیش‌نمایش و اعتبارسنجی</button></form><p id="importStatus" role="status"></p><div id="importPreview"></div></section>`;
  const schools=await lookup('schools');if(token!==pageToken)return;$('importSchool').innerHTML='<option value="">انتخاب کنید</option>'+schools.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
