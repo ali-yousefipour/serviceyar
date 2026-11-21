@@ -330,7 +330,8 @@ HTML;
   if(!OperationsService::validDate($start)||!OperationsService::validDate($end)||$end<$start)throw new AuthException(422,'بازه قرارداد نامعتبر است.','INVALID_CONTRACT_DATES');
   if(!is_array($input['overrides']??null))throw new AuthException(422,'مشخصات نامعتبر است.','INVALID_CONTRACT_OVERRIDE');
   $overrides=self::resolvedOverrides($input['overrides']);
-  return OperationsService::transaction(function(PDO $pdo)use($uid,$aid,$id,$start,$end,$overrides){
+  $confirmInvoiceUpdate=($input['confirmInvoiceUpdate']??false)===true;
+  return OperationsService::transaction(function(PDO $pdo)use($uid,$aid,$id,$start,$end,$overrides,$confirmInvoiceUpdate){
    $q=$pdo->prepare('SELECT * FROM contracts WHERE id=? AND agency_id=? FOR UPDATE');$q->execute([$id,$aid]);$old=$q->fetch(PDO::FETCH_ASSOC);
    if(!$old)throw new AuthException(404,'قرارداد یافت نشد.','NOT_FOUND');
    if($old['status']!=='active')throw new AuthException(409,'تنها قرارداد فعال قابل ویرایش است.','CONTRACT_NOT_ACTIVE');
@@ -356,6 +357,7 @@ HTML;
     if($amount<=0)throw new AuthException(422,'مبلغ قرارداد نامعتبر است.','CONTRACT_FEE_REQUIRED');
     $q=$pdo->prepare('SELECT invoice_id FROM student_contract_invoices WHERE agency_id=? AND contract_id=? FOR UPDATE');$q->execute([$aid,$id]);$invoice=(int)$q->fetchColumn();
     if($changed){
+     if(!$confirmInvoiceUpdate)throw new AuthException(409,'برای تغییر تاریخ قرارداد، تأیید اصلاح مبلغ قرارداد و فاکتور مرتبط الزامی است.','CONTRACT_INVOICE_CONFIRMATION_REQUIRED');
      if(!$invoice)throw new AuthException(409,'قرارداد قدیمی فاقد ارتباط مالی معتبر است؛ تغییر تاریخ نیازمند تطبیق فاکتور است.','LEGACY_CONTRACT_INVOICE_REQUIRED');
      $q=$pdo->prepare("SELECT id,status FROM invoices WHERE id=? AND agency_id=? AND party_type='student' AND party_id=? FOR UPDATE");$q->execute([$invoice,$aid,$old['party_id']]);$inv=$q->fetch(PDO::FETCH_ASSOC);
      if(!$inv||$inv['status']==='cancelled')throw new AuthException(409,'فاکتور مرتبط معتبر نیست.','CONTRACT_INVOICE_CONFLICT');
