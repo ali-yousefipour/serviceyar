@@ -9,6 +9,15 @@ const backend = read('backend/src/Domain/DomainService.php');
 const contracts = read('backend/src/Domain/ContractDocuments.php');
 const api = read('backend/public/index.php');
 const migration = read('database/migrations/0164_restore_active_students_service_status.sql');
+const reconciliation = read('backend/src/Domain/FinancialReconciliation.php');
+// Reconciliation queries must remain bounded and tenant-scoped: O(ceil(N/300))
+// document batches rather than two queries for each student.
+assert.match(reconciliation, /array_chunk\(array_map\('intval',array_column\(\$students,'id'\)\),300\)/, 'Reconciliation must use bounded document batches');
+assert.match(reconciliation, /c\.agency_id=\? AND c\.party_type='student' AND c\.party_id IN \(\$marks\)/, 'Contract lookup must remain tenant scoped');
+assert.match(reconciliation, /i\.agency_id=\? AND i\.party_type='student' AND i\.party_id IN \(\$marks\)/, 'Invoice lookup must remain tenant scoped');
+assert.match(reconciliation, /\$contracts=\$contractsByStudent\[\$sid\]\?\?\[\]/, 'Reconciliation must return contracts per student');
+assert.match(reconciliation, /\$invoices=\$invoicesByStudent\[\$sid\]\?\?\[\]/, 'Reconciliation must return invoices per student');
+
 
 assert.match(solar, /closest\('dialog\[open\]'\)/, 'Calendar must detect a native modal dialog');
 assert.match(solar, /showPopover\(\)/, 'Native dialog calendar must reach top layer');
