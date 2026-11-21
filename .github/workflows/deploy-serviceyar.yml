@@ -203,6 +203,7 @@ jobs:
           test -s deploy-payload/assets/operations.js
           test -s deploy-payload/assets/app.css
           test -s deploy-payload/assets/operations.css
+          test -s deploy-payload/assets/ui-consistency.css
           test -s deploy-payload/backend/src/Domain/OperationsService.php
           test -s deploy-payload/backend/src/Domain/TaxiOrganizationTariffs.php
           test -s deploy-payload/backend/src/Domain/TaxiFareComponents.php
