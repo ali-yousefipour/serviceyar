@@ -29,6 +29,7 @@ assert.match(backend, /DISTANCE_REPRICE_CONFIRMATION_REQUIRED/, 'Distance repric
 assert.match(backend, /repriceStudentAfterDistanceChange/, 'Approved distance edit must synchronize contracts/invoices');
 assert.match(contracts, /contract_revisions/, 'Contract revision audit missing');
 assert.match(contracts, /student_contract_invoices/, 'Contract invoice linkage must remain explicit');
+assert.match(contracts, /\$old\['end_date'\]<\$currentStart/, 'Historical contracts must be skipped before mapping validation');
 assert.match(backend, /STUDENT_HAS_DEPENDENCIES/, 'Hard delete must reject student financial dependencies');
 assert.match(api, /DELETE_STUDENT_PERMANENTLY/, 'Hard delete endpoint missing explicit confirmation');
 assert.match(migration, /service_status = 'waiting'/, 'Legacy restored student migration missing');
