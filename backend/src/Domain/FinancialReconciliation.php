@@ -27,14 +27,31 @@ final class FinancialReconciliation {
   }
   $q=$pdo->prepare("SELECT s.id,s.first_name,s.last_name,s.monthly_fee,s.grade,sc.name school,sc.school_type,sc.education_levels FROM students s LEFT JOIN schools sc ON sc.id=s.school_id AND sc.agency_id=s.agency_id WHERE $where ORDER BY sc.name,s.id");
   $q->execute($args);$students=$q->fetchAll(PDO::FETCH_ASSOC);
-  $c=$pdo->prepare("SELECT c.id,c.amount,c.start_date,c.end_date,c.status,m.invoice_id FROM contracts c LEFT JOIN student_contract_invoices m ON m.contract_id=c.id AND m.agency_id=c.agency_id AND m.student_id=c.party_id WHERE c.agency_id=? AND c.party_type='student' AND c.party_id=? AND c.status<>'cancelled' AND (c.start_date IS NULL OR c.end_date IS NULL OR (c.start_date<=? AND c.end_date>=?)) ORDER BY c.id");
-  $i=$pdo->prepare("SELECT i.id,i.amount,i.status,i.title,i.issue_date,m.academic_year contract_year,l.academic_year legacy_year FROM invoices i LEFT JOIN student_contract_invoices m ON m.invoice_id=i.id AND m.agency_id=i.agency_id AND m.student_id=i.party_id LEFT JOIN student_service_debt_invoices l ON l.invoice_id=i.id AND l.agency_id=i.agency_id AND l.student_id=i.party_id WHERE i.agency_id=? AND i.party_type='student' AND i.party_id=? ORDER BY i.id");
+  // Fetch documents in bounded batches rather than issuing two queries per student.
+  // Every query is tenant-scoped and still retains the original document ordering.
   $bounds=ContractBilling::defaults($year,false);$items=[];
+  $contractsByStudent=[];$invoicesByStudent=[];
+  foreach(array_chunk(array_map('intval',array_column($students,'id')),300) as $ids){
+   $marks=implode(',',array_fill(0,count($ids),'?'));
+   $c=$pdo->prepare("SELECT c.party_id,c.id,c.amount,c.start_date,c.end_date,c.status,m.invoice_id FROM contracts c LEFT JOIN student_contract_invoices m ON m.contract_id=c.id AND m.agency_id=c.agency_id AND m.student_id=c.party_id WHERE c.agency_id=? AND c.party_type='student' AND c.party_id IN ($marks) AND c.status<>'cancelled' AND (c.start_date IS NULL OR c.end_date IS NULL OR (c.start_date<=? AND c.end_date>=?)) ORDER BY c.id");
+   $c->execute([$aid,...$ids,$bounds['endDate'],$bounds['startDate']]);
+   foreach($c->fetchAll(PDO::FETCH_ASSOC) as $contract){
+    $sid=(int)$contract['party_id'];unset($contract['party_id']);
+    $contractsByStudent[$sid][]=$contract;
+   }
+   $i=$pdo->prepare("SELECT i.party_id,i.id,i.amount,i.status,i.title,i.issue_date,m.academic_year contract_year,l.academic_year legacy_year FROM invoices i LEFT JOIN student_contract_invoices m ON m.invoice_id=i.id AND m.agency_id=i.agency_id AND m.student_id=i.party_id LEFT JOIN student_service_debt_invoices l ON l.invoice_id=i.id AND l.agency_id=i.agency_id AND l.student_id=i.party_id WHERE i.agency_id=? AND i.party_type='student' AND i.party_id IN ($marks) ORDER BY i.id");
+   $i->execute([$aid,...$ids]);
+   foreach($i->fetchAll(PDO::FETCH_ASSOC) as $invoice){
+    $sid=(int)$invoice['party_id'];unset($invoice['party_id']);
+    $invoicesByStudent[$sid][]=$invoice;
+   }
+  }
   foreach($students as $st){
    $flags=[];$expected=null;$months=null;
    try{$months=ServiceFinancialBasis::monthsOfStudent($st);$expected=(int)round((float)$st['monthly_fee']*$months);}catch(AuthException $e){$flags[]='مقطع نامشخص';}
-   $c->execute([$aid,$st['id'],$bounds['endDate'],$bounds['startDate']]);$contracts=$c->fetchAll(PDO::FETCH_ASSOC);
-   $i->execute([$aid,$st['id']]);$invoices=$i->fetchAll(PDO::FETCH_ASSOC);
+   $sid=(int)$st['id'];
+   $contracts=$contractsByStudent[$sid]??[];
+   $invoices=$invoicesByStudent[$sid]??[];
    $valid=[];$unknown=[];
    foreach($invoices as $inv){
     if($inv['status']==='cancelled')continue;
