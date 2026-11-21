@@ -1229,8 +1229,35 @@ async function resourcePage(key,token=pageToken,options={}){
   const ascii=value=>String(value).replace(/[۰-۹]/g,c=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/[٠-٩]/g,c=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(c)));
   for(const name of ['amountMin','amountMax']){const input=filterForm.elements[name];input.addEventListener('input',()=>{const digits=ascii(input.value).replace(/[^0-9]/g,'').slice(0,15);input.value=digits?persianDigits(digits.replace(/\B(?=(\d{3})+(?!\d))/g,',')):'';});}
   filterForm.addEventListener('formdata',event=>{for(const name of ['amountMin','amountMax'])event.formData.set(name,ascii(filterForm.elements[name].value).replace(/[^0-9]/g,''));});
+
+  const syncInvoiceSolarDates=()=>{
+   let invalid=false;
+   for(const name of ['dateFrom','dateTo']){
+    const input=filterForm.elements[name+'Solar'],hidden=filterForm.elements[name];
+    const raw=ascii(input.value).trim().replace(/-/g,'/');
+    if(!raw){hidden.value='';input.setCustomValidity('');continue;}
+    if(!/^1[34][0-9]{2}\/(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])$/.test(raw)){
+     invalid=true;hidden.value='';input.setCustomValidity('تاریخ را به‌صورت ۱۴۰۵/۰۷/۰۱ وارد کنید.');continue;
+    }
+    try{
+     const iso=ServiceYarDates.toISO(raw);
+     if(!/^20[0-9]{2}-[0-9]{2}-[0-9]{2}$/.test(iso))throw Error('date');
+     const roundTrip=ascii(ServiceYarDates.toSolar(iso)).replace(/-/g,'/');
+     if(roundTrip!==raw)throw Error('invalid day');
+     hidden.value=iso;input.setCustomValidity('');
+    }catch(_error){invalid=true;hidden.value='';input.setCustomValidity('تاریخ شمسی نامعتبر است.');}
+   }
+   return !invalid;
+  };
+  for(const name of ['dateFrom','dateTo']){
+   const input=filterForm.elements[name+'Solar'];
+   input.addEventListener('input',()=>{input.setCustomValidity('');syncInvoiceSolarDates();});
+   input.addEventListener('change',()=>{if(syncInvoiceSolarDates())applyFilters();});
+  }
+  filterForm.elements.sortBy.addEventListener('change',()=>applyFilters());
+  filterForm.elements.sortDir.addEventListener('change',()=>applyFilters());
   filterForm.addEventListener('change',event=>{if(['partyType','paymentState','contractOnly','remainingOnly'].includes(event.target.name))applyFilters();});
-  filterForm.querySelector('#syInvoiceChips').addEventListener('click',event=>{const button=event.target.closest('[data-invoice-clear]');if(!button)return;const field=filterForm.elements[button.dataset.invoiceClear];if(!field)return;if(button.dataset.invoiceClear==='paymentState')field.value='';else if(field.type==='checkbox')field.checked=false;else field.value='';applyFilters();});
+  filterForm.querySelector('#syInvoiceChips').addEventListener('click',event=>{const button=event.target.closest('[data-invoice-clear]');if(!button)return;const field=filterForm.elements[button.dataset.invoiceClear];if(!field)return;if(button.dataset.invoiceClear==='paymentState')field.value='';else if(field.type==='checkbox')field.checked=false;else if(button.dataset.invoiceClear==='dateFrom'||button.dataset.invoiceClear==='dateTo'){field.value='';filterForm.elements[button.dataset.invoiceClear+'Solar'].value='';}else field.value='';applyFilters();});
 
  }
  if(isStudents){
@@ -1304,9 +1331,10 @@ async function resourcePage(key,token=pageToken,options={}){
  const applyFilters=()=>{
   if(gridState!==state||token!==pageToken)return;
   if(key==='invoices'){
+   const datesValid=syncInvoiceSolarDates();
    const values=new FormData(filterForm), min=values.get('amountMin'),max=values.get('amountMax'),from=values.get('dateFrom'),to=values.get('dateTo');
    const error=filterForm.querySelector('.sy-invoice-filter-error');
-   const message=from&&to&&from>to?'تاریخ شروع نباید بعد از تاریخ پایان باشد.':min&&max&&Number(min)>Number(max)?'حداقل مبلغ نباید بیشتر از حداکثر باشد.':'';
+   const message=!datesValid?'تاریخ شمسی را در قالب ۱۴۰۵/۰۷/۰۱ و با روز معتبر وارد کنید.':from&&to&&from>to?'تاریخ شروع نباید بعد از تاریخ پایان باشد.':min&&max&&Number(min)>Number(max)?'حداقل مبلغ نباید بیشتر از حداکثر باشد.':'';
    error.textContent=message;error.hidden=!message;if(message)return;
   }
   state.page=1;state.selected.clear();
