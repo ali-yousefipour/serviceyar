@@ -1043,7 +1043,10 @@ if($resource==='ledger'&&!in_array('company_account_id',thisColumns('ledger_entr
    ];
    $tables=$pdo->query("SELECT TABLE_NAME,COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE()")->fetchAll(\PDO::FETCH_ASSOC);
    $columns=[];
-   foreach($tables as $column)$columns[$column['TABLE_NAME']][$column['COLUMN_NAME']]=true;
+   foreach($tables as $column){
+    $columns[$column['TABLE_NAME']][$column['COLUMN_NAME']]=true;
+    if($column['COLUMN_NAME']==='student_id' && $column['TABLE_NAME']!=='students')$references[]=[$column['TABLE_NAME'],'student_id'];
+   }
    // Include unforeseen foreign-key dependencies, including tables added later.
    $fk=$pdo->query("SELECT TABLE_NAME,COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA=DATABASE() AND REFERENCED_TABLE_SCHEMA=DATABASE() AND REFERENCED_TABLE_NAME='students' AND REFERENCED_COLUMN_NAME='id'")->fetchAll(\PDO::FETCH_ASSOC);
    foreach($fk as $row)$references[]=[$row['TABLE_NAME'],$row['COLUMN_NAME']];
