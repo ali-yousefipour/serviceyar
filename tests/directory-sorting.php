@@ -13,6 +13,8 @@ $cases=[
     ['vehicles',['sortBy'=>'plate','sortDir'=>'asc'],'vehicles.plate ASC, vehicles.id DESC'],
     ['ledger',['sortBy'=>'amount','sortDir'=>'desc'],'ledger_entries.amount DESC, ledger_entries.id DESC'],
     ['invoices',[],'invoices.id DESC'],
+    ['invoices',['sortBy'=>'due_date','sortDir'=>'asc'],'invoices.due_date ASC, invoices.id DESC'],
+    ['invoices',['sortBy'=>'title','sortDir'=>'desc'],'invoices.title DESC, invoices.id DESC'],
 ];
 foreach($cases as [$resource,$query,$expected]){
     $actual=$method->invoke(null,$resource,$query);
@@ -24,6 +26,7 @@ foreach([
     ['students',['sortBy'=>'last_name','sortDir'=>'ASC;DELETE']],
     ['ledger',['sortBy'=>'gross','sortDir'=>'desc']],
     ['vehicles',['sortBy'=>['plate'],'sortDir'=>'asc']],
+    ['invoices',['sortBy'=>'amount;DROP TABLE invoices','sortDir'=>'asc']],
 ] as [$resource,$query]){
     try{$method->invoke(null,$resource,$query);throw new RuntimeException('Invalid ordering accepted');}
     catch(AuthException $e){if($e->status!==422)throw $e;}
