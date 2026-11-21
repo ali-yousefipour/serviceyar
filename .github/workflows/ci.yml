@@ -59,6 +59,7 @@ jobs:
           node tests/cheque-editor.cjs
           node tests/accounting-report-ui.cjs
           node tests/solar-date.cjs
+          node tests/recent-contract-invoice-student-ui.cjs
       - name: Dashboard contract and production JS parsing
         run: node tests/company-dashboard-contract.cjs
       - name: Taxi organization application, CSP and billing safeguards
@@ -68,7 +69,8 @@ jobs:
       - name: Representative school access, dedicated role and account contracts
         run: node tests/representative-access-contract.cjs
       - name: Official fare component unit test
-        run: php tests/taxi-fare-components.php
+        run: |
+          php tests/taxi-fare-components.php
           php tests/service-finance-basis.php
       - name: Financial quote integration (read-only fixture)
         run: php tests/taxi-financial-integration.php
