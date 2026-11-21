@@ -2475,11 +2475,7 @@ if(form.elements.mobile){const mobile=form.elements.mobile;mobile.pattern='09[0-
    const file=form.querySelector('#sySchoolPhotoUpload')?.files?.[0];
    if(file){
     const payload=new FormData();payload.append('photo',file);
-    const uploadResponse=await fetch('/api/v1/schools/'+encodeURIComponent(id)+'/photo?agencyId='+encodeURIComponent(currentAgency.id),{
-     method:'POST',credentials:'same-origin',headers:{'X-CSRF-Token':session.csrfToken,'Accept':'application/json'},body:payload
-    });
-    const result=await uploadResponse.json().catch(()=>({}));
-    if(!uploadResponse.ok||!result.ok)throw Error(result.error?.message||'اطلاعات مدرسه ذخیره شد اما بارگذاری تصویر ناموفق بود.');
+    await window.ServiceYarLoading.upload('/api/v1/schools/'+encodeURIComponent(id)+'/photo?agencyId='+encodeURIComponent(currentAgency.id),payload,{headers:{'X-CSRF-Token':session.csrfToken}});
    }
   }
   lookupCache={};closeDialog();notify('اطلاعات ذخیره شد.');if(onSaved)onSaved();else if(gridState?.key===key&&gridState.token===pageToken)await loadResource(key);else{location.hash=key;}}catch(err){if($('formError')){$('formError').textContent=err.message;$('formError').hidden=false;$('formError').focus();}}finally{if(button.isConnected)button.disabled=false;}};
@@ -3428,9 +3424,7 @@ function syBindPhoto(form){
 async function syUploadUserPhoto(url,file){
  if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>5*1024*1024)throw Error('تصویر باید JPG، PNG یا WebP و حداکثر ۵ مگابایت باشد.');
  const body=new FormData();body.append('photo',file);
- const resp=await fetch(url,{method:'POST',credentials:'same-origin',headers:{'X-CSRF-Token':session.csrfToken,'Accept':'application/json'},body});
- const json=await resp.json().catch(()=>({}));
- if(!resp.ok||!json.ok)throw Error(json.error?.message||'بارگذاری تصویر ناموفق بود.');
+ const json=await window.ServiceYarLoading.upload(url,body,{headers:{'X-CSRF-Token':session.csrfToken}});
  return json.data;
 }
 async function syRemoveUserPhoto(url){
@@ -3776,9 +3770,7 @@ async function settingsPage(){
   if(!file)throw new Error('ابتدا تصویر لوگو را انتخاب کنید.');
   if(file.size>1048576||!['image/png','image/jpeg','image/webp'].includes(file.type))throw new Error('تصویر باید PNG، JPEG یا WebP و حداکثر یک مگابایت باشد.');
   const data=new FormData();data.append('file',file);
-  const response=await fetch(agencyLogoUrl(),{method:'POST',credentials:'same-origin',headers:{'X-CSRF-Token':session.csrfToken,'Accept':'application/json'},body:data});
-  const result=await response.json().catch(()=>({}));
-  if(!response.ok||!result.ok)throw new Error(result.error?.message||'ذخیره لوگو ناموفق بود.');
+  const result=await window.ServiceYarLoading.upload(agencyLogoUrl(),data,{headers:{'X-CSRF-Token':session.csrfToken}});
   return result.data;
  };
 
