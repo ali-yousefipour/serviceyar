@@ -62,7 +62,7 @@
  }
  #app :is(.panel,.sy-settings-panel,.sy-admin-page-card,.portal-panel)
  :is(button:not(.leaflet-control-zoom-in):not(.leaflet-control-zoom-out),.primary,.secondary){
-  min-height:2.5rem;font-size:var(--sy-ui-small);line-height:1.5;
+  min-height:var(--sy-ui-control);font-size:var(--sy-ui-small);line-height:1.5;
  }
  #app :is(input,textarea,select,button,a,summary,[role=button]):focus-visible,
  #login :is(input,textarea,select,button,a):focus-visible{
@@ -95,6 +95,18 @@
  #app .sy-admin-page-card table{
   font:500 var(--sy-ui-small)/var(--sy-ui-line) var(--sy-ui-font);
   font-variant-numeric:tabular-nums;
+ }
+ #app .sy-admin-page-heading{
+  min-width:0;flex-wrap:wrap;row-gap:.75rem;column-gap:var(--sy-ui-space);
+ }
+ #app .sy-admin-page-heading :is(h2,p,.sy-admin-eyebrow,.sy-admin-back-dashboard){
+  font-family:var(--sy-ui-font);line-height:var(--sy-ui-line);
+ }
+ #app .sy-admin-page-heading p{font-size:var(--sy-ui-small);}
+ #app .sy-admin-page-heading .sy-admin-eyebrow{font-size:var(--sy-ui-caption);}
+ #app .sy-admin-back-dashboard{
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:var(--sy-ui-small);min-height:var(--sy-ui-control);
  }
  #app .sy-admin-page-card .toolbar :is(h2,h3){
   font:800 var(--sy-ui-title)/1.65 var(--sy-ui-font);
@@ -133,7 +145,7 @@
  }
  /* Wide admin tables stay legible by scrolling horizontally, never by
     reducing their type to 9px or clipping critical action buttons. */
- #app .sy-admin-page-card table{min-width:max(42rem,100%);}
+ #app .sy-admin-page-card .table-wrap:has(thead th:nth-child(5)) table{min-width:max(42rem,100%);}
  #app .sy-admin-page-card :is(th,td){
   font-size:var(--sy-ui-small);padding:.625rem .75rem;
  }
@@ -155,6 +167,8 @@
   padding-inline:clamp(.75rem,3vw,1rem);
  }
  #app .sy-admin-page-card .toolbar :is(h2,h3){font-size:1.0625rem;}
+ #app .sy-admin-back-dashboard{width:100%;}
+ #app .sy-admin-page-heading{padding-inline:0;}
  #app.sy-portal-mode .portal-photo-form :is(button,input[type=file]){width:100%;}
  #app .sy-invoice-table :is(th,td){font-size:var(--sy-ui-small);}
 }
