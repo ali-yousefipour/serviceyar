@@ -17,8 +17,9 @@ assert.doesNotMatch(portal,/@font-face\s*\{/, 'Portal must not register a duplic
 assert.match(styles,/--sy-ui-body:\.875rem/, 'Readable 14px base text token must be shared');
 assert.match(styles,/--sy-ui-small:\.8125rem/, 'Compact text token must remain at least 13px');
 assert.match(styles,/#app \.sy-admin-page-card table/, 'Admin tables must have a dedicated legible font override');
+assert.match(styles,/#app \.sy-admin-page-heading/, 'Super-admin section heading must wrap on mobile');
 assert.match(styles,/#app \.sy-admin-page-card :is\(th,td\)/, 'Mobile admin cells must keep readable sizes');
-assert.match(styles,/min-width:max\(42rem,100%\)/,'Wide tables must scroll instead of shrinking text on mobile');
+assert.match(styles,/\.table-wrap:has\(thead th:nth-child\(5\)\) table\{min-width:max\(42rem,100%\)/,'Only genuinely wide admin tables should scroll on mobile');
 assert.match(styles,/#app\.sy-portal-mode \.portal-panel :is\(th,td\)/, 'Parent and driver tables must share the readable type scale');
 assert.match(styles,/#app \.sy-invoice-table :is\(th,td\)/, 'Invoice tables must share the readable type scale');
 assert.match(styles,/#app \.solar-date-field/, 'Jalali calendar controls must fit narrow screens');
