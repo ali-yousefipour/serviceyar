@@ -7,6 +7,9 @@ assert.match(source,/\.serviceyar-staging-/,'Each workflow must use an independe
 assert.match(source,/verify\(ftp, digests\[name\], live\)/,'Published files must be verified');
 assert.match(source,/3 if name == "index.html"/,'HTML index must publish last');
 const workflow=readFileSync('.github/workflows/deploy-serviceyar.yml','utf8');
+assert.ok(workflow.includes('RewriteRule ^api/?$ backend/public/index.php [QSA,END]'), 'API endpoint must use an Apache 2.4 terminating rewrite');
+assert.ok(workflow.includes('RewriteRule ^(?:backend|database|storage)(?:/|$) - [F,END,NC]'), 'Private folders must be denied even with percent-encoded URL paths');
+assert.ok(source.includes('/%62ackend/src/bootstrap.php') && source.includes('/%73torage/private/negin-sms.key'), 'Live release verification must check encoded path bypasses');
 const html=readFileSync('frontend/index.html','utf8');
 const productionDocs=readFileSync('docs/PHASE-17-PRODUCTION.md','utf8');
 const bootstrap=readFileSync('backend/src/bootstrap.php','utf8');
