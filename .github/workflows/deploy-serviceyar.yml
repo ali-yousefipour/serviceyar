@@ -74,6 +74,9 @@ jobs:
           test -f frontend/assets/public-site.css
           node --check frontend/assets/task-progress.js
           node tests/task-progress.cjs
+          node tests/local-map-assets.cjs
+          python3 tests/vendor-neshan-sdk.py
+          python3 -m py_compile tools/vendor_neshan_sdk.py
           node --check frontend/assets/operations.js
           node --check frontend/assets/bale-bot.js
           node --check frontend/assets/login-methods.js
