@@ -311,6 +311,7 @@ final class ExportService
           header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
           header('Content-Disposition: attachment; filename="school-statement-1405.xlsx"');
           header('Cache-Control: no-store');header('X-Content-Type-Options: nosniff');
+          header('Content-Length: '.filesize($tmp));
           readfile($tmp);
         }finally{@unlink($tmp);}
         exit;
