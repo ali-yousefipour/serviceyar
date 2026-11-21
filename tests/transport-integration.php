@@ -30,6 +30,14 @@ try{
  $viewer=insertFixture('users',['uuid'=>Uuid::v4(),'username'=>'viewer_'.$tag,'password_hash'=>'unused']);
  $role=(int)$p->query("SELECT id FROM roles WHERE name='super_admin'")->fetchColumn();$p->prepare('INSERT INTO user_roles(user_id,role_id) VALUES(?,?)')->execute([$uid,$role]);
  $a=insertFixture('agencies',['uuid'=>Uuid::v4(),'name'=>'شرکت آزمایشی الف']);$b=insertFixture('agencies',['uuid'=>Uuid::v4(),'name'=>'شرکت آزمایشی ب']);
+
+ // SMS provider isolation: credentials and gateway selection are owned by
+ // super-admin settings, never by company settings or public users.
+ check(\ServiceYar\Integrations\SmsProvider::selected()==='negin','Existing installations retain Negin as default SMS provider');
+ rejected(fn()=>\ServiceYar\Integrations\SmsProvider::configure($viewer,['provider'=>'kavenegar']),'SUPER_ADMIN_REQUIRED');
+ rejected(fn()=>\ServiceYar\Integrations\KavenegarSms::overview($viewer),'SUPER_ADMIN_REQUIRED');
+ rejected(fn()=>\ServiceYar\Settings\SettingsService::put($uid,$a,['sms_provider_selected'=>'kavenegar']),'SUPER_ADMIN_REQUIRED');
+
  $sepandSchema=\ServiceYar\Domain\SepandSchemaMaintenance::status($uid);
  check($sepandSchema['ready']===true&&$sepandSchema['missingColumns']===[],
   'Sepand preview database requirements are verified after migration');
