@@ -22,8 +22,16 @@ final class FinancialReconciliation {
    if(!$id)throw new AuthException(422,'مدرسه نامعتبر است.','VALIDATION_ERROR');
    $where.=' AND s.school_id=?';$args[]=$id;
   }
-  if(trim((string)($filter['student']??''))!==''){
-   $where.=" AND CONCAT_WS(' ',s.first_name,s.last_name) LIKE ?";$args[]='%'.trim((string)$filter['student']).'%';
+  $studentFilter=$filter['student']??'';
+  if(!is_string($studentFilter)&&!is_numeric($studentFilter))
+   throw new AuthException(422,'عبارت جستجوی دانش‌آموز معتبر نیست.','VALIDATION_ERROR');
+  $studentFilter=trim((string)$studentFilter);
+  if(strlen($studentFilter)>240)
+   throw new AuthException(422,'عبارت جستجو بیش از حد طولانی است.','VALIDATION_ERROR');
+  if($studentFilter!==''){
+   // Treat SQL LIKE metacharacters as literal search text.
+   $term=str_replace(['!','%','_'],['!!','!%','!_'],$studentFilter);
+   $where.=" AND CONCAT_WS(' ',s.first_name,s.last_name) LIKE ? ESCAPE '!'";$args[]='%'.$term.'%';
   }
   $q=$pdo->prepare("SELECT s.id,s.first_name,s.last_name,s.monthly_fee,s.grade,sc.name school,sc.school_type,sc.education_levels FROM students s LEFT JOIN schools sc ON sc.id=s.school_id AND sc.agency_id=s.agency_id WHERE $where ORDER BY sc.name,s.id");
   $q->execute($args);$students=$q->fetchAll(PDO::FETCH_ASSOC);
