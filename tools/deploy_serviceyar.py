@@ -254,6 +254,27 @@ def verify_live(base_url, build_id, expected_digests):
                 )
             print(f"Public asset verified: {route}", flush=True)
 
+
+    # Verify host access controls against direct and percent-encoded paths.
+    # This is a read-only check; never print or download private file contents.
+    for path in (
+        "/backend/src/bootstrap.php",
+        "/%62ackend/src/bootstrap.php",
+        "/database/migrations/0001_create_migrations_table.sql",
+        "/storage/private/negin-sms.key",
+        "/%73torage/private/negin-sms.key",
+    ):
+        request = Request(base + path + "?access_audit=" + build_id,
+                          headers={"Cache-Control": "no-store", "User-Agent": "ServiceYar-Security-Smoke/1.0"})
+        try:
+            with urlopen(request, timeout=15, context=ssl._create_unverified_context()) as response:
+                status = response.status
+        except HTTPError as error:
+            status = error.code
+        if status not in (403, 404):
+            raise RuntimeError(f"Private URL exposure or invalid protection: {path}, HTTP {status}")
+        print(f"Private access blocked: {path} (HTTP {status})", flush=True)
+
 def main():
     files = {
         path.relative_to(PAYLOAD).as_posix(): path
