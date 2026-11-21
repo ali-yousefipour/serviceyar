@@ -68,6 +68,19 @@
  #login :is(input,textarea,select,button,a):focus-visible{
   outline:3px solid var(--sy-ui-focus);outline-offset:2px;
  }
+ #login .sy-login-method-tab{
+  font-family:var(--sy-ui-font);font-size:var(--sy-ui-small);
+  line-height:1.6;min-height:var(--sy-ui-control);
+ }
+ #login :is(.login-help,.login-bottom,.login-error){
+  font-size:var(--sy-ui-small);line-height:var(--sy-ui-line);
+ }
+ #app :is(.pager,.member-actions,.row-actions) :is(button,a){
+  font-family:var(--sy-ui-font);font-size:var(--sy-ui-small);
+ }
+ #app :is(.sy-mgmt-dashboard,.sy-portal-content) :is(.muted,small){
+  line-height:1.75;
+ }
  #app :is(button,input,select,textarea):disabled{cursor:not-allowed;}
  #app :is(.table-wrap,.portal-table-scroll,.sy-finance-table-wrap,.sy-directory-table-wrap,
            .services-table-wrap){max-width:100%;min-width:0;overscroll-behavior-x:contain;}
