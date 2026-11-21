@@ -45,14 +45,15 @@ let operationsModulePromise=null;
 function ensureOperationsModule(){
  if(operationsModulePromise)return operationsModulePromise;
  operationsModulePromise=new Promise((resolve,reject)=>{
+  const loading=window.ServiceYarLoading?.begin('در حال آماده‌سازی پنل مدیریتی…',{immediate:true});
   const script=document.createElement('script');
   const appScript=document.querySelector('script[src*="/assets/app.js"]');
   const version=appScript?new URL(appScript.src,location.href).searchParams.get('v'):null;
   script.src='/assets/operations.js'+(version?'?v='+encodeURIComponent(version):'');
   script.async=true;
-  script.onload=()=>resolve();
+  script.onload=()=>{loading?.finish();resolve();};
   script.onerror=()=>{
-   script.remove();operationsModulePromise=null;
+   loading?.finish();script.remove();operationsModulePromise=null;
    reject(new Error('بارگذاری بخش عملیاتی سامانه ناموفق بود. اتصال شبکه را بررسی و دوباره تلاش کنید.'));
   };
   document.head.append(script);
