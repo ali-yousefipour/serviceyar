@@ -17,6 +17,12 @@ $failed=KavenegarSms::parseResponse(200,'{"return":{"status":418,"message":"Inva
 check($failed===['accepted'=>false,'code'=>'418'],'Provider rejection must remain rejected');
 $failed=KavenegarSms::parseResponse(401,$success);
 check($failed['accepted']===false,'HTTP errors must not be accepted');
+try{
+    KavenegarSms::parseResponse(503,$success);
+    throw new RuntimeException('Unexpected acceptance of an uncertain upstream failure');
+}catch(AuthException $e){
+    check($e->codeName==='SMS_UNCERTAIN','Upstream 5xx must be uncertain');
+}
 foreach(['','not json','{"return":{"status":200}}','<html>error</html>'] as $body){
     try {
         KavenegarSms::parseResponse(200,$body);
