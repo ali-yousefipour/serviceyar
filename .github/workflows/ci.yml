@@ -36,6 +36,7 @@ jobs:
           node --check frontend/assets/task-progress.js
           node tests/task-progress.cjs
           node tests/ui-consistency.cjs
+          node tests/filter-consistency.cjs
           node tests/local-map-assets.cjs
           python3 tests/vendor-neshan-sdk.py
           python3 -m py_compile tools/vendor_neshan_sdk.py
