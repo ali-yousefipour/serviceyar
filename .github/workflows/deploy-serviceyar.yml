@@ -138,6 +138,10 @@ jobs:
           cp frontend/portal.html deploy-payload/portal.html
           sed -i "s/__BUILD_ID__/${GITHUB_SHA}/g" deploy-payload/index.html deploy-payload/portal.html
           cp frontend/assets/* deploy-payload/assets/
+          # Vendor SDK at build time: no external CDN fetch in the visitor's browser.
+          python3 tools/vendor_neshan_sdk.py deploy-payload/assets/vendor/neshan/v1.0.8
+          test -s deploy-payload/assets/vendor/neshan/v1.0.8/index.js
+          test -s deploy-payload/assets/vendor/neshan/v1.0.8/index.css
           test -s deploy-payload/portal.html
           test -s deploy-payload/assets/portal.js
           test -s deploy-payload/assets/portal.css
@@ -150,7 +154,10 @@ jobs:
           RewriteEngine On
           <IfModule mod_headers.c>
           Header always set Content-Security-Policy "default-src 'self'; img-src 'self' data: https://tile.openstreetmap.org https://*.neshan.org; script-src 'self' https://static.neshan.org; connect-src 'self' https://*.neshan.org; style-src 'self' https://static.neshan.org; style-src-attr 'unsafe-inline'; base-uri 'self'; frame-ancestors 'none'; object-src 'none';"
+          # Safe to cache: the local SDK path is pinned to v1.0.8.
+          Header set Cache-Control "public, max-age=31536000, immutable" env=SY_NESHAN_SDK
           </IfModule>
+          RewriteRule ^assets/vendor/neshan/v1\\.0\\.8/ - [E=SY_NESHAN_SDK:1]
 
           # Keep the public application on the canonical HTTPS apex domain.
           RewriteCond %{HTTP_HOST} ^www\.service-yar\.ir$ [NC]
@@ -188,6 +195,7 @@ jobs:
           test -f deploy-payload/database/migrations/0001_create_migrations_table.sql
           # Release completeness: the latest dashboard AND the official fare
           # engine must be present in the final upload payload together.
+          test -s deploy-payload/assets/vendor/neshan/v1.0.8/SHA256SUMS
           test -s deploy-payload/assets/operations.js
           test -s deploy-payload/assets/app.css
           test -s deploy-payload/assets/operations.css
