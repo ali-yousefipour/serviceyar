@@ -336,18 +336,8 @@
   const response=await fetch('/api/v1/public/map-config',{credentials:'omit'});
   const result=await response.json();
   if(!response.ok||!result.ok||!result.data?.webKey)throw new Error('کلید نمایش نقشه نشان در تنظیمات ادمین کل ثبت نشده یا معتبر نیست.');
-  // Use the configured Neshan WEB key; the private routing/service key never reaches browsers.
-  if(!window.__syPublicNeshanPromise){
-   window.__syPublicNeshanPromise=new Promise((resolve,reject)=>{
-    const stylesheet=document.createElement('link');stylesheet.rel='stylesheet';
-    stylesheet.href='/assets/vendor/neshan/v1.0.8/index.css';
-    document.head.append(stylesheet);
-    const script=document.createElement('script');script.src='/assets/vendor/neshan/v1.0.8/index.js';
-    script.onload=resolve;script.onerror=()=>reject(new Error('کتابخانه نقشه نشان بارگذاری نشد.'));
-    document.head.append(script);
-   });
-  }
-  await window.__syPublicNeshanPromise;
+  // Only the public browser key is exposed; the SDK itself is hosted locally.
+  await window.ServiceYarNeshanSDK.load();
   schoolMap=new L.Map(mapNode,{key:result.data.webKey,maptype:'dreamy',center:[36.3,59.6],zoom:12,scrollWheelZoom:false});
   publicCompanyMarkers=L.layerGroup().addTo(schoolMap);schoolMarkers=L.layerGroup().addTo(schoolMap);
   requestAnimationFrame(()=>schoolMap?.invalidateSize(true));
