@@ -24,6 +24,8 @@ assert.match(styles,/#app \.sy-invoice-table :is\(th,td\)/, 'Invoice tables must
 assert.match(styles,/#app \.solar-date-field/, 'Jalali calendar controls must fit narrow screens');
 assert.match(styles, /@media screen and \(max-width:760px\)/, 'Mobile responsive design at tablet breakpoint is missing');
 assert.match(styles, /@media screen and \(max-width:480px\)/, 'Small phone breakpoint is missing');
+assert.match(styles, /#login \.sy-login-method-tab/, 'Login methods must use legible mobile type and touch targets');
+assert.match(styles, /#app :is\(\.pager,\.member-actions,\.row-actions\)/, 'Pagination and row controls need consistent type scale');
 assert.match(styles, /prefers-reduced-motion:reduce/, 'Reduced motion support is required');
 assert.match(styles, /:focus-visible/, 'Keyboard focus must remain visible');
 assert.match(styles, /@media screen\{/, 'Interactive-screen overrides must not change PDF print layouts');
