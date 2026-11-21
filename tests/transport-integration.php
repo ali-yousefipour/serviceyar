@@ -25,6 +25,8 @@ function check(bool $condition,string $message): void{global $checks;if(!$condit
 function rejected(callable $call,string $code): void{try{$call();}catch(AuthException $e){check($e->codeName===$code,'Expected '.$code.', received '.$e->codeName);return;}throw new RuntimeException('Expected rejection: '.$code);}
 function insertFixture(string $table,array $data): int{global $p;$fields=array_keys($data);$p->prepare('INSERT INTO '.$table.' ('.implode(',',$fields).') VALUES ('.implode(',',array_fill(0,count($fields),'?')).')')->execute(array_values($data));return (int)$p->lastInsertId();}
 try{
+ $queueIndex=$p->query("SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='messages' AND INDEX_NAME='idx_messages_sms_queue'")->fetchColumn();
+ check($queueIndex==='channel,status,id','SMS queue has an indexed global FIFO claim path');
  $tag=bin2hex(random_bytes(4));
  $uid=insertFixture('users',['uuid'=>Uuid::v4(),'username'=>'test_'.$tag,'password_hash'=>password_hash('unused-test-password',PASSWORD_DEFAULT)]);
  $viewer=insertFixture('users',['uuid'=>Uuid::v4(),'username'=>'viewer_'.$tag,'password_hash'=>'unused']);
