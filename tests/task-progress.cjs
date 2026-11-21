@@ -22,6 +22,10 @@ assert.match(operations,/onProgress\(\+\+completedPages,totalPages\)/,'PDF progr
 assert.match(operations,/percent:count>0\?Math\.min\(99,Math\.round\(index\/count\*100\)\):null/,'PDF percentage must use measured completed pages');
 assert.match(operations,/ServiceYarLoading\?\.begin\('ساخت فایل PDF فیش حقوقی'/,'Payslip generation must show a loading state');
 assert.match(portal,/ServiceYarLoading\?\.begin/,'Parent and driver portal must show loading');
+assert.match(loader,/xhr\.upload\.onprogress=event=>/,'Upload percentage must come from actual XHR progress');
+assert.match(loader,/event\.lengthComputable&&event\.total>0/,'Unknown upload length must not display percentages');
+assert.match(loader,/percent:null/,'Server processing must revert to indeterminate state');
+assert.match(operations,/ServiceYarLoading\.upload\(scoped\('\/api\/v1\/operations\/import\/preview'/,'Student import must use measured upload progress');
 assert.match(style,/@media\(max-width:520px\)/,'Progress must fit mobile screens');
 assert.match(style,/prefers-reduced-motion:reduce/,'Loading animation must respect reduced-motion');
 console.log('Shared loading and real progress contract: OK');
