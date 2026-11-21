@@ -4162,7 +4162,9 @@ function showDriverPayslip(doc,line){
   const label=button.textContent;
   button.textContent='در حال ساخت PDF…';
   let wrap;
+  const task=window.ServiceYarLoading?.begin('ساخت فایل PDF فیش حقوقی',{immediate:true});
   try{
+   task?.update({detail:'بارگذاری موتور تولید PDF…'});
    await loadHtml2Pdf();
    wrap=document.createElement('div');
    wrap.dir='rtl';
@@ -4198,6 +4200,7 @@ function showDriverPayslip(doc,line){
    await Promise.all(Array.from(copy.querySelectorAll('img')).map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve;})));
    if(document.fonts?.ready)await document.fonts.ready;
    const name=person(line).replace(/[\\/:*?"<>|]/g,'-').trim()||'راننده';
+   task?.update({detail:'پردازش صفحه و آماده‌سازی فایل…'});
    await window.html2pdf().set({
     margin:[10,10,10,10],filename:'فیش-حقوق-'+name+'.pdf',
     image:{type:'jpeg',quality:0.98},
@@ -4206,7 +4209,7 @@ function showDriverPayslip(doc,line){
     pagebreak:{mode:['css','legacy'],avoid:['.sy-payslip-header','.sy-payslip-signatures','tr']}
    }).from(copy).save();
   }catch(error){notify(error?.message||'خطا در ساخت فایل PDF',true);}
-  finally{wrap?.remove();button.disabled=false;button.textContent=label;}
+  finally{task?.finish();wrap?.remove();button.disabled=false;button.textContent=label;}
  };
  $('payslipBack').onclick=()=>{if(isPreview){closeDialog();return;}payrollDocument(Number(doc.id));};
 }
