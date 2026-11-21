@@ -570,7 +570,7 @@ HTML;
  }
  public static function printable(int $uid,int $agencyId,int $contractId): array {
   self::scope($uid,$agencyId);$pdo=Connection::get();self::ensureSchema($pdo);
-  $q=$pdo->prepare('SELECT id,contract_no,rendered_html,party_type,party_id,start_date,end_date,amount FROM contracts WHERE id=? AND agency_id=?');
+  $q=$pdo->prepare('SELECT id,contract_no,rendered_html,issued_at,party_type,party_id,start_date,end_date,amount FROM contracts WHERE id=? AND agency_id=?');
   $q->execute([$contractId,$agencyId]);$row=$q->fetch(PDO::FETCH_ASSOC);
   if(!$row)throw new AuthException(404,'قرارداد یافت نشد.','NOT_FOUND');
   if($row['rendered_html']){
@@ -586,16 +586,15 @@ HTML;
   $data=self::data($pdo,$agencyId,$kind,(int)$row['party_id']);
   $total=(int)round((float)$row['amount']);
   $months=$kind==='parent'?(preg_match('/ابتدایی|دبستان|primary|elementary/u',(string)($data['schoolType']??'').(string)($data['grade']??''))?8.5:9):0;
-  $values=$data+['contractNo'=>self::persian((string)($row['contract_no']??'—')),'issueDate'=>'نامشخص',
+  $values=$data+['contractNo'=>self::persian((string)($row['contract_no']??'—')),'issueDate'=>$row['issued_at']?self::jalali((string)$row['issued_at']):'نامشخص',
    'startDate'=>self::jalali((string)($row['start_date']??'')),
    'endDate'=>self::jalali((string)($row['end_date']??'')),
    'durationMonths'=>self::persian((string)$months),
    'totalAmount'=>self::persian(number_format($total,0,'.',',')),
    'payment40'=>self::persian(number_format((int)round($total*.4),0,'.',',')),
    'payment20'=>self::persian(number_format((int)round($total*.2),0,'.',','))];
-  $warning='<p class="contract-warning">نسخه بازسازی‌شده از اطلاعات فعلی سامانه؛ اصل قالب و محتوای زمان صدور این قرارداد قدیمی در آرشیو موجود نیست و این نسخه جایگزین نسخه اصلی نیست.</p>';
+  // Reprint without a modal/warning banner; reconstruction provenance remains in API metadata.
   $html=self::document(self::template($pdo,$kind)['body_html'],$values);
-  $html=preg_replace('/(<body[^>]*>)/','$1'.$warning,$html,1)??$html;
   return ['html'=>$html,'contractNo'=>$row['contract_no'],'legacyReconstructed'=>true];
  }
 }
