@@ -969,7 +969,17 @@ if($resource==='ledger'&&!in_array('company_account_id',thisColumns('ledger_entr
     $driverChanged||$sourceChanged,$driverChanged||$sourceChanged);
   }
   if($resource==='services'&&isset($data['is_active']))self::syncStudentStatus($pdo,$aid,$id,(int)$data['is_active']===1);
-  if($resource==='students'&&isset($data['is_active'])&&(int)$data['is_active']===0)self::releaseStudent($pdo,$uid,$aid,$id);
+  if($resource==='students'&&isset($data['is_active'])){
+   if((int)$data['is_active']===0)self::releaseStudent($pdo,$uid,$aid,$id);
+   elseif($id&&(int)($existing['is_active']??1)===0){
+    // Deactivation removes assignments and marks the student cancelled. Restoring
+    // only is_active leaves the student invisible in every service picker.
+    $linked=$pdo->prepare("SELECT COUNT(*) FROM service_students ss JOIN services sv ON sv.id=ss.service_id WHERE ss.student_id=? AND sv.agency_id=? AND sv.is_active=1 AND sv.status<>'cancelled'");
+    $linked->execute([$id,$aid]);
+    $pdo->prepare('UPDATE students SET service_status=? WHERE id=? AND agency_id=?')
+     ->execute([(int)$linked->fetchColumn()>0?'assigned':'waiting',$id,$aid]);
+   }
+  }
   $s=$pdo->prepare('SELECT * FROM '.$c['table'].' WHERE id=:id AND agency_id=:agency');$s->execute(['id'=>$id,'agency'=>$aid]);$row=$s->fetch();if(!$row)throw new AuthException(404,'رکورد پیدا نشد.','NOT_FOUND');self::activity($pdo,$aid,$uid,$wasCreate?'create':'update',$c['table'],$id);return $row;
  }
  private static function validateRelations(\PDO $pdo,int $aid,string $table,array $data): void {
