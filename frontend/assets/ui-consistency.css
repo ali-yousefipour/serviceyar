@@ -180,6 +180,30 @@
  #app.sy-portal-mode .portal-photo-form :is(button,input[type=file]){width:100%;}
  #app .sy-invoice-table :is(th,td){font-size:var(--sy-ui-small);}
 }
+/* Audit fixes for legacy ultra-small 9–10px UI labels. Restrict to screens;
+   preserve printed reports and the intentionally scaled Iranian plate artwork. */
+@media screen{
+ #login .sy-login-method-tab,
+ #login .sy-recovery-channel{font-size:13px!important;line-height:1.65!important;}
+ #login :is(.sy-login-bot-return,.sy-login-otp-message,.login-copyright){
+  font-size:12px!important;line-height:1.7!important;
+ }
+ #app .sy-admin-metric small,#app .sy-admin-eyebrow,
+ #app .sy-admin-companies-panel>header>a{
+  font-family:var(--sy-ui-font);font-size:12px!important;line-height:1.75;
+ }
+ #app .sy-admin-page-card :is(.status-active,.status-inactive),
+ #app .sy-admin-page-card :is(th,td){font-size:13px!important;line-height:1.75;}
+ #app .sy-ledger-report-page-panel .ledger-report-table :is(th,td){
+  font-family:var(--sy-ui-font);font-size:12px!important;line-height:1.75;
+ }
+ #app .sy-ledger-report-page-panel :is(.table-wrap,.sy-ledger-report-table-wrap){
+  max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;
+ }
+ #app .sy-service-status,#app .sy-service-identity small{
+  font-size:12px;line-height:1.65;
+ }
+}
 @media (prefers-reduced-motion:reduce){
  #app :is(button,a,input,select,textarea){scroll-behavior:auto;transition:none;}
 }
