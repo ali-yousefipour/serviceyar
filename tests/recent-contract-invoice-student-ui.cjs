@@ -17,6 +17,9 @@ assert.match(reconciliation, /c\.agency_id=\? AND c\.party_type='student' AND c\
 assert.match(reconciliation, /i\.agency_id=\? AND i\.party_type='student' AND i\.party_id IN \(\$marks\)/, 'Invoice lookup must remain tenant scoped');
 assert.match(reconciliation, /\$contracts=\$contractsByStudent\[\$sid\]\?\?\[\]/, 'Reconciliation must return contracts per student');
 assert.match(reconciliation, /\$invoices=\$invoicesByStudent\[\$sid\]\?\?\[\]/, 'Reconciliation must return invoices per student');
+assert.match(reconciliation, /strlen\(\$studentFilter\)>240/, 'Student search must enforce an input size bound');
+assert.match(reconciliation, /str_replace\(\['!','%','_'\],\['!!','!%','!_'\],\$studentFilter\)/, 'LIKE wildcard characters must be escaped');
+assert.match(reconciliation, /LIKE \? ESCAPE '!'/, 'Student search must use the matching SQL LIKE escape clause');
 
 
 assert.match(solar, /closest\('dialog\[open\]'\)/, 'Calendar must detect a native modal dialog');
