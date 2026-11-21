@@ -54,6 +54,7 @@ final class PayrollWorkbook
             header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             header('Content-Disposition: attachment; filename="payroll-'.$id.'.xlsx"');
             header('Cache-Control: no-store');
+            header('Content-Length: '.filesize($path));
             readfile($path);
         } finally {
             unlink($path);
@@ -92,6 +93,7 @@ final class PayrollWorkbook
             header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             header('Content-Disposition: attachment; filename="payroll-standard-'.$id.'.xlsx"');
             header('Cache-Control: no-store');header('X-Content-Type-Options: nosniff');
+            header('Content-Length: '.filesize($tmp));
             readfile($tmp);
         }finally{@unlink($tmp);}
         exit;
