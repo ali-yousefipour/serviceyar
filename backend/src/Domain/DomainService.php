@@ -1052,10 +1052,10 @@ if($resource==='ledger'&&!in_array('company_account_id',thisColumns('ledger_entr
     [$table,$column]=json_decode($ref,true);
     if($table==='students'||!isset($columns[$table][$column]))continue;
     if(!preg_match('/^[a-zA-Z0-9_]+$/D',$table)||!preg_match('/^[a-zA-Z0-9_]+$/D',$column))continue;
-    $where='\`'.$column.'\`=?';
+    $where='`'.$column.'`=?';
     if($table==='contracts'||$table==='invoices'||$table==='ledger_entries')$where.=" AND party_type='student'";
     if(isset($columns[$table]['agency_id']))$where.=" AND agency_id=?";
-    $check=$pdo->prepare("SELECT 1 FROM \`".$table."\` WHERE ".$where." LIMIT 1");
+    $check=$pdo->prepare("SELECT 1 FROM `".$table."` WHERE ".$where." LIMIT 1");
     $check->execute(isset($columns[$table]['agency_id'])?[$id,$aid]:[$id]);
     if($check->fetchColumn())throw new AuthException(409,'حذف دائمی ممکن نیست؛ این دانش‌آموز دارای اطلاعات مرتبط یا سوابق مالی است. ابتدا وابستگی‌ها را بررسی کنید.','STUDENT_HAS_DEPENDENCIES');
    }
