@@ -290,7 +290,17 @@ async function boot(){try{const authStatus=await api('/api/v1/auth/status');if(!
  }return;
 }window.serviceyarPortalActive=false;$('app').classList.remove('sy-portal-mode');
 const accountMenu=document.getElementById('syAccountMenu');if(accountMenu)accountMenu.hidden=false;
-syncSessionAgencyContext();const isSuperAdmin=isPlatformAdminSession();const route=location.hash.slice(1).split('/')[0];if(session.impersonation){if(route.startsWith('admin-')||route==='companies'||route==='admin')history.replaceState(history.state,'',location.pathname+location.search+'#dashboard');}else if(isSuperAdmin&&!route.startsWith('admin-')){history.replaceState(history.state,'',location.pathname+location.search+'#admin-dashboard');}window.serviceyarSessionActive=true;window.serviceyarPublic?.hide();renderNav();$('login').hidden=true;$('app').hidden=false;render()}catch(e){session=null;agencies=[];currentAgency=null;window.serviceyarSessionActive=false;window.serviceyarPortalActive=false;$('app').classList.remove('sy-portal-mode');$('app').hidden=true;await window.serviceyarPublic?.show()}}
+syncSessionAgencyContext();const isSuperAdmin=isPlatformAdminSession();const route=location.hash.slice(1).split('/')[0];if(session.impersonation){if(route.startsWith('admin-')||route==='companies'||route==='admin')history.replaceState(history.state,'',location.pathname+location.search+'#dashboard');}else if(isSuperAdmin&&!route.startsWith('admin-')){history.replaceState(history.state,'',location.pathname+location.search+'#admin-dashboard');}window.serviceyarSessionActive=true;window.serviceyarPublic?.hide();renderNav();$('login').hidden=true;$('app').hidden=false;render()}catch(e){
+ if(session&&String(e.message||'').includes('بارگذاری بخش عملیاتی سامانه ناموفق بود')){
+  window.serviceyarSessionActive=true;
+  window.serviceyarPublic?.hide();
+  $('app').hidden=false;$('login').hidden=true;
+  $('content').innerHTML='<section class="panel"><h2>بارگذاری کامل نشد</h2><p class="error">'+esc(e.message)+'</p><button type="button" id="retryOperationsLoad" class="primary">تلاش مجدد برای بارگذاری</button></section>';
+  $('retryOperationsLoad').onclick=()=>void boot();
+  return;
+ }
+ session=null;agencies=[];currentAgency=null;window.serviceyarSessionActive=false;window.serviceyarPortalActive=false;$('app').classList.remove('sy-portal-mode');$('app').hidden=true;await window.serviceyarPublic?.show();
+}}
 // Remove legacy credential query parameters before any app routing or navigation.
 (function clearLeakedLoginQuery(){
  const params=new URLSearchParams(location.search);
