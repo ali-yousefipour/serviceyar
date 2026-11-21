@@ -33,6 +33,8 @@ jobs:
           node tests/auth-screen-isolation.cjs
           node tests/login-username-normalization.cjs
           node tests/sepand-schema-ui.cjs
+          node --check frontend/assets/task-progress.js
+          node tests/task-progress.cjs
           node --check frontend/assets/operations.js
           node tests/admin-impersonation-contract.cjs
           node tests/admin-driver-preview-contract.cjs
