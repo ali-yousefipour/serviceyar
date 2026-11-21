@@ -9,6 +9,7 @@ const sms=read('backend/src/Auth/SmsLogin.php');
 const recovery=read('backend/src/Auth/PasswordRecovery.php');
 const policy=read('backend/src/Auth/LoginMethods.php');
 const queue=read('backend/src/Integrations/SmsQueue.php');
+const companySettings=read('backend/src/Settings/SettingsService.php');
 const ui=read('frontend/assets/login-methods.js');
 const css=read('frontend/assets/filter-consistency.css');
 for(const key of ['kavenegar_api_key_enc','kavenegar_sender','kavenegar_enabled'])assert.ok(client.includes(key),'Missing Kavenegar setting '+key);
@@ -29,6 +30,8 @@ assert.ok(api.includes('KavenegarSms::configure')&&api.includes('SmsProvider::co
 assert.ok(sms.includes('(new SmsProvider())->send')&&recovery.includes('(new SmsProvider())->send'),'All OTP and recovery sends use selected provider');
 assert.ok(policy.includes('$smsReady=SmsProvider::ready()'),'Login method readiness matches active provider');
 assert.ok(queue.includes('new SmsProvider()'),'Queued SMS must respect selected provider');
+for(const key of ['kavenegar_api_key_enc','kavenegar_sender','kavenegar_enabled','sms_provider_selected'])
+ assert.ok(companySettings.includes("'"+key+"'"),'Company settings must reject super-admin-only SMS key: '+key);
 assert.ok(ui.includes('syAdminKavenegarSms')&&ui.includes('/api/v1/admin/kavenegar-sms'),'Kavenegar UI is accessible from super admin');
 assert.ok(ui.includes('/api/v1/admin/sms-provider-selection')&&ui.includes("X-CSRF-Token"),'Active SMS selector must use CSRF');
 assert.ok(css.includes('.sy-sms-provider-grid')&&css.includes('max-width:480px'),'Provider UI is compact and responsive');
