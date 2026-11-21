@@ -1,0 +1,95 @@
+/* Cross-module search/filter audit: compact, readable RTL layouts.
+   Prefer existing filter semantics; no API or submit behavior changes. */
+@media screen{
+ #app :is(.filters,.directory-filters,.service-filters,.service-filter-fields,
+     .sy-operation-filters,.report-filters,.ledger-filters,.accounting-filters,
+     .sy-invoice-filters,.sy-invoice-filter-v2,.portal-debtors-filters){
+   --sy-filter-gap:clamp(8px,1vw,12px);
+   box-sizing:border-box;
+   gap:var(--sy-filter-gap);
+   padding:clamp(10px,1.25vw,15px);
+   margin-block:0 12px;
+   min-width:0;max-width:100%;
+   border-radius:14px;
+ }
+ #app :is(.filters,.directory-filters,.service-filters,.sy-operation-filters,
+     .report-filters,.ledger-filters,.sy-invoice-filters,.portal-debtors-filters)
+ :is(label,fieldset){
+   min-width:0;max-width:100%;
+   gap:5px;
+   font-size:13px;
+   line-height:1.55;
+ }
+ #app :is(.filters,.directory-filters,.service-filters,.sy-operation-filters,
+     .report-filters,.ledger-filters,.sy-invoice-filters,.portal-debtors-filters)
+ :is(input:not([type=checkbox]):not([type=radio]),select){
+   box-sizing:border-box;
+   min-width:0;max-width:100%;
+   min-height:42px;
+   padding:8px 11px;
+   border-radius:10px;
+   font-family:Vazirmatn,Tahoma,sans-serif;
+   font-size:14px;
+   line-height:1.5;
+ }
+ #app :is(.filters,.directory-filters,.service-filters,.sy-operation-filters,
+     .report-filters,.ledger-filters,.sy-invoice-filters,.portal-debtors-filters)
+ :is(button,[role=button]){
+   min-height:42px;
+   padding:8px 12px;
+   border-radius:10px;
+   font-size:13px;
+   line-height:1.5;
+   white-space:normal;
+ }
+ #app :is(.filters,.directory-filters,.service-filters,.sy-operation-filters,
+     .report-filters,.ledger-filters,.sy-invoice-filters,.portal-debtors-filters)
+ :is(input,select,button):focus-visible{
+   outline:3px solid #b99344;outline-offset:2px;
+ }
+ #app :is(.filters,.directory-filters,.service-filters,.sy-operation-filters,
+     .report-filters,.ledger-filters,.sy-invoice-filters,.portal-debtors-filters)
+ :is(.filter-actions,.directory-filter-actions,.sy-invoice-filter-actions,.service-filter-actions){
+   display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+ }
+ #app .sy-sms-provider-panel{
+   padding:clamp(12px,1.5vw,18px);
+   display:grid;gap:12px;
+ }
+ #app .sy-sms-provider-form,
+ #app .sy-sms-choice-form{display:grid;gap:10px;max-width:100%;min-width:0;}
+ #app .sy-sms-provider-grid{
+   display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
+ }
+ #app .sy-sms-choice-form select{
+   width:100%;max-width:420px;min-height:44px;font:600 14px Vazirmatn,Tahoma,sans-serif;
+   border:1px solid #c8dcd0;border-radius:11px;padding:8px 11px;background:#fff;
+ }
+ #app .sy-provider-doc-link{
+   width:max-content;max-width:100%;font-size:13px;line-height:1.7;
+   color:#095e43;text-decoration:underline;text-underline-offset:3px;
+ }
+}
+@media screen and (min-width:761px){
+ #app :is(.directory-filters,.sy-operation-filters,.report-filters,.ledger-filters){
+   column-gap:10px;row-gap:10px;
+ }
+}
+@media screen and (max-width:760px){
+ #app :is(.filters,.directory-filters,.service-filters,.sy-operation-filters,
+     .report-filters,.ledger-filters,.sy-invoice-filters,.portal-debtors-filters){
+   padding:12px;gap:10px;
+ }
+ #app .sy-sms-provider-grid{grid-template-columns:minmax(0,1fr);}
+ #app :is(.directory-filters,.report-filters,.ledger-filters,.sy-operation-filters)
+ :is(input,select){width:100%;}
+}
+@media screen and (max-width:480px){
+ #app :is(.filters,.directory-filters,.service-filters,.sy-operation-filters,
+     .report-filters,.ledger-filters,.sy-invoice-filters,.portal-debtors-filters){
+   padding:10px;gap:8px;margin-bottom:10px;
+ }
+ #app :is(.directory-filters,.report-filters,.ledger-filters,.sy-operation-filters)
+ :is(.filter-actions,.directory-filter-actions) button{flex:1 1 110px;}
+ #app .sy-sms-choice-form button,#app .sy-sms-provider-form button.primary{width:100%;}
+}
