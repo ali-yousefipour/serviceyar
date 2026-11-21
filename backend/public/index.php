@@ -1003,6 +1003,13 @@ try {
   header('Cache-Control: no-store');
   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\ContractDocuments::printable($s['id'],$aid,(int)$match[1])]);
  }
+ if($method==='DELETE'&&preg_match('#^/api/v1/students/(\\d+)/permanent$#',$path,$studentDeleteMatch)){
+  $auth->requireCsrf($s);
+  $body=Request::json();
+  if(($body['confirmation']??'')!=='DELETE_STUDENT_PERMANENTLY')throw new AuthException(422,'تأیید حذف دائمی الزامی است.','CONFIRMATION_REQUIRED');
+  DomainService::permanentlyDeleteStudent($s['id'],$aid,(int)$studentDeleteMatch[1]);
+  Response::json(['ok'=>true,'data'=>['deletedPermanently'=>true]]);
+ }
  $domainMap=['schools','students','drivers','vehicles','services','packs','contracts','driver-work','driver-payments','school-charges','service-charges','invoices','payments','accounts','accounting-documents','wallets','messages','driver-changes','ledger','driver-ratings','parent-reports'];
  foreach($domainMap as $resource){
   $base='/api/v1/'.$resource;
