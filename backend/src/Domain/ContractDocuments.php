@@ -635,15 +635,25 @@ HTML;
    return true;
   });
  }
+ /** Mark reconstructed printouts visibly without changing persisted issuance snapshots. */
+ private static function markReconstructed(string $html): string {
+  if(str_contains($html,'نسخه بازسازی‌شده'))return $html;
+  $notice='<p class="contract-provenance" dir="rtl" style="font-size:11px;text-align:center;margin:12px 0">نسخه بازسازی‌شده از اطلاعات موجود؛ این سند تصویر نسخه اصلی امضاشده نیست.</p>';
+  if(str_contains($html,'</body>'))return str_replace('</body>',$notice.'</body>',$html);
+  return $html.$notice;
+ }
  public static function printable(int $uid,int $agencyId,int $contractId): array {
   self::scope($uid,$agencyId);$pdo=Connection::get();self::ensureSchema($pdo);
-  $q=$pdo->prepare('SELECT id,contract_no,rendered_html,issued_at,party_type,party_id,start_date,end_date,amount FROM contracts WHERE id=? AND agency_id=?');
+  $q=$pdo->prepare('SELECT id,contract_no,rendered_html,snapshot_json,issued_at,party_type,party_id,start_date,end_date,amount FROM contracts WHERE id=? AND agency_id=?');
   $q->execute([$contractId,$agencyId]);$row=$q->fetch(PDO::FETCH_ASSOC);
   if(!$row)throw new AuthException(404,'قرارداد یافت نشد.','NOT_FOUND');
   if($row['rendered_html']){
-   // Presentation only: preserve stored snapshots and the distinction from original signed documents.
-   $html=str_replace(['<p class="contract-warning">نسخه چاپی تهیه‌شده از قرارداد ثبت‌شده در مهاجرت اطلاعات و مشخصات موجود در زمان بازسازی؛ تاریخ درج‌شده تاریخ ثبت سامانه است، نه گواهی امضای قرارداد.</p>','<p class="contract-provenance">نسخه بازسازی‌شده؛ تاریخ ثبت سامانه.</p>'],'',$row['rendered_html']);
-   return ['html'=>$html,'contractNo'=>$row['contract_no'],'legacyReconstructed'=>false];
+   $snapshot=json_decode((string)($row['snapshot_json']??''),true);
+   $reconstructed=is_array($snapshot)&&($snapshot['source']??'')==='sql_import_reconstruction';
+   // Do not alter an archived document in storage. Label reconstructed copies
+   // only in the returned print view, never as an original signed issuance.
+   $html=$reconstructed?self::markReconstructed((string)$row['rendered_html']):(string)$row['rendered_html'];
+   return ['html'=>$html,'contractNo'=>$row['contract_no'],'legacyReconstructed'=>$reconstructed];
   }
   // Existing records before versioned issuance have no historical content.
   // Provide an explicitly watermarked reconstruction, never claim it is the
@@ -660,8 +670,8 @@ HTML;
    'totalAmount'=>self::persian(number_format($total,0,'.',',')),
    'payment40'=>self::persian(number_format((int)round($total*.4),0,'.',',')),
    'payment20'=>self::persian(number_format((int)round($total*.2),0,'.',','))];
-  // Reprint without a modal/warning banner; reconstruction provenance remains in API metadata.
-  $html=self::document(self::template($pdo,$kind)['body_html'],$values);
+  // The current-data reconstruction must remain distinguishable from an original.
+  $html=self::markReconstructed(self::document(self::template($pdo,$kind)['body_html'],$values));
   return ['html'=>$html,'contractNo'=>$row['contract_no'],'legacyReconstructed'=>true];
  }
 }
