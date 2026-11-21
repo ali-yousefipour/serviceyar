@@ -23,7 +23,7 @@ assert.ok(provider.includes("config('NEGIN_SMS_USERNAME'")&&provider.includes("c
 assert.ok(provider.includes('SMS_CREDENTIALS_PAIR_REQUIRED'),'credential rotation requires username and password together');
 assert.ok(provider.includes('beginTransaction()')&&provider.includes('rollBack()'),'credential updates are atomic');
 assert.ok(routes.includes("'/api/v1/admin/sms-provider'")&&routes.includes('NeginSms::configure'),'admin SMS provider API is registered');
-assert.ok(policy.includes('$smsReady=NeginSms::ready();'),'login methods use the same provider readiness check');
+assert.ok(policy.includes('$smsReady=SmsProvider::ready();'),'login methods use the same provider readiness check');
 assert.ok(ui.includes('syAdminNeginSms'),'super admin page mounts the Negin SMS settings panel');
 assert.ok(ui.includes('/api/v1/admin/sms-provider'),'settings panel reads and saves provider settings');
 assert.ok(ui.includes('X-CSRF-Token'),'provider settings writes are protected by CSRF');
