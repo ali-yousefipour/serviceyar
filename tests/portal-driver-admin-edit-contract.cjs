@@ -19,7 +19,7 @@ assert.match(portal,/portalVehicleForm/,'Car change form is present');
 assert.match(portal,/portalPhotoForm/,'Portrait uploader is present');
 assert.match(portal,/driverPortraitEndpoint\(\)/,'Driver portrait endpoints used');
 assert.match(portal,/info=1/,'Portrait loading verifies availability');
-assert.match(portal,/method:'POST',body/,'Photo posts multipart data');
+assert.match(portal,/ServiceYarLoading\.upload\(endpoint,body/,'Photo sends FormData through the shared multipart upload transport');
 assert.match(portal,/csrf=adminAuth\.csrfToken/,'Admin editing uses its own CSRF credential');
 assert.match(portal,/async function mountAdminInspection/,'Admin mount waits for its CSRF');
 assert.match(portal,/impersonated&&current\.portalType==='parent'\?'مشاهده مشخصات'/,'Parent menu remains view-only');
