@@ -11,7 +11,8 @@ assert.match(main,/function ensureOperationsModule\(\)/, 'Operations must expose
 assert.match(main,/operationsModulePromise=new Promise/, 'Concurrent private routes must share a promise');
 assert.match(main,/script\.src='\/assets\/operations\.js'/, 'Large operational script must be fetched only when required');
 assert.match(main,/script\.onerror=\(\)=>\{[\s\S]*operationsModulePromise=null/, 'A loading failure must allow retry');
-assert.match(main,/session=await api\('\/api\/v1\/auth\/me'\);await ensureOperationsModule\(\)/, 'Restored session must load operations before rendering');
+assert.match(main,/session=await api\('\/api\/v1\/auth\/me'\);if\(\(session\.roles/, 'Restore must identify portal sessions before heavy loading');
+assert.match(main,/\}await ensureOperationsModule\(\);window\.serviceyarPortalActive=false/, 'Management sessions load the operations bundle before rendering');
 assert.match(main,/session=\{\.\.\.session,\.\.\.m\};await ensureOperationsModule\(\)/, 'Password login must load operations before rendering');
 assert.ok(operations.includes('function render(){'), 'Operational renderer must remain intact');
 console.log('Authenticated-only operations lazy-loading contracts: OK');
