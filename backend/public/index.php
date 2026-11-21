@@ -754,7 +754,7 @@ try {
  if($method==='POST'&&$path==='/api/v1/operations/installments'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\InstallmentPlan::create($s['id'],$aid,Request::json())],201);}
  if($method==='POST'&&$path==='/api/v1/operations/installments/preview'){$auth->requireCsrf($s);Authorization::requireAgencyAccess($s['id'],$aid);Authorization::requirePermission($s['id'],'finance.view');Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\InstallmentPlan::preview(Request::json())]);}
  if($method==='GET'&&$path==='/api/v1/maps/config'){Authorization::requireAgencyAccess($s['id'],$aid);Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\Neshan::config($aid)]);}
- if($method==='GET'&&$path==='/api/v1/integrations/status'){Authorization::requirePermission($s['id'],'settings.view');Response::json(['ok'=>true,'data'=>['sms'=>\ServiceYar\Integrations\NeginSms::configured(),'bale'=>\ServiceYar\Integrations\BaleClient::configured(),'google'=>config('GOOGLE_MAPS_SERVER_KEY','')!=='','osm'=>true]]);}
+ if($method==='GET'&&$path==='/api/v1/integrations/status'){Authorization::requirePermission($s['id'],'settings.view');Response::json(['ok'=>true,'data'=>['sms'=>\ServiceYar\Integrations\SmsProvider::configured(),'bale'=>\ServiceYar\Integrations\BaleClient::configured(),'google'=>config('GOOGLE_MAPS_SERVER_KEY','')!=='','osm'=>true]]);}
  if($method==='POST'&&in_array($path,['/api/v1/maps/search','/api/v1/maps/reverse'],true)){$auth->requireCsrf($s);Authorization::requireAgencyAccess($s['id'],$aid);if(!array_intersect(['students.manage','schools.manage'],Authorization::permissions($s['id'])))throw new AuthException(403,'برای انتخاب موقعیت دسترسی ندارید.','FORBIDDEN');$body=Request::json();$result=$path==='/api/v1/maps/search'?\ServiceYar\Integrations\Neshan::search($aid,$body):\ServiceYar\Integrations\Neshan::reverse($aid,$body);Response::json(['ok'=>true,'data'=>$result]);}
  if($method==='POST'&&$path==='/api/v1/maps/route'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>MapService::route($s['id'],$aid,Request::json())]);}
  if($method==='GET'&&preg_match('#^/api/v1/services/(\d+)/map$#',$path,$m))Response::json(['ok'=>true,'data'=>MapService::points($s['id'],$aid,(int)$m[1])]);
@@ -843,6 +843,14 @@ try {
    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SepandRegistryImport::run(
     $s['id'],['drivers'=>$_FILES['drivers']??[],'vehicles'=>$_FILES['vehicles']??[]],
     $apply,$binding,(string)($_POST['digest']??''))]);
+ }
+ if($path==='/api/v1/admin/kavenegar-sms'){
+  if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\KavenegarSms::overview((int)$s['id'])]);
+  if($method==='PUT'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\KavenegarSms::configure((int)$s['id'],Request::json())]);}
+ }
+ if($path==='/api/v1/admin/sms-provider-selection'){
+  if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\SmsProvider::overview((int)$s['id'])]);
+  if($method==='PUT'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\SmsProvider::configure((int)$s['id'],Request::json())]);}
  }
  if($path==='/api/v1/admin/sms-provider'){
   if($method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Integrations\NeginSms::overview((int)$s['id'])]);
