@@ -13,6 +13,7 @@ assert.match(main,/script\.src='\/assets\/operations\.js'/, 'Large operational s
 assert.match(main,/script\.onerror=\(\)=>\{[\s\S]*operationsModulePromise=null/, 'A loading failure must allow retry');
 assert.match(main,/session=await api\('\/api\/v1\/auth\/me'\);if\(\(session\.roles/, 'Restore must identify portal sessions before heavy loading');
 assert.match(main,/\}await ensureOperationsModule\(\);window\.serviceyarPortalActive=false/, 'Management sessions load the operations bundle before rendering');
-assert.match(main,/session=\{\.\.\.session,\.\.\.m\};await ensureOperationsModule\(\)/, 'Password login must load operations before rendering');
+assert.match(main,/session=\{\.\.\.session,\.\.\.m\};[\s\S]*?window\.serviceyarPortal\.mount\(session\)/, 'Portal password login must mount without loading admin operations');
+assert.match(main,/await ensureOperationsModule\(\);syncSessionAgencyContext\(\)/, 'Management password login must load operations before rendering');
 assert.ok(operations.includes('function render(){'), 'Operational renderer must remain intact');
 console.log('Authenticated-only operations lazy-loading contracts: OK');
