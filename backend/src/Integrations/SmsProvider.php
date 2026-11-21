@@ -36,9 +36,15 @@ final class SmsProvider
     {
         if(!Authorization::isSuperAdmin($actor))
             throw new AuthException(403,'تنظیمات درگاه پیامک فقط در اختیار ادمین کل است.','SUPER_ADMIN_REQUIRED');
+        // One provider with a damaged encrypted credential must not prevent
+        // the admin from repairing or selecting the other ready provider.
+        try{$negin=NeginSms::overview($actor);}
+        catch(AuthException $e){$negin=['enabled'=>false,'credentialsConfigured'=>false,'ready'=>false,'configurationError'=>true];}
+        try{$kavenegar=KavenegarSms::overview($actor);}
+        catch(AuthException $e){$kavenegar=['enabled'=>false,'credentialsConfigured'=>false,'ready'=>false,'configurationError'=>true];}
         return [
             'selected'=>self::selected(),
-            'providers'=>['negin'=>NeginSms::overview($actor),'kavenegar'=>KavenegarSms::overview($actor)],
+            'providers'=>['negin'=>$negin,'kavenegar'=>$kavenegar],
             'ready'=>self::ready()
         ];
     }
