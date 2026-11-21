@@ -10,6 +10,7 @@ const styles=get('frontend/assets/ui-consistency.css');
 const theme=get('frontend/assets/brand-theme.css');
 const vendor=get('frontend/assets/leaflet.css');
 assert.ok(html.includes('ui-consistency.css?v=__BUILD_ID__'), 'Shared UI styles must be released with the build identifier');
+assert.ok(html.includes('rel="preload" href="/assets/Vazirmatn-Regular.woff2?v=20261014-1" as="font" type="font/woff2" crossorigin'), 'The locally served font should be preloaded for first paint');
 assert.ok(html.indexOf('ui-consistency.css')>html.indexOf('brand-theme.css'),'Shared UI overrides must follow the institutional theme');
 assert.ok(html.indexOf('ui-consistency.css')>html.indexOf('portal.css'),'Shared UI overrides must follow portal styles');
 assert.match(base,/@font-face\{font-family:Vazirmatn;[^}]+font-weight:400;/,'Bundled static Vazirmatn must not claim to be a variable weight font');
