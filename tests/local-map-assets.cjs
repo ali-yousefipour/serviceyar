@@ -21,6 +21,9 @@ assert.match(html,/src="\/assets\/leaflet\.js/, 'Leaflet already hosted locally'
 assert.match(html,/href="\/assets\/leaflet\.css/, 'Leaflet CSS already hosted locally');
 assert.match(operations,/\/assets\/html2pdf\.bundle\.min\.js/, 'PDF bundle must remain same-origin');
 assert.match(deploy,/python3 tools\/vendor_neshan_sdk\.py deploy-payload\/assets\/vendor\/neshan\/v1\.0\.8/, 'Deploy must stage actual SDK content');
+assert.ok(deploy.includes("script-src 'self'; connect-src 'self' https://*.neshan.org; style-src 'self';"), 'Production CSP must not allow remote CDN scripts or styles');
+assert.ok(deploy.includes('X-Content-Type-Options "nosniff"'), 'Static resources must carry nosniff');
+assert.ok(deploy.includes('Referrer-Policy "strict-origin-when-cross-origin"'), 'External links should not leak page query parameters');
 assert.match(deploy,/test -s deploy-payload\/assets\/vendor\/neshan\/v1\.0\.8\/index\.js/, 'Deploy must fail if SDK JS missing');
 assert.match(deploy,/test -s deploy-payload\/assets\/vendor\/neshan\/v1\.0\.8\/index\.css/, 'Deploy must fail if SDK CSS missing');
 assert.match(vendor,/static\.neshan\.org/, 'Source for the pinned SDK must be explicit');
