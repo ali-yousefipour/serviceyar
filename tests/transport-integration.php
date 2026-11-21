@@ -37,6 +37,13 @@ try{
  rejected(fn()=>\ServiceYar\Integrations\SmsProvider::configure($viewer,['provider'=>'kavenegar']),'SUPER_ADMIN_REQUIRED');
  rejected(fn()=>\ServiceYar\Integrations\KavenegarSms::overview($viewer),'SUPER_ADMIN_REQUIRED');
  rejected(fn()=>\ServiceYar\Settings\SettingsService::put($uid,$a,['sms_provider_selected'=>'kavenegar']),'SUPER_ADMIN_REQUIRED');
+ // Old tenant settings may contain reserved keys created before validation.
+ // Such values must never be returned even when legacy is_secret=0.
+ $p->prepare('INSERT INTO agency_settings(agency_id,setting_key,setting_value,is_secret) VALUES(?,?,?,0)')
+  ->execute([$a,'kavenegar_api_key_enc','DO_NOT_EXPOSE_TEST_SECRET']);
+ $visibleSettings=\ServiceYar\Settings\SettingsService::get($uid,$a);
+ check(!isset($visibleSettings['kavenegar_api_key_enc']),'Legacy tenant SMS secrets are never returned from agency settings');
+
 
  $sepandSchema=\ServiceYar\Domain\SepandSchemaMaintenance::status($uid);
  check($sepandSchema['ready']===true&&$sepandSchema['missingColumns']===[],
