@@ -26,6 +26,7 @@ assert.match(styles,/#app \.sy-admin-page-heading/, 'Super-admin section heading
 assert.match(styles,/#app \.sy-admin-page-card :is\(th,td\)/, 'Mobile admin cells must keep readable sizes');
 assert.ok(styles.includes('.table-wrap:has(thead th:nth-child(5)) table{min-width:max(42rem,100%);}'), 'Only genuinely wide admin tables should scroll on mobile');
 assert.match(styles,/#app\.sy-portal-mode \.portal-panel :is\(th,td\)/, 'Parent and driver tables must share the readable type scale');
+assert.ok(styles.includes('--portal-accent:var(--sy-primary,#095e43)'), 'Parent and driver portal must inherit institutional green palette');
 assert.match(styles,/#app \.sy-invoice-table :is\(th,td\)/, 'Invoice tables must share the readable type scale');
 assert.match(styles,/#app \.solar-date-field/, 'Jalali calendar controls must fit narrow screens');
 assert.match(styles, /@media screen and \(max-width:760px\)/, 'Mobile responsive design at tablet breakpoint is missing');
