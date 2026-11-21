@@ -13,10 +13,13 @@
    target.textContent=msg;target.className=msg?(error?'visible error':'visible'):'';
  };
  async function api(path,body,verb='GET'){
-   const r=await fetch(path,{method:verb,credentials:'same-origin',headers:{Accept:'application/json',...(body?{'Content-Type':'application/json'}:{}),...(csrf&&verb!=='GET'?{'X-CSRF-Token':csrf}:{})},...(body?{body:JSON.stringify(body)}:{})});
-   const j=await r.json().catch(()=>({}));
-   if(!r.ok||!j.ok)throw Error(j.error?.message||'پاسخ سرویس معتبر نیست. دوباره تلاش کنید.');
-   return j.data;
+   const task=window.ServiceYarLoading?.begin(verb==='GET'?'در حال بارگذاری اطلاعات پنل…':'در حال ثبت اطلاعات…');
+   try{
+    const r=await fetch(path,{method:verb,credentials:'same-origin',headers:{Accept:'application/json',...(body?{'Content-Type':'application/json'}:{}),...(csrf&&verb!=='GET'?{'X-CSRF-Token':csrf}:{})},...(body?{body:JSON.stringify(body)}:{})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.ok)throw Error(j.error?.message||'پاسخ سرویس معتبر نیست. دوباره تلاش کنید.');
+    return j.data;
+   }finally{task?.finish();}
  }
  function menuLinks(){
    if(current.portalType==='representative')return [['overview','نمای کلی','◈'],['debtors','گزارش بدهکاران','▦']];
