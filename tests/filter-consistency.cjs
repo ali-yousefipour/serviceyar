@@ -18,6 +18,8 @@ assert.ok(styles.includes('@media screen and (max-width:760px)'), 'Tablet filter
 assert.ok(styles.includes('@media screen and (max-width:480px)'), 'Phone filter breakpoint required');
 assert.ok(styles.includes(':focus-visible'), 'Keyboard navigation must retain focus');
 assert.ok(styles.includes('.sy-sms-provider-grid'), 'SMS provider settings must stay responsive');
+assert.ok(styles.includes('form.filters,.panel>.filters'), 'Search spacing must apply to filters, not every modal and toolbar with generic .filters class');
+assert.ok(!styles.includes(':is(.filters,'), 'Do not expand generic action-row spacing');
 assert.ok(!styles.includes('!important'), 'Filter overlay must avoid competing important declarations');
 assert.ok(operations.includes('.directory-filters')&&operations.includes('.sy-invoice-filters'), 'Existing operational filters must be preserved');
 assert.ok(portal.includes('.portal-debtors-filters'), 'Existing portal debtor filtering must be preserved');
