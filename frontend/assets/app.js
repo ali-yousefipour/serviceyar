@@ -209,10 +209,7 @@ async function companiesPage(){
    const button=event.currentTarget;button.disabled=true;
    try{
     const url='/api/v1/admin/agencies/export.xlsx?'+new URLSearchParams({search:search.value.trim(),status:status.value});
-    const response=await fetch(url,{credentials:'same-origin'});
-    if(!response.ok){const error=await response.json().catch(()=>null);throw new Error(error?.error?.message||'ساخت فایل ناموفق بود.');}
-    const blob=await response.blob(),uri=URL.createObjectURL(blob),link=document.createElement('a');
-    link.href=uri;link.download='serviceyar-agencies.xlsx';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(uri),1000);
+    await window.ServiceYarLoading.download(url,'serviceyar-agencies.xlsx');
    }catch(error){alert(error.message);}finally{button.disabled=false;}
   };
   filters.querySelector('#syAgencyPrint').onclick=()=>{
