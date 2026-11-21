@@ -3037,16 +3037,22 @@ function studentDebtorsPage(token){
   full.after(pdf,pdfStatus);
   pdf.onclick=async()=>{
    const pdfColumns=[...selectedColumns];
+   const task=window.ServiceYarLoading?.begin('ساخت گزارش PDF بدهکاران',{immediate:true});
    pdf.disabled=true;
    pdfStatus.textContent='در حال دریافت بدهکاران مدارس…';
    try{
     const params=new URLSearchParams({academicYear:request().get('academicYear')});
     const report=await api(scoped('/api/v1/operations/debtors?'+params));
     if(!report.items.length){pdfStatus.textContent='در این سال تحصیلی بدهکاری یافت نشد.';return;}
-    await downloadDebtorPdfs(report,(index,count)=>{pdfStatus.textContent='در حال آماده‌سازی مدرسه '+number(index)+' از '+number(count)+'…';},pdfColumns);
+    task?.update({detail:'در حال تبدیل داده‌های مدارس به PDF…'});
+    await downloadDebtorPdfs(report,(index,count)=>{
+     pdfStatus.textContent='در حال آماده‌سازی مدرسه '+number(index)+' از '+number(count)+'…';
+     task?.update({detail:pdfStatus.textContent,percent:count>0?Math.round((index-1)/count*100):null});
+    },pdfColumns);
+    task?.update({detail:'فایل ZIP آماده شد.',percent:100});
     pdfStatus.textContent='فایل ZIP آماده شد.';
    }catch(error){pdfStatus.textContent=error.message||'خطا در ساخت خروجی PDF.';}
-   finally{pdf.disabled=false;}
+   finally{pdf.disabled=false;task?.finish();}
   };
  }
  void loadSchools();return load();
