@@ -510,7 +510,7 @@ HTML;
   $pdo=Connection::get();self::ensureSchema($pdo);
   $q=$pdo->prepare("SELECT id,title,contract_no,party_type,party_id,start_date,end_date,amount,status,issued_at,
     CASE WHEN rendered_html IS NULL OR rendered_html='' THEN 0 ELSE 1 END AS printable
-    FROM contracts WHERE agency_id=? AND party_type=? ORDER BY id DESC LIMIT 250");
+    FROM contracts WHERE agency_id=? AND party_type=? ORDER BY id DESC");
   $q->execute([$agencyId,$kind==='parent'?'student':'driver']);
   return $q->fetchAll(PDO::FETCH_ASSOC);
  }
