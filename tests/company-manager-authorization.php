@@ -49,6 +49,10 @@ try {
   throw new RuntimeException('Expected '.$expected.' rejection');
  };
  $reject(fn()=>UserService::list($manager,$foreignAgency),'SCOPE_FORBIDDEN');
+ // A stale tenant membership must not grant an inactive account access.
+ $p->prepare('UPDATE users SET is_active=0 WHERE id=?')->execute([$manager]);
+ $reject(fn()=>Authorization::requireAgencyAccess($manager,$agency),'SCOPE_FORBIDDEN');
+ $p->prepare('UPDATE users SET is_active=1 WHERE id=?')->execute([$manager]);
  $reject(fn()=>UserService::list($manager,0),'FORBIDDEN');
  $reject(fn()=>UserService::save($manager,$agency,['firstName'=>'not allowed'],$manager),'PROTECTED_USER');
  $p->rollBack();
