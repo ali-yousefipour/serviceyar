@@ -101,6 +101,10 @@ final class KavenegarSms
     /** Convert documented response envelopes; no API key or message data in logs. */
     public static function parseResponse(int $httpStatus,string $body): array
     {
+        // A server-side 5xx may happen after accepting a request.
+        // Never mark that delivery as definitively rejected or auto-retry.
+        if($httpStatus===0||$httpStatus>=500)
+            throw new AuthException(502,'نتیجه ارسال پیامک مشخص نیست؛ وضعیت پنل کاوه‌نگار بررسی شود.','SMS_UNCERTAIN');
         $json=json_decode($body,true);
         if(!is_array($json)||!isset($json['return'])||!is_array($json['return']))
             throw new AuthException(502,'پاسخ سرویس پیامک کاوه‌نگار نامعتبر است.','SMS_PROVIDER_INVALID_RESPONSE');
