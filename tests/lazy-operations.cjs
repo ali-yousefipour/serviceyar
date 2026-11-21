@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const read=p=>fs.readFileSync(p,'utf8');
+const html=read('frontend/index.html');
+const main=read('frontend/assets/app.js');
+const operations=read('frontend/assets/operations.js');
+assert.ok(!html.includes('<script src="/assets/operations.js'), 'Public login page must not request operations by default');
+assert.ok(html.includes('<script src="/assets/app.js'), 'The primary entrypoint must still load');
+assert.match(main,/function ensureOperationsModule\(\)/, 'Operations must expose a one-time authenticated lazy loader');
+assert.match(main,/operationsModulePromise=new Promise/, 'Concurrent private routes must share a promise');
+assert.match(main,/script\.src='\/assets\/operations\.js'/, 'Large operational script must be fetched only when required');
+assert.match(main,/script\.onerror=\(\)=>\{[\s\S]*operationsModulePromise=null/, 'A loading failure must allow retry');
+assert.match(main,/session=await api\('\/api\/v1\/auth\/me'\);await ensureOperationsModule\(\)/, 'Restored session must load operations before rendering');
+assert.match(main,/session=\{\.\.\.session,\.\.\.m\};await ensureOperationsModule\(\)/, 'Password login must load operations before rendering');
+assert.ok(operations.includes('function render(){'), 'Operational renderer must remain intact');
+console.log('Authenticated-only operations lazy-loading contracts: OK');
