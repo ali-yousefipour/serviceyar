@@ -340,9 +340,9 @@
   if(!window.__syPublicNeshanPromise){
    window.__syPublicNeshanPromise=new Promise((resolve,reject)=>{
     const stylesheet=document.createElement('link');stylesheet.rel='stylesheet';
-    stylesheet.href='https://static.neshan.org/sdk/leaflet/v1.9.4/neshan-sdk/v1.0.8/index.css';
+    stylesheet.href='/assets/vendor/neshan/v1.0.8/index.css';
     document.head.append(stylesheet);
-    const script=document.createElement('script');script.src='https://static.neshan.org/sdk/leaflet/v1.9.4/neshan-sdk/v1.0.8/index.js';
+    const script=document.createElement('script');script.src='/assets/vendor/neshan/v1.0.8/index.js';
     script.onload=resolve;script.onerror=()=>reject(new Error('کتابخانه نقشه نشان بارگذاری نشد.'));
     document.head.append(script);
    });
