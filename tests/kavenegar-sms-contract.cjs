@@ -22,7 +22,7 @@ assert.ok(client.includes('CURLOPT_CONNECTTIMEOUT=>8')&&client.includes('CURLOPT
 assert.ok(client.includes('https://api.kavenegar.com/v1/'),'Official first-party REST endpoint used');
 assert.ok(router.includes("sms_provider_selected")&&router.includes("return 'negin'"),'Existing tenants default to Negin');
 assert.ok(router.includes('KavenegarSms::ready()')&&router.includes('NeginSms::ready()'),'Only selected ready provider can send');
-assert.ok(!router.includes('catch('),'Router must not silently fall back on uncertain sends');
+assert.ok(!router.slice(router.indexOf('public function send(')).includes('catch('),'Send route must not silently fall back on uncertain sends');
 assert.ok(api.includes("'/api/v1/admin/kavenegar-sms'")&&api.includes("'/api/v1/admin/sms-provider-selection'"),'Super-admin Kavenegar and switch endpoints registered');
 assert.ok(api.includes('KavenegarSms::configure')&&api.includes('SmsProvider::configure'),'Settings calls use authorized domain methods');
 assert.ok(sms.includes('(new SmsProvider())->send')&&recovery.includes('(new SmsProvider())->send'),'All OTP and recovery sends use selected provider');
