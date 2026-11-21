@@ -135,6 +135,7 @@ def verify_live(base_url, build_id, expected_digests):
         ("/assets/app.css", "assets/app.css"),
         ("/assets/operations.css", "assets/operations.css"),
         ("/assets/brand-theme.css", "assets/brand-theme.css"),
+        ("/assets/ui-consistency.css", "assets/ui-consistency.css"),
         # Verify the exact same-origin SDK bytes after FTP publication, not
         # merely successful download during the build.
         ("/assets/vendor/neshan/v1.0.8/index.js", "assets/vendor/neshan/v1.0.8/index.js"),
