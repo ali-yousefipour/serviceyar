@@ -177,16 +177,14 @@ jobs:
           RewriteRule ^ https://service-yar.ir%{REQUEST_URI} [R=301,L,NE]
 
           # Route API requests to the PHP front controller.
-          RewriteRule ^api/?$ backend/public/index.php [QSA,L]
-          RewriteRule ^api/.*$ backend/public/index.php [QSA,L]
+          # END prevents the internal API rewrite from re-entering the
+          # unconditional filesystem-denial rule below (Apache 2.4).
+          RewriteRule ^api/?$ backend/public/index.php [QSA,END]
+          RewriteRule ^api/.*$ backend/public/index.php [QSA,END]
 
-          # Do not expose application internals, runtime data, or environment files.
-          RewriteCond %{THE_REQUEST} \s/+backend(?:/|\s) [NC]
-          RewriteRule ^backend(?:/|$) - [F,L,NC]
-          RewriteCond %{THE_REQUEST} \s/+database(?:/|\s) [NC]
-          RewriteRule ^database(?:/|$) - [F,L,NC]
-          RewriteCond %{THE_REQUEST} \s/+storage(?:/|\s) [NC]
-          RewriteRule ^storage(?:/|$) - [F,L,NC]
+          # Match Apache's decoded URL path, not THE_REQUEST: encoded letters
+          # such as /%62ackend must not bypass private-directory protection.
+          RewriteRule ^(?:backend|database|storage)(?:/|$) - [F,END,NC]
           <FilesMatch "^\.serviceyar-">
             Require all denied
           </FilesMatch>
