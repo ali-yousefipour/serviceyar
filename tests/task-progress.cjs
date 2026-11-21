@@ -8,6 +8,9 @@ const html=read('frontend/index.html');
 const app=read('frontend/assets/app.js');
 const operations=read('frontend/assets/operations.js');
 const portal=read('frontend/assets/portal.js');
+const exported=read('backend/src/Reports/ExportService.php');
+const statements=read('backend/src/Reports/MonthlyStatementWorkbook.php');
+const payroll=read('backend/src/Reports/PayrollWorkbook.php');
 assert.ok(html.indexOf('task-progress.js')<html.indexOf('app.js'),'Progress controller must load before app');
 assert.match(html,/task-progress\.css\?v=__BUILD_ID__/,'Progress CSS must be cache-busted by deployment');
 assert.match(loader,/Number\.isSafeInteger\(length\)&&length>0/,'Download % must require a measured content length');
@@ -32,4 +35,8 @@ assert.match(operations,/ServiceYarLoading\.upload\(url,body/,'Managed user port
 assert.match(operations,/ServiceYarLoading\.upload\(agencyLogoUrl\(\),data/,'Agency logo upload must use shared progress');
 assert.match(style,/@media\(max-width:520px\)/,'Progress must fit mobile screens');
 assert.match(style,/prefers-reduced-motion:reduce/,'Loading animation must respect reduced-motion');
+
+for(const [name,code] of [['general',exported],['monthly',statements],['payroll',payroll]]){
+ assert.match(code,/header\('Content-Length: '\.filesize\(\$(?:tmp|path)\)\)/,'XLSX '+name+' must expose a real file size');
+}
 console.log('Shared loading and real progress contract: OK');
