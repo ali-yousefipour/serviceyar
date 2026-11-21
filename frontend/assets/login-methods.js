@@ -321,7 +321,7 @@
    for(const key of Object.keys(checks)){
     checks[key].checked=Boolean(status.configured[key]);
     checks[key].disabled=!status.available[key]&&!status.configured[key];
-    if(key==='sms'||key==='mobile')checks[key].parentElement.title=status.available[key]?'سرویس پیامک آماده است':'برای فعال‌سازی، سرویس پیامک نگین و افزونه SOAP را تنظیم کنید.';
+    if(key==='sms'||key==='mobile')checks[key].parentElement.title=status.available[key]?'سرویس پیامک آماده است':'برای فعال‌سازی، درگاه پیامک انتخابی را در تنظیمات آماده کنید.';
     if(key==='bale')checks[key].parentElement.title=status.available[key]?'ربات بله آماده است':'برای فعال‌سازی، ربات بله را تنظیم و متصل کنید.';
    }
    const readiness=block.querySelector('.sy-login-policy-readiness');
@@ -386,5 +386,87 @@
    finally{smsSave.disabled=false;}
   };
   try{await refreshSms();}catch(error){note(smsResult,error.message||'دریافت تنظیمات پیامک ناموفق بود.',true);}
+
+  // Configure an independent REST provider without leaking keys to browsers.
+  const kavenegarBlock=make('section','sy-login-policy-panel sy-sms-provider-panel');
+  kavenegarBlock.id='syAdminKavenegarSms';
+  kavenegarBlock.append(make('h3','','تنظیمات پیامک کاوه‌نگار'),
+   make('p','','کلید API فقط در سرور رمزگذاری و نگهداری می‌شود. برای جلوگیری از ارسال تکراری، در صورت خطای نامشخص بین درگاه‌ها جابه‌جایی خودکار انجام نمی‌شود.'));
+  const kavenegarForm=make('form','sy-sms-provider-form');
+  const kEnabledLabel=make('label','sy-login-policy-option');
+  const kEnabled=make('input');kEnabled.type='checkbox';
+  kEnabledLabel.append(kEnabled,make('span','','فعال‌سازی حساب کاوه‌نگار'));
+  const kGrid=make('div','sy-sms-provider-grid');
+  const kKeyLabel=make('label','sy-sms-provider-field');kKeyLabel.append(make('span','','کلید API کاوه‌نگار'));
+  const kKey=make('input');kKey.type='password';kKey.autocomplete='new-password';kKey.maxLength=180;kKey.placeholder='برای حفظ کلید قبلی خالی بگذارید';kKeyLabel.append(kKey);
+  const kSenderLabel=make('label','sy-sms-provider-field');kSenderLabel.append(make('span','','شماره فرستنده (اختیاری)'));
+  const kSender=make('input');kSender.type='text';kSender.dir='ltr';kSender.maxLength=32;kSender.placeholder='مثلاً 10004346';kSenderLabel.append(kSender);
+  kGrid.append(kKeyLabel,kSenderLabel);
+  const kReady=make('p','sy-login-policy-readiness');kReady.setAttribute('role','status');
+  const kResult=make('p','sy-login-policy-status');kResult.setAttribute('role','status');
+  const kSave=make('button','primary','ذخیره تنظیمات کاوه‌نگار');kSave.type='submit';
+  const kGuide=make('a','sy-provider-doc-link','راهنمای رسمی API کاوه‌نگار');kGuide.href='https://kavenegar.com/sdk.html';kGuide.target='_blank';kGuide.rel='noopener noreferrer';
+  kavenegarForm.append(kEnabledLabel,kGrid,kReady,kSave,kResult);
+  kavenegarBlock.append(kavenegarForm,kGuide);parent.append(kavenegarBlock);
+
+  const choiceBlock=make('section','sy-login-policy-panel sy-sms-provider-panel');
+  const choiceHeading=make('h3','','انتخاب درگاه اصلی ارسال پیامک');
+  const choiceDescription=make('p','','درگاه انتخاب‌شده برای ورود پیامکی، بازیابی رمز و صف پیامک استفاده می‌شود. تنها درگاه آماده قابل انتخاب است.');
+  const choiceForm=make('form','sy-sms-choice-form');
+  const choiceLabel=make('label','sy-sms-provider-field');choiceLabel.append(make('span','','درگاه فعال'));
+  const choice=make('select');choice.name='provider';
+  for(const [value,label] of [['negin','نگین'],['kavenegar','کاوه‌نگار']]){
+    const option=make('option','',label);option.value=value;choice.append(option);
+  }
+  choiceLabel.append(choice);
+  const choiceReady=make('p','sy-login-policy-readiness');choiceReady.setAttribute('role','status');
+  const choiceResult=make('p','sy-login-policy-status');choiceResult.setAttribute('role','status');
+  const choiceSave=make('button','primary','اعمال درگاه انتخابی');choiceSave.type='submit';
+  choiceForm.append(choiceLabel,choiceReady,choiceSave,choiceResult);
+  choiceBlock.append(choiceHeading,choiceDescription,choiceForm);parent.append(choiceBlock);
+
+  const refreshChoice=async()=>{
+    const status=await api('/api/v1/admin/sms-provider-selection');
+    if(!choiceBlock.isConnected)return;
+    choice.value=status.selected;
+    choiceReady.textContent='درگاه فعلی: '+(status.selected==='kavenegar'?'کاوه‌نگار':'نگین')+
+      ' · '+(status.ready?'آماده ارسال پیامک':'نیازمند تکمیل تنظیمات');
+    const options=Array.from(choice.options);
+    for(const option of options){
+      const details=status.providers?.[option.value];
+      option.disabled=!details?.ready&&option.value!==status.selected;
+      option.textContent=(option.value==='kavenegar'?'کاوه‌نگار':'نگین')+(details?.ready?' · آماده':' · نیازمند تنظیم');
+    }
+  };
+  const refreshKavenegar=async()=>{
+    const status=await api('/api/v1/admin/kavenegar-sms');
+    if(!kavenegarBlock.isConnected)return;
+    kEnabled.checked=Boolean(status.enabled);
+    kSender.value=status.sender||'';
+    kKey.placeholder=status.credentialsConfigured?'کلید ثبت شده؛ برای حفظ آن خالی بگذارید':'کلید API را وارد کنید';
+    kReady.textContent=(status.credentialsConfigured?'کلید API ذخیره شده':'کلید API ثبت نشده')+
+      ' · '+(status.curlAvailable?'cURL فعال است':'cURL روی هاست فعال نیست')+
+      ' · '+(status.ready?'آماده استفاده':'آماده ارسال پیامک نیست');
+    kReady.classList.toggle('error',!status.ready);
+  };
+  kavenegarForm.onsubmit=async e=>{
+    e.preventDefault();kSave.disabled=true;note(kResult,'در حال ذخیره تنظیمات…');
+    try{
+      await api('/api/v1/admin/kavenegar-sms',{method:'PUT',headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify({enabled:kEnabled.checked,apiKey:kKey.value,sender:kSender.value})});
+      kKey.value='';note(kResult,'تنظیمات کاوه‌نگار ذخیره شد.');
+      await refreshKavenegar();await refreshChoice();await refresh();
+    }catch(error){note(kResult,error.message,true);}finally{kSave.disabled=false;}
+  };
+  choiceForm.onsubmit=async e=>{
+    e.preventDefault();choiceSave.disabled=true;note(choiceResult,'در حال اعمال درگاه…');
+    try{
+      await api('/api/v1/admin/sms-provider-selection',{method:'PUT',headers:{'X-CSRF-Token':session.csrfToken},body:JSON.stringify({provider:choice.value})});
+      note(choiceResult,'درگاه پیامکی انتخاب شد و روی ارسال‌های جدید اعمال می‌شود.');
+      await refreshChoice();await refresh();
+    }catch(error){note(choiceResult,error.message,true);}finally{choiceSave.disabled=false;}
+  };
+  try{await Promise.all([refreshKavenegar(),refreshChoice()]);}
+  catch(error){note(kResult,error.message||'دریافت تنظیمات درگاه پیامک ناموفق بود.',true);}
+
  };
 })();
