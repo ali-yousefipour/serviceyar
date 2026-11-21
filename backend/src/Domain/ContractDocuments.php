@@ -336,6 +336,8 @@ HTML;
    $i->execute([$invoiceId,$aid,$studentId]);$invoice=$i->fetch(PDO::FETCH_ASSOC);
    if(!$invoice||$invoice['status']==='cancelled')throw new AuthException(409,'فاکتور مرتبط با قرارداد معتبر نیست.','CONTRACT_INVOICE_CONFLICT');
    $year=ContractBilling::year((string)$mapping[0]['academic_year']);
+   // A tariff change in the current student year must never reprice a previous year's contract.
+   if($year!==ContractBilling::year((string)$student['academic_year']))continue;
    $period=ContractBilling::quote($year,(string)$old['start_date'],(string)$old['end_date'],(int)round((float)$student['monthly_fee']));
    $amount=(int)$period['amount'];
    if($amount<=0)throw new AuthException(422,'تعرفه جدید معتبر نیست.','CONTRACT_FEE_REQUIRED');
