@@ -18,7 +18,7 @@ VERSION = "v1.0.8"
 ORIGIN = "https://static.neshan.org"
 BASE = ORIGIN + "/sdk/leaflet/v1.9.4/neshan-sdk/" + VERSION + "/"
 MAX_BYTES = 4 * 1024 * 1024
-CSS_REFERENCE = re.compile(r"url\\(\\s*['\\\"]?([^)'\\\"]+)['\\\"]?\\s*\\)", re.IGNORECASE)
+CSS_REFERENCE = re.compile(r"""url\(\s*['"]?([^)'" ]+)['"]?\s*\)""", re.IGNORECASE)
 
 
 def download(url: str) -> bytes:
