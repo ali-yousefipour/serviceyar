@@ -238,6 +238,7 @@ final class MonthlyStatementWorkbook
                 header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
                 header('Content-Disposition: attachment; filename="'.($preview?'preview-':'').'school-statement-'.$d['year'].'-'.str_pad((string)$d['month'],2,'0',STR_PAD_LEFT).($preview?'':'-'.$id).'.xlsx"');
                 header('Cache-Control: private, no-store');header('X-Content-Type-Options: nosniff');
+                header('Content-Length: '.filesize($tmp));
                 readfile($tmp);
             }finally{if(is_file($tmp))@unlink($tmp);}
             exit;
@@ -267,6 +268,7 @@ final class MonthlyStatementWorkbook
             header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             header('Content-Disposition: attachment; filename="'.($preview?'preview-':'').'school-statement-'.$d['year'].'-'.str_pad((string)$d['month'],2,'0',STR_PAD_LEFT).($preview?'':'-'.$id).'.xlsx"');
             header('Cache-Control: private, no-store');header('X-Content-Type-Options: nosniff');
+            header('Content-Length: '.filesize($tmp));
             readfile($tmp);
         }finally{if(is_file($tmp))@unlink($tmp);}
         exit;
