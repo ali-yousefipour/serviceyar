@@ -283,10 +283,7 @@
      try{
        const body=new FormData();body.append('photo',file);
        const endpoint=driverPortraitEndpoint();
-       const response=await fetch(endpoint,{method:'POST',body,
-         credentials:'same-origin',headers:{'X-CSRF-Token':csrf,Accept:'application/json'}});
-       const result=await response.json().catch(()=>({}));
-       if(!response.ok||!result.ok)throw Error(result.error?.message||'ثبت تصویر انجام نشد.');
+       const result=await window.ServiceYarLoading.upload(endpoint,body,{headers:{'X-CSRF-Token':csrf}});
        const version=Number(result.data?.version||Date.now());
        const updatedUrl=endpoint+(endpoint.includes('?')?'&':'?')+'v='+version;
        const image=el('portalPortrait');if(image){image.hidden=false;image.parentElement?.classList.remove('portrait-empty');image.src=updatedUrl;}
