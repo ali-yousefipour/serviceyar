@@ -2791,6 +2791,10 @@ async function downloadDebtorPdfs(report,onProgress,columns=debtorDefaultColumns
  wrap.appendChild(sheet);
  document.body.appendChild(wrap);
  const files=[],names=new Set();
+ const pageSize=columns.length>15?8:14;
+ const totalPages=[...groups.values()].reduce((total,rows)=>total+Math.ceil(rows.length/pageSize),0);
+ let completedPages=0;
+ onProgress(0,totalPages);
  try{
   for(const rows of groups.values()){
    const school=rows[0].school;
@@ -2799,9 +2803,7 @@ async function downloadDebtorPdfs(report,onProgress,columns=debtorDefaultColumns
    let name=base;
    for(let suffix=2;names.has(name.toLowerCase());suffix++)name=base+' ('+persian(suffix)+')';
    names.add(name.toLowerCase());
-   onProgress(files.length+1,groups.size);
    let pdf;
-   const pageSize=columns.length>15?8:14;
    for(let start=0;start<rows.length;start+=pageSize){
     const page=rows.slice(start,start+pageSize);
     const last=start+pageSize>=rows.length;
@@ -2828,6 +2830,7 @@ async function downloadDebtorPdfs(report,onProgress,columns=debtorDefaultColumns
      pdf.addPage('a4','landscape');
      pdf.addImage(canvas.toDataURL('image/jpeg',0.94),'JPEG',(297-width)/2,8,width,width*canvas.height/canvas.width);
     }
+    onProgress(++completedPages,totalPages);
    }
    files.push({name:name+'.pdf',bytes:pdf.output('arraybuffer')});
   }
@@ -3046,8 +3049,8 @@ function studentDebtorsPage(token){
     if(!report.items.length){pdfStatus.textContent='در این سال تحصیلی بدهکاری یافت نشد.';return;}
     task?.update({detail:'در حال تبدیل داده‌های مدارس به PDF…'});
     await downloadDebtorPdfs(report,(index,count)=>{
-     pdfStatus.textContent='در حال آماده‌سازی مدرسه '+number(index)+' از '+number(count)+'…';
-     task?.update({detail:pdfStatus.textContent,percent:count>0?Math.round((index-1)/count*100):null});
+     pdfStatus.textContent='تبدیل صفحه '+number(index)+' از '+number(count)+' به PDF…';
+     task?.update({detail:pdfStatus.textContent,percent:count>0?Math.min(99,Math.round(index/count*100)):null});
     },pdfColumns);
     task?.update({detail:'فایل ZIP آماده شد.',percent:100});
     pdfStatus.textContent='فایل ZIP آماده شد.';
