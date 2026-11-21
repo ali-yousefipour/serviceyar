@@ -1,4 +1,4 @@
-.sy-task-progress{position:fixed;z-index:2147483000;inset:auto auto:24px 24px;direction:rtl;width:min(420px,calc(100vw - 32px));border:1px solid #d7e5df;border-radius:18px;padding:18px 20px;background:#fff;color:#163b33;box-shadow:0 16px 48px #153b302b;font-family:Vazirmatn,Tahoma,sans-serif;text-align:right}
+.sy-task-progress{position:fixed;z-index:2147483000;top:auto;right:auto;bottom:24px;left:24px;direction:rtl;width:min(420px,calc(100vw - 32px));border:1px solid #d7e5df;border-radius:18px;padding:18px 20px;background:#fff;color:#163b33;box-shadow:0 16px 48px #153b302b;font-family:Vazirmatn,Tahoma,sans-serif;text-align:right}
 .sy-task-progress[hidden],.sy-task-progress [hidden]{display:none!important}
 .sy-task-progress-heading{display:flex;align-items:center;gap:11px;font-size:14px}
 .sy-task-progress-heading strong{flex:1}
@@ -10,5 +10,5 @@
 .sy-task-indeterminate::after{content:'';position:absolute;inset:0 auto 0 0;width:32%;border-radius:8px;background:#168661;animation:sy-task-slide 1.5s ease-in-out infinite alternate}
 @keyframes sy-task-spin{to{transform:rotate(360deg)}}
 @keyframes sy-task-slide{to{transform:translateX(210%)}}
-@media(max-width:520px){.sy-task-progress{inset:auto 12px 12px 12px;width:auto;padding:15px 16px;border-radius:15px}}
+@media(max-width:520px){.sy-task-progress{top:auto;right:12px;bottom:12px;left:12px;width:auto;padding:15px 16px;border-radius:15px}}
 @media(prefers-reduced-motion:reduce){.sy-task-progress-spinner,.sy-task-indeterminate::after{animation:none}}
