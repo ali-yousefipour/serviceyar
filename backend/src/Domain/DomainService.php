@@ -565,6 +565,26 @@ final class DomainService {
   }
   return $row;
  }
+ /**
+  * Distances are stored as MySQL DECIMAL (e.g. 5.00) but the UI uses
+  * integer kilometers (e.g. 5). A formatting difference must not trigger
+  * a contract/invoice repricing confirmation.
+  */
+ private static function studentDistanceChanged(mixed $before,mixed $after): bool {
+  $normalize=static function(mixed $value): ?float {
+   if($value===null||$value==='')return null;
+   if(!is_scalar($value))return null;
+   $digits=strtr(trim((string)$value),[
+    '۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9',
+    '٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9',
+    '٫'=>'.'
+   ]);
+   return is_numeric($digits)&&is_finite((float)$digits)?(float)$digits:null;
+  };
+  $old=$normalize($before);$new=$normalize($after);
+  if($old===null||$new===null)return (string)$before!==(string)$after;
+  return abs($old-$new)>0.000001;
+ }
  public static function save(int $uid,int $aid,string $resource,array $b,?int $id=null): array {
   if($resource==='accounting-documents')return AccountingJournal::save($uid,$aid,$b,$id);
   return OperationsService::transaction(function()use($uid,$aid,$resource,$b,$id){
@@ -641,8 +661,10 @@ if($resource==='ledger'&&!in_array('company_account_id',thisColumns('ledger_entr
   if($id)FinancialPosting::assertEditable($aid,$resource,$id);
   if($resource==='invoices'&&$id)ContractBilling::assertInvoiceEditable($pdo,$aid,$id);
   $existing=$id?self::get($uid,$aid,$resource,$id):[];
+  // MySQL DECIMAL may return "5.00" while the browser submits "5". Compare
+  // normalized numeric distances, not their textual representations.
   $distanceChanged=$resource==='students'&&$id&&array_key_exists('tariff_distance_km',$data)
-   &&(string)($existing['tariff_distance_km']??'')!==(string)($data['tariff_distance_km']??'');
+   &&self::studentDistanceChanged($existing['tariff_distance_km']??null,$data['tariff_distance_km']);
   if($distanceChanged){
    if(($b['confirmDistanceReprice']??false)!==true)throw new AuthException(409,'تغییر مسافت نیازمند تأیید محاسبه مجدد مبلغ سرویس، قرارداد و فاکتور است.','DISTANCE_REPRICE_CONFIRMATION_REQUIRED');
    Authorization::requirePermission($uid,'finance.manage');
