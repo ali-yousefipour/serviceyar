@@ -95,5 +95,35 @@
    return blob.size;
   }finally{task.finish();}
  }
- window.ServiceYarLoading={begin,track,download};
+ // XMLHttpRequest exposes actual uploaded bytes. Server-side validation and
+ // processing have no known duration and return to indeterminate progress.
+ function upload(url,body,{headers={},method='POST'}={}){
+  const task=begin('ارسال و اعتبارسنجی فایل',{immediate:true});
+  task.update({detail:'در حال ارسال اطلاعات به سرور…'});
+  return new Promise((resolve,reject)=>{
+   const xhr=new XMLHttpRequest();
+   xhr.open(method,url,true);
+   xhr.withCredentials=true;
+   xhr.setRequestHeader('Accept','application/json');
+   for(const [key,value] of Object.entries(headers))xhr.setRequestHeader(key,value);
+   xhr.upload.onprogress=event=>{
+    if(event.lengthComputable&&event.total>0){
+     task.update({detail:'ارسال '+fa(event.loaded)+' از '+fa(event.total)+' بایت…',percent:Math.min(99,event.loaded/event.total*100)});
+    }else task.update({detail:'در حال ارسال فایل…',percent:null});
+   };
+   xhr.upload.onload=()=>task.update({detail:'فایل ارسال شد؛ در انتظار پردازش سرور…',percent:null});
+   xhr.onerror=()=>{task.finish();reject(new Error('ارتباط با سرور هنگام بارگذاری قطع شد.'));};
+   xhr.ontimeout=()=>{task.finish();reject(new Error('مهلت بارگذاری پایان یافت.'));};
+   xhr.onabort=()=>{task.finish();reject(new Error('بارگذاری لغو شد.'));};
+   xhr.onload=()=>{
+    task.finish();
+    let data={};try{data=JSON.parse(xhr.responseText);}catch(_){}
+    if(xhr.status<200||xhr.status>=300||!data.ok){
+     reject(new Error(data?.error?.message||'بارگذاری یا پردازش فایل ناموفق بود.'));
+    }else resolve(data);
+   };
+   xhr.send(body);
+  });
+ }
+ window.ServiceYarLoading={begin,track,download,upload};
 })();
