@@ -22,6 +22,7 @@ jobs:
           php tests/sepand-xlsx.php
           php tests/excel-localization.php
           php tests/directory-sorting.php
+          php tests/student-distance-confirmation.php
           php tests/installments.php
           php tests/monthly-statement-period.php
           php tests/monthly-statement-template-capacity.php
