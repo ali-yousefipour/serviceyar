@@ -4,7 +4,7 @@ namespace ServiceYar\Auth;
 
 use ServiceYar\Database\Connection;
 use ServiceYar\Integrations\BaleBotService;
-use ServiceYar\Integrations\NeginSms;
+use ServiceYar\Integrations\SmsProvider;
 use PDO;
 
 final class PasswordRecovery
@@ -32,7 +32,7 @@ final class PasswordRecovery
         $smsSchema=SmsLogin::recoveryReady();
         $baleSchema=self::baleRecoveryReady();
         return [
-            'sms'=>(($policy['sms']??false)||($policy['mobile']??false))&&NeginSms::configured()&&class_exists(\SoapClient::class)&&$smsSchema,
+            'sms'=>(($policy['sms']??false)||($policy['mobile']??false))&&SmsProvider::ready()&&$smsSchema,
             'bale'=>($policy['bale']??false)&&BaleBotService::ready()&&$baleSchema
         ];
     }
@@ -47,7 +47,7 @@ final class PasswordRecovery
             ?(($policy['sms']??false)||($policy['mobile']??false))
             :($policy['bale']??false);
         $providerReady=$channel==='sms'
-            ?(NeginSms::configured()&&class_exists(\SoapClient::class))
+            ?(SmsProvider::ready())
             :BaleBotService::ready();
         if(!$enabled||!$schemaReady||($forDelivery&&!$providerReady))
             throw new AuthException(403,'این روش بازیابی رمز عبور فعال یا آماده نیست.','PASSWORD_RECOVERY_METHOD_DISABLED');
@@ -114,7 +114,7 @@ final class PasswordRecovery
         try{
             $message='کد بازیابی رمز عبور سرویس‌یار: '.$code."\nاعتبار: ۵ دقیقه. این کد را در اختیار دیگران قرار ندهید.";
             if($channel==='sms'){
-                $sent=(new NeginSms())->send($mobile,$message);
+                $sent=(new SmsProvider())->send($mobile,$message);
                 if(!($sent['accepted']??false))throw new AuthException(502,'پیامک بازیابی توسط سرویس‌دهنده پذیرفته نشد.','SMS_PROVIDER_REJECTED');
             }else{
                 BaleBotService::sendAuthCodeToUser($uid,$message);
