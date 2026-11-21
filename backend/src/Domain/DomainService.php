@@ -242,6 +242,7 @@ final class DomainService {
   $where='agency_id=:agency';$params=['agency'=>$aid];
   if($resource==='invoices'){
    $term=trim((string)($q['search']??''));
+   $term=strtr($term,['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9','ي'=>'ی','ك'=>'ک']);
    if($term!==''){
     $pattern='%'.strtr($term,['!'=>'!!','%'=>'!%','_'=>'!_']).'%';
     $where.=" AND (invoices.title LIKE :inv_title ESCAPE '!' OR CAST(invoices.id AS CHAR) LIKE :inv_id ESCAPE '!' OR (CASE invoices.party_type WHEN 'student' THEN (SELECT CONCAT_WS(' ',s.first_name,s.last_name) FROM students s WHERE s.id=invoices.party_id AND s.agency_id=invoices.agency_id) WHEN 'driver' THEN (SELECT CONCAT_WS(' ',d.first_name,d.last_name) FROM drivers d WHERE d.id=invoices.party_id AND d.agency_id=invoices.agency_id) WHEN 'school' THEN (SELECT s.name FROM schools s WHERE s.id=invoices.party_id AND s.agency_id=invoices.agency_id) WHEN 'agency' THEN (SELECT a.name FROM agencies a WHERE a.id=invoices.party_id AND a.id=invoices.agency_id) END) LIKE :inv_name ESCAPE '!' OR (SELECT c.contract_no FROM student_contract_invoices m JOIN contracts c ON c.id=m.contract_id AND c.agency_id=m.agency_id WHERE m.invoice_id=invoices.id AND m.agency_id=invoices.agency_id AND m.student_id=invoices.party_id AND invoices.party_type='student' LIMIT 1) LIKE :inv_contract ESCAPE '!')";
