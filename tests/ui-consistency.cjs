@@ -33,6 +33,8 @@ assert.match(styles, /@media screen and \(max-width:760px\)/, 'Mobile responsive
 assert.match(styles, /@media screen and \(max-width:480px\)/, 'Small phone breakpoint is missing');
 assert.match(styles, /#login \.sy-login-method-tab/, 'Login methods must use legible mobile type and touch targets');
 assert.match(styles, /#app :is\(\.pager,\.member-actions,\.row-actions\)/, 'Pagination and row controls need consistent type scale');
+assert.match(styles, /#login \.sy-login-method-tab,[\s\S]*?font-size:13px!important/, 'Small login buttons must override 10px legacy important rules');
+assert.match(styles, /#app \.sy-ledger-report-page-panel \.ledger-report-table/, 'Ledger reports must remain readable on screens');
 assert.match(styles, /prefers-reduced-motion:reduce/, 'Reduced motion support is required');
 assert.match(styles, /:focus-visible/, 'Keyboard focus must remain visible');
 assert.match(styles, /@media screen\{/, 'Interactive-screen overrides must not change PDF print layouts');
