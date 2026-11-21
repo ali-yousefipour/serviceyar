@@ -64,7 +64,7 @@ assert.ok(companyPlot.includes('if(points.length)focusPoints(points)'),'Original
 assert.ok(js.includes("schoolMap.setView([Number(company.latitude),Number(company.longitude)],15)"),'Original company selection zoom 15 must be restored');
 assert.ok(navJs.includes("iconSize:[78,59],iconAnchor:[39,40]")&&navJs.includes("className:'sy-dashboard-popup'"),'Dashboard map markers and Persian popup must have controlled size');
 assert.ok(brandCss.includes('.sy-public-v3 #syPublicSchools .leaflet-marker-icon.sy-public-pin')&&brandCss.includes('.leaflet-popup .sy-map-popup'),'Public pins and dashboard popup need compact themed CSS');
-assert.ok(js.includes('/api/v1/public/map-config')&&js.includes('/assets/vendor/neshan/v1.0.8/index.js')&&js.includes('/assets/vendor/neshan/v1.0.8/index.css')&&js.includes('invalidateSize(true)'),'Public map must use configured Neshan web key');
+assert.ok(js.includes('/api/v1/public/map-config')&&js.includes('ServiceYarNeshanSDK.load()')&&js.includes('invalidateSize(true)'),'Public map must use configured Neshan web key');
 assert.ok(html.includes('syCatalogAdvantageTitle')&&html.includes('فهرست بسیاری از مدارس'),'Catalog advantage must be visible');
 assert.ok(html.includes('dashboard-real-capture.webp')&&html.includes('sy-v3-real-preview')&&html.includes('sy-v3-map-intro'),'Landing must show the authentic dashboard capture and map introduction');
 assert.ok(html.includes('name="educationLevel"')&&html.includes('value="elementary"')&&html.includes('value="secondary"'),'Public fare form must allow elementary and secondary selection');
