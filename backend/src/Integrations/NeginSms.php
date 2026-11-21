@@ -72,6 +72,17 @@ final class NeginSms
         return $plain;
     }
 
+    /** Shared AES-GCM storage for SMS provider secrets; never expose plaintext in the API. */
+    public static function encryptProviderSecret(string $value): string
+    {
+        return self::encrypt($value);
+    }
+
+    public static function decryptProviderSecret(string $encoded): string
+    {
+        return self::decrypt($encoded);
+    }
+
     private static function credentials(): array
     {
         $settings=self::settings();
