@@ -6,9 +6,9 @@ use ServiceYar\Domain\OperationsService;
 
 final class SmsQueue
 {
-    public static function run(int $limit=20,?NeginSms $provider=null): array
+    public static function run(int $limit=20,?SmsProvider $provider=null): array
     {
-        $provider??=new NeginSms();$p=Connection::get();$sent=0;$failed=0;
+        $provider??=new SmsProvider();$p=Connection::get();$sent=0;$failed=0;
         for($i=0;$i<min(100,max(1,$limit));$i++){
             $row=OperationsService::transaction(function($p){$q=$p->query("SELECT id,recipient_mobile,body FROM messages WHERE channel='sms' AND status='queued' ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED");$r=$q->fetch();if(!$r)return null;$p->prepare("UPDATE messages SET status='sending',attempts=attempts+1 WHERE id=?")->execute([$r['id']]);return $r;});
             if(!$row)break;
