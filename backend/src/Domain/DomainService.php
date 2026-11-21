@@ -61,7 +61,7 @@ final class DomainService {
    'driver-payments'=>['id','payment_date','amount'],
    'school-charges'=>['id','due_date','amount','title'],
    'service-charges'=>['id','due_date','amount','title'],
-   'invoices'=>['id','issue_date','amount','status'],
+   'invoices'=>['id','title','issue_date','due_date','amount','status'],
    'payments'=>['id','payment_date','amount'],
    'accounts'=>['id','code','title'],
    'accounting-documents'=>['id','document_date','total_amount','status'],
