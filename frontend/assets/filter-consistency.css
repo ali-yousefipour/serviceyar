@@ -1,9 +1,9 @@
 /* Cross-module search/filter audit: compact, readable RTL layouts.
    Prefer existing filter semantics; no API or submit behavior changes. */
 @media screen{
- #app :is(.filters,.directory-filters,.service-filters,.service-filter-fields,
+ #app :is(.filters,.directory-filters,.service-filters,
      .sy-operation-filters,.report-filters,.ledger-filters,.accounting-filters,
-     .sy-invoice-filters,.sy-invoice-filter-v2,.portal-debtors-filters){
+     .sy-invoice-filters,.portal-debtors-filters){
    --sy-filter-gap:clamp(8px,1vw,12px);
    box-sizing:border-box;
    gap:var(--sy-filter-gap);
