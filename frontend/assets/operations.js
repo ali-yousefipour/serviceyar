@@ -1218,6 +1218,7 @@ async function resourcePage(key,token=pageToken,options={}){
  const filterForm=$('gridFilters'),state=gridState;
  let syncInvoiceSolarDates=()=>true;
  if(key==='invoices'){
+  syncInvoiceSolarDates=()=>[...filterForm.querySelectorAll('.solar-input')].every(input=>input.checkValidity());
   filterForm.classList.add('sy-invoice-filters','sy-invoice-filter-v2');
   filterForm.innerHTML=`<div class="sy-invoice-filter-head"><div><span class="sy-invoice-eyebrow">مدیریت مطالبات و صورتحساب‌ها</span><h3>جست‌وجوی پیشرفته فاکتورها</h3><small>نام طرف حساب، شماره قرارداد، مبلغ و تاریخ صدور را جست‌وجو و فیلتر کنید.</small></div><span id="syInvoiceResultCount" role="status" aria-live="polite"></span></div>
    <div class="sy-invoice-quick"><label class="sy-invoice-search">جست‌وجوی فاکتور<div class="sy-invoice-search-box"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input name="search" type="search" autocomplete="off" maxlength="200" placeholder="نام طرف حساب، عنوان یا شماره فاکتور / قرارداد" value="${esc(initialSearch)}"></div></label>
@@ -1660,7 +1661,7 @@ async function viewRecord(key,id){
   if(key==='ledger'){showLedgerDetails(r);return;}
   if(key==='invoices'){
    const facts=[['شماره فاکتور',number(r.id)],['طرف حساب',r.party_name||'نامشخص'],['اطلاعات تکمیلی',persianDigits(r.party_meta||'—')],['شماره قرارداد',persianDigits(String(r.contract_no||'—').replace(/\.0+$/,''))],['تاریخ صدور',dateText(r.issue_date)],['سررسید',dateText(r.due_date)],['مبلغ فاکتور',number(r.amount)],['دریافتی مستقیم',number(r.paid_amount)],['مانده فاکتور',number(r.remaining_amount)]];
-   dialog('جزئیات فاکتور', '<section class="sy-invoice-detail"><h3>'+esc(persianDigits(r.title))+'</h3><dl>'+facts.map(([k,v])=>'<div><dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd></div>').join('')+'</dl><h3>پرداخت‌های متصل به فاکتور</h3>'+((r.payments||[]).length?simpleTable(['تاریخ','مبلغ (ریال)','روش','پیگیری'],r.payments.map(p=>[dateText(p.payment_date),number(p.amount),methodLabel(p.method),p.reference_no||'—'])):'<p class="muted">پرداخت مستقیم ثبت نشده است.</p>')+'</section>');return;
+   dialog('جزئیات فاکتور', '<section class="sy-invoice-detail"><h3>'+esc(persianDigits(r.title))+'</h3><dl>'+facts.map(([k,v])=>'<div><dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd></div>').join('')+'</dl><h3>پرداخت‌های متصل به فاکتور</h3>'+((r.payments||[]).length?simpleTable(['تاریخ','مبلغ (ریال)','روش','پیگیری'],r.payments.map(p=>[dateText(p.payment_date),number(p.amount),methodLabel(p.method),persianDigits(p.reference_no||'—')])):'<p class="muted">پرداخت مستقیم ثبت نشده است.</p>')+'</section>');return;
   }
   if(key==='schools'){
    const name=String(r.name||'مدرسه'),photo=schoolPhotoUrl(r);
