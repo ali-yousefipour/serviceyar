@@ -640,6 +640,12 @@ if($resource==='ledger'&&!in_array('company_account_id',thisColumns('ledger_entr
   if($id)FinancialPosting::assertEditable($aid,$resource,$id);
   if($resource==='invoices'&&$id)ContractBilling::assertInvoiceEditable($pdo,$aid,$id);
   $existing=$id?self::get($uid,$aid,$resource,$id):[];
+  $distanceChanged=$resource==='students'&&$id&&array_key_exists('tariff_distance_km',$data)
+   &&(string)($existing['tariff_distance_km']??'')!==(string)($data['tariff_distance_km']??'');
+  if($distanceChanged){
+   if(($b['confirmDistanceReprice']??false)!==true)throw new AuthException(409,'تغییر مسافت نیازمند تأیید محاسبه مجدد مبلغ سرویس، قرارداد و فاکتور است.','DISTANCE_REPRICE_CONFIRMATION_REQUIRED');
+   Authorization::requirePermission($uid,'finance.manage');
+  }
   if($resource==='contracts'&&$id&&!empty($existing['rendered_html']))
    throw new AuthException(409,'قرارداد صادرشده دارای نسخه چاپی ثابت است و امکان تغییر آن وجود ندارد. برای تغییر مفاد، قرارداد جدید صادر کنید.','ISSUED_CONTRACT_IMMUTABLE');
   if($id&&$resource==='messages'&&$existing['status']!=='queued')throw new AuthException(409,'پیام پردازش‌شده قابل ویرایش یا ارسال مجدد از این فرم نیست.','MESSAGE_LOCKED');
@@ -956,6 +962,7 @@ if($resource==='ledger'&&!in_array('company_account_id',thisColumns('ledger_entr
   if($resource==='students'&&array_intersect(['monthly_fee','driver_base_monthly','fee_source','tariff_distance_km','tariff_vehicle_class','grade','school_id','academic_year'],array_keys($data))) {
    StudentServiceBilling::sync($pdo,$aid,(int)$id);
   }
+  if($distanceChanged)ContractDocuments::repriceStudentAfterDistanceChange($pdo,$uid,$aid,(int)$id);
   if($resource==='services'&&!empty($data['school_id']))$pdo->prepare('INSERT IGNORE INTO service_schools(service_id,school_id) VALUES(?,?)')->execute([$id,$data['school_id']]);
   if($resource==='services'&&!$wasCreate)
    ServicePricing::setDriverVehicleType($pdo,$aid,(int)($merged['driver_id']??0),$b);
