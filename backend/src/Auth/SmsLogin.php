@@ -3,7 +3,7 @@ declare(strict_types=1);
 namespace ServiceYar\Auth;
 
 use ServiceYar\Database\Connection;
-use ServiceYar\Integrations\NeginSms;
+use ServiceYar\Integrations\SmsProvider;
 use PDO;
 
 final class SmsLogin
@@ -85,7 +85,7 @@ final class SmsLogin
     public static function request(string $username): array
     {
         LoginMethods::requireEnabled('sms');
-        if(!NeginSms::configured()||!class_exists(\SoapClient::class))throw new AuthException(503,'سرویس پیامک ورود تنظیم نشده است.','SMS_NOT_CONFIGURED');
+        if(!SmsProvider::ready())throw new AuthException(503,'سرویس پیامک ورود تنظیم نشده است.','SMS_NOT_CONFIGURED');
         $username=self::digits($username);
         if($username===''||strlen($username)>100)throw new AuthException(422,'نام کاربری معتبر نیست.','VALIDATION_ERROR');
         $hasPurpose=self::schema();
@@ -111,7 +111,7 @@ final class SmsLogin
         $pdo->prepare($hasPurpose?"UPDATE sms_login_challenges SET consumed_at=UTC_TIMESTAMP() WHERE user_id=? AND purpose='login' AND consumed_at IS NULL":"UPDATE sms_login_challenges SET consumed_at=UTC_TIMESTAMP() WHERE user_id=? AND consumed_at IS NULL")->execute([$uid]);
         $pdo->prepare($hasPurpose?"INSERT INTO sms_login_challenges(user_id,purpose,code_hash,expires_at) VALUES(?,'login',?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 5 MINUTE))":"INSERT INTO sms_login_challenges(user_id,code_hash,expires_at) VALUES(?,?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 5 MINUTE))")->execute([$uid,$hash]);
         try{
-            $result=(new NeginSms())->send($user['mobile'],'کد ورود سرویس‌یار: '.$code."\nاعتبار: ۵ دقیقه. کد را در اختیار دیگران قرار ندهید.");
+            $result=(new SmsProvider())->send($user['mobile'],'کد ورود سرویس‌یار: '.$code."\nاعتبار: ۵ دقیقه. کد را در اختیار دیگران قرار ندهید.");
             if(!($result['accepted']??false))throw new AuthException(502,'پیامک ورود توسط سرویس‌دهنده پذیرفته نشد.','SMS_PROVIDER_REJECTED');
         }catch(\Throwable $e){
             $pdo->prepare($hasPurpose?"UPDATE sms_login_challenges SET consumed_at=UTC_TIMESTAMP() WHERE user_id=? AND purpose='login' AND code_hash=?":"UPDATE sms_login_challenges SET consumed_at=UTC_TIMESTAMP() WHERE user_id=? AND code_hash=?")->execute([$uid,$hash]);
@@ -153,7 +153,7 @@ final class SmsLogin
     public static function requestMobile(string $mobile): array
     {
         LoginMethods::requireEnabled('mobile');
-        if(!NeginSms::configured()||!class_exists(\SoapClient::class))throw new AuthException(503,'سرویس پیامک ورود تنظیم نشده است.','SMS_NOT_CONFIGURED');
+        if(!SmsProvider::ready())throw new AuthException(503,'سرویس پیامک ورود تنظیم نشده است.','SMS_NOT_CONFIGURED');
         $mobile=self::normalizeMobile($mobile);
         if($mobile==='')throw new AuthException(422,'شماره همراه معتبر وارد کنید.','INVALID_MOBILE');
         $hasPurpose=self::schema();
@@ -173,7 +173,7 @@ final class SmsLogin
         $pdo->prepare($hasPurpose?"UPDATE sms_login_challenges SET consumed_at=UTC_TIMESTAMP() WHERE user_id=? AND purpose='login' AND consumed_at IS NULL":"UPDATE sms_login_challenges SET consumed_at=UTC_TIMESTAMP() WHERE user_id=? AND consumed_at IS NULL")->execute([$uid]);
         $pdo->prepare($hasPurpose?"INSERT INTO sms_login_challenges(user_id,purpose,code_hash,expires_at) VALUES(?,'login',?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 5 MINUTE))":"INSERT INTO sms_login_challenges(user_id,code_hash,expires_at) VALUES(?,?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 5 MINUTE))")->execute([$uid,$hash]);
         try{
-            $result=(new NeginSms())->send($user['mobile'],'کد ورود سرویس‌یار: '.$code."\nاعتبار: ۵ دقیقه. کد را در اختیار دیگران قرار ندهید.");
+            $result=(new SmsProvider())->send($user['mobile'],'کد ورود سرویس‌یار: '.$code."\nاعتبار: ۵ دقیقه. کد را در اختیار دیگران قرار ندهید.");
             if(!($result['accepted']??false))throw new AuthException(502,'پیامک ورود توسط سرویس‌دهنده پذیرفته نشد.','SMS_PROVIDER_REJECTED');
         }catch(\Throwable $e){
             $pdo->prepare($hasPurpose?"UPDATE sms_login_challenges SET consumed_at=UTC_TIMESTAMP() WHERE user_id=? AND purpose='login' AND code_hash=?":"UPDATE sms_login_challenges SET consumed_at=UTC_TIMESTAMP() WHERE user_id=? AND code_hash=?")->execute([$uid,$hash]);throw $e;
