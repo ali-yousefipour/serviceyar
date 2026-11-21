@@ -18,7 +18,8 @@ assert.match(loader,/finally\{task\.finish\(\);\}/,'Progress state must clean up
 assert.match(app,/ServiceYarLoading\?\.begin/,'Admin API must show shared progress');
 assert.match(app,/ServiceYarLoading\.download\('\/api\/v1\/reports\/export/,'Main Excel export must use shared downloader');
 assert.match(operations,/async function downloadFile\(url,name\)[\s\S]*?ServiceYarLoading\.download/,'Operations exports must use shared downloader');
-assert.match(operations,/percent:count>0\?Math\.round\(\(index-1\)\/count\*100\):null/,'PDF progress must count completed schools');
+assert.match(operations,/onProgress\(\+\+completedPages,totalPages\)/,'PDF progress must count completed rendered pages');
+assert.match(operations,/percent:count>0\?Math\.min\(99,Math\.round\(index\/count\*100\)\):null/,'PDF percentage must use measured completed pages');
 assert.match(operations,/ServiceYarLoading\?\.begin\('ساخت فایل PDF فیش حقوقی'/,'Payslip generation must show a loading state');
 assert.match(portal,/ServiceYarLoading\?\.begin/,'Parent and driver portal must show loading');
 assert.match(style,/@media\(max-width:520px\)/,'Progress must fit mobile screens');
