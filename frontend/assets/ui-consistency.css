@@ -121,6 +121,14 @@
  #app .sy-admin-page-card :is(.primary,.link,.status-active,.status-inactive){
   font-family:var(--sy-ui-font);font-size:var(--sy-ui-small);line-height:1.6;
  }
+ #app.sy-portal-mode{
+  --portal-accent:var(--sy-primary,#095e43);
+  --portal-border:var(--sy-ui-border);
+  --portal-ink:var(--sy-ui-text);
+ }
+ #app.sy-portal-mode :is(.portal-panel,.portal-kpi){
+  border-color:var(--portal-border);
+ }
  #app.sy-portal-mode .portal-kpi small{font-size:var(--sy-ui-small);line-height:1.65;}
  #app.sy-portal-mode .portal-panel :is(th,td){font-size:var(--sy-ui-small);}
  #app.sy-portal-mode .portal-panel .muted{font-size:var(--sy-ui-small);line-height:var(--sy-ui-line);}
