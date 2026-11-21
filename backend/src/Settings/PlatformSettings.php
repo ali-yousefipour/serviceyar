@@ -28,7 +28,7 @@ final class PlatformSettings
         if(!Authorization::isSuperAdmin($uid))throw new AuthException(403,'تنظیمات سامانه فقط در اختیار ادمین کل است.','SUPER_ADMIN_REQUIRED');
         return ['neshanServiceConfigured'=>self::value('neshan_service_key')!==''||config('NESHAN_SERVICE_KEY','')!=='',
             'neshanWebConfigured'=>self::value('neshan_web_key')!==''||config('NESHAN_WEB_KEY','')!=='',
-            'smsConfigured'=>\ServiceYar\Integrations\NeginSms::configured(),
+            'smsConfigured'=>\ServiceYar\Integrations\SmsProvider::configured(),
             'baleConfigured'=>\ServiceYar\Integrations\BaleClient::configured(),
             'smsManagedByEnvironment'=>false,'smsManagedBySuperAdmin'=>true];
     }
