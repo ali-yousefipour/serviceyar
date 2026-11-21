@@ -1223,7 +1223,7 @@ async function resourcePage(key,token=pageToken,options={}){
    <div class="sy-invoice-quick"><label class="sy-invoice-search">جست‌وجوی فاکتور<div class="sy-invoice-search-box"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input name="search" type="search" autocomplete="off" maxlength="200" placeholder="نام طرف حساب، عنوان یا شماره فاکتور / قرارداد" value="${esc(initialSearch)}"></div></label>
    <label>نوع طرف حساب<select name="partyType"><option value="">همه طرف حساب‌ها</option><option value="student">دانش‌آموز</option><option value="driver">راننده</option><option value="school">مدرسه</option><option value="agency">شرکت</option></select></label></div>
    <fieldset class="sy-invoice-state"><legend>وضعیت پرداخت</legend><div class="sy-invoice-state-options">${[['','همه'],['open','باز'],['partial','پرداخت جزئی'],['paid','تسویه'],['overdue','سررسید گذشته'],['cancelled','ابطال‌شده']].map(([value,label])=>'<label><input type="radio" name="paymentState" value="'+value+'" '+(value===''?'checked':'')+'><span>'+label+'</span></label>').join('')}</div></fieldset>
-   <details class="sy-invoice-advanced"><summary>فیلترهای پیشرفته <span id="syInvoiceAdvancedCount"></span></summary><div class="sy-invoice-advanced-grid"><fieldset><legend>بازه تاریخ صدور</legend><div class="sy-invoice-pair"><label>از تاریخ شمسی<input name="dateFromSolar" type="text" inputmode="numeric" maxlength="10" placeholder="۱۴۰۵/۰۷/۰۱" autocomplete="off"><input name="dateFrom" type="hidden"></label><label>تا تاریخ شمسی<input name="dateToSolar" type="text" inputmode="numeric" maxlength="10" placeholder="۱۴۰۵/۰۹/۳۰" autocomplete="off"><input name="dateTo" type="hidden"></label></div><small class="sy-invoice-date-hint">تاریخ‌ها را به‌صورت سال/ماه/روز شمسی وارد کنید.</small></fieldset><fieldset><legend>بازه مبلغ (ریال)</legend><div class="sy-invoice-pair"><label>حداقل<input name="amountMin" type="text" inputmode="numeric" placeholder="بدون محدودیت"></label><label>حداکثر<input name="amountMax" type="text" inputmode="numeric" placeholder="بدون محدودیت"></label></div></fieldset><fieldset class="sy-invoice-flags"><legend>محدوده نتایج</legend><label><input type="checkbox" name="contractOnly" value="1"> فقط فاکتورهای قرارداد</label><label><input type="checkbox" name="remainingOnly" value="1"> فقط دارای مانده</label></fieldset></div></details>
+   <details class="sy-invoice-advanced"><summary>فیلترهای پیشرفته <span id="syInvoiceAdvancedCount"></span></summary><div class="sy-invoice-advanced-grid"><fieldset><legend>بازه تاریخ صدور</legend><div class="sy-invoice-pair"><label>از تاریخ شمسی<input name="dateFrom" type="date" aria-label="تاریخ شروع صدور به شمسی"></label><label>تا تاریخ شمسی<input name="dateTo" type="date" aria-label="تاریخ پایان صدور به شمسی"></label></div><small class="sy-invoice-date-hint">تاریخ‌ها را به‌صورت سال/ماه/روز شمسی وارد کنید.</small></fieldset><fieldset><legend>بازه مبلغ (ریال)</legend><div class="sy-invoice-pair"><label>حداقل<input name="amountMin" type="text" inputmode="numeric" placeholder="بدون محدودیت"></label><label>حداکثر<input name="amountMax" type="text" inputmode="numeric" placeholder="بدون محدودیت"></label></div></fieldset><fieldset class="sy-invoice-flags"><legend>محدوده نتایج</legend><label><input type="checkbox" name="contractOnly" value="1"> فقط فاکتورهای قرارداد</label><label><input type="checkbox" name="remainingOnly" value="1"> فقط دارای مانده</label></fieldset></div></details>
    <div class="sy-invoice-sort"><label>مرتب‌سازی<select name="sortBy"><option value="id">شماره فاکتور</option><option value="issue_date">تاریخ صدور</option><option value="due_date">سررسید</option><option value="amount">مبلغ فاکتور</option><option value="title">عنوان فاکتور</option></select></label><label>ترتیب<select name="sortDir"><option value="desc">نزولی (جدیدترین / بیشترین)</option><option value="asc">صعودی (قدیمی‌ترین / کمترین)</option></select></label></div>
    <div class="sy-invoice-filter-footer"><div id="syInvoiceChips" aria-label="فیلترهای اعمال‌شده"></div><div class="sy-invoice-filter-actions"><button type="reset" class="sy-invoice-reset">پاک‌کردن فیلترها</button><button type="submit" class="primary">نمایش نتایج</button></div></div><p class="sy-invoice-filter-error" role="alert" hidden></p>`;
   filterForm.insertAdjacentHTML('beforebegin','<div class="sy-invoice-kpis" id="syInvoiceKpis" aria-live="polite"></div><p class="sy-invoice-finance-note">مانده هر فاکتور بر اساس پرداخت‌های مستقیم همان فاکتور است؛ دریافتی‌های آزاد در حساب مالی شخص محاسبه می‌شوند.</p>');
@@ -1231,34 +1231,10 @@ async function resourcePage(key,token=pageToken,options={}){
   for(const name of ['amountMin','amountMax']){const input=filterForm.elements[name];input.addEventListener('input',()=>{const digits=ascii(input.value).replace(/[^0-9]/g,'').slice(0,15);input.value=digits?persianDigits(digits.replace(/\B(?=(\d{3})+(?!\d))/g,',')):'';});}
   filterForm.addEventListener('formdata',event=>{for(const name of ['amountMin','amountMax'])event.formData.set(name,ascii(filterForm.elements[name].value).replace(/[^0-9]/g,''));});
 
-  syncInvoiceSolarDates=()=>{
-   let invalid=false;
-   for(const name of ['dateFrom','dateTo']){
-    const input=filterForm.elements[name+'Solar'],hidden=filterForm.elements[name];
-    const raw=ascii(input.value).trim().replace(/-/g,'/');
-    if(!raw){hidden.value='';input.setCustomValidity('');continue;}
-    if(!/^1[34][0-9]{2}\/(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])$/.test(raw)){
-     invalid=true;hidden.value='';input.setCustomValidity('تاریخ را به‌صورت ۱۴۰۵/۰۷/۰۱ وارد کنید.');continue;
-    }
-    try{
-     const iso=ServiceYarDates.toISO(raw);
-     if(!/^20[0-9]{2}-[0-9]{2}-[0-9]{2}$/.test(iso))throw Error('date');
-     const roundTrip=ascii(ServiceYarDates.toSolar(iso)).replace(/-/g,'/');
-     if(roundTrip!==raw)throw Error('invalid day');
-     hidden.value=iso;input.setCustomValidity('');
-    }catch(_error){invalid=true;hidden.value='';input.setCustomValidity('تاریخ شمسی نامعتبر است.');}
-   }
-   return !invalid;
-  };
-  for(const name of ['dateFrom','dateTo']){
-   const input=filterForm.elements[name+'Solar'];
-   input.addEventListener('input',()=>{input.setCustomValidity('');syncInvoiceSolarDates();});
-   input.addEventListener('change',()=>{if(syncInvoiceSolarDates())applyFilters();});
-  }
   filterForm.elements.sortBy.addEventListener('change',()=>applyFilters());
   filterForm.elements.sortDir.addEventListener('change',()=>applyFilters());
   filterForm.addEventListener('change',event=>{if(['partyType','paymentState','contractOnly','remainingOnly'].includes(event.target.name))applyFilters();});
-  filterForm.querySelector('#syInvoiceChips').addEventListener('click',event=>{const button=event.target.closest('[data-invoice-clear]');if(!button)return;const field=filterForm.elements[button.dataset.invoiceClear];if(!field)return;if(button.dataset.invoiceClear==='paymentState')field.value='';else if(field.type==='checkbox')field.checked=false;else if(button.dataset.invoiceClear==='dateFrom'||button.dataset.invoiceClear==='dateTo'){field.value='';filterForm.elements[button.dataset.invoiceClear+'Solar'].value='';}else if(button.dataset.invoiceClear==='sortBy')field.value='id';else if(button.dataset.invoiceClear==='sortDir')field.value='desc';else field.value='';applyFilters();});
+  filterForm.querySelector('#syInvoiceChips').addEventListener('click',event=>{const button=event.target.closest('[data-invoice-clear]');if(!button)return;const field=filterForm.elements[button.dataset.invoiceClear];if(!field)return;if(button.dataset.invoiceClear==='paymentState')field.value='';else if(field.type==='checkbox')field.checked=false;else if(button.dataset.invoiceClear==='dateFrom'||button.dataset.invoiceClear==='dateTo')field.value='';else if(button.dataset.invoiceClear==='sortBy')field.value='id';else if(button.dataset.invoiceClear==='sortDir')field.value='desc';else field.value='';applyFilters();});
 
  }
  if(isStudents){
@@ -1345,7 +1321,7 @@ async function resourcePage(key,token=pageToken,options={}){
  state.appliedFilters=new URLSearchParams(new FormData(filterForm));
  initialSearch='';$('addBtn')?.addEventListener('click',()=>{if(key==='services')location.hash='services/new';else formResource(key,null);});
  filterForm.onsubmit=e=>{e.preventDefault();applyFilters();};
- filterForm.onreset=()=>setTimeout(()=>{if(key==='students'){$('studentStatuses')?.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.status===''));}if(isLedger)filterForm.querySelector('.ledger-filter-more')?.removeAttribute('open');if(key==='services'){filterForm.elements.search.value='';const driverSearch=$('serviceDriverSearch');if(driverSearch){driverSearch.value='';driverSearch.dispatchEvent(new Event('input'));}filterForm.querySelector('.service-filter-advanced')?.removeAttribute('open');}applyFilters();},0);
+ filterForm.onreset=()=>setTimeout(()=>{if(key==='invoices'){filterForm.elements.dateFrom.value='';filterForm.elements.dateTo.value='';}if(key==='students'){$('studentStatuses')?.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.status===''));}if(isLedger)filterForm.querySelector('.ledger-filter-more')?.removeAttribute('open');if(key==='services'){filterForm.elements.search.value='';const driverSearch=$('serviceDriverSearch');if(driverSearch){driverSearch.value='';driverSearch.dispatchEvent(new Event('input'));}filterForm.querySelector('.service-filter-advanced')?.removeAttribute('open');}applyFilters();},0);
  $('studentStatuses')?.querySelectorAll('button').forEach(b=>{b.type='button';b.setAttribute('aria-pressed',String(b.classList.contains('active')||(!initialStudentStatus&&b.dataset.status==='')));b.onclick=()=>{$('gridFilters').elements.serviceStatus.value=b.dataset.status;$('studentStatuses').querySelectorAll('button').forEach(x=>{x.classList.toggle('active',x===b);x.setAttribute('aria-pressed',String(x===b));});applyFilters();};});
  $('bulkServiceStatus')?.addEventListener('click',bulkServiceStatusDialog);$('bulkDriverStatus')?.addEventListener('click',bulkDriverStatusDialog);$('bulkFees')?.addEventListener('click',bulkFeeDialog);$('bulkMessage')?.addEventListener('click',bulkMessageDialog);$('printGrid').onclick=()=>window.print();
  $('gridExport')?.addEventListener('click',()=>{const query=gridQuery();query.set('resource',key);downloadFile('/api/v1/reports/export?'+query,'گزارش-'+key+'.xlsx');});
