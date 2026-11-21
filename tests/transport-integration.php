@@ -88,6 +88,20 @@ try{
  check(($legacyPrint['legacyReconstructed']??false)===true
    && str_contains($legacyPrint['html'],'نسخه بازسازی‌شده'),
    'Old contracts without issuance snapshots are labeled as reconstructions, not originals');
+ // Imported archival snapshots retain their stored bytes while the print view
+ // carries explicit provenance. Genuine issued snapshots must not be relabeled.
+ $archivedHtml='<html><body><p>قرارداد وارداتی آزمایشی</p></body></html>';
+ $p->prepare('UPDATE contracts SET rendered_html=?,snapshot_json=? WHERE id=? AND agency_id=?')->execute([
+   $archivedHtml,json_encode(['source'=>'sql_import_reconstruction']),$contract['id'],$a
+ ]);
+ $archivedPrint=$docApi::printable($uid,$a,(int)$contract['id']);
+ check(($archivedPrint['legacyReconstructed']??false)===true
+   && str_contains($archivedPrint['html'],'نسخه بازسازی‌شده')
+   && str_contains($archivedPrint['html'],'قرارداد وارداتی آزمایشی'),
+   'Archived reconstruction is labeled without losing the print content');
+ check($p->query('SELECT rendered_html FROM contracts WHERE id='.(int)$contract['id'])->fetchColumn()===$archivedHtml,
+   'Printing an archived reconstruction does not mutate the persisted snapshot');
+ $p->prepare('UPDATE contracts SET rendered_html=NULL,snapshot_json=NULL WHERE id=? AND agency_id=?')->execute([$contract['id'],$a]);
  rejected(fn()=>D::save($uid,$a,'contracts',['amount'=>'1'],(int)$issued['id']),'ISSUED_CONTRACT_IMMUTABLE');
  $contractAccount=\ServiceYar\Domain\StudentServiceBilling::account($uid,$a,(int)$s1['id']);
  $contractListRow=D::get($uid,$a,'students',(int)$s1['id']);
