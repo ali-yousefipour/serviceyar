@@ -323,10 +323,17 @@ HTML;
   Authorization::requirePermission($uid,'finance.manage');
   self::ensureSchema($pdo);ContractSchemaMaintenance::requireReady($pdo);
   $student=ContractBilling::lockStudent($pdo,$aid,$studentId);
+  $currentYear=ContractBilling::year((string)$student['academic_year']);
+  $currentStart=ContractBilling::defaults($currentYear,false)['startDate'];
+  $nextYear=(int)substr($currentYear,0,4)+1;
+  $nextStart=ContractBilling::defaults($nextYear.'-'.($nextYear+1),false)['startDate'];
   $q=$pdo->prepare("SELECT * FROM contracts WHERE agency_id=? AND party_type='student' AND party_id=? AND status='active' ORDER BY id FOR UPDATE");
   $q->execute([$aid,$studentId]);$contracts=$q->fetchAll(PDO::FETCH_ASSOC);
   $updated=0;
   foreach($contracts as $old){
+   // Previous/future school-year contracts do not belong to the current tariff
+   // change. Skip before validating their potentially legacy invoice mappings.
+   if((string)$old['end_date']<$currentStart||(string)$old['start_date']>=$nextStart)continue;
    $id=(int)$old['id'];
    $m=$pdo->prepare('SELECT invoice_id,academic_year FROM student_contract_invoices WHERE agency_id=? AND contract_id=? AND student_id=? FOR UPDATE');
    $m->execute([$aid,$id,$studentId]);$mapping=$m->fetchAll(PDO::FETCH_ASSOC);
@@ -336,8 +343,7 @@ HTML;
    $i->execute([$invoiceId,$aid,$studentId]);$invoice=$i->fetch(PDO::FETCH_ASSOC);
    if(!$invoice||$invoice['status']==='cancelled')throw new AuthException(409,'فاکتور مرتبط با قرارداد معتبر نیست.','CONTRACT_INVOICE_CONFLICT');
    $year=ContractBilling::year((string)$mapping[0]['academic_year']);
-   // A tariff change in the current student year must never reprice a previous year's contract.
-   if($year!==ContractBilling::year((string)$student['academic_year']))continue;
+   if($year!==$currentYear)throw new AuthException(409,'سال تحصیلی ثبت‌شده فاکتور با تاریخ قرارداد جاری مطابقت ندارد؛ تطبیق مالی لازم است.','CONTRACT_YEAR_MAPPING_CONFLICT');
    $period=ContractBilling::quote($year,(string)$old['start_date'],(string)$old['end_date'],(int)round((float)$student['monthly_fee']));
    $amount=(int)$period['amount'];
    if($amount<=0)throw new AuthException(422,'تعرفه جدید معتبر نیست.','CONTRACT_FEE_REQUIRED');
