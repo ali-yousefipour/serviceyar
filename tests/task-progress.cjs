@@ -27,6 +27,9 @@ assert.match(loader,/event\.lengthComputable&&event\.total>0/,'Unknown upload le
 assert.match(loader,/percent:null/,'Server processing must revert to indeterminate state');
 assert.match(operations,/ServiceYarLoading\.upload\(scoped\('\/api\/v1\/operations\/import\/preview'/,'Student import must use measured upload progress');
 assert.match(portal,/ServiceYarLoading\.upload\(endpoint,body/,'Driver portrait upload must report measured bytes');
+assert.match(operations,/ServiceYarLoading\.upload\('\/api\/v1\/schools\//,'School photo upload must report measured bytes');
+assert.match(operations,/ServiceYarLoading\.upload\(url,body/,'Managed user portraits must use shared upload progress');
+assert.match(operations,/ServiceYarLoading\.upload\(agencyLogoUrl\(\),data/,'Agency logo upload must use shared progress');
 assert.match(style,/@media\(max-width:520px\)/,'Progress must fit mobile screens');
 assert.match(style,/prefers-reduced-motion:reduce/,'Loading animation must respect reduced-motion');
 console.log('Shared loading and real progress contract: OK');
