@@ -105,8 +105,12 @@ final class KavenegarSms
         if(!is_array($json)||!isset($json['return'])||!is_array($json['return']))
             throw new AuthException(502,'پاسخ سرویس پیامک کاوه‌نگار نامعتبر است.','SMS_PROVIDER_INVALID_RESPONSE');
         $status=(int)($json['return']['status']??0);
-        if($httpStatus===200&&$status===200&&isset($json['entries'][0]['messageid']))
-            return ['accepted'=>true,'id'=>(string)$json['entries'][0]['messageid']];
+        if($httpStatus===200&&$status===200){
+            $id=$json['entries'][0]['messageid']??null;
+            if(!is_scalar($id)||trim((string)$id)==='')
+                throw new AuthException(502,'شناسه پیامک در پاسخ کاوه‌نگار وجود ندارد.','SMS_PROVIDER_INVALID_RESPONSE');
+            return ['accepted'=>true,'id'=>(string)$id];
+        }
         return ['accepted'=>false,'code'=>(string)$status];
     }
 
