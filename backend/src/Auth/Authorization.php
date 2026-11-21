@@ -43,6 +43,13 @@ final class Authorization
 
     public static function requireAgencyAccess(int $userId,int $agencyId): void
     {
+        // Tenant access must never survive account deactivation, even when an
+        // old agency_users membership (or a privileged role) is still present.
+        $active=Connection::get()->prepare('SELECT 1 FROM users WHERE id=:uid AND is_active=1 LIMIT 1');
+        $active->execute(['uid'=>$userId]);
+        if (!$active->fetchColumn()) {
+            throw new AuthException(403,'دسترسی به این سازمان مجاز نیست.','SCOPE_FORBIDDEN');
+        }
         if (self::isSuperAdmin($userId)) return;
         $s=Connection::get()->prepare('SELECT 1 FROM agency_users WHERE user_id=:uid AND agency_id=:aid LIMIT 1');
         $s->execute(['uid'=>$userId,'aid'=>$agencyId]);
