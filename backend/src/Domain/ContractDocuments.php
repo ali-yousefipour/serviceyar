@@ -332,7 +332,7 @@ HTML;
    $m->execute([$aid,$id,$studentId]);$mapping=$m->fetchAll(PDO::FETCH_ASSOC);
    if(count($mapping)!==1)throw new AuthException(409,'ارتباط فاکتور این قرارداد یکتا نیست؛ پیش از اصلاح تعرفه، تطبیق مالی لازم است.','CONTRACT_INVOICE_MAPPING_REQUIRED');
    $invoiceId=(int)$mapping[0]['invoice_id'];
-   $i=$pdo->prepare("SELECT id,status FROM invoices WHERE id=? AND agency_id=? AND party_type='student' AND party_id=? FOR UPDATE");
+   $i=$pdo->prepare("SELECT id,amount,status,due_date FROM invoices WHERE id=? AND agency_id=? AND party_type='student' AND party_id=? FOR UPDATE");
    $i->execute([$invoiceId,$aid,$studentId]);$invoice=$i->fetch(PDO::FETCH_ASSOC);
    if(!$invoice||$invoice['status']==='cancelled')throw new AuthException(409,'فاکتور مرتبط با قرارداد معتبر نیست.','CONTRACT_INVOICE_CONFLICT');
    $year=ContractBilling::year((string)$mapping[0]['academic_year']);
@@ -357,6 +357,8 @@ HTML;
    }
    if(!$template)$template=self::template($pdo,'parent');
    $snapshot['values']=$values;
+   $old['invoiceBeforeDistanceReprice']=$invoice;
+   $old['distanceRepriceNewAmount']=$amount;
    $pdo->prepare('INSERT INTO contract_revisions(agency_id,contract_id,edited_by,previous_json) VALUES(?,?,?,?)')
     ->execute([$aid,$id,$uid,json_encode($old,JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE|JSON_THROW_ON_ERROR)]);
    $pdo->prepare('UPDATE contracts SET amount=?,rendered_html=?,snapshot_json=? WHERE id=? AND agency_id=?')
