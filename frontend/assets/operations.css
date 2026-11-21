@@ -3519,3 +3519,84 @@ dialog.sy-contract-edit-dialog::backdrop{background:rgba(10,30,23,.55)}
 .sy-student-payment-filter{margin:0;padding:0;border:0;min-width:0}.sy-student-payment-filter legend{font-weight:600;font-size:.85rem;margin-bottom:8px}.sy-student-payment-options{display:flex;gap:8px;flex-wrap:wrap}.sy-student-payment-options label{display:block;position:relative;cursor:pointer}.sy-student-payment-options input[type=radio]{position:absolute;opacity:0;width:1px!important;height:1px!important;min-height:0!important}.sy-student-payment-options span{display:block;padding:8px 14px;border:1px solid #d1ded5;border-radius:8px;min-height:38px;background:#fff;color:#365247}.sy-student-payment-options input:checked+span{background:#075b44;color:#fff;border-color:#075b44}.sy-student-payment-options input:focus-visible+span{outline:2px solid #25836a;outline-offset:3px}@media(max-width:540px){.sy-student-payment-options span{padding:7px 10px}}
 
 .sy-contract-filters{display:grid;grid-template-columns:minmax(220px,2fr) repeat(2,minmax(120px,1fr));gap:12px;align-items:end;padding:14px;border:1px solid #d9e5dc;border-radius:12px;margin:12px 0}.sy-contract-filters label{display:grid;gap:6px;min-width:0}.sy-contract-filters input,.sy-contract-filters select{min-height:42px;width:100%;min-width:0}.sy-contract-filter-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.sy-contract-filters [data-contract-count]{color:#075b44;font-size:.85rem}.sy-contract-list tr[hidden]{display:none!important}.sy-contract-list th{position:sticky;top:0}.sy-contract-new-dialog{width:min(950px,94vw);max-height:90vh;overflow:auto;border:1px solid #d9e5dc;border-radius:14px;padding:18px;background:var(--surface,#fff);color:inherit;direction:rtl}.sy-contract-new-dialog:not([open]){display:none!important}.sy-contract-new-dialog::backdrop{background:#10271f80}.sy-contract-new-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}.sy-contract-new-head h3{margin:0}@media(max-width:760px){.sy-contract-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.sy-contract-filters label:first-child{grid-column:1/-1}.sy-contract-new-dialog .sy-contract-create-grid{grid-template-columns:1fr}}
+
+
+/* Invoice workspace refresh: RTL-first, high-density desktop and readable mobile. */
+#content .sy-invoice-kpis{gap:14px;margin:0 0 12px}
+#content .sy-invoice-kpi{position:relative;border:1px solid #d8e6df;border-radius:16px;
+ background:linear-gradient(155deg,var(--surface,#fff),#f6faf8);padding:18px 20px;box-shadow:0 5px 20px #133b2910}
+#content .sy-invoice-kpi:before{content:"";position:absolute;inset-block:14px 14px;inset-inline-start:0;width:4px;
+ border-radius:10px;background:#178166}
+#content .sy-invoice-kpi small{font-weight:750;color:#42665a}
+#content .sy-invoice-kpi strong{font-size:clamp(1.05rem,1.65vw,1.55rem);font-weight:850;color:var(--text,#183128);direction:rtl}
+#content .sy-invoice-kpi:last-child strong{color:#945012}
+#content .sy-invoice-finance-note{margin:0 0 16px;border-radius:10px;padding:10px 14px;
+ background:#eff7f2;color:#3d6154;font-size:.78rem;line-height:1.85}
+#content .sy-invoice-filters.sy-invoice-filter-v2{border:1px solid #cedfd6;border-radius:18px;
+ box-shadow:0 8px 28px #183b2912;padding:20px;gap:17px;background:var(--surface,#fff)}
+#content .sy-invoice-filter-head{padding-bottom:12px;border-bottom:1px solid #e3eee7}
+#content .sy-invoice-eyebrow{display:inline-block;font-size:.72rem;letter-spacing:0;color:#19745c;font-weight:750;margin-bottom:4px}
+#content .sy-invoice-filter-head h3{font-size:1.13rem;font-weight:850}
+#content .sy-invoice-filter-head>span{padding:7px 12px;border-radius:999px;background:#e8f6ef;font-size:.8rem;white-space:nowrap}
+#content .sy-invoice-quick{grid-template-columns:minmax(0,2.4fr) minmax(190px,1fr)}
+#content .sy-invoice-filter-v2 label{font-weight:700;color:var(--text,#183128)}
+#content .sy-invoice-filter-v2 :is(input:not([type=hidden]),select){border-radius:10px;
+ border:1px solid #c7dad0;background:var(--surface,#fff);color:var(--text,#183128);min-height:45px;padding:9px 11px}
+#content .sy-invoice-filter-v2 :is(input,select):focus-visible{outline:2px solid #178166;outline-offset:1px}
+#content .sy-invoice-search-box{min-height:46px;background:var(--surface,#fff);border-radius:11px}
+#content .sy-invoice-search-box input{min-height:40px!important;padding:7px 3px!important}
+#content .sy-invoice-state-options{gap:8px}
+#content .sy-invoice-state-options span{font-weight:700;border-radius:999px;padding:9px 16px;transition:background .15s}
+#content .sy-invoice-state-options input:checked+span{background:#116e54}
+#content .sy-invoice-advanced{border-radius:13px;border-color:#d4e5db;background:#f7faf8;padding:14px}
+#content .sy-invoice-advanced summary{list-style-position:inside;padding:3px}
+#content .sy-invoice-advanced[open] summary{margin-bottom:7px}
+#content .sy-invoice-advanced-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+#content .sy-invoice-date-hint{display:block;margin-top:7px;color:#53756a;font-size:.75rem}
+#content .sy-invoice-sort{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#content .sy-invoice-filter-footer{align-items:flex-end}
+#content #syInvoiceChips{min-height:20px;flex:1;align-items:center}
+#content #syInvoiceChips button{background:#edf7f1;border-color:#c7dfd2;border-radius:999px;min-height:32px}
+#content .sy-invoice-filter-actions button{min-height:43px;border-radius:10px;font-weight:750}
+#content .sy-invoice-reset{background:transparent;border:1px solid #b4cabd;color:#355c49}
+#content .sy-invoice-table{min-width:1060px!important;border-collapse:separate;border-spacing:0}
+#content .sy-invoice-table th{background:#eaf4ee;color:#1e5943;font-size:.81rem;padding:12px 10px;
+ border-bottom:2px solid #bfd7c7;position:sticky;top:0;z-index:2}
+#content .sy-invoice-table td{padding:12px 10px;line-height:1.9;border-bottom:1px solid #e3ece7}
+#content .sy-invoice-table tbody tr:nth-child(even){background:#fafcfb}
+#content .sy-invoice-table tbody tr:hover{background:#f0f8f3}
+#content .sy-invoice-table td:nth-child(3){font-weight:700}
+#content .sy-invoice-table td:nth-child(7),#content .sy-invoice-table td:nth-child(8),
+#content .sy-invoice-table td:nth-child(9){font-weight:750;direction:rtl}
+#content .sy-invoice-status{font-weight:750;white-space:nowrap;border:1px solid transparent}
+#content .sy-invoice-status[data-state=open]{color:#20588b;background:#e6f2ff;border-color:#c8ddf1}
+#content .sy-invoice-status[data-state=paid]{border-color:#b8ddc5}
+#content .sy-invoice-status[data-state=partial]{border-color:#eed7a6}
+#content .sy-invoice-status[data-state=overdue]{border-color:#eac2a8;background:#fff0e7;color:#a24722}
+#content .sy-invoice-status[data-state=cancelled]{border-color:#ecc2c2}
+@media (max-width:1000px){
+ #content .sy-invoice-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #content .sy-invoice-quick{grid-template-columns:minmax(0,1.5fr) minmax(175px,1fr)}
+}
+@media (max-width:760px){
+ #content .sy-invoice-filters.sy-invoice-filter-v2{padding:13px;gap:13px}
+ #content .sy-invoice-quick,#content .sy-invoice-advanced-grid,#content .sy-invoice-sort{grid-template-columns:1fr}
+ #content .sy-invoice-pair{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #content .sy-invoice-kpi{padding:13px 14px}
+ #content .sy-invoice-table{min-width:0!important}
+ #content .sy-invoice-table tbody{display:grid;gap:12px}
+ #content .sy-invoice-table tr{background:var(--surface,#fff)!important;box-shadow:0 3px 13px #193c2610}
+ #content .sy-invoice-table td{padding:4px 6px;border-bottom:0!important;font-size:.85rem}
+ #content .sy-invoice-table td:nth-child(3){grid-column:1/-1;font-size:.94rem;border-bottom:1px solid #e2ebe6!important}
+ #content .sy-invoice-table td:nth-child(7),#content .sy-invoice-table td:nth-child(8),
+ #content .sy-invoice-table td:nth-child(9){white-space:normal!important}
+ #content .sy-invoice-table td:last-child{grid-column:1/-1;border-top:1px solid #e2ebe6;padding-top:9px}
+ #content .sy-invoice-filter-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}
+}
+@media(max-width:440px){
+ #content .sy-invoice-pair{grid-template-columns:1fr}
+ #content .sy-invoice-kpis{grid-template-columns:1fr 1fr;gap:8px}
+ #content .sy-invoice-kpi{padding:11px}
+ #content .sy-invoice-kpi strong{font-size:1rem}
+ #content .sy-invoice-filter-actions{grid-template-columns:1fr}
+}
