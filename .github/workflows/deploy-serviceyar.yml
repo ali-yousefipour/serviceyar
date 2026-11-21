@@ -83,6 +83,8 @@ jobs:
           node --check frontend/assets/login-methods.js
           node tests/login-methods-contract.cjs
           node tests/negin-sms-admin-settings.cjs
+          node tests/kavenegar-sms-contract.cjs
+          php tests/kavenegar-sms.php
           node tests/representative-access-contract.cjs
           node tests/admin-impersonation-contract.cjs
           node tests/admin-driver-preview-contract.cjs
