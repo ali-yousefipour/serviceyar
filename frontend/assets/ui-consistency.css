@@ -1,0 +1,150 @@
+/* ServiceYar UI audit — shared typography, touch, RTL and responsive parity.
+ * Loaded last: deliberately scoped to interactive screens so it does not
+ * change Excel/PDF/print documents or third-party Leaflet visuals. */
+:root{
+ --sy-ui-font:Vazirmatn,Tahoma,Arial,sans-serif;
+ --sy-ui-body:.875rem;
+ --sy-ui-small:.8125rem;
+ --sy-ui-caption:.75rem;
+ --sy-ui-title:clamp(1.0625rem,1rem + .5vw,1.375rem);
+ --sy-ui-line:1.85;
+ --sy-ui-radius:.875rem;
+ --sy-ui-control:2.75rem;
+ --sy-ui-space:clamp(.75rem,1.4vw,1.25rem);
+ --sy-ui-border:#d9e6dc;
+ --sy-ui-text:#193f31;
+ --sy-ui-muted:#587367;
+ --sy-ui-focus:#b48a22;
+}
+@media screen{
+ /* Preserve the design hierarchy while using one readable type family.
+    Do not affect icons, map marker controls or HTML-to-PDF workers. */
+ :is(html,body,#app,#login,#publicSite){font-family:var(--sy-ui-font);}
+ #app :is(button,input,select,textarea),
+ #login :is(button,input,select,textarea),
+ #publicSite :is(button,input,select,textarea){
+  font-family:var(--sy-ui-font);
+ }
+ #app :is(.panel,.sy-admin-page-card,.portal-panel,.sy-settings-panel){
+  min-width:0;max-width:100%;
+ }
+ #app :is(.toolbar,.page-intro,.sy-settings-section-head,.portal-panel-heading){
+  min-width:0;column-gap:var(--sy-ui-space);row-gap:.625rem;
+ }
+ #app :is(.toolbar h2,.page-intro h2,.sy-settings-section-head h2,.portal-section-title h1){
+  font-family:var(--sy-ui-font);font-size:var(--sy-ui-title);
+  line-height:1.6;font-weight:800;overflow-wrap:anywhere;
+ }
+ #app :is(.toolbar p,.page-intro p,.sy-settings-section-head p,.portal-section-title p){
+  font-size:var(--sy-ui-small);line-height:var(--sy-ui-line);color:var(--sy-ui-muted);
+ }
+ #app :is(.panel h3,.portal-panel h2,.sy-admin-page-card h3){
+  line-height:1.7;overflow-wrap:anywhere;
+ }
+ #app :is(.filters,.form-grid,.report-filters,.directory-filters,.sy-operation-filters,.portal-debtors-filters)
+ :is(label,legend), #app .portal-profile-form label{
+  color:var(--sy-ui-text);font-size:var(--sy-ui-small);line-height:1.65;font-weight:700;
+ }
+ #app :is(.filters,.form-grid,.report-filters,.directory-filters,.sy-operation-filters,
+           .sy-settings-panel,.sy-admin-page-card,.portal-panel,.portal-debtors-filters)
+ :is(input:not([type=checkbox]):not([type=radio]):not([type=hidden]),select,textarea),
+ #login :is(input,select,textarea){
+  box-sizing:border-box;min-width:0;max-width:100%;
+  min-height:var(--sy-ui-control);
+  font-family:var(--sy-ui-font);font-size:var(--sy-ui-body);line-height:1.5;
+  border-radius:.6875rem;
+ }
+ #app :is(.filters,.form-grid,.report-filters,.directory-filters,.sy-operation-filters,
+           .sy-settings-panel,.sy-admin-page-card,.portal-panel)
+ :is(input,select,textarea)::placeholder{color:#70867a;opacity:1;}
+ #app :is(button,.primary,.secondary,.link),#login button{
+  font-family:var(--sy-ui-font);
+ }
+ #app :is(.panel,.sy-settings-panel,.sy-admin-page-card,.portal-panel)
+ :is(button:not(.leaflet-control-zoom-in):not(.leaflet-control-zoom-out),.primary,.secondary){
+  min-height:2.5rem;font-size:var(--sy-ui-small);line-height:1.5;
+ }
+ #app :is(input,textarea,select,button,a,summary,[role=button]):focus-visible,
+ #login :is(input,textarea,select,button,a):focus-visible{
+  outline:3px solid var(--sy-ui-focus);outline-offset:2px;
+ }
+ #app :is(button,input,select,textarea):disabled{cursor:not-allowed;}
+ #app :is(.table-wrap,.portal-table-scroll,.sy-finance-table-wrap,.sy-directory-table-wrap,
+           .services-table-wrap){max-width:100%;min-width:0;overscroll-behavior-x:contain;}
+ #app .table-wrap:not(.sy-invoice-table){overflow-x:auto;}
+ #app :is(.sy-admin-page-card,.portal-panel) :is(th,td){
+  font-family:var(--sy-ui-font);font-size:var(--sy-ui-small);
+  line-height:var(--sy-ui-line);overflow-wrap:anywhere;
+ }
+ #app .sy-admin-page-card .table-wrap{
+  border-radius:var(--sy-ui-radius);border-color:var(--sy-ui-border);
+ }
+ #app .sy-admin-page-card table{
+  font:500 var(--sy-ui-small)/var(--sy-ui-line) var(--sy-ui-font);
+  font-variant-numeric:tabular-nums;
+ }
+ #app .sy-admin-page-card .toolbar :is(h2,h3){
+  font:800 var(--sy-ui-title)/1.65 var(--sy-ui-font);
+ }
+ #app .sy-admin-page-card :is(.toolbar p,.muted){
+  font:500 var(--sy-ui-small)/var(--sy-ui-line) var(--sy-ui-font);
+ }
+ #app .sy-admin-page-card :is(input:not([type=checkbox]),select,textarea){
+  font:600 var(--sy-ui-body)/1.5 var(--sy-ui-font);
+  min-height:var(--sy-ui-control);
+ }
+ #app .sy-admin-page-card :is(.primary,.link,.status-active,.status-inactive){
+  font-family:var(--sy-ui-font);font-size:var(--sy-ui-small);line-height:1.6;
+ }
+ #app.sy-portal-mode .portal-kpi small{font-size:var(--sy-ui-small);line-height:1.65;}
+ #app.sy-portal-mode .portal-panel :is(th,td){font-size:var(--sy-ui-small);}
+ #app.sy-portal-mode .portal-panel .muted{font-size:var(--sy-ui-small);line-height:var(--sy-ui-line);}
+ #app.sy-portal-mode .portal-profile-form :is(input,select,textarea){font-size:var(--sy-ui-body);}
+ #app .sy-invoice-table :is(th,td){font-size:var(--sy-ui-small);line-height:1.8;}
+ #app :is(.sy-invoice-status,.status-active,.status-inactive){
+  font-size:var(--sy-ui-small);line-height:1.65;
+ }
+ #app .sy-settings-section-head p,#app .sy-settings-panel>p{
+  font-size:var(--sy-ui-small);line-height:var(--sy-ui-line);
+ }
+ #app .solar-date-field{min-width:0;max-width:100%;}
+ #app .solar-date-field .solar-input{min-width:0;}
+ #app :is(.sy-admin-page-card,.portal-panel,.sy-settings-panel) :is(button,a,input,select,textarea){
+  touch-action:manipulation;
+ }
+}
+@media screen and (max-width:760px){
+ #app :is(.panel,.sy-admin-page-card,.portal-panel,.sy-settings-panel){max-width:100%;}
+ #app .sy-admin-page-card .table-wrap{
+  overflow-x:auto;max-height:min(66dvh,620px);
+ }
+ /* Wide admin tables stay legible by scrolling horizontally, never by
+    reducing their type to 9px or clipping critical action buttons. */
+ #app .sy-admin-page-card table{min-width:max(42rem,100%);}
+ #app .sy-admin-page-card :is(th,td){
+  font-size:var(--sy-ui-small);padding:.625rem .75rem;
+ }
+ #app :is(.toolbar,.page-intro,.sy-settings-section-head){
+  flex-wrap:wrap;align-items:flex-start;
+ }
+ #app :is(.toolbar-buttons,.member-actions,.portal-photo-form){
+  max-width:100%;min-width:0;flex-wrap:wrap;
+ }
+ #app.sy-portal-mode .portal-panel:not(.portal-debtors-workspace) .portal-table-scroll td{
+  font-size:var(--sy-ui-small);line-height:1.75;min-width:0;
+ }
+ #app.sy-portal-mode .portal-panel:not(.portal-debtors-workspace) .portal-table-scroll td::before{
+  font-size:var(--sy-ui-caption);line-height:1.75;
+ }
+}
+@media screen and (max-width:480px){
+ #app :is(.panel,.sy-admin-page-card,.portal-panel,.sy-settings-panel){
+  padding-inline:clamp(.75rem,3vw,1rem);
+ }
+ #app .sy-admin-page-card .toolbar :is(h2,h3){font-size:1.0625rem;}
+ #app.sy-portal-mode .portal-photo-form :is(button,input[type=file]){width:100%;}
+ #app .sy-invoice-table :is(th,td){font-size:var(--sy-ui-small);}
+}
+@media (prefers-reduced-motion:reduce){
+ #app :is(button,a,input,select,textarea){scroll-behavior:auto;transition:none;}
+}
