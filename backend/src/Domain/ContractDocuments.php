@@ -314,6 +314,63 @@ HTML;
   $pdo->prepare('UPDATE contract_number_sequence SET next_number=? WHERE id=1')->execute([$n+1]);
   return (string)$n;
  }
+ /**
+  * Apply an explicitly confirmed student-distance tariff change to active,
+  * uniquely linked parent contracts and their tuition invoices. Must run in
+  * the same outer transaction as the student update.
+  */
+ public static function repriceStudentAfterDistanceChange(PDO $pdo,int $uid,int $aid,int $studentId): int {
+  Authorization::requirePermission($uid,'finance.manage');
+  self::ensureSchema($pdo);ContractSchemaMaintenance::requireReady($pdo);
+  $student=ContractBilling::lockStudent($pdo,$aid,$studentId);
+  $q=$pdo->prepare("SELECT * FROM contracts WHERE agency_id=? AND party_type='student' AND party_id=? AND status='active' ORDER BY id FOR UPDATE");
+  $q->execute([$aid,$studentId]);$contracts=$q->fetchAll(PDO::FETCH_ASSOC);
+  $updated=0;
+  foreach($contracts as $old){
+   $id=(int)$old['id'];
+   $m=$pdo->prepare('SELECT invoice_id,academic_year FROM student_contract_invoices WHERE agency_id=? AND contract_id=? AND student_id=? FOR UPDATE');
+   $m->execute([$aid,$id,$studentId]);$mapping=$m->fetchAll(PDO::FETCH_ASSOC);
+   if(count($mapping)!==1)throw new AuthException(409,'ارتباط فاکتور این قرارداد یکتا نیست؛ پیش از اصلاح تعرفه، تطبیق مالی لازم است.','CONTRACT_INVOICE_MAPPING_REQUIRED');
+   $invoiceId=(int)$mapping[0]['invoice_id'];
+   $i=$pdo->prepare("SELECT id,status FROM invoices WHERE id=? AND agency_id=? AND party_type='student' AND party_id=? FOR UPDATE");
+   $i->execute([$invoiceId,$aid,$studentId]);$invoice=$i->fetch(PDO::FETCH_ASSOC);
+   if(!$invoice||$invoice['status']==='cancelled')throw new AuthException(409,'فاکتور مرتبط با قرارداد معتبر نیست.','CONTRACT_INVOICE_CONFLICT');
+   $year=ContractBilling::year((string)$mapping[0]['academic_year']);
+   $period=ContractBilling::quote($year,(string)$old['start_date'],(string)$old['end_date'],(int)round((float)$student['monthly_fee']));
+   $amount=(int)$period['amount'];
+   if($amount<=0)throw new AuthException(422,'تعرفه جدید معتبر نیست.','CONTRACT_FEE_REQUIRED');
+   $snapshot=json_decode((string)$old['snapshot_json'],true);
+   if(!is_array($snapshot))$snapshot=[];
+   $values=is_array($snapshot['values']??null)?$snapshot['values']:self::data($pdo,$aid,'parent',$studentId);
+   $distance=$pdo->prepare('SELECT tariff_distance_km FROM students WHERE id=? AND agency_id=?');
+   $distance->execute([$studentId,$aid]);
+   $values['distanceKm']=(string)$distance->fetchColumn();
+   $values['monthlyFee']=(int)$student['monthly_fee'];
+   $values['totalAmount']=self::persian(number_format($amount,0,'.',','));
+   $values['payment40']=self::persian(number_format((int)round($amount*.4),0,'.',','));
+   $values['payment20']=self::persian(number_format((int)round($amount*.2),0,'.',','));
+   $values['durationMonths']=self::persian(rtrim(rtrim(number_format($period['months'],2,'.',''),'0'),'.'));
+   $template=null;
+   if(!empty($old['template_id'])){
+    $t=$pdo->prepare("SELECT * FROM contract_templates WHERE id=? AND kind='parent'");
+    $t->execute([(int)$old['template_id']]);$template=$t->fetch(PDO::FETCH_ASSOC)?:null;
+   }
+   if(!$template)$template=self::template($pdo,'parent');
+   $snapshot['values']=$values;
+   $pdo->prepare('INSERT INTO contract_revisions(agency_id,contract_id,edited_by,previous_json) VALUES(?,?,?,?)')
+    ->execute([$aid,$id,$uid,json_encode($old,JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE|JSON_THROW_ON_ERROR)]);
+   $pdo->prepare('UPDATE contracts SET amount=?,rendered_html=?,snapshot_json=? WHERE id=? AND agency_id=?')
+    ->execute([$amount,self::document((string)$template['body_html'],$values),
+      json_encode($snapshot,JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE|JSON_THROW_ON_ERROR),$id,$aid]);
+   $paid=$pdo->prepare('SELECT COALESCE(SUM(amount),0) FROM payments WHERE invoice_id=? AND agency_id=?');
+   $paid->execute([$invoiceId,$aid]);$received=(float)$paid->fetchColumn();
+   $status=$received >= $amount?'paid':($received>0?'partial':'open');
+   $pdo->prepare('UPDATE invoices SET amount=?,status=? WHERE id=? AND agency_id=?')
+    ->execute([$amount,$status,$invoiceId,$aid]);
+   $updated++;
+  }
+  return $updated;
+ }
  public static function editData(int $uid,int $aid,int $id): array {
   self::scope($uid,$aid,true);$pdo=Connection::get();
   $q=$pdo->prepare('SELECT id,contract_no,party_type,party_id,start_date,end_date,amount,status,snapshot_json FROM contracts WHERE id=? AND agency_id=?');
