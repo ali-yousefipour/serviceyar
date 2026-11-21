@@ -3,7 +3,7 @@ declare(strict_types=1);
 namespace ServiceYar\Auth;
 use ServiceYar\Database\Connection;
 use ServiceYar\Integrations\BaleBotService;
-use ServiceYar\Integrations\NeginSms;
+use ServiceYar\Integrations\SmsProvider;
 
 final class LoginMethods
 {
@@ -32,7 +32,7 @@ final class LoginMethods
     public static function publicStatus(): array
     {
         $configured=self::policies();
-        $smsReady=NeginSms::ready();
+        $smsReady=SmsProvider::ready();
         $available=['password'=>true,'sms'=>$smsReady,'bale'=>BaleBotService::ready(),'mobile'=>$smsReady];
         return ['methods'=>[
             'password'=>$configured['password'],
