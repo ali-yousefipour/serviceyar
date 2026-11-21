@@ -23,7 +23,7 @@ assert.ok(sms.includes('password_hash($code,PASSWORD_DEFAULT)'),'OTP not stored 
 assert.ok(sms.includes("password_verify($code,$row['code_hash'])"),'OTP verified securely');
 assert.ok(sms.includes('attempt_count>=5')||sms.includes("['attempt_count']>=5"),'OTP attempts limited');
 assert.ok(sms.includes('DATE_ADD(UTC_TIMESTAMP(),INTERVAL 5 MINUTE)'),'OTP expires');
-assert.ok(sms.includes('NeginSms())->send'),'SMS uses provider');
+assert.ok(sms.includes('SmsProvider())->send'),'SMS uses provider');
 assert.ok(sms.includes("public static function requestMobile(string $mobile)"),'mobile OTP request supported');
 assert.ok(sms.includes("public static function verifyMobile(string $mobile,string $code)"),'mobile OTP verification supported');
 assert.ok(sms.includes("purpose='login'"),'login OTP is isolated from password reset challenges');
