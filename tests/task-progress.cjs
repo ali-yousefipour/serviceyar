@@ -26,6 +26,7 @@ assert.match(loader,/xhr\.upload\.onprogress=event=>/,'Upload percentage must co
 assert.match(loader,/event\.lengthComputable&&event\.total>0/,'Unknown upload length must not display percentages');
 assert.match(loader,/percent:null/,'Server processing must revert to indeterminate state');
 assert.match(operations,/ServiceYarLoading\.upload\(scoped\('\/api\/v1\/operations\/import\/preview'/,'Student import must use measured upload progress');
+assert.match(portal,/ServiceYarLoading\.upload\(endpoint,body/,'Driver portrait upload must report measured bytes');
 assert.match(style,/@media\(max-width:520px\)/,'Progress must fit mobile screens');
 assert.match(style,/prefers-reduced-motion:reduce/,'Loading animation must respect reduced-motion');
 console.log('Shared loading and real progress contract: OK');
