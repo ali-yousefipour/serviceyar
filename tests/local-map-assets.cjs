@@ -8,11 +8,15 @@ const html=get('frontend/index.html');
 const deploy=get('.github/workflows/deploy-serviceyar.yml');
 const vendor=get('tools/vendor_neshan_sdk.py');
 
+const loader=get('frontend/assets/neshan-sdk-loader.js');
+assert.match(loader,/\/assets\/vendor\/neshan\/v1\.0\.8\//,'Shared SDK loader must use first-party versioned path');
+assert.match(loader,/ROOT\+'index.js'/,'Loader must request local SDK JS');
+assert.match(loader,/ROOT\+'index.css'/,'Loader must request local SDK CSS');
 for(const [name,source] of [['public',publicJs],['company',operations]]){
- assert.match(source,/\/assets\/vendor\/neshan\/v1\.0\.8\/index\.js/,name+' must use first-party SDK JS');
- assert.match(source,/\/assets\/vendor\/neshan\/v1\.0\.8\/index\.css/,name+' must use first-party SDK CSS');
- assert.doesNotMatch(source,/https:\/\/static\.neshan\.org\/sdk\//,name+' must not load an SDK CDN at runtime');
+ assert.match(source,/ServiceYarNeshanSDK\.load\(\)/,name+' must reuse the shared SDK loader');
+ assert.doesNotMatch(source,/https:\/\/static\.neshan\.org\/sdk\//,name+' must not fetch third-party SDK in browser');
 }
+assert.ok(html.indexOf('/assets/neshan-sdk-loader.js') < html.indexOf('/assets/public-site.js'), 'SDK loader must initialize before public map');
 assert.match(html,/src="\/assets\/leaflet\.js/, 'Leaflet already hosted locally');
 assert.match(html,/href="\/assets\/leaflet\.css/, 'Leaflet CSS already hosted locally');
 assert.match(operations,/\/assets\/html2pdf\.bundle\.min\.js/, 'PDF bundle must remain same-origin');
