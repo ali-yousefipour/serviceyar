@@ -179,10 +179,21 @@ final class MonthlyStatements
             ]);
             if(preg_match('/^[1-7]$/',$region))$region='ناحیه '.$region;
             try{
-                $reference=SchoolServiceStatement::fromSchoolTariff(
-                    (string)($row['tariff_vehicle_class']??''),
-                    $row['tariff_distance_km']??null,$region,30
-                );
+                // For a mid-month class switch, blend every component of
+                // the official workbook rate using actual effective-day shares.
+                $weights=VehicleClassEffectiveDates::classWeights(
+                    $from,$to,$periods,(int)($row['tariff_vehicle_class']??0));
+                $reference=[];
+                foreach($weights as $historicClass=>$share){
+                    $quote=SchoolServiceStatement::fromSchoolTariff(
+                        (string)$historicClass,$row['tariff_distance_km']??null,$region,30);
+                    foreach($quote as $key=>$value){
+                        if(is_numeric($value))$reference[$key]=($reference[$key]??0)+(float)$value*$share;
+                        elseif(!array_key_exists($key,$reference))$reference[$key]=$value;
+                    }
+                }
+                if(count($weights)>1)$reference['source']='school-workbook-rates-1405-effective-dated';
+                $row['historic_class_weights']=$weights;
                 $row['reference_tariff_verified']=true;
                 if($gross>0 && abs((float)$reference['parent_total']-$gross)>1.0){
                     $reconciliationWarnings[]=[
