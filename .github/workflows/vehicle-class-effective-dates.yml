@@ -22,6 +22,8 @@ jobs:
           php -l backend/src/Domain/VehicleClassChangeWorkflow.php
           php -l backend/src/Domain/VehicleClassHistory.php
           php -l backend/src/Domain/VehicleClassSchema.php
+          php -l backend/src/Domain/VehicleClassRateApplication.php
+          php -l backend/src/Domain/ServicePricing.php
           php -l backend/src/Domain/ContractDocuments.php
           php -l backend/src/Domain/StudentBalance.php
           php -l backend/src/Domain/StudentDebtors.php
@@ -31,6 +33,13 @@ jobs:
           php -l backend/public/index.php
           node --check frontend/assets/operations.js
           node tests/vehicle-class-workflow-contract.cjs
+          php tests/static-smoke.php
+          node tests/api-route-guard-contract.cjs
+          node tests/payroll-reconciliation-contract.cjs
+          node tests/finance-form-inputs.cjs
+          node tests/vehicle-model-selector.cjs
+          node tests/new-service-wizard.cjs
+          node tests/wizard-lookup.cjs
           php -l tests/vehicle-class-effective-dates.php
       - name: Check date and proration contracts
         run: php tests/vehicle-class-effective-dates.php
