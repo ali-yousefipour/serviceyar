@@ -55,6 +55,16 @@ try {
  $p->prepare('UPDATE users SET is_active=1 WHERE id=?')->execute([$manager]);
  $reject(fn()=>UserService::list($manager,0),'FORBIDDEN');
  $reject(fn()=>UserService::save($manager,$agency,['firstName'=>'not allowed'],$manager),'PROTECTED_USER');
+ // A company manager must not replace another manager's photo through
+ // the separate user-photo handler (the normal user editor already forbids it).
+ $secondManager=$makeUser('manager2_'.$tag);
+ $p->prepare('INSERT INTO user_roles(user_id,role_id) VALUES(?,?)')->execute([$secondManager,$roleId]);
+ $p->prepare('INSERT INTO agency_users(agency_id,user_id) VALUES(?,?)')->execute([$agency,$secondManager]);
+ $photoAccess=new ReflectionMethod(\\ServiceYar\\Users\\UserPhotos::class,'access');
+ $reject(fn()=>$photoAccess->invoke(null,$manager,$agency,$secondManager,true),'PROTECTED_USER');
+ // Read-only access remains explicitly permitted within the same agency.
+ $photoAccess->invoke(null,$manager,$agency,$secondManager,false);
+ $reject(fn()=>$photoAccess->invoke(null,$manager,$foreignAgency,$foreignOperator,false),'SCOPE_FORBIDDEN');
  $p->rollBack();
  echo "School company manager authorization, tenant isolation and protected role: OK\n";
 }catch(Throwable $e){
