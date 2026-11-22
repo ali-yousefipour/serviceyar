@@ -989,6 +989,37 @@ try{
  $adminProfile=\ServiceYar\Users\UserService::save($uid,0,['mobile'=>'09121111111'], $viewer);
  check(($adminProfile['mobile']??'')==='09121111111',
   'Super administrator may correct other user contact information');
+ // Validate the actual batched reconciliation engine against MariaDB,
+ // including invoice grouping, SQL LIKE escaping and tenant isolation.
+ $reconA=D::save($uid,$a,'students',[
+  'schoolId'=>$school['id'],'firstName'=>'ممیزی','lastName'=>'مالی',
+  'mobile'=>'09120000881','academicYear'=>'1405/1406','monthlyFee'=>'900'
+ ]);
+ $reconB=D::save($uid,$b,'students',[
+  'schoolId'=>$otherSchool['id'],'firstName'=>'ممیزی','lastName'=>'مالی',
+  'mobile'=>'09120000882','academicYear'=>'1405/1406','monthlyFee'=>'1200'
+ ]);
+ $reconInvoiceA=D::save($uid,$a,'invoices',[
+  'title'=>'صورت‌حساب ممیزی الف','partyType'=>'student','partyId'=>$reconA['id'],'amount'=>'7650'
+ ]);
+ $reconInvoiceB=D::save($uid,$b,'invoices',[
+  'title'=>'صورت‌حساب ممیزی ب','partyType'=>'student','partyId'=>$reconB['id'],'amount'=>'10200'
+ ]);
+ $reconReport=\ServiceYar\Domain\FinancialReconciliation::report($uid,$a,['academicYear'=>'1405-1406','student'=>'ممیزی']);
+ check(($reconReport['readOnly']??false)===true,'Reconciliation must be read-only');
+ $reconRows=array_values(array_filter($reconReport['items'],fn($item)=>(int)$item['student_id']===(int)$reconA['id']));
+ check(count($reconRows)===1,'Batched reconciliation includes the local student with unmatched invoice');
+ check(in_array((int)$reconInvoiceA['id'],array_map('intval',array_column($reconRows[0]['invoices'],'id')),true),
+  'Batched reconciliation groups local invoice records correctly');
+ check(!in_array((int)$reconInvoiceB['id'],array_map('intval',array_column($reconRows[0]['invoices'],'id')),true),
+  'Foreign agency invoices are excluded from batched reconciliation');
+ check(!in_array((int)$reconB['id'],array_map('intval',array_column($reconReport['items'],'student_id')),true),
+  'Foreign agency students never appear in reconciliation');
+ $literalSearch=\ServiceYar\Domain\FinancialReconciliation::report($uid,$a,['academicYear'=>'1405-1406','student'=>'%_']);
+ check(($literalSearch['count']??-1)===0,'LIKE wildcard characters are interpreted literally');
+ rejected(fn()=>\ServiceYar\Domain\FinancialReconciliation::report($uid,$a,['academicYear'=>'1405-1406','student'=>['invalid']]),'VALIDATION_ERROR');
+ rejected(fn()=>\ServiceYar\Domain\FinancialReconciliation::report($uid,$a,['academicYear'=>'1405-1406','student'=>str_repeat('a',241)]),'VALIDATION_ERROR');
+ rejected(fn()=>\ServiceYar\Domain\FinancialReconciliation::report($viewer,$b,['academicYear'=>'1405-1406']),'SCOPE_FORBIDDEN');
  echo "Transport integration: $checks checks passed. All fixtures rolled back.\n";
 }finally{if($p->inTransaction())$p->rollBack();}
 
