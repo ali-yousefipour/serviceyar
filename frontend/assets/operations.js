@@ -1713,15 +1713,91 @@ function vehicleClassChangeWizard(id,row,body,onSaved){
  render();
 }
 async function vehicleClassHistoryDialog(){
- dialog('تاریخچه تغییر کلاس خودرو','<p role="status">در حال دریافت تاریخچه تغییرات…</p>');
+ dialog('گزارش تغییر کلاس خودرو','<div class="sy-class-report" role="region" aria-label="گزارش تغییر کلاس خودرو"><p role="status">در حال دریافت سوابق…</p></div>');
  const host=document.querySelector('#modal .modal-body');
- try{
-  const rows=await api(scoped('/api/v1/vehicles/class-change-history'));
-  if(!host?.isConnected)return;
-  if(!rows.length){host.innerHTML='<p>تغییر کلاس تاریخ‌دار ثبت نشده است.</p>';return;}
-  const shamsi=date=>date?persianDigits(ServiceYarDates.toSolar(String(date).slice(0,10))||String(date)):'';
-  host.innerHTML='<div class="table-wrap" tabindex="0"><table><thead><tr><th>زمان ثبت</th><th>ثبت‌کننده</th><th>راننده / پلاک قبلی ← جدید</th><th>کلاس قبلی و جدید</th><th>قرارداد</th><th>بدهی</th><th>حقوق راننده</th><th>تعدیل بدهی (ریال)</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc((shamsi(r.created_at)||'')+' · '+String(r.created_at||'').slice(11,16))+'</td><td>'+esc(r.changed_by||String(r.created_by||'—'))+'</td><td>'+esc((r.driver_name||'—')+' · '+(r.old_plate||'—')+' ← '+(r.new_plate||r.current_plate||'—'))+'</td><td>'+esc(String(r.old_vehicle_class??'—')+' ← '+String(r.new_vehicle_class))+'</td><td>'+esc(shamsi(r.contract_effective_date)||'بدون تغییر')+'</td><td>'+esc(Number(r.update_student_debt)?shamsi(r.student_debt_effective_date):'بدون تغییر')+'</td><td>'+esc(Number(r.update_driver_pay)?shamsi(r.driver_pay_effective_date):'بدون تغییر')+'</td><td>'+esc(persianDigits(Number(r.total_debt_adjustment||0).toLocaleString('en-US')))+'</td></tr>').join('')+'</tbody></table></div>';
- }catch(e){if(host?.isConnected)host.textContent=e.message;}
+ if(!host)return;
+ host.closest('.modal')?.classList.add('sy-class-report-modal');
+ const solar=date=>date?persianDigits(ServiceYarDates.toSolar(String(date).slice(0,10))||String(date)):'—';
+ const fmt=value=>number(Math.round(Number(value||0)));
+ let rows=[],filters={};
+ host.innerHTML='<div class="sy-class-report" dir="rtl">'+
+  '<header class="sy-class-report-head"><div><h3>تاریخچه تغییر کلاس خودرو</h3><p>مشاهده تصمیم‌های قراردادی، بدهی دانش‌آموزان و حقوق رانندگان، با حفظ سوابق قطعی</p></div></header>'+
+  '<form id="vcHistoryFilters" class="sy-class-report-filters">'+
+   '<label>نام راننده، پلاک یا شناسه تغییر<input type="search" name="search" placeholder="جستجو در تغییرات" maxlength="100"></label>'+
+   '<label>از تاریخ ثبت<input type="date" name="from"></label><label>تا تاریخ ثبت<input type="date" name="to"></label>'+
+   '<label>کلاس قبلی<select name="oldClass"><option value="">همه</option><option value="1">۱</option><option value="2">۲</option><option value="3">۳</option></select></label>'+
+   '<label>کلاس جدید<select name="newClass"><option value="">همه</option><option value="1">۱</option><option value="2">۲</option><option value="3">۳</option></select></label>'+
+   '<div class="sy-class-report-tools"><button type="submit" class="primary">جستجو و اعمال فیلتر</button><button id="vcHistoryReset" type="button">پاک‌کردن</button><button id="vcHistoryExport" type="button" disabled>خروجی Excel (CSV)</button><button id="vcHistoryPrint" type="button" disabled>چاپ گزارش</button></div></form>'+
+  '<div id="vcHistoryCount" role="status" class="sy-class-report-summary"></div>'+
+  '<div id="vcHistoryTable" class="table-wrap sy-class-report-table" tabindex="0"><p role="status">در حال بارگذاری…</p></div></div>';
+ const form=host.querySelector('#vcHistoryFilters'),grid=host.querySelector('#vcHistoryTable'),count=host.querySelector('#vcHistoryCount');
+ let request=0;
+ const draw=()=>{
+  count.textContent=fmt(rows.length)+' رویداد تغییر کلاس'+(rows.length>=1000?' · حداکثر ۱۰۰۰ رویداد اخیر متناسب با فیلتر نمایش داده شده است.':'');
+  host.querySelector('#vcHistoryExport').disabled=!rows.length;
+  host.querySelector('#vcHistoryPrint').disabled=!rows.length;
+  if(!rows.length){grid.innerHTML='<p class="empty">هیچ تغییر کلاسی با این فیلترها ثبت نشده است.</p>';return;}
+  grid.innerHTML='<table><thead><tr><th>ردیف</th><th>تاریخ ثبت</th><th>راننده و پلاک</th><th>کلاس خودرو</th><th>قراردادهای اصلاح‌شده</th><th>دانش‌آموزان</th><th>تاریخ تغییر بدهی</th><th>تاریخ حقوق</th><th>جمع تعدیل (ریال)</th><th>جزئیات</th></tr></thead><tbody>'+
+  rows.map((r,i)=>'<tr><td>'+fmt(i+1)+'</td><td>'+esc(solar(r.created_at)+' · '+String(r.created_at||'').slice(11,16))+'</td>'+
+   '<td>'+esc(r.driver_name||'—')+'<small class="sy-class-report-plate">'+esc((r.old_plate||'—')+' ← '+(r.new_plate||r.current_plate||'—'))+'</small></td>'+
+   '<td>'+esc(persianDigits(String(r.old_vehicle_class||'—')+' ← '+String(r.new_vehicle_class||'—')))+'</td>'+
+   '<td>'+fmt(r.amended_contract_count)+'</td><td>'+fmt(r.adjusted_student_count)+'</td>'+
+   '<td>'+esc(Number(r.update_student_debt)?solar(r.student_debt_effective_date):'بدون تغییر')+'</td>'+
+   '<td>'+esc(Number(r.update_driver_pay)?solar(r.driver_pay_effective_date):'بدون تغییر')+'</td>'+
+   '<td>'+fmt(r.total_debt_adjustment)+'</td><td><button type="button" data-class-change-id="'+esc(r.id)+'">نمایش</button></td></tr>').join('')+'</tbody></table>';
+  grid.querySelectorAll('[data-class-change-id]').forEach(button=>button.addEventListener('click',()=>void showDetail(button.dataset.classChangeId)));
+ };
+ const load=async()=>{
+  const revision=++request;count.textContent='در حال دریافت تغییرات…';grid.setAttribute('aria-busy','true');
+  try{
+   const params=new URLSearchParams();
+   Object.entries(filters).forEach(([key,value])=>{if(value)params.set(key,value);});
+   const result=await api(scoped('/api/v1/vehicles/class-change-history'+(params.size?'?'+params:'')));
+   if(revision!==request||!host.isConnected)return;
+   rows=Array.isArray(result)?result:[];draw();
+  }catch(error){if(revision===request&&host.isConnected){rows=[];count.textContent='خطا در دریافت گزارش';grid.innerHTML='<p class="error" role="alert">'+esc(error.message)+'</p>';}}
+  finally{if(revision===request&&host.isConnected)grid.removeAttribute('aria-busy');}
+ };
+ const showDetail=async id=>{
+  const record=rows.find(r=>String(r.id)===String(id));if(!record)return;
+  const popup=document.createElement('section');popup.className='sy-class-report-detail';popup.setAttribute('role','region');popup.setAttribute('aria-label','جزئیات تغییر کلاس');
+  popup.innerHTML='<p role="status">در حال دریافت جزئیات رویداد '+fmt(id)+'…</p>';
+  host.querySelector('.sy-class-report-detail')?.remove();
+  grid.after(popup);
+  try{
+   const data=await api(scoped('/api/v1/vehicles/class-change-history/'+encodeURIComponent(id)));
+   if(!popup.isConnected)return;
+   const adj=data.adjustments||[],contracts=data.contracts||[],rates=data.rates||[];
+   popup.innerHTML='<div class="sy-class-report-detail-head"><h4>جزئیات رویداد '+fmt(id)+'</h4><button type="button" data-close-report-detail>بستن جزئیات</button></div>'+
+    '<p>راننده: <strong>'+esc(record.driver_name||'—')+'</strong> | تغییر کلاس: '+esc(persianDigits(String(record.old_vehicle_class)+' ← '+String(record.new_vehicle_class)))+'</p>'+
+    '<p>قرارداد: '+esc(record.contract_effective_date?solar(record.contract_effective_date):'بدون تغییر')+' | بدهی: '+esc(record.update_student_debt?solar(record.student_debt_effective_date):'بدون تغییر')+' | حقوق: '+esc(record.update_driver_pay?solar(record.driver_pay_effective_date):'بدون تغییر')+'</p>'+
+    '<h5>قراردادهای دارای الحاقیه ('+fmt(contracts.length)+')</h5>'+
+    (contracts.length?simpleTable(['شماره قرارداد','نوع','تاریخ اثر'],contracts.map(c=>[c.contract_no||c.contract_id,c.party_type,solar(c.effective_date)])):'<p class="muted">الحاقیه قراردادی ثبت نشده است.</p>')+
+    '<h5>اسناد تعدیل بدهی دانش‌آموزان ('+fmt(adj.length)+')</h5>'+
+    (adj.length?simpleTable(['دانش‌آموز','سال تحصیلی','تاریخ اثر','مبلغ تعدیل (ریال)'],adj.map(a=>[a.student_name||a.student_id,a.academic_year,solar(a.effective_date),fmt(a.amount_irr)])):'<p class="muted">سند تعدیل بدهی ثبت نشده است.</p>')+
+    '<h5>تاریخچه نرخ مالی ('+fmt(rates.length)+')</h5>'+
+    (rates.length?simpleTable(['نوع','شناسه دانش‌آموز','تاریخ اثر','نرخ قبلی (ریال)','نرخ جدید (ریال)'],rates.map(p=>[p.subject_type==='driver_pay'?'حقوق راننده':'بدهی دانش‌آموز',p.subject_id,solar(p.effective_date),fmt(p.old_monthly_irr),fmt(p.new_monthly_irr)])):'<p class="muted">نرخی ثبت نشده است.</p>');
+   popup.querySelector('[data-close-report-detail]').onclick=()=>popup.remove();
+   popup.scrollIntoView({block:'nearest',behavior:'smooth'});
+  }catch(e){if(popup.isConnected)popup.innerHTML='<p class="error" role="alert">'+esc(e.message)+'</p>';}
+ };
+ form.onsubmit=e=>{e.preventDefault();filters=Object.fromEntries(new FormData(form));void load();};
+ host.querySelector('#vcHistoryReset').onclick=()=>{form.reset();filters={};void load();};
+ host.querySelector('#vcHistoryExport').onclick=()=>{
+  if(!rows.length)return;
+  const headings=['شناسه','تاریخ ثبت','راننده','پلاک قبلی','پلاک جدید','کلاس قبلی','کلاس جدید','تاریخ قرارداد','تعداد الحاقیه','تاریخ بدهی','تعداد دانش‌آموز','تاریخ حقوق','مبلغ تعدیل ریال','ثبت‌کننده'];
+  const csvSafe=value=>{const v=String(value??'').replace(/^[\s]*[=+\-@\t\r]/,'\\u0027$&');return '"'+v.replace(/"/g,'""')+'"';};
+  const content=[headings,...rows.map(r=>[r.id,r.created_at,r.driver_name,r.old_plate,r.new_plate||r.current_plate,r.old_vehicle_class,r.new_vehicle_class,r.contract_effective_date,r.amended_contract_count,r.student_debt_effective_date,r.adjusted_student_count,r.driver_pay_effective_date,r.total_debt_adjustment,r.changed_by])].map(record=>record.map(csvSafe).join(',')).join('\r\n');
+  const url=URL.createObjectURL(new Blob(['\ufeff',content],{type:'text/csv;charset=utf-8'}));
+  const link=document.createElement('a');link.href=url;link.download='vehicle-class-changes.csv';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);
+ };
+ host.querySelector('#vcHistoryPrint').onclick=()=>{
+  if(!rows.length)return;
+  host.closest('.modal')?.classList.add('sy-class-report-printing');
+  window.print();
+  host.closest('.modal')?.classList.remove('sy-class-report-printing');
+ };
+ await load();
 }
 function resourceWizard(form,key){
  const definitions={students:[['اطلاعات ولی',['mobile','guardianFirstName','guardianLastName','guardianNationalCode','guardianRelation','emergencyPhone']],['مشخصات دانش‌آموز',['firstName','lastName','gender','nationality','nationalCode','fatherName','healthStatus']],['نشانی و مدرسه',['address','returnAddress','latitude','longitude','schoolId','grade','shift','academicYear']],['وضعیت و هزینه',['serviceStatus','tariffDistanceKm','tariffVehicleClass','monthlyFee']]],drivers:[['مشخصات راننده',['firstName','lastName','nationalCode','mobile','status']],['خودرو و نشانی',['vehicleId','isRepresentative','address']],['اطلاعات بانکی',['bankName','bankAccount','iban']]],services:[['مشخصات سرویس',['title','capacity','shift','status']],['مدرسه و راننده',['schoolId','driverId','vehicleModel','packId']],['مسیر و مبالغ',['startAddress','endAddress','feeSource','agreedAmount']]]};
