@@ -249,6 +249,26 @@ final class PortalService {
                     WHERE agency_id=? AND student_id=? AND effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
                     ORDER BY effective_date,id",[$agencyId,$partyId]):[];
             $total+=array_sum(array_map(static fn($a)=>(float)$a['amount_irr'],$classAdjustments));
+            // The parent's existing invoice row must reflect its effective
+            // amended amount, not only the separate account-level adjustment.
+            // Keep the original billed value for transparent audit display.
+            if($classAdjustments&&$invoices){
+                $q=$pdo->prepare("SELECT m.invoice_id,COALESCE(SUM(a.amount_irr),0) AS delta
+                  FROM student_contract_invoices m JOIN vehicle_class_debt_adjustments a
+                    ON a.agency_id=m.agency_id AND a.student_id=m.student_id
+                    AND ".StudentBalance::yearSql('a.academic_year')."=".StudentBalance::yearSql('m.academic_year')."
+                    AND a.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
+                  WHERE m.agency_id=? AND m.student_id=? GROUP BY m.invoice_id");
+                $q->execute([$agencyId,$partyId]);$invoiceDeltas=[];
+                foreach($q->fetchAll(PDO::FETCH_ASSOC) as $entry)$invoiceDeltas[(int)$entry['invoice_id']]=(int)$entry['delta'];
+                foreach($invoices as &$inv){
+                    $inv['originalAmount']=$inv['amount'];
+                    $inv['classAdjustmentAmount']=$invoiceDeltas[(int)$inv['id']]??0;
+                    $inv['effectiveAmount']=(int)$inv['amount']+$inv['classAdjustmentAmount'];
+                    $inv['amount']=$inv['effectiveAmount'];
+                }
+                unset($inv);
+            }
             StudentBalance::allocate($invoices,(float)$received);
             $totals=StudentBalance::totals((float)$total,(float)$received);
             return $base+['student'=>$student,'guardian'=>$guardian,'services'=>$services,
