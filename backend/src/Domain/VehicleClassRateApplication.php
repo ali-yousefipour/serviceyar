@@ -15,6 +15,11 @@ final class VehicleClassRateApplication
     public static function applyDue(int $agencyId): int
     {
         if(!VehicleClassSchema::exists())return 0;
+        $pdo=Connection::get();
+        $probe=$pdo->prepare("SELECT id FROM vehicle_class_rate_periods
+          WHERE agency_id=? AND applied_at IS NULL AND effective_date<=CURRENT_DATE() LIMIT 1");
+        $probe->execute([$agencyId]);
+        if(!$probe->fetchColumn())return 0;
         return OperationsService::transaction(function(PDO $pdo)use($agencyId){
             $count=0;$services=[];
             do {
