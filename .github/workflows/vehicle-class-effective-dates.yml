@@ -21,6 +21,9 @@ jobs:
           php -l backend/src/Domain/VehicleClassEffectiveDates.php
           php -l backend/src/Domain/VehicleClassChangeWorkflow.php
           php -l backend/src/Domain/VehicleClassHistory.php
+          php -l backend/src/Domain/StudentBalance.php
+          php -l backend/src/Domain/StudentServiceBilling.php
+          php -l backend/src/Domain/MonthlyStatements.php
           php -l backend/src/Domain/DomainService.php
           php -l backend/public/index.php
           node --check frontend/assets/operations.js
