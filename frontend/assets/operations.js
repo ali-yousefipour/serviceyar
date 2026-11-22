@@ -1786,7 +1786,7 @@ async function vehicleClassHistoryDialog(){
  host.querySelector('#vcHistoryExport').onclick=()=>{
   if(!rows.length)return;
   const headings=['شناسه','تاریخ ثبت','راننده','پلاک قبلی','پلاک جدید','کلاس قبلی','کلاس جدید','تاریخ قرارداد','تعداد الحاقیه','تاریخ بدهی','تعداد دانش‌آموز','تاریخ حقوق','مبلغ تعدیل ریال','ثبت‌کننده'];
-  const csvSafe=value=>{const v=String(value??'').replace(/^[\s]*[=+\-@\t\r]/,'\\u0027$&');return '"'+v.replace(/"/g,'""')+'"';};
+  const csvSafe=value=>{let v=String(value??'');if(/^[\s]*[=+@]/.test(v)||/^[\s]*-(?!\d+(?:\.\d+)?$)/.test(v))v=String.fromCharCode(39)+v;return '"'+v.replace(/"/g,'""')+'"';};
   const content=[headings,...rows.map(r=>[r.id,r.created_at,r.driver_name,r.old_plate,r.new_plate||r.current_plate,r.old_vehicle_class,r.new_vehicle_class,r.contract_effective_date,r.amended_contract_count,r.student_debt_effective_date,r.adjusted_student_count,r.driver_pay_effective_date,r.total_debt_adjustment,r.changed_by])].map(record=>record.map(csvSafe).join(',')).join('\r\n');
   const url=URL.createObjectURL(new Blob(['\ufeff',content],{type:'text/csv;charset=utf-8'}));
   const link=document.createElement('a');link.href=url;link.download='vehicle-class-changes.csv';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);
@@ -1794,8 +1794,9 @@ async function vehicleClassHistoryDialog(){
  host.querySelector('#vcHistoryPrint').onclick=()=>{
   if(!rows.length)return;
   host.closest('.modal')?.classList.add('sy-class-report-printing');
+  const closePrint=()=>host.closest('.modal')?.classList.remove('sy-class-report-printing');
+  window.addEventListener('afterprint',closePrint,{once:true});
   window.print();
-  host.closest('.modal')?.classList.remove('sy-class-report-printing');
  };
  await load();
 }
