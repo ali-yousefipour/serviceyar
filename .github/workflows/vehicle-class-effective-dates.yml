@@ -29,6 +29,7 @@ jobs:
           php -l backend/src/Domain/StudentDebtors.php
           php -l backend/src/Domain/StudentServiceBilling.php
           php -l backend/src/Domain/MonthlyStatements.php
+          php -l backend/src/Domain/OperationsService.php
           php -l backend/src/Domain/DomainService.php
           php -l backend/public/index.php
           node --check frontend/assets/operations.js
