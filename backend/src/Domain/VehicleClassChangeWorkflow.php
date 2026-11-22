@@ -185,7 +185,7 @@ final class VehicleClassChangeWorkflow
                 VALUES(?,?,?,?,?,?,?,?)");
             $contract=$pdo->prepare("SELECT c.start_date,c.end_date,m.academic_year FROM student_contract_invoices m
               JOIN contracts c ON c.id=m.contract_id AND c.agency_id=m.agency_id
-              WHERE m.agency_id=? AND m.student_id=? AND m.academic_year=?
+              WHERE m.agency_id=? AND m.student_id=? AND ".StudentBalance::yearSql('m.academic_year')."=?
               ORDER BY c.id DESC LIMIT 1 FOR UPDATE");
             foreach($oldRates as $sid=>$rate){
                 $student=$rate['student'];
