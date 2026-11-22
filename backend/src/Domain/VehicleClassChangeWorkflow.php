@@ -56,6 +56,15 @@ final class VehicleClassChangeWorkflow
             if(count($drivers)!==1)
                 throw new AuthException(409,'برای این خودرو راننده فعال یکتا ثبت نشده است؛ ابتدا از قسمت رانندگان اتصال خودروی جدید را اصلاح کنید.','VEHICLE_DRIVER_ASSOCIATION_REQUIRED');
             $driverId=(int)$drivers[0]['id'];
+            // A vehicle swap and a class-rate transition are distinct actions:
+            // never silently transfer a vehicle to a different driver while
+            // calculating the old driver's contractual rates.
+            if(array_key_exists('driverId',$body)||array_key_exists('driver_id',$body)){
+                $requested=$body['driverId']??$body['driver_id'];
+                if((string)$requested!==(string)$driverId)
+                    throw new AuthException(409,'ابتدا اتصال خودروی جدید به راننده را در بخش رانندگان اصلاح و ذخیره کنید؛ سپس تغییر کلاس را ثبت کنید.','DRIVER_REASSIGNMENT_FIRST');
+            }
+
             $services=$pdo->prepare("SELECT sv.id,sv.fee_source FROM services sv WHERE sv.agency_id=? AND sv.driver_id=? AND sv.is_active=1 AND sv.status<>'cancelled' ORDER BY sv.id FOR UPDATE");
             $services->execute([$aid,$driverId]);$linked=$services->fetchAll(PDO::FETCH_ASSOC);
             $oldRates=[];
@@ -68,7 +77,7 @@ final class VehicleClassChangeWorkflow
                         throw new AuthException(409,'دانش‌آموز به چند سرویس فعال متصل است؛ ابتدا تخصیص تکراری را اصلاح کنید.','DUPLICATE_STUDENT_ASSIGNMENT');
                     $newRow=$student;$newRow['tariff_vehicle_class']=(int)$class;
                     $mode=ServicePricing::source($service['fee_source']??'taxi');
-                    $quote=$mode==='agreed'
+                    $quote=(!$choices['updateStudentDebt']&&!$choices['updateDriverPay'])||$mode==='agreed'
                         ?['monthlyFee'=>(int)$student['monthly_fee'],'driverBaseMonthly'=>(int)($student['driver_base_monthly']??$student['monthly_fee'])]
                         :ServicePricing::quote($pdo,$aid,$newRow,$mode);
                     $oldRates[$sid]=[
@@ -84,6 +93,7 @@ final class VehicleClassChangeWorkflow
             // driver-assignment rules. The tariff class is written separately
             // to avoid the legacy unconditional financial repricing trigger.
             $update=$body;
+            unset($update['driverId'],$update['driver_id']);
             unset($update['tariffVehicleClass'],$update['updateContract'],$update['contractEffectiveDate'],
                 $update['updateStudentDebt'],$update['studentDebtEffectiveDate'],
                 $update['updateDriverPay'],$update['driverPayEffectiveDate']);
