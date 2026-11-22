@@ -35,6 +35,7 @@ jobs:
           node tests/sepand-schema-ui.cjs
           node --check frontend/assets/task-progress.js
           node tests/task-progress.cjs
+          node tests/school-photo-security.cjs
           node tests/ui-consistency.cjs
           node tests/filter-consistency.cjs
           node tests/lazy-operations.cjs
