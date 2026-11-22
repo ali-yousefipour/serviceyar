@@ -963,7 +963,11 @@ try {
   $vehicleId=isset($_GET['vehicleId'])?filter_var($_GET['vehicleId'],FILTER_VALIDATE_INT):null;
   if($vehicleId===false)throw new AuthException(422,'شناسه خودرو نامعتبر است.','INVALID_VEHICLE');
   header('Cache-Control: no-store');
-  Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\VehicleClassHistory::list((int)$s['id'],$aid,$vehicleId===null?null:(int)$vehicleId)]);
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\VehicleClassHistory::list((int)$s['id'],$aid,$vehicleId===null?null:(int)$vehicleId,$_GET)]);
+ }
+ if($method==='GET'&&preg_match('#^/api/v1/vehicles/class-change-history/(\\d+)$#',$path,$classHistoryMatch)){
+  header('Cache-Control: no-store');
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\VehicleClassHistory::detail((int)$s['id'],$aid,(int)$classHistoryMatch[1])]);
  }
  if($path==='/api/v1/vehicles/owner-driver-exists'&&$method==='GET'){
   $code=$_GET['nationalCode']??'';
