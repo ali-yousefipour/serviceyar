@@ -11,6 +11,9 @@ assert.ok(workflow.includes('RewriteRule ^api/?$ backend/public/index.php [QSA,E
 assert.ok(workflow.includes('RewriteRule ^(?:backend|database|storage)(?:/|$) - [F,END,NC]'), 'Private folders must be denied even with percent-encoded URL paths');
 assert.ok(source.includes('/%62ackend/src/bootstrap.php') && source.includes('/%73torage/private/negin-sms.key'), 'Live release verification must check encoded path bypasses');
 const html=readFileSync('frontend/index.html','utf8');
+assert.ok(workflow.includes('<IfModule mod_deflate.c>'), 'Deployment should enable compression when supported by the web server');
+assert.ok(workflow.includes('application/javascript application/json'), 'HTML/CSS/JS/JSON should use transfer compression');
+assert.ok(!workflow.includes('DEFLATE application/pdf') && !workflow.includes('DEFLATE application/zip'), 'Do not compress PDF/XLSX downloads or falsify Content-Length');
 const productionDocs=readFileSync('docs/PHASE-17-PRODUCTION.md','utf8');
 const bootstrap=readFileSync('backend/src/bootstrap.php','utf8');
 const baleBot=readFileSync('backend/src/Integrations/BaleBotService.php','utf8');
