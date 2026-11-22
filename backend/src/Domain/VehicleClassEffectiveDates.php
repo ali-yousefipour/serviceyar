@@ -15,10 +15,14 @@ final class VehicleClassEffectiveDates
 {
     public static function parseChoices(array $body): array
     {
-        $contract=self::requireDate($body['contractEffectiveDate']??null,'تاریخ اعمال تغییر کلاس در قرارداد');
+        $contractChoice=self::boolChoice($body,'updateContract');
+        $contract=$contractChoice
+            ?self::requireDate($body['contractEffectiveDate']??null,'تاریخ اعمال تغییر کلاس در قرارداد')
+            :null;
         $debt=self::boolChoice($body,'updateStudentDebt');
         $pay=self::boolChoice($body,'updateDriverPay');
         return [
+            'updateContract'=>$contractChoice,
             'contractEffectiveDate'=>$contract,
             'updateStudentDebt'=>$debt,
             'studentDebtEffectiveDate'=>$debt
