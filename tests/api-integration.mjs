@@ -9,6 +9,17 @@ async function request(path,{method='GET',body,token=true,status=200,raw=false}=
  const result=raw?new Uint8Array(await response.arrayBuffer()):await response.json();assert.equal(response.status,status,JSON.stringify(result));checks++;return {response,data:raw?result:result.data,error:result.error};
 }
 const scoped=path=>path+(path.includes('?')?'&':'?')+'agencyId='+aid;
+// API JSON endpoints require an object. Arrays, scalars and malformed JSON
+// must fail with 400 before the authentication/domain layer handles them.
+for(const invalidBody of ['[]','null','42','"text"','{invalid']){
+ const response=await fetch(base+'/api/v1/auth/login',{
+  method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:invalidBody
+ });
+ assert.equal(response.status,400,'Invalid JSON shape must return HTTP 400: '+invalidBody);
+ const parsed=await response.json();
+ assert.ok(['INVALID_JSON','INVALID_JSON_OBJECT'].includes(parsed?.error?.code),'Missing JSON validation code');
+ checks+=2;
+}
 const guestStatus=(await request('/api/v1/auth/status')).data;
 assert.equal(guestStatus.authenticated,false,'Anonymous session check must return 200 with false');checks++;
 await request('/api/v1/auth/me',{status:401});
