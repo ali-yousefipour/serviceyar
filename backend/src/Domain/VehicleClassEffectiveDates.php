@@ -50,11 +50,10 @@ final class VehicleClassEffectiveDates
 
     /**
      * Prorate a continuous ISO date period [start,end] with old/new monthly
-     * rates. Denominator equals the ACTUAL days in each Gregorian calendar
-     * segment; month boundaries are handled independently and rounding occurs
-     * only on the final total, preventing fractional-rial drift.
-     * For Persian monthly statements use splitRates with exact Jalali month
-     * boundaries supplied by that statement's date converter.
+     * rates. The caller supplies ONE complete accounting month (normally
+     * a Jalali month converted to ISO). Denominator is the actual day count
+     * of that accounting period; final rounding happens only once.
+     * This routine must never be called across multiple accounting months.
      */
     public static function splitRates(string $start,string $end,string $effectiveDate,
         int $oldMonthly,int $newMonthly): array
@@ -67,9 +66,10 @@ final class VehicleClassEffectiveDates
         $last=new DateTimeImmutable($end.'T12:00:00+00:00');
         $oldDays=0;$newDays=0;$weighted=0.0;
         $totalDays=(int)$cursor->diff($last)->days+1;
+        if($totalDays>31)throw new AuthException(422,'دوره محاسبه باید حداکثر یک ماه باشد.','INVALID_RATE_PERIOD');
         while($cursor<=$last){
             $day=$cursor->format('Y-m-d');
-            $denominator=(int)$cursor->format('t');
+            $denominator=$totalDays;
             if($day<$effectiveDate){$oldDays++;$weighted+=$oldMonthly/$denominator;}
             else{$newDays++;$weighted+=$newMonthly/$denominator;}
             $cursor=$cursor->modify('+1 day');
