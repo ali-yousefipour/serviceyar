@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const code=fs.readFileSync('backend/src/Domain/PortalService.php','utf8');
+const begin=code.indexOf('private static function ensureSchema(): void');
+const end=code.indexOf('private static function mobile(',begin);
+assert.ok(begin>=0&&end>begin,'Portal schema routine must exist');
+const method=code.slice(begin,end);
+assert.match(method,/SELECT COUNT\(\*\) FROM roles WHERE name IN \('parent_portal','driver_portal'\)/,'Portal roles must be checked cheaply');
+assert.match(method,/if\(\$roles!==2\)\{/,'Repeated portal requests must not write role seed rows');
+assert.match(method,/INSERT IGNORE INTO roles\(name,title\)/,'Missing portal roles must remain recoverable');
+assert.match(method,/if\(self::\$schemaReady\)return/,'Portal schema must be cached for the current request');
+console.log('Portal schema startup avoids redundant writes: OK');
