@@ -555,6 +555,26 @@ final class DomainService {
   $row=$s->fetch();if(!$row)throw new AuthException(404,'رکورد پیدا نشد.','NOT_FOUND');
   if($resource==='invoices'){
    $detail=Connection::get()->prepare("SELECT invoices.*, CASE invoices.party_type WHEN 'student' THEN (SELECT CONCAT_WS(' ',s.first_name,s.last_name) FROM students s WHERE s.id=invoices.party_id AND s.agency_id=invoices.agency_id) WHEN 'driver' THEN (SELECT CONCAT_WS(' ',d.first_name,d.last_name) FROM drivers d WHERE d.id=invoices.party_id AND d.agency_id=invoices.agency_id) WHEN 'school' THEN (SELECT s.name FROM schools s WHERE s.id=invoices.party_id AND s.agency_id=invoices.agency_id) WHEN 'agency' THEN (SELECT a.name FROM agencies a WHERE a.id=invoices.party_id AND a.id=invoices.agency_id) END AS party_name, CASE invoices.party_type WHEN 'student' THEN (SELECT sc.name FROM students s JOIN schools sc ON sc.id=s.school_id AND sc.agency_id=s.agency_id WHERE s.id=invoices.party_id AND s.agency_id=invoices.agency_id) WHEN 'driver' THEN (SELECT v.plate FROM drivers d JOIN vehicles v ON v.id=d.vehicle_id AND v.agency_id=d.agency_id WHERE d.id=invoices.party_id AND d.agency_id=invoices.agency_id) END AS party_meta, (SELECT COALESCE(SUM(p.amount),0) FROM payments p WHERE p.invoice_id=invoices.id AND p.agency_id=invoices.agency_id) AS paid_amount, CASE WHEN invoices.status='cancelled' THEN 0 ELSE GREATEST(0,invoices.amount-(SELECT COALESCE(SUM(p.amount),0) FROM payments p WHERE p.invoice_id=invoices.id AND p.agency_id=invoices.agency_id)) END AS remaining_amount, CASE WHEN invoices.status='cancelled' THEN 'cancelled' WHEN (SELECT COALESCE(SUM(p.amount),0) FROM payments p WHERE p.invoice_id=invoices.id AND p.agency_id=invoices.agency_id)>=invoices.amount THEN 'paid' WHEN (SELECT COALESCE(SUM(p.amount),0) FROM payments p WHERE p.invoice_id=invoices.id AND p.agency_id=invoices.agency_id)>0 THEN 'partial' WHEN invoices.due_date<CURRENT_DATE() THEN 'overdue' ELSE 'open' END AS display_status, (SELECT c.contract_no FROM student_contract_invoices m JOIN contracts c ON c.id=m.contract_id AND c.agency_id=m.agency_id WHERE m.invoice_id=invoices.id AND m.agency_id=invoices.agency_id AND m.student_id=invoices.party_id AND invoices.party_type='student' LIMIT 1) AS contract_no FROM invoices WHERE invoices.id=? AND invoices.agency_id=?");$detail->execute([$id,$aid]);$row=$detail->fetch()?:$row;
+   // Financial effect on this existing invoice: preserve the issued SQL
+   // document and expose the legally recorded correction to every detail view.
+   $delta=0;
+   if($row['party_type']==='student'&&$row['status']!=='cancelled'&&VehicleClassSchema::exists()){
+    $adjust=Connection::get()->prepare("SELECT COALESCE(SUM(a.amount_irr),0)
+      FROM student_contract_invoices m JOIN vehicle_class_debt_adjustments a
+        ON a.agency_id=m.agency_id AND a.student_id=m.student_id
+        AND ".StudentBalance::yearSql('a.academic_year')."=".StudentBalance::yearSql('m.academic_year')."
+        AND a.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
+      WHERE m.agency_id=? AND m.invoice_id=? AND m.student_id=?");
+    $adjust->execute([$aid,$id,$row['party_id']]);
+    $delta=(int)$adjust->fetchColumn();
+   }
+   $row['original_amount']=$row['amount'];
+   $row['class_adjustment_amount']=$delta;
+   $row['effective_amount']=(int)$row['amount']+$delta;
+   $row['effective_remaining_amount']=$row['status']==='cancelled'?0:max(0,(float)$row['effective_amount']-(float)$row['paid_amount']);
+   $row['effective_display_status']=$row['status']==='cancelled'?'cancelled':
+      ((float)$row['paid_amount']>=(float)$row['effective_amount']?'paid':
+      ((float)$row['paid_amount']>0?'partial':((string)$row['due_date']<date('Y-m-d')?'overdue':'open')));
    $payments=Connection::get()->prepare("SELECT id,amount,payment_date,method,reference_no FROM payments WHERE agency_id=? AND invoice_id=? ORDER BY payment_date DESC,id DESC");$payments->execute([$aid,$id]);$row['payments']=$payments->fetchAll();
   }
   if($resource==='vehicles'){
