@@ -34,8 +34,13 @@ final class PortalService {
                     if(trim($statement)!=='')$pdo->exec(trim($statement));
                 }
             }
-            $pdo->exec("INSERT IGNORE INTO roles(name,title) VALUES
-                ('parent_portal','ولی دانش‌آموز'),('driver_portal','راننده سرویس مدارس')");
+            // Avoid redundant INSERTs and their locking/binlog overhead on
+            // every portal request. Repair missing legacy roles only when needed.
+            $roles=(int)$pdo->query("SELECT COUNT(*) FROM roles WHERE name IN ('parent_portal','driver_portal')")->fetchColumn();
+            if($roles!==2){
+                $pdo->exec("INSERT IGNORE INTO roles(name,title) VALUES
+                    ('parent_portal','ولی دانش‌آموز'),('driver_portal','راننده سرویس مدارس')");
+            }
             self::$schemaReady=true;
         } catch(\Throwable $error) {
             error_log('[ServiceYar][portal] Schema not ready: '.$error->getMessage());
