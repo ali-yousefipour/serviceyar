@@ -905,6 +905,16 @@ try{
  check($auditRow && (int)$auditRow['old_vehicle_class']===2&&(int)$auditRow['new_vehicle_class']===3
    &&(int)$auditRow['update_student_debt']===0&&(int)$auditRow['update_driver_pay']===0,
    'Historic class and independent consent decisions survive the transaction');
+ D::save($uid,$a,'students',['address'=>'نشانی تغییر کرده بدون تغییر تعرفه'],(int)$taxiStudent['id']);
+ $afterStudentEdit=D::get($uid,$a,'students',(int)$taxiStudent['id']);
+ check((int)$afterStudentEdit['tariff_vehicle_class']===2
+    &&(int)$afterStudentEdit['monthly_fee']===$expectedClassTwo['parentMonthly'],
+    'A later unrelated student edit cannot bypass the declined student-debt repricing');
+ D::save($uid,$a,'services',['title'=>'سرویس بدون تغییر نرخ'],(int)$taxiService['id']);
+ $afterServiceEdit=D::get($uid,$a,'students',(int)$taxiStudent['id']);
+ check((int)$afterServiceEdit['tariff_vehicle_class']===2
+    &&(int)$afterServiceEdit['monthly_fee']===$expectedClassTwo['parentMonthly'],
+    'A later unrelated service edit cannot overwrite the previously declined tuition change');
  $tariffPreview=\ServiceYar\Domain\LegacyServiceTariffMigration::run($uid,$a,false);
  check(($tariffPreview['servicesToChange']??-1)===
    (($tariffPreview['servicesAmountToChange']??0)+($tariffPreview['servicesSourceOnlyToChange']??0)),
