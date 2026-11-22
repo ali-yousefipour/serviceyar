@@ -6,6 +6,7 @@ const styles=read('frontend/assets/filter-consistency.css');
 const html=read('frontend/index.html');
 const operations=read('frontend/assets/operations.css');
 const portal=read('frontend/assets/portal.css');
+const scripts=read('frontend/assets/operations.js');
 assert.ok(html.includes('filter-consistency.css?v=__BUILD_ID__'),'Versioned shared filter CSS must load');
 assert.ok(html.indexOf('filter-consistency.css')>html.indexOf('ui-consistency.css'),'Filter rules must follow typography rules');
 for(const selector of ['.filters','.directory-filters','.service-filters','.sy-operation-filters','.report-filters','.ledger-filters','.sy-invoice-filters','.portal-debtors-filters']){
@@ -18,6 +19,11 @@ assert.ok(styles.includes('@media screen and (max-width:760px)'), 'Tablet filter
 assert.ok(styles.includes('@media screen and (max-width:480px)'), 'Phone filter breakpoint required');
 assert.ok(styles.includes(':focus-visible'), 'Keyboard navigation must retain focus');
 assert.ok(styles.includes('.sy-sms-provider-grid'), 'SMS provider settings must stay responsive');
+assert.ok(scripts.includes("details.className='sy-directory-advanced'"), 'Generic directory filters should collapse on small screens');
+assert.ok(scripts.includes('secondary.forEach(node=>fields.append(node))'), 'Existing form elements must be moved instead of cloned to preserve selections and listeners');
+assert.ok(scripts.includes('searchField.after(details)'), 'Primary search must remain visible outside advanced filters');
+assert.ok(styles.includes('.sy-directory-advanced-fields'), 'Advanced filter fields need a responsive layout');
+assert.ok(styles.includes('.sy-directory-advanced[open]>summary{display:none;}'), 'Expanded desktop filters should not waste a heading row');
 assert.ok(styles.includes('form.filters,.panel>.filters'), 'Search spacing must apply to filters, not every modal and toolbar with generic .filters class');
 assert.ok(!styles.includes(':is(.filters,'), 'Do not expand generic action-row spacing');
 assert.ok(!styles.includes('!important'), 'Filter overlay must avoid competing important declarations');
