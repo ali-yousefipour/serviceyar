@@ -50,7 +50,7 @@
    const parent=current.portalType==='parent',f=data.finance||{};
    const who=parent?person(data.student):person(data.driver);
    const cards=parent?[
-     ['بدهی کل ثبت‌شده',money(f.total),'بر اساس فاکتورهای رسمی'],
+     ['بدهی کل ثبت‌شده',money(f.total),'فاکتورها و تعدیل‌های تأییدشده'],
      ['پرداخت‌شده به شرکت',money(f.paid),'پرداخت‌ها و دریافتی‌های ثبت‌شده'],
      ['مانده بدهی',money(f.balance),'پس از کسر پرداخت‌های ثبت‌شده'],
      ['سرویس‌های فعال',fa(data.services?.length),'متصل به دانش‌آموز']
@@ -89,11 +89,14 @@
    const parent=current.portalType==='parent',f=data.finance||{};
    let heading=parent?'شهریه، فاکتورها و پرداخت‌ها':'حق‌الزحمه و دریافتی‌های راننده';
    let kpis=parent?[
-      ['جمع فاکتورهای سالانه',money(f.total),'فاکتورهای ثبت‌شده'],['جمع پرداختی',money(f.paid),'تا آخرین ثبت'],['مانده بدهی',money(f.balance),'باقیمانده']
+      ['جمع صورتحساب و تعدیلات',money(f.total),'فاکتورها و تغییرات تاریخ‌دار کلاس خودرو'],['جمع پرداختی',money(f.paid),'تا آخرین ثبت'],['مانده بدهی',money(f.balance),'باقیمانده']
     ]:[['درآمد ماهانه سرویس‌ها',money(f.monthlyServicesTotal),'برآورد فعلی'],['خالص کارکرد',money(f.recordedNet),'ثبت‌شده'],['دریافتی',money(f.paid),'ثبت‌شده']];
    let bills=parent?'<section class="portal-panel"><h2>صورتحساب‌ها و فاکتورها</h2>'+
      table(['عنوان','مبلغ','پرداخت‌شده','باقی‌مانده','تاریخ'],(f.invoices||[]).map(x=>[x.title,money(x.amount),money(x.paidAmount),money(x.remainingAmount),date(x.issue_date)]))+
-     '<p class="muted">مبلغ سالانه مطابق فاکتور ثبت‌شده شرکت نمایش داده می‌شود.</p></section>'+
+     '<p class="muted">فاکتورهای قطعی بدون تغییر حفظ می‌شوند؛ تعدیل‌های کلاس خودرو به‌صورت مستقل ثبت می‌شوند.</p></section>'+
+     ((f.vehicleClassAdjustments||[]).length?'<section class="portal-panel"><h2>تعدیل‌های کلاس خودرو</h2>'+
+      table(['سال تحصیلی','تاریخ اثر','تعدیل بدهی (ریال)'],f.vehicleClassAdjustments.map(a=>[a.academic_year,date(a.effective_date),money(a.amount_irr)]))+
+      '<p class="muted">مبلغ مثبت افزایش بدهی و مبلغ منفی کاهش بدهی است. تاریخ‌های آینده تنها در موعد مقرر بر مانده اثر می‌گذارند.</p></section>':'')+
      '<section class="portal-panel"><h2>اقساط و سررسیدها</h2>'+
       table(['عنوان قسط','مبلغ','سررسید','وضعیت'],(f.installments||[]).map(x=>[x.title,money(x.amount),date(x.due_date),x.status]))+
       '<p class="muted">فقط اقساط ثبت‌شده در صورتحساب شرکت نمایش داده می‌شوند؛ اقساط پیشنهادی یا هنوز تأییدنشده نمایش داده نمی‌شوند.</p></section>':
