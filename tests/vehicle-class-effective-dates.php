@@ -45,4 +45,14 @@ check(Rates::annualEntitlement('1405-1406',false,100,[])===900,
 check(Rates::annualEntitlement('1405-1406',true,900,[
  ['id'=>1,'effective_date'=>'2028-01-01','old_monthly_irr'=>100,'new_monthly_irr'=>900],
 ])===850,'Change after school year must not rewrite prior driver entitlement');
+$weights=Rates::classWeights('2026-11-01','2026-11-30',[
+ ['id'=>1,'effective_date'=>'2026-11-16','old_class'=>1,'new_class'=>2],
+],2);
+check(abs(($weights[1]??0)-0.5)<0.000001&&abs(($weights[2]??0)-0.5)<0.000001,
+ 'The class change date must belong to the new class');
+$futureWeights=Rates::classWeights('2026-11-01','2026-11-30',[
+ ['id'=>1,'effective_date'=>'2026-12-01','old_class'=>1,'new_class'=>2],
+],2);
+check(abs(($futureWeights[1]??0)-1.0)<0.000001,
+ 'Future vehicle swaps must preserve the old class in statements');
 echo "Vehicle class effective-date rules: OK\n";
