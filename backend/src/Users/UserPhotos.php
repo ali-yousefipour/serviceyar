@@ -28,7 +28,7 @@ final class UserPhotos {
      $q->execute([$target]);
      $role=Connection::get()->prepare("SELECT r.name FROM roles r JOIN user_roles ur ON ur.role_id=r.id WHERE ur.user_id=?");
      $role->execute([$target]);
-     if((int)$q->fetchColumn()>1||array_intersect(['super_admin','agency_admin'],$role->fetchAll(\PDO::FETCH_COLUMN)))
+     if((int)$q->fetchColumn()>1||array_intersect(['super_admin','agency_admin','school_company_manager'],$role->fetchAll(\PDO::FETCH_COLUMN)))
       throw new AuthException(403,'ویرایش تصویر حساب مدیر یا مشترک مجاز نیست.','PROTECTED_USER');
     }
    }else{
