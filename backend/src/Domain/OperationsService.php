@@ -272,20 +272,43 @@ final class OperationsService
              WHERE s.driver_id=d.id AND s.agency_id=d.agency_id AND s.is_active=1 AND s.status=\'active\' AND st.is_active=1) assigned_student_count
           FROM drivers d WHERE d.agency_id=:a AND d.is_active=1 ORDER BY d.last_name,d.first_name');
         $q->execute(['a'=>$aid,'wf'=>$from,'wt'=>$to,'cf'=>$from,'ct'=>$to,'pf'=>$from,'pt'=>$to,'lf'=>$from,'lt'=>$to]);$rows=$q->fetchAll();
-        // One service snapshot drives the monthly payslip and the service editor.
-        // Never use driver_base_monthly here: it describes a different reference
-        // and can silently double-count deductions against parent tuition.
-        $details=$p->prepare("SELECT sv.id AS service_id,sv.driver_id,sv.title,sv.code,sv.fee_source,
-           COUNT(st.id) AS student_count,COALESCE(SUM(st.monthly_fee),0) AS monthly_gross
-           FROM services sv JOIN service_students ss ON ss.service_id=sv.id
-           JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id AND st.is_active=1
-           WHERE sv.agency_id=? AND sv.is_active=1 AND sv.status='active'
-           GROUP BY sv.id,sv.driver_id,sv.title,sv.code,sv.fee_source");
-        $details->execute([$aid]);$byDriver=[];
-        foreach($details->fetchAll(\PDO::FETCH_ASSOC) as $service){
-            if($service['driver_id']===null)continue;
-            $byDriver[(int)$service['driver_id']][]=$service;
+        // Use date-scoped signed vehicle-class rates in assignment estimates
+        // only. Recorded driver_work and approved payroll remain immutable.
+        $rateHistory=[];
+        if(VehicleClassSchema::exists($p)){
+            $rateQuery=$p->prepare("SELECT subject_id,service_id,id,effective_date,old_monthly_irr,new_monthly_irr
+                FROM vehicle_class_rate_periods WHERE agency_id=? AND subject_type='driver_pay'
+                ORDER BY subject_id,service_id,effective_date,id");
+            $rateQuery->execute([$aid]);
+            foreach($rateQuery->fetchAll(\PDO::FETCH_ASSOC) as $period)
+                $rateHistory[(int)$period['subject_id'].':'.(int)$period['service_id']][]=$period;
         }
+        $details=$p->prepare("SELECT sv.id AS service_id,sv.driver_id,sv.title,sv.code,sv.fee_source,
+            st.id AS student_id,st.monthly_fee,st.driver_base_monthly
+            FROM services sv JOIN service_students ss ON ss.service_id=sv.id
+            JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id AND st.is_active=1
+            WHERE sv.agency_id=? AND sv.is_active=1 AND sv.status='active'
+            ORDER BY sv.id,st.id");
+        $details->execute([$aid]);$servicesMap=[];
+        foreach($details->fetchAll(\PDO::FETCH_ASSOC) as $member){
+            if($member['driver_id']===null)continue;
+            $serviceId=(int)$member['service_id'];
+            $studentId=(int)$member['student_id'];
+            if(!isset($servicesMap[$serviceId]))$servicesMap[$serviceId]=[
+                'service_id'=>$serviceId,'driver_id'=>$member['driver_id'],
+                'title'=>$member['title'],'code'=>$member['code'],
+                'fee_source'=>$member['fee_source'],'student_count'=>0,'monthly_gross'=>0];
+            $history=$rateHistory[$studentId.':'.$serviceId]??[];
+            $monthly=$history
+                ?VehicleClassEffectiveDates::blendedRate($from,$to,
+                    (int)round((float)($member['driver_base_monthly']??$member['monthly_fee'])),$history)
+                :(int)round((float)$member['monthly_fee']);
+            $servicesMap[$serviceId]['student_count']++;
+            $servicesMap[$serviceId]['monthly_gross']+=$monthly;
+        }
+        $byDriver=[];
+        foreach($servicesMap as $service)
+            $byDriver[(int)$service['driver_id']][]=$service;
         $overrides=$filter['serviceDays']??[];
         if(is_string($overrides))$overrides=json_decode($overrides,true);
         if(!is_array($overrides)||count($overrides)>1000)
@@ -336,7 +359,7 @@ final class OperationsService
             $r['reconciliation_requires_review']=abs((float)$r['recorded_earned']-$assignedMonthly)>=1;
             $r['balance']=$deductions['net_earned']-$r['paid'];
         }unset($r);
-        return ['items'=>$rows,'from'=>$from,'to'=>$to,'calculationMode'=>$estimateRequested?'assignment_estimate':'recorded','estimatedOnly'=>$estimateRequested,'estimatedWarning'=>'مبنای هر سرویس ۳۰ روز است؛ برای ماه‌های گذشته و تغییرات راننده یا دانش‌آموز، روزهای واقعی را پیش از تأیید بررسی کنید.'];
+        return ['items'=>$rows,'from'=>$from,'to'=>$to,'calculationMode'=>$estimateRequested?'assignment_estimate':'recorded','estimatedOnly'=>$estimateRequested,'estimatedWarning'=>'برآورد بر اساس تخصیص‌های جاری و دوره‌های تاریخ‌دار نرخ خودرو است؛ سوابق کارکرد و اسناد قطعی تغییر نمی‌کنند. روزهای واقعی سرویس را پیش از تأیید کنترل کنید.'];
     }
 
     /** Rates are agency-specific; defaults apply when no policy has been saved. */
