@@ -427,9 +427,42 @@ final class DomainService {
    ".self::studentPaidTotalSql()." paid_total";
   $ordering=self::listOrdering($resource,$q);
   $s=$pdo->prepare("SELECT $select FROM {$c['table']} WHERE $where ORDER BY $ordering LIMIT $limit OFFSET $off");$s->execute($params);
-   $total=(int)$count->fetchColumn();$items=$s->fetchAll();if($resource==='services')foreach($items as &$item)self::attachServicePayable($item);if($resource==='students')foreach($items as &$item)self::attachStudentBalance($item);unset($item);$result=['items'=>$items,'pagination'=>['page'=>$page,'limit'=>$limit,'total'=>$total,'pages'=>(int)ceil($total/$limit)]];
+   $total=(int)$count->fetchColumn();$items=$s->fetchAll();if($resource==='invoices'){
+   // Issued invoice.amount is immutable. A separate, signed change-class
+   // memo is included in effective tuition/remaining due (by invoice year).
+   $adjustments=[];
+   if(VehicleClassSchema::exists($pdo)&&$items){
+    $ids=array_map(static fn($row)=>(int)$row['id'],$items);
+    $marks=implode(',',array_fill(0,count($ids),'?'));
+    $qAdjust=$pdo->prepare("SELECT m.invoice_id,COALESCE(SUM(a.amount_irr),0) AS delta
+      FROM student_contract_invoices m
+      JOIN vehicle_class_debt_adjustments a ON a.agency_id=m.agency_id AND a.student_id=m.student_id
+       AND ".StudentBalance::yearSql('a.academic_year')."=".StudentBalance::yearSql('m.academic_year')."
+       AND a.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
+      WHERE m.agency_id=? AND m.invoice_id IN ($marks)
+      GROUP BY m.invoice_id");
+    $qAdjust->execute(array_merge([$aid],$ids));
+    foreach($qAdjust->fetchAll(\PDO::FETCH_ASSOC) as $adj)$adjustments[(int)$adj['invoice_id']]=(int)$adj['delta'];
+   }
+   foreach($items as &$item){
+    $delta=($item['party_type']==='student'&&$item['status']!=='cancelled')?($adjustments[(int)$item['id']]??0):0;
+    $effective=(float)$item['amount']+$delta;
+    $paid=(float)($item['paid_amount']??0);
+    $item['class_adjustment_amount']=$delta;
+    $item['effective_amount']=$effective;
+    $item['effective_remaining_amount']=$item['status']==='cancelled'?0:max(0,$effective-$paid);
+    $item['effective_display_status']=$item['status']==='cancelled'?'cancelled':
+      ($paid>=$effective?'paid':($paid>0?'partial':((string)($item['due_date']??'')<date('Y-m-d')?'overdue':'open')));
+   }unset($item);
+  }
+  if($resource==='services')foreach($items as &$item)self::attachServicePayable($item);if($resource==='students')foreach($items as &$item)self::attachStudentBalance($item);unset($item);$result=['items'=>$items,'pagination'=>['page'=>$page,'limit'=>$limit,'total'=>$total,'pages'=>(int)ceil($total/$limit)]];
   if($resource==='invoices'){
-   $summary=$pdo->prepare("SELECT COUNT(*) records,COALESCE(SUM(CASE WHEN invoices.status<>'cancelled' THEN invoices.amount ELSE 0 END),0) amount,COALESCE(SUM((SELECT COALESCE(SUM(p.amount),0) FROM payments p WHERE p.invoice_id=invoices.id AND p.agency_id=invoices.agency_id)),0) paid,COALESCE(SUM(CASE WHEN invoices.status='cancelled' THEN 0 ELSE GREATEST(0,invoices.amount-(SELECT COALESCE(SUM(p.amount),0) FROM payments p WHERE p.invoice_id=invoices.id AND p.agency_id=invoices.agency_id)) END),0) remaining FROM invoices WHERE $where");$summary->execute($params);$result['summary']=$summary->fetch();
+   $adjustSql=VehicleClassSchema::exists($pdo)
+    ?"(SELECT COALESCE(SUM(a.amount_irr),0) FROM student_contract_invoices m JOIN vehicle_class_debt_adjustments a
+       ON a.agency_id=m.agency_id AND a.student_id=m.student_id AND ".StudentBalance::yearSql('a.academic_year')."=".StudentBalance::yearSql('m.academic_year')."
+       WHERE m.invoice_id=invoices.id AND m.agency_id=invoices.agency_id AND a.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE))":"0";
+   $effective="(invoices.amount + (CASE WHEN invoices.party_type='student' AND invoices.status<>'cancelled' THEN $adjustSql ELSE 0 END))";
+   $summary=$pdo->prepare("SELECT COUNT(*) records,COALESCE(SUM(CASE WHEN invoices.status<>'cancelled' THEN $effective ELSE 0 END),0) amount,COALESCE(SUM((SELECT COALESCE(SUM(p.amount),0) FROM payments p WHERE p.invoice_id=invoices.id AND p.agency_id=invoices.agency_id)),0) paid,COALESCE(SUM(CASE WHEN invoices.status='cancelled' THEN 0 ELSE GREATEST(0,$effective-(SELECT COALESCE(SUM(p.amount),0) FROM payments p WHERE p.invoice_id=invoices.id AND p.agency_id=invoices.agency_id)) END),0) remaining FROM invoices WHERE $where");$summary->execute($params);$result['summary']=$summary->fetch();
   }
   return $result;
  }
