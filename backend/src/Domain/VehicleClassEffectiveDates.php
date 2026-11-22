@@ -52,6 +52,33 @@ final class VehicleClassEffectiveDates
         return $date;
     }
 
+    /** Distribute historical vehicle classes over a calendar statement month. */
+    public static function classWeights(string $from,string $to,array $periods,int $fallbackClass): array
+    {
+        self::requireDate($from,'شروع دوره');self::requireDate($to,'پایان دوره');
+        if($from>$to)throw new AuthException(422,'بازه محاسبه نامعتبر است.','INVALID_RATE_PERIOD');
+        if(!$periods)return [$fallbackClass=>1.0];
+        usort($periods,static fn($a,$b)=>strcmp((string)$a['effective_date'],(string)$b['effective_date'])
+            ?:((int)($a['id']??0)<=>(int)($b['id']??0)));
+        $start=new DateTimeImmutable($from.'T12:00:00+00:00');
+        $end=new DateTimeImmutable($to.'T12:00:00+00:00');
+        $days=(int)$start->diff($end)->days+1;
+        if($days>31)throw new AuthException(422,'دوره باید حداکثر یک ماه باشد.','INVALID_RATE_PERIOD');
+        $totals=[];
+        for($date=$start;$date<=$end;$date=$date->modify('+1 day')){
+            $day=$date->format('Y-m-d');
+            $class=(int)($periods[0]['old_class']??$fallbackClass);
+            foreach($periods as $period){
+                if((string)$period['effective_date']>$day)break;
+                $class=(int)$period['new_class'];
+            }
+            if(!in_array($class,[1,2,3],true))
+                throw new AuthException(422,'کلاس خودروی سابق در تاریخچه معتبر نیست.','INVALID_HISTORIC_CLASS');
+            $totals[$class]=($totals[$class]??0)+1;
+        }
+        return array_map(static fn(int $daysForClass)=>$daysForClass/$days,$totals);
+    }
+
     /**
      * Project the full contracted school year by successive signed rate
      * periods. The academic-year boundaries and 8.5/9 month rule come from
