@@ -76,7 +76,7 @@ final class StudentDebtors
                    (SELECT c.contract_no FROM contracts c WHERE c.agency_id=students.agency_id AND c.party_type='student' AND c.party_id=students.id ORDER BY c.id DESC LIMIT 1) contract_no,";
         $hasVehicleChange=VehicleClassSchema::exists();
         $adjustmentCondition=$hasVehicleChange
-            ? "EXISTS(SELECT 1 FROM vehicle_class_debt_adjustments va WHERE va.agency_id=:adjustmentAgency AND va.student_id=basis.id AND va.academic_year=:adjustmentYear AND va.effective_date<=CURRENT_DATE())"
+            ? "EXISTS(SELECT 1 FROM vehicle_class_debt_adjustments va WHERE va.agency_id=:adjustmentAgency AND va.student_id=basis.id AND va.academic_year=:adjustmentYear AND va.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE))"
             : "FALSE";
         if($hasVehicleChange){$params['adjustmentAgency']=$aid;$params['adjustmentYear']=$year;}
         $sql="WITH balances AS (
