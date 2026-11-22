@@ -882,12 +882,12 @@ try{
  check((int)$assignedAfterVehicleChange['tariff_vehicle_class']===2
    &&(int)$assignedAfterVehicleChange['monthly_fee']===$expectedClassTwo['parentMonthly'],
    'Changing the service driver derives class and fare from the registered vehicle');
- D::save($uid,$a,'vehicles',['tariffVehicleClass'=>3],(int)$classVehicle['id']);
- $expectedClassThree=\ServiceYar\Domain\TaxiOrganizationTariffs::quote($p,1,3,3);
- $afterRegisteredVehicleEdit=D::get($uid,$a,'students',(int)$taxiStudent['id']);
- check((int)$afterRegisteredVehicleEdit['tariff_vehicle_class']===3
-   &&(int)$afterRegisteredVehicleEdit['monthly_fee']===$expectedClassThree['parentMonthly'],
-   'Editing registered vehicle class reprices its assigned students and synchronizes invoices');
+ rejected(fn()=>D::save($uid,$a,'vehicles',['tariffVehicleClass'=>3],(int)$classVehicle['id']),
+   'VEHICLE_CLASS_WORKFLOW_REQUIRED');
+ $afterRejectedVehicleEdit=D::get($uid,$a,'students',(int)$taxiStudent['id']);
+ check((int)$afterRejectedVehicleEdit['tariff_vehicle_class']===2
+   &&(int)$afterRejectedVehicleEdit['monthly_fee']===$expectedClassTwo['parentMonthly'],
+   'Unconsented direct class changes must preserve the previous student tariff and invoice');
  $tariffPreview=\ServiceYar\Domain\LegacyServiceTariffMigration::run($uid,$a,false);
  check(($tariffPreview['servicesToChange']??-1)===
    (($tariffPreview['servicesAmountToChange']??0)+($tariffPreview['servicesSourceOnlyToChange']??0)),
