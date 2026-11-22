@@ -23,6 +23,7 @@ assert.ok(scripts.includes("details.className='sy-directory-advanced'"), 'Generi
 assert.ok(scripts.includes('secondary.forEach(node=>fields.append(node))'), 'Existing form elements must be moved instead of cloned to preserve selections and listeners');
 assert.ok(scripts.includes('searchField.after(details)'), 'Primary search must remain visible outside advanced filters');
 assert.ok(styles.includes('.sy-directory-advanced-fields'), 'Advanced filter fields need a responsive layout');
+assert.ok(styles.includes('.sy-directory-advanced:not([open])>.sy-directory-advanced-fields'), 'Collapsed mobile filters must be hidden even with author-level display:grid');
 assert.ok(styles.includes('.sy-directory-advanced[open]>summary{display:none;}'), 'Expanded desktop filters should not waste a heading row');
 assert.ok(styles.includes('form.filters,.panel>.filters'), 'Search spacing must apply to filters, not every modal and toolbar with generic .filters class');
 assert.ok(!styles.includes(':is(.filters,'), 'Do not expand generic action-row spacing');
