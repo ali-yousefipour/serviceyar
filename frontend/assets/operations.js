@@ -2548,9 +2548,21 @@ if(form.elements.mobile){const mobile=form.elements.mobile;mobile.pattern='09[0-
     throw Error('نوع خودرو را از فهرست جستجوی مدل‌های تأییدشده انتخاب کنید.');
   }
   if(key==='vehicles'&&id&&body.tariffVehicleClass==='')delete body.tariffVehicleClass;
-   if(key==='vehicles'&&id&&body.tariffVehicleClass!==undefined
-      &&String(body.tariffVehicleClass)!==String(row?.tariff_vehicle_class??'')){
-    vehicleClassChangeWizard(id,row,body,onSaved);return;
+   if(key==='vehicles'&&id&&body.tariffVehicleClass!==undefined){
+    let oldClass=row?.tariff_vehicle_class??null;
+    // Vehicle replacement: the driver's current registered vehicle is the
+    // historic pricing source, not the class currently saved on the new car.
+    if(body.driverId){
+     const driver=(await lookup('drivers',true)).find(d=>String(d.id)===String(body.driverId));
+     if(driver?.vehicle_id&&String(driver.vehicle_id)!==String(id)){
+      const registered=(await lookup('vehicles')).find(v=>String(v.id)===String(driver.vehicle_id))||
+        await api(scoped('/api/v1/vehicles/'+encodeURIComponent(driver.vehicle_id)));
+      if(registered)oldClass=registered.tariff_vehicle_class;
+     }
+    }
+    if(String(body.tariffVehicleClass)!==String(oldClass??'')){
+     vehicleClassChangeWizard(id,{...row,tariff_vehicle_class:oldClass},body,onSaved);return;
+    }
    }
   if(key==='services'){
    if(!form.elements.vehicleModel?.dataset.vehicleFamily){
