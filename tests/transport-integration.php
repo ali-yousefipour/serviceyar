@@ -915,6 +915,73 @@ try{
  check((int)$afterServiceEdit['tariff_vehicle_class']===2
     &&(int)$afterServiceEdit['monthly_fee']===$expectedClassTwo['parentMonthly'],
     'A later unrelated service edit cannot overwrite the previously declined tuition change');
+ // Signed-amount and invoice adjustment lifecycle: original issued documents
+ // remain unchanged; an effective-dated memorandum changes enforceable debt.
+ $classYear='1405-1406';
+ $classStart='2026-09-23';$classEnd='2027-06-22';$classEffective='2026-11-20';
+ $classOriginalMonthly=(int)$afterServiceEdit['monthly_fee'];
+ $classOriginalAmount=\ServiceYar\Domain\ContractBilling::quote($classYear,$classStart,$classEnd,$classOriginalMonthly)['amount'];
+ $classStudentContract=D::save($uid,$a,'contracts',[
+    'title'=>'قرارداد تغییر کلاس خودرو','partyType'=>'student','partyId'=>(int)$taxiStudent['id'],
+    'startDate'=>$classStart,'endDate'=>$classEnd,'amount'=>$classOriginalAmount
+ ]);
+ $classInvoice=insertFixture('invoices',[
+    'agency_id'=>$a,'party_type'=>'student','party_id'=>(int)$taxiStudent['id'],
+    'title'=>'شهریه آزمایشی تغییر کلاس','amount'=>$classOriginalAmount,
+    'status'=>'open','issue_date'=>$classStart,'due_date'=>$classEnd
+ ]);
+ // Historical records may contain Persian digits and / separators.
+ insertFixture('student_contract_invoices',[
+    'agency_id'=>$a,'student_id'=>(int)$taxiStudent['id'],
+    'academic_year'=>'۱۴۰۵/۱۴۰۶','contract_id'=>(int)$classStudentContract['id'],'invoice_id'=>$classInvoice
+ ]);
+ $paidToClassInvoice=insertFixture('payments',[
+    'agency_id'=>$a,'invoice_id'=>$classInvoice,'amount'=>500000,'payment_date'=>'2026-11-03'
+ ]);
+ $oldClassBefore=(int)D::get($uid,$a,'vehicles',(int)$classVehicle['id'])['tariff_vehicle_class'];
+ check($oldClassBefore===3,'Prior vehicle-only transition leaves the vehicle in class three');
+ $allConsented=\ServiceYar\Domain\VehicleClassChangeWorkflow::apply($uid,$a,(int)$classVehicle['id'],[
+    'driverId'=>(int)$classDriver['id'],'tariffVehicleClass'=>'1',
+    'updateContract'=>true,'contractEffectiveDate'=>$classEffective,
+    'updateStudentDebt'=>true,'studentDebtEffectiveDate'=>$classEffective,
+    'updateDriverPay'=>true,'driverPayEffectiveDate'=>$classEffective
+ ]);
+ check((int)$allConsented['changeId']>0,'Approved class change with contractual and financial adjustments commits');
+ $qClass=$p->prepare('SELECT a.amount_irr,a.academic_year FROM vehicle_class_debt_adjustments a WHERE a.agency_id=? AND a.change_id=? AND a.student_id=?');
+ $qClass->execute([$a,$allConsented['changeId'],$taxiStudent['id']]);
+ $classAdjustment=$qClass->fetch(\PDO::FETCH_ASSOC);
+ check((bool)$classAdjustment,'Approved student rate change produces a signed adjustment memo');
+ $newMonthly=(int)D::get($uid,$a,'students',(int)$taxiStudent['id'])['monthly_fee'];
+ $remainingOld=\ServiceYar\Domain\ContractBilling::quote($classYear,$classEffective,$classEnd,$classOriginalMonthly)['amount'];
+ $remainingNew=\ServiceYar\Domain\ContractBilling::quote($classYear,$classEffective,$classEnd,$newMonthly)['amount'];
+ $expectedAdjustment=$remainingNew-$remainingOld;
+ check((int)$classAdjustment['amount_irr']===$expectedAdjustment,
+   'Signed class-change adjustment equals exact contractual fee difference for remaining school term');
+ $qClass=$p->prepare('SELECT amount FROM invoices WHERE agency_id=? AND id=?');
+ $qClass->execute([$a,$classInvoice]);
+ check((int)$qClass->fetchColumn()===$classOriginalAmount,
+   'Issued invoice amount remains immutable after adjustment');
+ $qClass=$p->prepare('SELECT amount FROM payments WHERE agency_id=? AND id=?');
+ $qClass->execute([$a,$paidToClassInvoice]);
+ check((int)$qClass->fetchColumn()===500000,'Already received invoice payments survive class change');
+ $classAccount=\ServiceYar\Domain\StudentServiceBilling::account($uid,$a,(int)$taxiStudent['id']);
+ check((int)$classAccount['totals']['invoiced']===$classOriginalAmount+$expectedAdjustment,
+   'Student account includes the signed adjustment in collectible annual tuition');
+ $listedInvoice=D::list($uid,$a,'invoices',['search'=>'شهریه آزمایشی تغییر کلاس']);
+ $effectiveInvoice=null;
+ foreach($listedInvoice['items'] as $row)if((int)$row['id']===$classInvoice)$effectiveInvoice=$row;
+ check($effectiveInvoice!==null
+   &&(int)$effectiveInvoice['class_adjustment_amount']===$expectedAdjustment
+   &&(int)$effectiveInvoice['effective_amount']===$classOriginalAmount+$expectedAdjustment,
+   'Invoice list clearly distinguishes original amount, signed adjustment, and revised amount');
+ $classHistory=\ServiceYar\Domain\VehicleClassHistory::list($uid,$a,null,['newClass'=>'1','search'=>'کلاس تست']);
+ check((bool)array_filter($classHistory,static fn($row)=>(int)$row['id']===(int)$allConsented['changeId']),
+   'Filtered vehicle-class report includes committed event and driver');
+ $classDetail=\ServiceYar\Domain\VehicleClassHistory::detail($uid,$a,(int)$allConsented['changeId']);
+ check(count($classDetail['adjustments'])===1&&count($classDetail['contracts'])>=1
+   &&count($classDetail['rates'])===2,
+   'Audit detail links contract appendices, one debt adjustment, and two independent rate periods');
+
  $tariffPreview=\ServiceYar\Domain\LegacyServiceTariffMigration::run($uid,$a,false);
  check(($tariffPreview['servicesToChange']??-1)===
    (($tariffPreview['servicesAmountToChange']??0)+($tariffPreview['servicesSourceOnlyToChange']??0)),
