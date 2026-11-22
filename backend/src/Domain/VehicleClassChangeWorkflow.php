@@ -38,6 +38,8 @@ final class VehicleClassChangeWorkflow
             Authorization::requirePermission($uid,'finance.manage');
 
         $class=(string)($body['tariffVehicleClass']??'');
+        if(array_key_exists('isActive',$body)&&in_array((string)$body['isActive'],['0'],true))
+            throw new AuthException(422,'همزمان با تغییر کلاس، خودرو را غیرفعال نکنید؛ خودروی سرویس باید فعال بماند.','VEHICLE_MUST_REMAIN_ACTIVE');
         if(!in_array($class,['1','2','3'],true))
             throw new AuthException(422,'کلاس جدید خودرو باید ۱، ۲ یا ۳ باشد.','INVALID_VEHICLE_CLASS');
 
