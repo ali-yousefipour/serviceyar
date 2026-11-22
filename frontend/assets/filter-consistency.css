@@ -96,6 +96,9 @@
  }
 }
 @media screen and (min-width:761px){
+ #app form.filters .sy-directory-advanced{border:0;background:transparent;}
+ #app form.filters .sy-directory-advanced[open]>summary{display:none;}
+ #app form.filters .sy-directory-advanced-fields{padding:0;}
  #app :is(.directory-filters,.sy-operation-filters,.report-filters,.ledger-filters){
    column-gap:10px;row-gap:10px;
  }
