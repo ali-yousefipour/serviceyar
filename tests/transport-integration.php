@@ -979,6 +979,15 @@ try{
    &&(int)$amendedContractRow[0]['original_amount']===$classOriginalAmount
    &&(int)$amendedContractRow[0]['effective_amount']===$classOriginalAmount+$expectedAdjustment,
    'Previous parent contract list shows its corrected amount on the original record');
+ $amendedContractEdit=\ServiceYar\Domain\ContractDocuments::editData($uid,$a,(int)$classStudentContract['id']);
+ check((int)$amendedContractEdit['original_amount']===$classOriginalAmount
+   &&(int)$amendedContractEdit['effective_amount']===$classOriginalAmount+$expectedAdjustment,
+   'Existing contract editor reads the corrected effective value');
+ $amendedPrint=\ServiceYar\Domain\ContractDocuments::printable($uid,$a,(int)$classStudentContract['id']);
+ check(str_contains((string)$amendedPrint['html'],'الحاقیه تغییر کلاس خودرو')
+   &&str_contains((string)$amendedPrint['html'],'تعهد اصلاح‌شده تا امروز')
+   &&str_contains((string)$amendedPrint['html'],'مبلغ قرارداد اصلی'),
+   'Existing contract print includes the historic original plus effective financial amendment');
  $existingInvoiceDetail=D::get($uid,$a,'invoices',$classInvoice);
  check((int)$existingInvoiceDetail['original_amount']===$classOriginalAmount
    &&(int)$existingInvoiceDetail['effective_amount']===$classOriginalAmount+$expectedAdjustment,
