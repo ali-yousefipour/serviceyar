@@ -643,26 +643,44 @@ HTML;
   return $html.$notice;
  }
  private static function vehicleClassAppendixPrint(\PDO $pdo,int $aid,int $id,string $html): string {
-  // Append the amendment to the print *view* only; preserve the original
-  // issued signed document, its HTML snapshot and its amount.
+  // Original signed HTML and base amounts stay immutable. The appendices show
+  // approved class and financial adjustments without rewriting prior invoices.
   if(!VehicleClassSchema::exists($pdo))return $html;
-  $q=$pdo->prepare("SELECT a.effective_date,a.old_class,a.new_class,ch.old_vehicle_model,ch.new_vehicle_model,ch.created_at
+  $query=$pdo->prepare("SELECT a.change_id,a.effective_date,a.old_class,a.new_class,ch.old_vehicle_model,ch.new_vehicle_model,
+      ch.update_student_debt,ch.student_debt_effective_date,c.party_type,c.party_id,c.amount AS original_amount,
+      (SELECT COALESCE(SUM(d.amount_irr),0) FROM vehicle_class_debt_adjustments d
+       WHERE d.agency_id=a.agency_id AND d.change_id=a.change_id
+         AND c.party_type='student' AND d.student_id=c.party_id) AS adjustment_amount,
+      (SELECT COALESCE(SUM(d.amount_irr),0) FROM vehicle_class_debt_adjustments d
+       WHERE d.agency_id=a.agency_id AND c.party_type='student' AND d.student_id=c.party_id
+         AND d.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)) AS total_due_adjustments
     FROM vehicle_class_contract_appendices a
     JOIN vehicle_class_changes ch ON ch.id=a.change_id AND ch.agency_id=a.agency_id
+    JOIN contracts c ON c.id=a.contract_id AND c.agency_id=a.agency_id
     WHERE a.agency_id=? AND a.contract_id=? ORDER BY a.effective_date,a.id");
-  $q->execute([$aid,$id]);
-  $rows=$q->fetchAll(\PDO::FETCH_ASSOC);
+  $query->execute([$aid,$id]);$rows=$query->fetchAll(\PDO::FETCH_ASSOC);
   if(!$rows)return $html;
-  $content='<section class="contract-sheet vehicle-class-contract-appendix" dir="rtl"><h2>الحاقیه تغییر کلاس خودرو</h2><p>این صفحه الحاقیه قرارداد است و متن قرارداد اصلی و پرداخت‌های ثبت‌شده را تغییر نمی‌دهد.</p>';
-  foreach($rows as $r){
-   $old=htmlspecialchars((string)($r['old_vehicle_model']??'نامشخص'),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
-   $new=htmlspecialchars((string)($r['new_vehicle_model']??'نامشخص'),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
-   $date=htmlspecialchars(self::jalali((string)$r['effective_date']),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
-   $content.='<div class="contract-appendix-record"><p><strong>تاریخ اعمال تغییر:</strong> '.$date.'</p>'
-    .'<p>خودروی قبلی: '.$old.'، کلاس '.self::persian((string)($r['old_class']??'—')).'</p>'
-    .'<p>خودروی جدید: '.$new.'، کلاس '.self::persian((string)$r['new_class']).'</p></div>';
+  $content='<section class="contract-sheet vehicle-class-contract-appendix" dir="rtl"><h2>الحاقیه تغییر کلاس خودرو</h2><p>سند اصلی صادرشده بدون تغییر باقی می‌ماند. مبالغ زیر صرفاً تعدیل‌های مستقل و تاریخ‌دار هستند.</p>';
+  foreach($rows as $entry){
+   $old=htmlspecialchars((string)($entry['old_vehicle_model']??'نامشخص'),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
+   $new=htmlspecialchars((string)($entry['new_vehicle_model']??'نامشخص'),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
+   $date=htmlspecialchars(self::jalali((string)$entry['effective_date']),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
+   $content.='<div class="contract-appendix-record"><p><strong>شماره تغییر:</strong> '.self::persian((string)$entry['change_id']).' | <strong>تاریخ اعمال کلاس:</strong> '.$date.'</p>'
+    .'<p>خودروی قبلی: '.$old.'، کلاس '.self::persian((string)($entry['old_class']??'—')).'</p>'
+    .'<p>خودروی جدید: '.$new.'، کلاس '.self::persian((string)$entry['new_class']).'</p>';
+   if($entry['party_type']==='student'){
+    $original=(int)$entry['original_amount'];$adjust=(int)$entry['adjustment_amount'];
+    $effective=(string)($entry['student_debt_effective_date']??'');
+    $future=$effective!==''&&$effective>(new \DateTimeImmutable('now',new \DateTimeZone('Asia/Tehran')))->format('Y-m-d');
+    $content.='<p><strong>مبلغ قرارداد اصلی:</strong> '.self::persian(number_format($original)).' ریال</p>';
+    if((int)$entry['update_student_debt']===1){
+     $content.='<p><strong>تعدیل مربوط به این تغییر:</strong> '.self::persian(number_format($adjust)).' ریال، از تاریخ '.htmlspecialchars(self::jalali($effective),ENT_QUOTES,'UTF-8').($future?' (زمان‌بندی‌شده)':' (اعمال‌شده)').'</p>';
+     $content.='<p><strong>تعهد اصلاح‌شده تا امروز:</strong> '.self::persian(number_format($original+(int)$entry['total_due_adjustments'])).' ریال</p>';
+    }else{$content.='<p>مطابق تصمیم ثبت‌کننده، بدهی دانش‌آموز تغییر نکرده است.</p>';}
+   }
+   $content.='</div>';
   }
-  $content.='<p>هرگونه تغییر مبلغ بدهی یا حقوق راننده تنها مطابق تأییدهای مالی ثبت‌شده و تاریخ اثر مستقل آن محاسبه می‌شود.</p></section>';
+  $content.='<p>این الحاقیه به‌جای تغییر مبلغ یا متن سند امضاشده، سابقه و مبالغ تعدیل را مستند می‌کند.</p></section>';
   return str_contains($html,'</body>')?str_replace('</body>',$content.'</body>',$html):$html.$content;
  }
  public static function printable(int $uid,int $agencyId,int $contractId): array {
