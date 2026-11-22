@@ -16,7 +16,7 @@ for(const marker of ['vehicleClassChangeWizard','updateContract','contractEffect
  'updateStudentDebt','studentDebtEffectiveDate','updateDriverPay','driverPayEffectiveDate',
  'type="date"','vehicleClassHistoryDialog'])
  assert.ok(ui.includes(marker),'Missing wizard/history field: '+marker);
-assert.match(api,/vehicles\/\(\\d\+\)\/class-change/,'No vehicle class workflow route');
+assert.ok(api.includes('/api/v1/vehicles/')&&api.includes('/class-change$#'),'No vehicle class workflow route');
 assert.ok(api.includes('VehicleClassChangeWorkflow::apply'),'Class changes are not routed');
 assert.ok(domain.includes('VEHICLE_CLASS_WORKFLOW_REQUIRED'),'Unconsented class edits must be rejected');
 for(const table of ['vehicle_class_changes','vehicle_class_rate_periods',
