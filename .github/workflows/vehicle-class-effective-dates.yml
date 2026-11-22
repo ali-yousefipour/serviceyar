@@ -1,0 +1,73 @@
+name: Vehicle class effective-date regression
+
+on:
+  push:
+    branches: [feature/vehicle-class-effective-dates]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  effective-dates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - name: Validate source syntax
+        run: |
+          php -l backend/src/Domain/VehicleClassEffectiveDates.php
+          php -l backend/src/Domain/VehicleClassChangeWorkflow.php
+          php -l backend/src/Domain/VehicleClassHistory.php
+          php -l backend/src/Domain/VehicleClassSchema.php
+          php -l backend/src/Domain/VehicleClassRateApplication.php
+          php -l backend/src/Domain/ServicePricing.php
+          php -l backend/src/Domain/ContractDocuments.php
+          php -l backend/src/Domain/StudentBalance.php
+          php -l backend/src/Domain/StudentDebtors.php
+          php -l backend/src/Domain/StudentServiceBilling.php
+          php -l backend/src/Domain/MonthlyStatements.php
+          php -l backend/src/Domain/OperationsService.php
+          php -l backend/src/Domain/DomainService.php
+          php -l backend/public/index.php
+          node --check frontend/assets/operations.js
+          node --check frontend/assets/portal.js
+          node tests/vehicle-class-workflow-contract.cjs
+          php tests/static-smoke.php
+          node tests/api-route-guard-contract.cjs
+          node tests/payroll-reconciliation-contract.cjs
+          node tests/finance-form-inputs.cjs
+          node tests/vehicle-model-selector.cjs
+          node tests/new-service-wizard.cjs
+          node tests/wizard-lookup.cjs
+          php -l tests/vehicle-class-effective-dates.php
+      - name: Check date and proration contracts
+        run: php tests/vehicle-class-effective-dates.php
+
+  mysql-audit:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: testpassword
+          MYSQL_DATABASE: serviceyar_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -ptestpassword"
+          --health-interval=10s --health-timeout=5s --health-retries=12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql
+      - name: Test real MySQL DDL and rollback
+        env:
+          SERVICEYAR_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=serviceyar_test;charset=utf8mb4
+          SERVICEYAR_TEST_USER: root
+          SERVICEYAR_TEST_PASSWORD: testpassword
+        run: php tests/vehicle-class-db-integration.php

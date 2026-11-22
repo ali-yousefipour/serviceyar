@@ -753,15 +753,15 @@ try{
   'Pars Khodro manufacturer must not be misclassified as Peugeot Pars');
  $operatorVehicle=D::save($uid,$a,'vehicles',['plate'=>'44ج'.substr($tag,0,4).'15','capacity'=>4,'tariffVehicleClass'=>1]);
  $operatorDriver=D::save($uid,$a,'drivers',['firstName'=>'آزمون','lastName'=>'ویرایش کلاس خودرو','vehicleId'=>$operatorVehicle['id'],'status'=>'active']);
- \ServiceYar\Domain\ServicePricing::setDriverVehicleType($p,$a,(int)$operatorDriver['id'],
-   ['vehicleModel'=>'دوو سی یلو','vehicleClass'=>'2']);
- $selectedVehicle=D::get($uid,$a,'vehicles',(int)$operatorVehicle['id']);
- check((int)$selectedVehicle['tariff_vehicle_class']===2 && $selectedVehicle['model']==='دوو سی یلو',
-  'Service model selection persists approved family and recommended vehicle class');
+ rejected(fn()=>\ServiceYar\Domain\ServicePricing::setDriverVehicleType($p,$a,(int)$operatorDriver['id'],
+   ['vehicleModel'=>'دوو سی یلو','vehicleClass'=>'2']),'VEHICLE_CLASS_WORKFLOW_REQUIRED');
+ check((int)D::get($uid,$a,'vehicles',(int)$operatorVehicle['id'])['tariff_vehicle_class']===1,
+  'Changing a vehicle class from service editor must require the financial consent workflow');
  \ServiceYar\Domain\ServicePricing::setDriverVehicleType($p,$a,(int)$operatorDriver['id'],
    ['vehicleModel'=>'دوو سی یلو','vehicleClass'=>'1']);
- check((int)D::get($uid,$a,'vehicles',(int)$operatorVehicle['id'])['tariff_vehicle_class']===1,
-  'Operator may explicitly change the suggested class on the registered vehicle');
+ $selectedVehicle=D::get($uid,$a,'vehicles',(int)$operatorVehicle['id']);
+ check((int)$selectedVehicle['tariff_vehicle_class']===1 && $selectedVehicle['model']==='دوو سی یلو',
+  'An approved model update with unchanged class is still allowed');
 
 
  $unnamedVehicle=D::save($uid,$a,'vehicles',['plate'=>'77ی12345','capacity'=>4]);
@@ -882,12 +882,39 @@ try{
  check((int)$assignedAfterVehicleChange['tariff_vehicle_class']===2
    &&(int)$assignedAfterVehicleChange['monthly_fee']===$expectedClassTwo['parentMonthly'],
    'Changing the service driver derives class and fare from the registered vehicle');
- D::save($uid,$a,'vehicles',['tariffVehicleClass'=>3],(int)$classVehicle['id']);
- $expectedClassThree=\ServiceYar\Domain\TaxiOrganizationTariffs::quote($p,1,3,3);
- $afterRegisteredVehicleEdit=D::get($uid,$a,'students',(int)$taxiStudent['id']);
- check((int)$afterRegisteredVehicleEdit['tariff_vehicle_class']===3
-   &&(int)$afterRegisteredVehicleEdit['monthly_fee']===$expectedClassThree['parentMonthly'],
-   'Editing registered vehicle class reprices its assigned students and synchronizes invoices');
+ rejected(fn()=>D::save($uid,$a,'vehicles',['tariffVehicleClass'=>3],(int)$classVehicle['id']),
+   'VEHICLE_CLASS_WORKFLOW_REQUIRED');
+ $afterRejectedVehicleEdit=D::get($uid,$a,'students',(int)$taxiStudent['id']);
+ check((int)$afterRejectedVehicleEdit['tariff_vehicle_class']===2
+   &&(int)$afterRejectedVehicleEdit['monthly_fee']===$expectedClassTwo['parentMonthly'],
+   'Unconsented direct class changes must preserve the previous student tariff and invoice');
+ $consentedClassChange=\ServiceYar\Domain\VehicleClassChangeWorkflow::apply($uid,$a,(int)$classVehicle['id'],[
+    'driverId'=>(int)$classDriver['id'],'tariffVehicleClass'=>'3',
+    'updateContract'=>false,'updateStudentDebt'=>false,'updateDriverPay'=>false
+ ]);
+ check((int)$consentedClassChange['changeId']>0,
+    'An explicit vehicle-only class change is transactionally recorded');
+ check((int)D::get($uid,$a,'vehicles',(int)$classVehicle['id'])['tariff_vehicle_class']===3,
+    'Vehicle class is updated after the consent wizard decisions');
+ $afterIndependentConsent=D::get($uid,$a,'students',(int)$taxiStudent['id']);
+ check((int)$afterIndependentConsent['tariff_vehicle_class']===2
+   &&(int)$afterIndependentConsent['monthly_fee']===$expectedClassTwo['parentMonthly'],
+   'Declining debt and payroll adjustments preserves the previous student rates');
+ $classAudit=$p->prepare('SELECT id,old_vehicle_class,new_vehicle_class,update_student_debt,update_driver_pay FROM vehicle_class_changes WHERE id=? AND agency_id=?');
+ $classAudit->execute([(int)$consentedClassChange['changeId'],$a]);$auditRow=$classAudit->fetch(\PDO::FETCH_ASSOC);
+ check($auditRow && (int)$auditRow['old_vehicle_class']===2&&(int)$auditRow['new_vehicle_class']===3
+   &&(int)$auditRow['update_student_debt']===0&&(int)$auditRow['update_driver_pay']===0,
+   'Historic class and independent consent decisions survive the transaction');
+ D::save($uid,$a,'students',['address'=>'نشانی تغییر کرده بدون تغییر تعرفه'],(int)$taxiStudent['id']);
+ $afterStudentEdit=D::get($uid,$a,'students',(int)$taxiStudent['id']);
+ check((int)$afterStudentEdit['tariff_vehicle_class']===2
+    &&(int)$afterStudentEdit['monthly_fee']===$expectedClassTwo['parentMonthly'],
+    'A later unrelated student edit cannot bypass the declined student-debt repricing');
+ D::save($uid,$a,'services',['title'=>'سرویس بدون تغییر نرخ'],(int)$taxiService['id']);
+ $afterServiceEdit=D::get($uid,$a,'students',(int)$taxiStudent['id']);
+ check((int)$afterServiceEdit['tariff_vehicle_class']===2
+    &&(int)$afterServiceEdit['monthly_fee']===$expectedClassTwo['parentMonthly'],
+    'A later unrelated service edit cannot overwrite the previously declined tuition change');
  $tariffPreview=\ServiceYar\Domain\LegacyServiceTariffMigration::run($uid,$a,false);
  check(($tariffPreview['servicesToChange']??-1)===
    (($tariffPreview['servicesAmountToChange']??0)+($tariffPreview['servicesSourceOnlyToChange']??0)),

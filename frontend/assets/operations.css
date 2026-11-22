@@ -3607,3 +3607,20 @@ dialog.sy-contract-edit-dialog::backdrop{background:rgba(10,30,23,.55)}
 .sy-contract-edit-dialog .solar-date-field .solar-input{flex:1;min-height:42px;text-align:center;direction:ltr}
 .sy-contract-edit-dialog .solar-trigger{flex:none;min-width:44px;background:#edf7f1;color:#075b44;border-color:#bad5c5}
 @media(max-width:500px){.solar-calendar[popover]{width:min(360px,calc(100vw - 16px));max-height:min(430px,calc(100dvh - 16px))}}
+
+/* Vehicle class transition: readable, RTL-first guided confirmation. */
+.sy-change-wizard{display:grid;gap:1rem;direction:rtl;max-width:720px;margin-inline:auto}
+.sy-change-wizard h4{margin:0;font-size:1.2rem;line-height:1.7}
+.sy-change-wizard-context{background:var(--surface-soft,#f1f6f3);border:1px solid #d5e4da;border-radius:12px;padding:.75rem 1rem;line-height:1.9}
+.sy-change-wizard-choice{border:1px solid #d8e4dc;border-radius:12px;display:grid;gap:.75rem;padding:1rem;margin:0}
+.sy-change-wizard-choice legend{padding-inline:.5rem;font-weight:600;line-height:1.8}
+.sy-change-wizard-choice label{display:flex;align-items:center;gap:.65rem;min-height:44px;cursor:pointer}
+.sy-change-wizard-choice input{accent-color:#086d54;width:18px;height:18px;flex:none}
+.sy-change-wizard-date{display:grid;gap:.5rem;max-width:320px;font-weight:600}
+.sy-change-wizard-date[hidden]{display:none}
+.sy-change-wizard-date .solar-date-field{width:100%}
+.sy-change-wizard-review{display:grid;gap:.5rem;border:1px solid #d8e4dc;border-radius:12px;padding:1rem}
+.sy-change-wizard-review p{margin:0;line-height:1.9}
+.sy-change-wizard .sy-new-service-actions{display:flex;flex-wrap:wrap;align-items:center;gap:.7rem;justify-content:flex-end;border-top:1px solid #e2eae4;padding-top:1rem}
+.sy-change-wizard .sy-new-service-actions button{min-height:44px}
+@media(max-width:600px){.sy-change-wizard .sy-new-service-actions button{flex:1 1 110px}.sy-change-wizard-date{max-width:none}.sy-change-wizard-context{font-size:.9rem}}

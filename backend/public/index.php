@@ -563,6 +563,9 @@ try {
   }
  }
  $aid=agencyId($s);
+ // Activate consented, future-dated vehicle rates on the first authorized
+ // company request after their effective date; never alter posted invoices.
+ \ServiceYar\Domain\VehicleClassRateApplication::applyDue($aid);
  if(preg_match('#^/api/v1/users/(\d+)/(password)$#',$path,$m)&&$method==='POST'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>UserService::changePassword($s['id'],$aid,(int)$m[1],Request::json())]);}
  if($method==='POST'&&$path==='/api/v1/operations/financial-preview'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>FinancialRules::preview($s['id'],$aid,Request::json())]);}
  if($method==='GET'&&$path==='/api/v1/reports/school-workbook.xlsx')ExportService::schoolWorkbook($s['id'],$aid,(string)($_GET['period']??'Mehr'));
@@ -952,6 +955,16 @@ try {
  if($method==='POST'&&$path==='/api/v1/operations/mehr-assignments/drafts'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\MehrWorkbookAssignments::run($s['id'],$aid,true)]);}
  if($path==='/api/v1/school-catalog'&&$method==='GET')Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolCatalog::search($s['id'],$aid,$_GET)]);
  if($path==='/api/v1/school-catalog/select'&&$method==='POST'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolCatalog::select($s['id'],$aid,Request::json())]);}
+ if($method==='PUT'&&preg_match('#^/api/v1/vehicles/(\\d+)/class-change$#',$path,$vehicleClassMatch)){
+  $auth->requireCsrf($s);
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\VehicleClassChangeWorkflow::apply((int)$s['id'],$aid,(int)$vehicleClassMatch[1],Request::json())]);
+ }
+ if($path==='/api/v1/vehicles/class-change-history'&&$method==='GET'){
+  $vehicleId=isset($_GET['vehicleId'])?filter_var($_GET['vehicleId'],FILTER_VALIDATE_INT):null;
+  if($vehicleId===false)throw new AuthException(422,'شناسه خودرو نامعتبر است.','INVALID_VEHICLE');
+  header('Cache-Control: no-store');
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\VehicleClassHistory::list((int)$s['id'],$aid,$vehicleId===null?null:(int)$vehicleId)]);
+ }
  if($path==='/api/v1/vehicles/owner-driver-exists'&&$method==='GET'){
   $code=$_GET['nationalCode']??'';
   if(!is_string($code))throw new AuthException(422,'کد ملی نامعتبر است.','INVALID_OWNER_NATIONAL_CODE');

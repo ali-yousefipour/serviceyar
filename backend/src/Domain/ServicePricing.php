@@ -14,15 +14,40 @@ final class ServicePricing {
         if(!in_array($mode,self::SOURCES,true))throw new AuthException(422,'روش محاسبه هزینه باید تاکسیرانی، تعرفه شرکت یا توافقی باشد.','INVALID_FEE_SOURCE');
         return $mode;
     }
+    /**
+     * An approved physical vehicle swap does not authorize changing tuition.
+     * Until the independent student-debt effective date arrives (or when
+     * student-debt repricing was explicitly declined), retain the stored
+     * contractual tariff class instead of copying the actual vehicle class.
+     */
+    private static function preserveStudentTariffClass(PDO $pdo,int $aid,int $driverId,int $actualClass): bool {
+        if($driverId<1||!VehicleClassSchema::exists($pdo))return false;
+        $q=$pdo->prepare("SELECT new_vehicle_class,update_student_debt,student_debt_effective_date
+            FROM vehicle_class_changes
+            WHERE agency_id=? AND driver_id=?
+            ORDER BY id DESC LIMIT 1");
+        $q->execute([$aid,$driverId]);$change=$q->fetch(PDO::FETCH_ASSOC);
+        return $change!==false&&(int)$change['new_vehicle_class']===$actualClass
+            &&(!(int)$change['update_student_debt']
+                ||(string)($change['student_debt_effective_date']??'9999-12-31')>(new \DateTimeImmutable('now',new \DateTimeZone('Asia/Tehran')))->format('Y-m-d'));
+    }
     public static function assignedVehicleClass(PDO $pdo,int $aid,int $studentId): ?int {
-        $stmt=$pdo->prepare("SELECT v.tariff_vehicle_class FROM service_students ss
+        $stmt=$pdo->prepare("SELECT v.tariff_vehicle_class AS actual_class,
+                 sv.driver_id,st.tariff_vehicle_class AS billed_class FROM service_students ss
+          JOIN students st ON st.id=ss.student_id AND st.agency_id=?
           JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=? AND sv.is_active=1 AND sv.status<>'cancelled'
           JOIN drivers dr ON dr.id=sv.driver_id AND dr.agency_id=sv.agency_id
           JOIN vehicles v ON v.id=dr.vehicle_id AND v.agency_id=sv.agency_id AND v.is_active=1
           WHERE ss.student_id=? AND v.tariff_vehicle_class IN (1,2,3) ORDER BY sv.id LIMIT 1");
-        $stmt->execute([$aid,$studentId]);
-        $class=$stmt->fetchColumn();
-        return $class===false?null:(int)$class;
+        $stmt->execute([$aid,$aid,$studentId]);
+        $row=$stmt->fetch(PDO::FETCH_ASSOC);
+        if(!$row)return null;
+        $actual=(int)$row['actual_class'];
+        $billed=(int)($row['billed_class']??0);
+        if(in_array($billed,[1,2,3],true)
+          &&self::preserveStudentTariffClass($pdo,$aid,(int)$row['driver_id'],$actual))
+            return $billed;
+        return $actual;
     }
     public static function quote(PDO $pdo,int $aid,array $student,string $source,array $options=[]): array {
         $source=self::source($source);
@@ -78,6 +103,8 @@ final class ServicePricing {
             return;
         }
         $previous=(string)($vehicle['tariff_vehicle_class']??'');
+        if($previous!==$class)
+            throw new AuthException(409,'تغییر کلاس تعرفه تنها از فرایند تاریخ‌دار بخش خودروها مجاز است تا قرارداد، بدهی دانش‌آموز و حقوق راننده بدون اجازه تغییر نکند.','VEHICLE_CLASS_WORKFLOW_REQUIRED');
         $pdo->prepare('UPDATE vehicles SET model=?,vehicle_trim=?,tariff_vehicle_class=? WHERE id=? AND agency_id=?')
             ->execute([$model,$model,(int)$class,(int)$vehicle['id'],$agencyId]);
         if($previous!==$class){
@@ -119,10 +146,12 @@ final class ServicePricing {
              'کلاس تعرفه خودروی راننده برای این سرویس مشخص نیست. ابتدا در قسمت خودروها، کلاس تعرفه خودرو را ۱، ۲ یا ۳ تعیین کنید.',
              'VEHICLE_TARIFF_CLASS_REQUIRED');
         }
+        $preserveTariff=self::preserveStudentTariffClass($pdo,$agencyId,
+            (int)($service['driver_id']??0),(int)$class);
         $set=$pdo->prepare('UPDATE students SET tariff_vehicle_class=? WHERE id=? AND agency_id=?');
         $updated=0;
         foreach($ids as $studentId){
-            $set->execute([(int)$class,$studentId,$agencyId]);
+            if(!$preserveTariff)$set->execute([(int)$class,$studentId,$agencyId]);
             if($reprice && $source!=='agreed')self::updateStudent($pdo,$agencyId,$studentId,$source);
             if($reprice)StudentServiceBilling::sync($pdo,$agencyId,$studentId);
             $updated++;

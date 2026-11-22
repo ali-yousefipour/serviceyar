@@ -74,6 +74,11 @@ final class StudentDebtors
                    (SELECT c.start_date FROM contracts c WHERE c.agency_id=students.agency_id AND c.party_type='student' AND c.party_id=students.id ORDER BY c.id DESC LIMIT 1) contract_start,
                    (SELECT c.end_date FROM contracts c WHERE c.agency_id=students.agency_id AND c.party_type='student' AND c.party_id=students.id ORDER BY c.id DESC LIMIT 1) contract_end,
                    (SELECT c.contract_no FROM contracts c WHERE c.agency_id=students.agency_id AND c.party_type='student' AND c.party_id=students.id ORDER BY c.id DESC LIMIT 1) contract_no,";
+        $hasVehicleChange=VehicleClassSchema::exists();
+        $adjustmentCondition=$hasVehicleChange
+            ? "EXISTS(SELECT 1 FROM vehicle_class_debt_adjustments va WHERE va.agency_id=:adjustmentAgency AND va.student_id=basis.id AND va.academic_year=:adjustmentYear AND va.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE))"
+            : "FALSE";
+        if($hasVehicleChange){$params['adjustmentAgency']=$aid;$params['adjustmentYear']=$year;}
         $sql="WITH balances AS (
             SELECT students.id, students.school_id, COALESCE(sc.name,'مدرسه نامشخص') school,
                    CONCAT_WS(' ',students.first_name,students.last_name) student, students.mobile guardian_mobile,
@@ -96,7 +101,7 @@ final class StudentDebtors
               invoice_total debt_basis,
               CASE WHEN invoice_count>0 THEN 'invoiced' ELSE 'refund_balance' END balance_source
               FROM balances),
-              debtors AS (SELECT basis.*, GREATEST(0,ROUND(debt_basis-paid,2)) debt, GREATEST(0,ROUND(paid-debt_basis,2)) credit, CASE WHEN annual_months IS NULL THEN 'مقطع نامشخص' WHEN contract_amount IS NULL THEN 'بدون قرارداد مرتبط' WHEN contract_amount<>invoice_total THEN 'اختلاف قرارداد و فاکتور' WHEN annual_fee<>contract_amount THEN 'اختلاف تعرفه و قرارداد؛ نیازمند بررسی' ELSE 'منطبق' END reconciliation_status FROM basis)
+              debtors AS (SELECT basis.*, GREATEST(0,ROUND(debt_basis-paid,2)) debt, GREATEST(0,ROUND(paid-debt_basis,2)) credit, CASE WHEN annual_months IS NULL THEN 'مقطع نامشخص' WHEN contract_amount IS NULL THEN 'بدون قرارداد مرتبط' WHEN $adjustmentCondition THEN 'دارای تعدیل تاریخ‌دار کلاس خودرو' WHEN contract_amount<>invoice_total THEN 'اختلاف قرارداد و فاکتور' WHEN annual_fee<>contract_amount THEN 'اختلاف تعرفه و قرارداد؛ نیازمند بررسی' ELSE 'منطبق' END reconciliation_status FROM basis)
         SELECT debtors.*, SUM(debt) OVER () total_debt FROM debtors WHERE ".implode(' AND ',$where)
             .' ORDER BY school,school_id,debt DESC,student,id';
         $query=Connection::get()->prepare($sql);

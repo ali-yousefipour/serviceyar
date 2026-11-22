@@ -642,6 +642,29 @@ HTML;
   if(str_contains($html,'</body>'))return str_replace('</body>',$notice.'</body>',$html);
   return $html.$notice;
  }
+ private static function vehicleClassAppendixPrint(\PDO $pdo,int $aid,int $id,string $html): string {
+  // Append the amendment to the print *view* only; preserve the original
+  // issued signed document, its HTML snapshot and its amount.
+  if(!VehicleClassSchema::exists($pdo))return $html;
+  $q=$pdo->prepare("SELECT a.effective_date,a.old_class,a.new_class,ch.old_vehicle_model,ch.new_vehicle_model,ch.created_at
+    FROM vehicle_class_contract_appendices a
+    JOIN vehicle_class_changes ch ON ch.id=a.change_id AND ch.agency_id=a.agency_id
+    WHERE a.agency_id=? AND a.contract_id=? ORDER BY a.effective_date,a.id");
+  $q->execute([$aid,$id]);
+  $rows=$q->fetchAll(\PDO::FETCH_ASSOC);
+  if(!$rows)return $html;
+  $content='<section class="contract-sheet vehicle-class-contract-appendix" dir="rtl"><h2>الحاقیه تغییر کلاس خودرو</h2><p>این صفحه الحاقیه قرارداد است و متن قرارداد اصلی و پرداخت‌های ثبت‌شده را تغییر نمی‌دهد.</p>';
+  foreach($rows as $r){
+   $old=htmlspecialchars((string)($r['old_vehicle_model']??'نامشخص'),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
+   $new=htmlspecialchars((string)($r['new_vehicle_model']??'نامشخص'),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
+   $date=htmlspecialchars(self::jalali((string)$r['effective_date']),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
+   $content.='<div class="contract-appendix-record"><p><strong>تاریخ اعمال تغییر:</strong> '.$date.'</p>'
+    .'<p>خودروی قبلی: '.$old.'، کلاس '.self::persian((string)($r['old_class']??'—')).'</p>'
+    .'<p>خودروی جدید: '.$new.'، کلاس '.self::persian((string)$r['new_class']).'</p></div>';
+  }
+  $content.='<p>هرگونه تغییر مبلغ بدهی یا حقوق راننده تنها مطابق تأییدهای مالی ثبت‌شده و تاریخ اثر مستقل آن محاسبه می‌شود.</p></section>';
+  return str_contains($html,'</body>')?str_replace('</body>',$content.'</body>',$html):$html.$content;
+ }
  public static function printable(int $uid,int $agencyId,int $contractId): array {
   self::scope($uid,$agencyId);$pdo=Connection::get();self::ensureSchema($pdo);
   $q=$pdo->prepare('SELECT id,contract_no,rendered_html,snapshot_json,issued_at,party_type,party_id,start_date,end_date,amount FROM contracts WHERE id=? AND agency_id=?');
@@ -653,7 +676,7 @@ HTML;
    // Do not alter an archived document in storage. Label reconstructed copies
    // only in the returned print view, never as an original signed issuance.
    $html=$reconstructed?self::markReconstructed((string)$row['rendered_html']):(string)$row['rendered_html'];
-   return ['html'=>$html,'contractNo'=>$row['contract_no'],'legacyReconstructed'=>$reconstructed];
+   return ['html'=>self::vehicleClassAppendixPrint($pdo,$agencyId,$contractId,$html),'contractNo'=>$row['contract_no'],'legacyReconstructed'=>$reconstructed];
   }
   // Existing records before versioned issuance have no historical content.
   // Provide an explicitly watermarked reconstruction, never claim it is the
@@ -672,6 +695,6 @@ HTML;
    'payment20'=>self::persian(number_format((int)round($total*.2),0,'.',','))];
   // The current-data reconstruction must remain distinguishable from an original.
   $html=self::markReconstructed(self::document(self::template($pdo,$kind)['body_html'],$values));
-  return ['html'=>$html,'contractNo'=>$row['contract_no'],'legacyReconstructed'=>true];
+  return ['html'=>self::vehicleClassAppendixPrint($pdo,$agencyId,$contractId,$html),'contractNo'=>$row['contract_no'],'legacyReconstructed'=>true];
  }
 }

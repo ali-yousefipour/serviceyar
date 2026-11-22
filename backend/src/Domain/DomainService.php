@@ -794,6 +794,9 @@ if($resource==='ledger'&&!in_array('company_account_id',thisColumns('ledger_entr
    if(!ctype_digit((string)$data['make_year'])||(int)$data['make_year']<1300||(int)$data['make_year']>1600)
     throw new AuthException(422,'سال ساخت خودرو نامعتبر است.','INVALID_MAKE_YEAR');
   }
+  if($resource==='vehicles'&&$id&&array_key_exists('tariff_vehicle_class',$data)
+   &&(string)($existing['tariff_vehicle_class']??'')!==(string)($data['tariff_vehicle_class']??''))
+   throw new AuthException(409,'برای تغییر کلاس خودرو از فرآیند تاریخ‌دار تغییر کلاس استفاده کنید.','VEHICLE_CLASS_WORKFLOW_REQUIRED');
   if($resource==='vehicles'&&array_key_exists('tariff_vehicle_class',$data)){
    $class=(string)($data['tariff_vehicle_class']??'');
    if(!in_array($class,['1','2','3'],true))throw new AuthException(422,
@@ -930,6 +933,20 @@ if($resource==='ledger'&&!in_array('company_account_id',thisColumns('ledger_entr
   if($resource==='drivers'&&$id&&array_key_exists('vehicle_id',$data)
      &&(int)($existing['vehicle_id']??0)!==(int)($data['vehicle_id']??0)
      &&(int)($data['vehicle_id']??0)>0){
+   // A driver can switch between vehicles freely only when their tariff classes
+   // match. Crossing classes requires the explicitly consented, effective-dated
+   // vehicle workflow; otherwise this path silently reprices all students.
+   if((int)($existing['vehicle_id']??0)>0){
+    $classCompare=$pdo->prepare("SELECT id,tariff_vehicle_class FROM vehicles WHERE agency_id=? AND id IN (?,?) FOR UPDATE");
+    $classCompare->execute([$aid,(int)$existing['vehicle_id'],(int)$data['vehicle_id']]);
+    $classes=[];
+    foreach($classCompare->fetchAll(\PDO::FETCH_ASSOC) as $vehicleRow)
+     $classes[(int)$vehicleRow['id']]=(int)($vehicleRow['tariff_vehicle_class']??0);
+    $previousClass=$classes[(int)$existing['vehicle_id']]??0;
+    $incomingClass=$classes[(int)$data['vehicle_id']]??0;
+    if($previousClass!==$incomingClass)
+     throw new AuthException(409,'تعویض خودرو باعث تغییر کلاس تعرفه می‌شود؛ ابتدا در بخش خودروها فرایند تأیید تاریخ‌دار تغییر کلاس را انجام دهید.','VEHICLE_CLASS_WORKFLOW_REQUIRED');
+   }
    $vehicleCheck=$pdo->prepare('SELECT capacity,is_active FROM vehicles WHERE id=? AND agency_id=? FOR UPDATE');
    $vehicleCheck->execute([(int)$data['vehicle_id'],$aid]);$targetVehicle=$vehicleCheck->fetch(\PDO::FETCH_ASSOC);
    if(!$targetVehicle||(int)$targetVehicle['is_active']!==1)
