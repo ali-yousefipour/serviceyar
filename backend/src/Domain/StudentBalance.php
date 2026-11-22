@@ -14,7 +14,9 @@ final class StudentBalance {
   return "CONVERT($expr USING utf8mb4) COLLATE utf8mb4_unicode_ci";
  }
  public static function invoicesSql(): string {
-  return "((SELECT COALESCE(SUM(i.amount),0) FROM invoices i WHERE i.party_type='student' AND i.party_id=students.id AND i.agency_id=students.agency_id AND i.status<>'cancelled') + (SELECT COALESCE(SUM(adj.amount_irr),0) FROM vehicle_class_debt_adjustments adj WHERE adj.student_id=students.id AND adj.agency_id=students.agency_id))";
+  $base="(SELECT COALESCE(SUM(i.amount),0) FROM invoices i WHERE i.party_type='student' AND i.party_id=students.id AND i.agency_id=students.agency_id AND i.status<>'cancelled')";
+  if(!VehicleClassSchema::exists())return $base;
+  return "($base + (SELECT COALESCE(SUM(adj.amount_irr),0) FROM vehicle_class_debt_adjustments adj WHERE adj.student_id=students.id AND adj.agency_id=students.agency_id))";
  }
  public static function receiptsSql(): string {
   return "((SELECT COALESCE(SUM(p.amount),0) FROM payments p JOIN invoices i ON i.id=p.invoice_id AND i.agency_id=p.agency_id WHERE i.party_type='student' AND i.party_id=students.id AND p.agency_id=students.agency_id) + (SELECT COALESCE(SUM(CASE WHEN le.direction='receipt' THEN le.amount ELSE -le.amount END),0) FROM ledger_entries le WHERE le.agency_id=students.agency_id AND le.party_type='student' AND le.party_id=students.id AND le.is_active=1))";
@@ -39,12 +41,14 @@ final class StudentBalance {
   // Class-change adjustments are signed charges, never cash receipts.
   // A negative adjustment reduces outstanding debt without mutating a
   // previously issued invoice or the student's payment history.
+  if(VehicleClassSchema::exists($pdo)){
   $adjust=$pdo->prepare("SELECT academic_year,SUM(amount_irr) amount FROM vehicle_class_debt_adjustments WHERE agency_id=? AND student_id=? GROUP BY academic_year");
   $adjust->execute([$agency,$student]);
   foreach($adjust->fetchAll(PDO::FETCH_ASSOC) as $row){
    $key=ContractBilling::year((string)$row['academic_year']);
    $groups[$key]??=['invoiced'=>0.0,'received'=>0.0];
    $groups[$key]['invoiced']+=(float)$row['amount'];
+  }
   }
   ksort($groups);
   foreach($groups as $key=>$row)$groups[$key]=self::totals($row['invoiced'],$row['received']);
