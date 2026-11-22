@@ -1259,6 +1259,39 @@ async function resourcePage(key,token=pageToken,options={}){
   if(isLedger){const advanced=filterForm.querySelector('.ledger-filter-more .ledger-filter-grid');if(advanced)advanced.append(controls);else filterForm.append(controls);}else if(submit)submit.before(controls);else filterForm.append(controls);
  }
 
+ // Compact, accessible mobile filtering for the generic directory forms.
+ // Preserve the original form controls and names, so existing API filters,
+ // reset behavior and listeners work without any duplicated state.
+ if(filterForm&&!['students','services','ledger','invoices'].includes(key)){
+  const searchField=filterForm.querySelector('input[name="search"]')?.closest('label');
+  const secondary=[...filterForm.children].filter(node=>
+   node!==searchField&&node.matches('label,fieldset,.sy-grid-sort-controls'));
+  if(searchField&&secondary.length>1){
+   const details=document.createElement('details');
+   details.className='sy-directory-advanced';
+   details.open=!window.matchMedia('(max-width:760px)').matches;
+   const summary=document.createElement('summary');
+   summary.textContent='فیلترهای بیشتر';
+   const fields=document.createElement('div');
+   fields.className='sy-directory-advanced-fields';
+   secondary.forEach(node=>fields.append(node));
+   details.append(summary,fields);
+   searchField.after(details);
+   const updateSummary=()=>{
+    let count=0;
+    fields.querySelectorAll('input,select').forEach(control=>{
+     if(!control.name||control.disabled||['sortBy','sortDir'].includes(control.name))return;
+     if(control.type==='radio'||control.type==='checkbox'){
+      if(control.checked&&control.value!=='')count++;
+     }else if(String(control.value).trim()!==''&&!(control.name==='active'&&control.value==='1'))count++;
+    });
+    summary.textContent='فیلترهای بیشتر'+(count?' · '+count.toLocaleString('fa-IR')+' فعال':'');
+   };
+   updateSummary();
+   filterForm.addEventListener('change',updateSummary);
+   filterForm.addEventListener('reset',()=>queueMicrotask(updateSummary));
+  }
+ }
  $('ledgerTabReport')?.addEventListener('click',()=>ledgerReportPage(token));
  if(isVehicles){
   const toAscii=value=>String(value).replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
