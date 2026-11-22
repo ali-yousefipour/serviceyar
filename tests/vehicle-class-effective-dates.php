@@ -31,4 +31,11 @@ try{
 }catch(\ServiceYar\Auth\AuthException $e){
  check($e->status===422,'Expected validation error');
 }
+$periods=[
+ ['id'=>1,'effective_date'=>'2026-11-11','old_monthly_irr'=>3000000,'new_monthly_irr'=>6000000],
+ ['id'=>2,'effective_date'=>'2026-11-21','old_monthly_irr'=>6000000,'new_monthly_irr'=>9000000],
+];
+check(Rates::blendedRate('2026-11-01','2026-11-30',9000000,$periods)===6000000,'Multi-change November blend must be exact');
+check(Rates::blendedRate('2026-10-01','2026-10-31',9000000,$periods)===3000000,'Prior months must retain original class rate');
+check(Rates::blendedRate('2026-12-01','2026-12-31',9000000,$periods)===9000000,'Future months must use final class rate');
 echo "Vehicle class effective-date rules: OK\n";
