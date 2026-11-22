@@ -52,6 +52,31 @@
  :is(.filter-actions,.directory-filter-actions,.sy-invoice-filter-actions,.service-filter-actions){
    display:flex;flex-wrap:wrap;align-items:center;gap:8px;
  }
+ /* Existing directory controls are moved, not cloned, into this accessible
+    details group so form submit/reset and autocomplete remain unchanged. */
+ #app form.filters .sy-directory-advanced{
+  flex:1 1 100%;min-width:0;max-width:100%;
+  border:1px solid #d9e6dc;border-radius:11px;background:#fff;
+ }
+ #app form.filters .sy-directory-advanced>summary{
+  padding:10px 12px;min-height:44px;box-sizing:border-box;
+  display:flex;align-items:center;cursor:pointer;gap:8px;
+  color:#225340;font:700 13px/1.7 Vazirmatn,Tahoma,sans-serif;
+ }
+ #app form.filters .sy-directory-advanced>summary:focus-visible{
+  outline:3px solid #b99344;outline-offset:2px;
+ }
+ #app form.filters .sy-directory-advanced-fields{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  align-items:end;gap:10px;padding:10px 12px;
+ }
+ #app form.filters .sy-directory-advanced-fields>label{min-width:0;max-width:100%;}
+ #app form.filters .sy-directory-advanced-fields>.sy-grid-sort-controls{
+  min-width:0;max-width:100%;grid-column:span 2;
+ }
+ #app form.filters .sy-directory-advanced-fields>fieldset{
+  grid-column:1/-1;min-width:0;max-width:100%;
+ }
  #app .sy-sms-provider-panel{
    padding:clamp(12px,1.5vw,18px);
    display:grid;gap:12px;
@@ -80,6 +105,10 @@
      .report-filters,.ledger-filters,.sy-invoice-filters,.portal-debtors-filters){
    padding:12px;gap:10px;
  }
+ #app form.filters .sy-directory-advanced-fields{
+  grid-template-columns:repeat(2,minmax(0,1fr));padding:10px;gap:10px;
+ }
+ #app form.filters .sy-directory-advanced-fields>.sy-grid-sort-controls{grid-column:1/-1;}
  #app .sy-sms-provider-grid{grid-template-columns:minmax(0,1fr);}
  #app :is(.directory-filters,.report-filters,.ledger-filters,.sy-operation-filters)
  :is(input,select){width:100%;}
@@ -91,5 +120,7 @@
  }
  #app :is(.directory-filters,.report-filters,.ledger-filters,.sy-operation-filters)
  :is(.filter-actions,.directory-filter-actions) button{flex:1 1 110px;}
+ #app form.filters .sy-directory-advanced-fields{grid-template-columns:minmax(0,1fr);}
+ #app form.filters .sy-directory-advanced-fields>.sy-grid-sort-controls{grid-column:1/-1;}
  #app .sy-sms-choice-form button,#app .sy-sms-provider-form button.primary{width:100%;}
 }
