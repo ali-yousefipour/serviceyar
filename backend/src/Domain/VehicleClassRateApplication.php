@@ -1,0 +1,57 @@
+<?php
+declare(strict_types=1);
+namespace ServiceYar\Domain;
+
+use PDO;
+use ServiceYar\Database\Connection;
+
+/**
+ * Apply approved tuition/payroll rates only when their effective date arrives.
+ * The operation is idempotent; every rate period is applied exactly once and
+ * previously issued contracts, invoices and payments remain unchanged.
+ */
+final class VehicleClassRateApplication
+{
+    public static function applyDue(int $agencyId): int
+    {
+        if(!VehicleClassSchema::exists())return 0;
+        return OperationsService::transaction(function(PDO $pdo)use($agencyId){
+            $count=0;$services=[];
+            do {
+                $q=$pdo->prepare("SELECT p.id,p.subject_type,p.subject_id,p.service_id,
+                      p.new_class,p.new_monthly_irr
+                      FROM vehicle_class_rate_periods p
+                      WHERE p.agency_id=? AND p.applied_at IS NULL AND p.effective_date<=CURRENT_DATE()
+                      ORDER BY p.effective_date,p.id LIMIT 500 FOR UPDATE");
+                $q->execute([$agencyId]);$pending=$q->fetchAll(PDO::FETCH_ASSOC);
+                foreach($pending as $p){
+                    if($p['subject_type']==='student_debt'){
+                        $pdo->prepare("UPDATE students SET monthly_fee=?,tariff_vehicle_class=?
+                            WHERE id=? AND agency_id=?")
+                            ->execute([$p['new_monthly_irr'],$p['new_class'],$p['subject_id'],$agencyId]);
+                    }else{
+                        $pdo->prepare("UPDATE students SET driver_base_monthly=?
+                            WHERE id=? AND agency_id=?")
+                            ->execute([$p['new_monthly_irr'],$p['subject_id'],$agencyId]);
+                        $services[(int)$p['service_id']]=true;
+                    }
+                    $pdo->prepare('UPDATE vehicle_class_rate_periods SET applied_at=NOW() WHERE id=? AND agency_id=? AND applied_at IS NULL')
+                        ->execute([$p['id'],$agencyId]);
+                    $count++;
+                }
+            }while(count($pending)===500);
+            foreach(array_keys($services) as $serviceId){
+                $q=$pdo->prepare("SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0)
+                     FROM service_students ss
+                     JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=?
+                     JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id AND st.is_active=1
+                     WHERE ss.service_id=?");
+                $q->execute([$agencyId,$serviceId]);$gross=(float)$q->fetchColumn();
+                $net=OperationsService::driverDeductions($gross,$agencyId)['net_earned'];
+                $pdo->prepare('UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?')
+                    ->execute([$net,$serviceId,$agencyId]);
+            }
+            return $count;
+        });
+    }
+}
