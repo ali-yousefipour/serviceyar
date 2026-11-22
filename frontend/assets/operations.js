@@ -1631,45 +1631,85 @@ function closeDialog(){
 }
 document.addEventListener('keydown',e=>{if(e.defaultPrevented)return;const modal=$('modal')?.querySelector('.modal[role="dialog"]');if(!modal)return;if(e.key==='Escape'){if(document.querySelector('.solar-calendar'))return;e.preventDefault();closeDialog();return;}if(e.key==='Tab'){const items=[...modal.querySelectorAll('button,input,select,textarea,a[href],[tabindex="0"]')].filter(x=>!x.disabled&&x.type!=='hidden'&&x.getClientRects().length&&!x.closest('[hidden]'));const first=items[0],last=items.at(-1);if(!first){e.preventDefault();modal.focus();}else if(e.shiftKey&&(document.activeElement===first||document.activeElement===modal)){e.preventDefault();last.focus();}else if(!e.shiftKey&&(document.activeElement===last||document.activeElement===modal)){e.preventDefault();first.focus();}}});
 function vehicleClassChangeWizard(id,row,body,onSaved){
- const today=()=>{const parts=new Intl.DateTimeFormat('en-US',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'Asia/Tehran'}).formatToParts(new Date());const get=t=>parts.find(p=>p.type===t)?.value||'';return get('year')+'-'+get('month')+'-'+get('day');};
- const values={updateContract:true,contractEffectiveDate:today(),updateStudentDebt:false,studentDebtEffectiveDate:today(),updateDriverPay:false,driverPayEffectiveDate:today()};
- let step=0,saving=false;
- const steps=[
-  {title:'اعمال تغییر در قرارداد',choice:'updateContract',date:'contractEffectiveDate',question:'آیا تغییر کلاس خودرو از تاریخ انتخاب‌شده در الحاقیه قرارداد ثبت شود؟'},
-  {title:'اصلاح بدهی دانش‌آموزان',choice:'updateStudentDebt',date:'studentDebtEffectiveDate',question:'آیا تغییر نرخ کلاس خودرو در بدهی دانش‌آموزان اعمال شود؟ سوابق پرداخت‌شده تغییر نمی‌کنند.'},
-  {title:'اصلاح سرویس و حقوق راننده',choice:'updateDriverPay',date:'driverPayEffectiveDate',question:'آیا مبلغ سرویس و مبنای حقوق راننده از تاریخ انتخاب‌شده اصلاح شود؟'},
-  {title:'تأیید نهایی تغییرات'}
+ const today=()=>{const p=new Intl.DateTimeFormat('en-US',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'Asia/Tehran'}).formatToParts(new Date());const f=t=>p.find(a=>a.type===t)?.value||'';return f('year')+'-'+f('month')+'-'+f('day');};
+ const dateToday=today();
+ const values={updateContract:true,contractEffectiveDate:dateToday,updateStudentDebt:false,studentDebtEffectiveDate:dateToday,updateDriverPay:false,driverPayEffectiveDate:dateToday};
+ const stages=[
+  {name:'قرارداد',title:'اصلاح کلاس خودرو در قرارداد',choice:'updateContract',date:'contractEffectiveDate',question:'آیا کلاس جدید خودرو در قراردادهای مرتبط ثبت شود؟',hint:'قراردادهای صادرشده تغییر نمی‌کنند؛ اصلاحیه با تاریخ انتخاب‌شده ثبت می‌شود.'},
+  {name:'بدهی دانش‌آموز',title:'اصلاح بدهی دانش‌آموزان',choice:'updateStudentDebt',date:'studentDebtEffectiveDate',question:'آیا نرخ جدید در بدهی دانش‌آموزان مرتبط اعمال شود؟',hint:'نرخ قبلی تا روز پیش از تاریخ انتخاب‌شده معتبر می‌ماند و پرداخت‌های ثبت‌شده حفظ می‌شوند.'},
+  {name:'حقوق راننده',title:'اصلاح نرخ سرویس و حقوق راننده',choice:'updateDriverPay',date:'driverPayEffectiveDate',question:'آیا نرخ جدید در محاسبه حقوق راننده و مبلغ سرویس اعمال شود؟',hint:'تاریخ اثر این بخش مستقل از تاریخ بدهی است؛ اسناد حقوق قطعی دست‌نخورده باقی می‌مانند.'},
+  {name:'تأیید نهایی',title:'بررسی و تأیید تغییرات',hint:'پیش از تأیید نهایی، هیچ‌یک از تصمیم‌های جدید ثبت نمی‌شوند.'}
  ];
+ let stage=0,busy=false;
+ const safe=x=>esc(String(x??''));
+ const fa=x=>persianDigits(String(x??''));
+ const shamsi=x=>x?fa(ServiceYarDates.toSolar(x)||x):'—';
+ const currentClass=()=>fa(row?.tariff_vehicle_class??'نامشخص');
+ const nextClass=()=>fa(body.tariffVehicleClass??'نامشخص');
+ const decision=step=>values[step.choice];
  const render=()=>{
-  const current=steps[step],modal=document.querySelector('#modal .modal-body');
-  if(!modal)return;
-  const info='<p class="sy-change-wizard-context">کلاس قبلی: <strong>'+esc(String(row.tariff_vehicle_class??'نامشخص'))+'</strong> | کلاس جدید: <strong>'+esc(String(body.tariffVehicleClass))+'</strong></p>';
-  const field=current.choice?'<fieldset class="sy-change-wizard-choice"><legend>'+esc(current.question)+'</legend><label><input type="radio" name="classConsent" value="yes" '+(values[current.choice]?'checked':'')+'> بله، اعمال شود</label><label><input type="radio" name="classConsent" value="no" '+(!values[current.choice]?'checked':'')+'> خیر، مبالغ قبلی حفظ شوند</label></fieldset><label class="sy-change-wizard-date" '+(!values[current.choice]?'hidden':'')+'>تاریخ اثر (شمسی)<input type="date" name="classEffectiveDate" value="'+esc(values[current.date])+'" required></label>':'<section class="sy-change-wizard-review">'+steps.slice(0,3).map(st=>'<p><strong>'+esc(st.title)+':</strong> '+(values[st.choice]?'بله · '+esc(persianDigits(ServiceYarDates.toSolar(values[st.date])||values[st.date])):'خیر؛ بدون تغییر مالی')+'</p>').join('')+'</section>';
-  modal.innerHTML='<div class="sy-change-wizard"><p class="sy-operation-kicker">مرحله '+(step+1)+' از ۴ · تغییر کلاس خودرو</p><h4>'+esc(current.title)+'</h4>'+info+field+'<div id="classChangeError" class="error" role="alert" hidden></div><div class="sy-new-service-actions"><button type="button" id="classChangeCancel">انصراف</button><button type="button" id="classChangeBack" '+(step===0?'disabled':'')+'>قبلی</button><button type="button" class="primary" id="classChangeNext">'+(step===3?'تأیید و ذخیره نهایی':'مرحله بعد')+'</button></div></div>';
-  const choice=modal.querySelectorAll('[name=classConsent]'),date=modal.querySelector('[name=classEffectiveDate]'),dateLabel=modal.querySelector('.sy-change-wizard-date');
-  choice.forEach(input=>input.onchange=()=>{values[current.choice]=input.value==='yes';dateLabel.hidden=!values[current.choice];});
-  modal.querySelector('#classChangeCancel').onclick=()=>{closeDialog();void formResource('vehicles',id,onSaved);};
-  modal.querySelector('#classChangeBack').onclick=()=>{step--;render();};
-  modal.querySelector('#classChangeNext').onclick=async()=>{
-   const error=modal.querySelector('#classChangeError');
-   if(current.choice&&values[current.choice]){
-    if(!date.value||!/^\d{4}-\d{2}-\d{2}$/.test(date.value)){error.textContent='تاریخ معتبر شمسی را از تقویم انتخاب کنید.';error.hidden=false;return;}
-    values[current.date]=date.value;
+  const root=document.querySelector('#modal .modal-body'),s=stages[stage];
+  if(!root)return;
+  const nav=stages.map((x,i)=>'<li class="'+(i===stage?'is-current':i<stage?'is-done':'')+'" '+(i===stage?'aria-current="step"':'')+'><span class="vcw-index">'+(i<stage?'✓':fa(i+1))+'</span><span>'+safe(x.name)+'</span></li>').join('');
+  let content='';
+  if(s.choice){
+   const yes=decision(s);
+   content='<fieldset class="vcw-choice"><legend>'+safe(s.question)+'</legend>'+
+    '<label class="vcw-choice-card '+(yes?'selected':'')+'"><input type="radio" name="classConsent" value="yes" '+(yes?'checked':'')+'><span><strong>بله، اعمال شود</strong><small>با تاریخ مؤثر انتخابی</small></span><span class="vcw-tick" aria-hidden="true">✓</span></label>'+
+    '<label class="vcw-choice-card '+(!yes?'selected':'')+'"><input type="radio" name="classConsent" value="no" '+(!yes?'checked':'')+'><span><strong>خیر، بدون تغییر</strong><small>اطلاعات این بخش حفظ شود</small></span><span class="vcw-tick" aria-hidden="true">✓</span></label></fieldset>'+
+    '<div class="vcw-date" '+(!yes?'hidden':'')+'><label for="vcwEffectiveDate">تاریخ مؤثر تغییر</label><input id="vcwEffectiveDate" type="date" name="classEffectiveDate" value="'+safe(values[s.date])+'" required><p>تاریخ از تقویم شمسی سامانه انتخاب می‌شود.</p></div>';
+  }else{
+   content='<div class="vcw-review">'+stages.slice(0,3).map(x=>'<div class="vcw-review-item"><span>'+safe(x.name)+'</span><strong class="'+(decision(x)?'vcw-approved':'vcw-unchanged')+'">'+(decision(x)?'بله، از '+safe(shamsi(values[x.date])):'خیر، بدون تغییر')+'</strong></div>').join('')+'</div>'+
+    '<div class="vcw-notice"><strong>تأیید نهایی</strong><p>تنها پس از تأیید نهایی، خودرو و تصمیم‌های انتخابی ذخیره می‌شوند. لغو این مرحله تغییری ایجاد نمی‌کند.</p></div>';
+  }
+  root.innerHTML='<section class="sy-change-wizard vcw" dir="rtl" aria-labelledby="vcwTitle">'+
+   '<div class="vcw-headline"><span>فرایند تغییر کلاس خودرو</span><span class="vcw-count">مرحله '+fa(stage+1)+' از '+fa(stages.length)+'</span></div>'+
+   '<ol class="vcw-steps" aria-label="مراحل تغییر کلاس خودرو">'+nav+'</ol>'+
+   '<div class="vcw-classes"><div><span>کلاس قبلی</span><strong>'+safe(currentClass())+'</strong></div><span class="vcw-arrow" aria-hidden="true">←</span><div><span>کلاس جدید</span><strong>'+safe(nextClass())+'</strong></div></div>'+
+   '<div class="vcw-main"><h3 id="vcwTitle" tabindex="-1">'+safe(s.title)+'</h3><p class="vcw-hint">'+safe(s.hint)+'</p>'+content+'<p id="vcwError" class="vcw-error" role="alert" tabindex="-1" hidden></p></div>'+
+   '<div class="vcw-actions"><button type="button" class="vcw-button vcw-cancel" id="vcwCancel">انصراف</button><div><button type="button" class="vcw-button" id="vcwBack" '+(stage===0?'disabled':'')+'>مرحله قبل</button><button type="button" class="vcw-button vcw-primary" id="vcwNext">'+(stage===3?'تأیید و ثبت نهایی':'مرحله بعد')+'</button></div></div></section>';
+  const date=root.querySelector('#vcwEffectiveDate');
+  if(date){date.addEventListener('change',()=>{values[s.date]=date.value;});date.addEventListener('input',()=>{values[s.date]=date.value;});}
+  root.querySelectorAll('input[name="classConsent"]').forEach(input=>input.addEventListener('change',()=>{
+   values[s.choice]=input.value==='yes';
+   root.querySelectorAll('.vcw-choice-card').forEach(card=>card.classList.toggle('selected',card.querySelector('input').checked));
+   root.querySelector('.vcw-date').hidden=!values[s.choice];
+  }));
+  root.querySelector('#vcwCancel').onclick=()=>{if(busy)return;closeDialog();void formResource('vehicles',id,onSaved);};
+  root.querySelector('#vcwBack').onclick=()=>{if(busy||stage===0)return;stage--;render();};
+  root.querySelector('#vcwNext').onclick=async()=>{
+   if(busy)return;
+   const error=root.querySelector('#vcwError');
+   error.hidden=true;
+   if(s.choice&&values[s.choice]){
+    const field=root.querySelector('#vcwEffectiveDate');
+    if(!field?.value||!/^\d{4}-\d{2}-\d{2}$/.test(field.value)||!field.checkValidity()){
+     error.textContent='تاریخ معتبر را از تقویم انتخاب کنید.';error.hidden=false;field?.focus();return;
+    }
+    values[s.date]=field.value;
    }
-   if(step<3){step++;render();return;}
-   if(saving)return;
-   saving=true;const btn=modal.querySelector('#classChangeNext');btn.disabled=true;btn.textContent='در حال ذخیره و محاسبه…';
+   if(stage<stages.length-1){stage++;render();return;}
+   busy=true;
+   const save=root.querySelector('#vcwNext');save.disabled=true;save.textContent='در حال ثبت تغییرات…';
+   root.querySelector('#vcwBack').disabled=true;root.querySelector('#vcwCancel').disabled=true;
+   root.querySelector('.vcw').setAttribute('aria-busy','true');
    try{
     const payload={...body,...values};
-    for(const st of steps.slice(0,3))if(!values[st.choice])payload[st.date]=null;
-    const result=await write('/api/v1/vehicles/'+id+'/class-change',payload,'PUT');
-    lookupCache={};closeDialog();notify('تغییر کلاس خودرو و تصمیم‌های مالی ثبت شد. شناسه تغییر: '+number(result.changeId));
-    if(onSaved)onSaved();else await loadResource('vehicles');
-   }catch(e){error.textContent=e.message;error.hidden=false;btn.disabled=false;btn.textContent='تأیید و ذخیره نهایی';}
-   finally{saving=false;}
+    for(const x of stages.slice(0,3))if(!values[x.choice])payload[x.date]=null;
+    const data=await write('/api/v1/vehicles/'+encodeURIComponent(id)+'/class-change',payload,'PUT');
+    lookupCache={};closeDialog();notify('تغییر کلاس خودرو ثبت شد. شناسه: '+number(data.changeId));
+    if(onSaved)await onSaved();else await loadResource('vehicles');
+   }catch(err){
+    error.textContent=err?.message||'عملیات ذخیره انجام نشد. دوباره تلاش کنید.';
+    error.hidden=false;error.focus();
+    save.disabled=false;save.textContent='تأیید و ثبت نهایی';
+    root.querySelector('#vcwBack').disabled=false;root.querySelector('#vcwCancel').disabled=false;
+    root.querySelector('.vcw').removeAttribute('aria-busy');
+   }finally{busy=false;}
   };
+  root.querySelector('#vcwTitle')?.focus();
  };
- dialog('فرایند تاریخ‌دار تغییر کلاس خودرو','<div class="sy-change-wizard" role="status">در حال آماده‌سازی مراحل…</div>');
+ dialog('تغییر کلاس خودرو','<div role="status">در حال آماده‌سازی مراحل…</div>');
  render();
 }
 async function vehicleClassHistoryDialog(){
