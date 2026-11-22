@@ -7,24 +7,20 @@ use ServiceYar\Auth\AuthException;
 use ServiceYar\Auth\Authorization;
 use ServiceYar\Database\Connection;
 
-/** Read-only, company-scoped history of consented vehicle class changes. */
+/** Tenant-isolated read-only audit report for vehicle class changes. */
 final class VehicleClassHistory
 {
-    public static function list(int $uid,int $agencyId,?int $vehicleId=null): array
-    {
+    private static function connection(int $uid,int $agencyId): PDO {
         Authorization::requireAgencyAccess($uid,$agencyId);
         Authorization::requirePermission($uid,'drivers.view');
+        VehicleClassSchema::ensure();
+        return Connection::get();
+    }
+
+    public static function list(int $uid,int $agencyId,?int $vehicleId=null,array $filters=[]): array {
         if($vehicleId!==null&&$vehicleId<1)
             throw new AuthException(422,'شناسه خودرو نامعتبر است.','INVALID_VEHICLE');
-        VehicleClassSchema::ensure();
-        $pdo=Connection::get();
-        try {
-            $pdo->query('SELECT id FROM vehicle_class_changes LIMIT 0');
-        } catch(\PDOException $e) {
-            if(($e->errorInfo[1]??null)===1146)
-                throw new AuthException(503,'مهاجرت تاریخچه تغییر کلاس خودرو (0168) اجرا نشده است.','VEHICLE_CLASS_HISTORY_SCHEMA_REQUIRED');
-            throw $e;
-        }
+        $pdo=self::connection($uid,$agencyId);
         $sql="SELECT ch.id,ch.vehicle_id,ch.driver_id,ch.old_vehicle_model,ch.new_vehicle_model,
           ch.old_vehicle_class,ch.new_vehicle_class,ch.contract_effective_date,
           ch.update_student_debt,ch.student_debt_effective_date,ch.update_driver_pay,
@@ -32,8 +28,9 @@ final class VehicleClassHistory
           CONCAT_WS(' ',u.first_name,u.last_name) AS changed_by,
           JSON_UNQUOTE(JSON_EXTRACT(ch.old_vehicle_snapshot,'$.plate')) AS old_plate,
           JSON_UNQUOTE(JSON_EXTRACT(ch.new_vehicle_snapshot,'$.plate')) AS new_plate,
-          (SELECT COUNT(*) FROM vehicle_class_rate_periods p WHERE p.change_id=ch.id AND p.subject_type='student_debt') AS adjusted_student_count,
-          (SELECT COALESCE(SUM(a.amount_irr),0) FROM vehicle_class_debt_adjustments a WHERE a.change_id=ch.id) AS total_debt_adjustment,
+          (SELECT COUNT(*) FROM vehicle_class_contract_appendices a WHERE a.agency_id=ch.agency_id AND a.change_id=ch.id) AS amended_contract_count,
+          (SELECT COUNT(*) FROM vehicle_class_rate_periods p WHERE p.agency_id=ch.agency_id AND p.change_id=ch.id AND p.subject_type='student_debt') AS adjusted_student_count,
+          (SELECT COALESCE(SUM(a.amount_irr),0) FROM vehicle_class_debt_adjustments a WHERE a.agency_id=ch.agency_id AND a.change_id=ch.id) AS total_debt_adjustment,
           CONCAT_WS(' ',d.first_name,d.last_name) AS driver_name,
           v.plate AS current_plate
           FROM vehicle_class_changes ch
@@ -43,8 +40,62 @@ final class VehicleClassHistory
           WHERE ch.agency_id=?";
         $params=[$agencyId];
         if($vehicleId!==null){$sql.=' AND ch.vehicle_id=?';$params[]=$vehicleId;}
-        $sql.=' ORDER BY ch.id DESC LIMIT 200';
+        foreach(['oldClass'=>'old_vehicle_class','newClass'=>'new_vehicle_class'] as $key=>$column){
+            if(!isset($filters[$key])||$filters[$key]==='')continue;
+            if(!in_array((string)$filters[$key],['1','2','3'],true))
+                throw new AuthException(422,'فیلتر کلاس خودرو معتبر نیست.','INVALID_CLASS_FILTER');
+            $sql.=' AND ch.'.$column.'=?';$params[]=(int)$filters[$key];
+        }
+        foreach(['from'=>'>=','to'=>'<='] as $key=>$operator){
+            $date=(string)($filters[$key]??'');
+            if($date==='')continue;
+            VehicleClassEffectiveDates::requireDate($date,'تاریخ گزارش');
+            $sql.=' AND DATE(ch.created_at)'.$operator.'?';$params[]=$date;
+        }
+        $search=trim((string)($filters['search']??''));
+        if($search!==''){
+            if(mb_strlen($search)>100)throw new AuthException(422,'متن جستجو طولانی است.','SEARCH_TOO_LONG');
+            $sql.=" AND (CONCAT_WS(' ',d.first_name,d.last_name) LIKE ?
+              OR v.plate LIKE ?
+              OR JSON_UNQUOTE(JSON_EXTRACT(ch.old_vehicle_snapshot,'$.plate')) LIKE ?
+              OR JSON_UNQUOTE(JSON_EXTRACT(ch.new_vehicle_snapshot,'$.plate')) LIKE ?
+              OR CAST(ch.id AS CHAR) = ?)";
+            $like='%'.str_replace(['\\','%','_'],['\\\\','\\%','\\_'],$search).'%';
+            array_push($params,$like,$like,$like,$like,$search);
+        }
+        $sql.=' ORDER BY ch.id DESC LIMIT 1000';
         $q=$pdo->prepare($sql);$q->execute($params);
         return $q->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function detail(int $uid,int $agencyId,int $changeId): array {
+        if($changeId<1)throw new AuthException(422,'شناسه تغییر معتبر نیست.','INVALID_CHANGE_ID');
+        $pdo=self::connection($uid,$agencyId);
+        $q=$pdo->prepare("SELECT ch.*,CONCAT_WS(' ',d.first_name,d.last_name) AS driver_name,
+                v.plate AS vehicle_plate
+            FROM vehicle_class_changes ch
+            LEFT JOIN drivers d ON d.id=ch.driver_id AND d.agency_id=ch.agency_id
+            LEFT JOIN vehicles v ON v.id=ch.vehicle_id AND v.agency_id=ch.agency_id
+            WHERE ch.id=? AND ch.agency_id=?");
+        $q->execute([$changeId,$agencyId]);$change=$q->fetch(PDO::FETCH_ASSOC);
+        if(!$change)throw new AuthException(404,'این تغییر برای شرکت جاری یافت نشد.','CHANGE_NOT_FOUND');
+        $q=$pdo->prepare("SELECT a.id,a.student_id,a.service_id,a.academic_year,a.effective_date,a.amount_irr,
+              CONCAT_WS(' ',s.first_name,s.last_name) AS student_name
+            FROM vehicle_class_debt_adjustments a
+            JOIN students s ON s.id=a.student_id AND s.agency_id=a.agency_id
+            WHERE a.agency_id=? AND a.change_id=? ORDER BY s.last_name,s.first_name,a.id");
+        $q->execute([$agencyId,$changeId]);$adjustments=$q->fetchAll(PDO::FETCH_ASSOC);
+        $q=$pdo->prepare("SELECT a.id,a.contract_id,a.effective_date,c.contract_no,c.party_type,c.party_id
+            FROM vehicle_class_contract_appendices a
+            JOIN contracts c ON c.id=a.contract_id AND c.agency_id=a.agency_id
+            WHERE a.agency_id=? AND a.change_id=? ORDER BY a.id");
+        $q->execute([$agencyId,$changeId]);
+        $contracts=$q->fetchAll(PDO::FETCH_ASSOC);
+        $q=$pdo->prepare("SELECT p.id,p.subject_type,p.subject_id,p.service_id,p.effective_date,
+                 p.old_monthly_irr,p.new_monthly_irr,p.applied_at
+            FROM vehicle_class_rate_periods p
+            WHERE p.agency_id=? AND p.change_id=? ORDER BY p.subject_type,p.id");
+        $q->execute([$agencyId,$changeId]);
+        return ['change'=>$change,'adjustments'=>$adjustments,'contracts'=>$contracts,'rates'=>$q->fetchAll(PDO::FETCH_ASSOC)];
     }
 }
