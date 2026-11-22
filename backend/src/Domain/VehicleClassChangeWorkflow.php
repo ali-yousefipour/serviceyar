@@ -44,26 +44,47 @@ final class VehicleClassChangeWorkflow
         return OperationsService::transaction(function(PDO $pdo) use($uid,$aid,$vehicleId,$body,$class,$choices){
             self::assertSchema($pdo);
             $q=$pdo->prepare('SELECT * FROM vehicles WHERE id=? AND agency_id=? FOR UPDATE');
-            $q->execute([$vehicleId,$aid]);$old=$q->fetch(PDO::FETCH_ASSOC);
-            if(!$old)throw new AuthException(404,'خودرو یافت نشد.','VEHICLE_NOT_FOUND');
-            if((string)($old['tariff_vehicle_class']??'')===$class)
-                throw new AuthException(409,'کلاس خودرو تغییر نکرده است؛ ویرایش معمولی انجام دهید.','VEHICLE_CLASS_NOT_CHANGED');
+            $q->execute([$vehicleId,$aid]);$target=$q->fetch(PDO::FETCH_ASSOC);
+            if(!$target)throw new AuthException(404,'خودرو یافت نشد.','VEHICLE_NOT_FOUND');
+            if((int)$target['is_active']!==1)
+                throw new AuthException(422,'خودروی جایگزین باید فعال باشد.','VEHICLE_NOT_ACTIVE');
 
-            // Exactly one active driver can own this vehicle. Ambiguity would
-            // otherwise silently reprice the wrong service/driver.
-            $q=$pdo->prepare('SELECT id,first_name,last_name FROM drivers WHERE agency_id=? AND vehicle_id=? AND is_active=1 FOR UPDATE');
-            $q->execute([$aid,$vehicleId]);$drivers=$q->fetchAll(PDO::FETCH_ASSOC);
-            if(count($drivers)!==1)
-                throw new AuthException(409,'برای این خودرو راننده فعال یکتا ثبت نشده است؛ ابتدا از قسمت رانندگان اتصال خودروی جدید را اصلاح کنید.','VEHICLE_DRIVER_ASSOCIATION_REQUIRED');
-            $driverId=(int)$drivers[0]['id'];
-            // A vehicle swap and a class-rate transition are distinct actions:
-            // never silently transfer a vehicle to a different driver while
-            // calculating the old driver's contractual rates.
-            if(array_key_exists('driverId',$body)||array_key_exists('driver_id',$body)){
-                $requested=$body['driverId']??$body['driver_id'];
-                if((string)$requested!==(string)$driverId)
-                    throw new AuthException(409,'ابتدا اتصال خودروی جدید به راننده را در بخش رانندگان اصلاح و ذخیره کنید؛ سپس تغییر کلاس را ثبت کنید.','DRIVER_REASSIGNMENT_FIRST');
+            $requested=$body['driverId']??$body['driver_id']??null;
+            if($requested!==null&&$requested!==''&&(!ctype_digit((string)$requested)||(int)$requested<1))
+                throw new AuthException(422,'راننده انتخاب‌شده معتبر نیست.','INVALID_DRIVER_ID');
+            $owners=$pdo->prepare('SELECT id FROM drivers WHERE agency_id=? AND vehicle_id=? AND is_active=1 FOR UPDATE');
+            $owners->execute([$aid,$vehicleId]);$assigned=array_map('intval',$owners->fetchAll(PDO::FETCH_COLUMN));
+            if(count($assigned)>1)
+                throw new AuthException(409,'این خودرو به چند راننده فعال متصل است؛ ابتدا ارتباط تکراری را اصلاح کنید.','VEHICLE_MULTIPLE_DRIVERS');
+            $driverId=(int)($requested?:($assigned[0]??0));
+            if($driverId<1)
+                throw new AuthException(409,'راننده خودرو مشخص نیست؛ راننده را در ویرایش خودرو انتخاب کنید.','VEHICLE_DRIVER_REQUIRED');
+            if($assigned && $assigned[0]!==$driverId)
+                throw new AuthException(409,'این خودرو به راننده فعال دیگری تعلق دارد.','VEHICLE_ASSIGNED_TO_OTHER_DRIVER');
+            $q=$pdo->prepare('SELECT id,vehicle_id,is_active,status FROM drivers WHERE id=? AND agency_id=? FOR UPDATE');
+            $q->execute([$driverId,$aid]);$driver=$q->fetch(PDO::FETCH_ASSOC);
+            if(!$driver||(int)$driver['is_active']!==1)
+                throw new AuthException(422,'راننده فعال در شرکت یافت نشد.','DRIVER_NOT_AVAILABLE');
+            $old=$target;
+            if(!empty($driver['vehicle_id'])&&(int)$driver['vehicle_id']!==$vehicleId){
+                $q=$pdo->prepare('SELECT * FROM vehicles WHERE id=? AND agency_id=? FOR UPDATE');
+                $q->execute([(int)$driver['vehicle_id'],$aid]);
+                $registered=$q->fetch(PDO::FETCH_ASSOC);
+                if($registered)$old=$registered;
             }
+            if((string)($old['tariff_vehicle_class']??'')===$class)
+                throw new AuthException(409,'کلاس قبلی راننده با کلاس جدید یکسان است؛ ویرایش معمولی انجام دهید.','VEHICLE_CLASS_NOT_CHANGED');
+            // The new registered vehicle and its existing service assignments
+            // must remain capacity-compatible before any re-linking.
+            $seats=(int)($body['capacity']??$target['capacity']);
+            $occupancy=$pdo->prepare('SELECT sv.id,COUNT(ss.student_id) assigned FROM services sv
+                LEFT JOIN service_students ss ON ss.service_id=sv.id
+                WHERE sv.agency_id=? AND sv.driver_id=? AND sv.is_active=1
+                GROUP BY sv.id');
+            $occupancy->execute([$aid,$driverId]);
+            foreach($occupancy->fetchAll(PDO::FETCH_ASSOC) as $serviceCapacity)
+                if((int)$serviceCapacity['assigned']>$seats)
+                    throw new AuthException(409,'ظرفیت خودروی جدید از تعداد دانش‌آموزان سرویس فعال کمتر است.','VEHICLE_CAPACITY_TOO_SMALL');
 
             $services=$pdo->prepare("SELECT sv.id,sv.fee_source FROM services sv WHERE sv.agency_id=? AND sv.driver_id=? AND sv.is_active=1 AND sv.status<>'cancelled' ORDER BY sv.id FOR UPDATE");
             $services->execute([$aid,$driverId]);$linked=$services->fetchAll(PDO::FETCH_ASSOC);
@@ -89,8 +110,8 @@ final class VehicleClassChangeWorkflow
                 }
             }
 
-            // All other vehicle fields use the same normal validation and
-            // driver-assignment rules. The tariff class is written separately
+            // All other vehicle fields use the existing validations.
+            // Driver reassignment is atomic and audited separately below. The tariff class is written separately
             // to avoid the legacy unconditional financial repricing trigger.
             $update=$body;
             unset($update['driverId'],$update['driver_id']);
@@ -98,6 +119,14 @@ final class VehicleClassChangeWorkflow
                 $update['updateStudentDebt'],$update['studentDebtEffectiveDate'],
                 $update['updateDriverPay'],$update['driverPayEffectiveDate']);
             if($update)DomainService::save($uid,$aid,'vehicles',$update,$vehicleId);
+            // Re-link a replacement vehicle without invoking legacy immediate
+            // tariff synchronization, which would rewrite past student rates.
+            if((int)($driver['vehicle_id']??0)!==$vehicleId){
+                $pdo->prepare('UPDATE drivers SET vehicle_id=? WHERE id=? AND agency_id=?')
+                    ->execute([$vehicleId,$driverId,$aid]);
+                $pdo->prepare('UPDATE services SET capacity=? WHERE agency_id=? AND driver_id=? AND is_active=1')
+                    ->execute([$seats,$aid,$driverId]);
+            }
             $pdo->prepare('UPDATE vehicles SET tariff_vehicle_class=? WHERE id=? AND agency_id=?')
                 ->execute([(int)$class,$vehicleId,$aid]);
             $q=$pdo->prepare('SELECT * FROM vehicles WHERE id=? AND agency_id=?');
