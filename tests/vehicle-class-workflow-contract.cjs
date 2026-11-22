@@ -18,7 +18,7 @@ for(const marker of ['vehicleClassChangeWizard','updateContract','contractEffect
  assert.ok(ui.includes(marker),'Missing wizard/history field: '+marker);
 assert.ok(api.includes('/api/v1/vehicles/')&&api.includes('/class-change$#'),'No vehicle class workflow route');
 assert.ok(api.includes('VehicleClassChangeWorkflow::apply'),'Class changes are not routed');
-assert.ok(domain.includes('VEHICLE_CLASS_WORKFLOW_REQUIRED'),'Unconsented class edits must be rejected');
+assert.ok((domain.match(/VEHICLE_CLASS_WORKFLOW_REQUIRED/g)||[]).length>=2,'Both vehicle edits and driver vehicle swaps must block unconsented class changes');
 for(const table of ['vehicle_class_changes','vehicle_class_rate_periods',
  'vehicle_class_contract_appendices','vehicle_class_debt_adjustments'])
  assert.ok(schema.includes('CREATE TABLE IF NOT EXISTS '+table),'Missing migration '+table);
