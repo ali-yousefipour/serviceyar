@@ -38,6 +38,19 @@ try{
  check(\ServiceYar\Integrations\SmsProvider::selected()==='negin','Existing installations retain Negin as default SMS provider');
  rejected(fn()=>\ServiceYar\Integrations\SmsProvider::configure($viewer,['provider'=>'kavenegar']),'SUPER_ADMIN_REQUIRED');
  rejected(fn()=>\ServiceYar\Integrations\KavenegarSms::overview($viewer),'SUPER_ADMIN_REQUIRED');
+
+ // Corrupt encrypted credentials are repairable by a super administrator.
+ // Keep this fixture isolated without committing or altering real provider settings.
+ $p->exec('SAVEPOINT sms_credential_recovery');
+ $corrupt=$p->prepare("INSERT INTO platform_settings(setting_key,setting_value) VALUES('kavenegar_api_key_enc',?)
+  ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)");
+ $corrupt->execute(['corrupted-test-ciphertext']);
+ $kavenegarState=\ServiceYar\Integrations\KavenegarSms::overview($uid);
+ check(($kavenegarState['configurationError']??false)===true&&!($kavenegarState['ready']??true),
+  'Super admin can view and repair corrupt encrypted Kavenegar credentials');
+ $p->exec('ROLLBACK TO SAVEPOINT sms_credential_recovery');
+ $p->exec('RELEASE SAVEPOINT sms_credential_recovery');
+
  rejected(fn()=>\ServiceYar\Settings\SettingsService::put($uid,$a,['sms_provider_selected'=>'kavenegar']),'SUPER_ADMIN_REQUIRED');
  // Old tenant settings may contain reserved keys created before validation.
  // Such values must never be returned even when legacy is_secret=0.
