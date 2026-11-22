@@ -34,12 +34,15 @@ final class StudentServiceBilling {
   foreach($ledger as $row){$received+=($row['direction']==='receipt'?1:-1)*(float)$row['amount'];$payments[]=[
    'id'=>$row['id'],'invoice_id'=>null,'amount'=>($row['direction']==='receipt'?1:-1)*(float)$row['amount'],
    'payment_date'=>$row['payment_date'],'method'=>$row['method'],'reference_no'=>$row['reference_no'],'source'=>'ledger'];}
+  $adjustments=[];
+  if(VehicleClassSchema::exists($pdo)){
   $adj=$pdo->prepare("SELECT a.id,a.change_id,a.academic_year,a.effective_date,a.amount_irr,vc.old_vehicle_class,vc.new_vehicle_class
       FROM vehicle_class_debt_adjustments a JOIN vehicle_class_changes vc ON vc.id=a.change_id AND vc.agency_id=a.agency_id
       WHERE a.agency_id=? AND a.student_id=? ORDER BY a.effective_date DESC,a.id DESC");
   $adj->execute([$agencyId,$studentId]);
   $adjustments=$adj->fetchAll(PDO::FETCH_ASSOC);
   $total+=(float)array_sum(array_column($adjustments,'amount_irr'));
+  }
   StudentBalance::allocate($invoices,$received);
   return ['invoices'=>$invoices,'payments'=>$payments,'vehicleClassAdjustments'=>$adjustments,'totals'=>StudentBalance::totals($total,$received)];
  }
@@ -58,15 +61,17 @@ final class StudentServiceBilling {
    JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id
    WHERE sv.agency_id=? AND sv.driver_id=? AND sv.is_active=1 AND sv.status='active' AND st.is_active=1");
   $grossQuery->execute([$agencyId,$driverId]);
+  $ratePeriods=[];
+  if(VehicleClassSchema::exists($pdo)){
   $rateQuery=$pdo->prepare("SELECT p.id,p.subject_id,p.service_id,p.effective_date,p.old_monthly_irr,p.new_monthly_irr
       FROM vehicle_class_rate_periods p
       JOIN services sv ON sv.id=p.service_id AND sv.agency_id=p.agency_id
       WHERE p.agency_id=? AND sv.driver_id=? AND p.subject_type='driver_pay'
       ORDER BY p.subject_id,p.service_id,p.effective_date,p.id");
   $rateQuery->execute([$agencyId,$driverId]);
-  $ratePeriods=[];
   foreach($rateQuery->fetchAll(PDO::FETCH_ASSOC) as $entry)
       $ratePeriods[(int)$entry['subject_id'].':'.(int)$entry['service_id']][]=$entry;
+  }
   $annualGross=0;
   foreach($grossQuery->fetchAll(PDO::FETCH_ASSOC) as $row){
     $months=ServiceFinancialBasis::monthsOfStudent($row);
