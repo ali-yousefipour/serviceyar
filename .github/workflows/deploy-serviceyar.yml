@@ -159,6 +159,11 @@ jobs:
           cp -a storage/. deploy-payload/storage/
           cat > deploy-payload/.htaccess <<'HTACCESS'
           Options -Indexes
+          # Compress static JS/CSS/HTML/JSON when Apache-compatible compression
+          # is available. Exclude XLSX/PDF/ZIP so download sizes remain truthful.
+          <IfModule mod_deflate.c>
+          AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json application/xml image/svg+xml
+          </IfModule>
           RewriteEngine On
           <IfModule mod_headers.c>
           Header always set Content-Security-Policy "default-src 'self'; img-src 'self' data: https://tile.openstreetmap.org https://*.neshan.org; script-src 'self'; connect-src 'self' https://*.neshan.org; style-src 'self'; style-src-attr 'unsafe-inline'; base-uri 'self'; frame-ancestors 'none'; object-src 'none';"
