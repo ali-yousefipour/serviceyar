@@ -196,29 +196,19 @@ final class VehicleClassChangeWorkflow
                         $debt->execute([$aid,$changeId,$sid,$rate['serviceId'],$bound['academic_year'],
                             $choices['studentDebtEffectiveDate'],$delta,self::json(['rate'=>$rate,'contract'=>$bound])]);
                     }
-                    // The current monthly tuition reflects the approved new
-                    // class, but historic invoicing and cash receipts stay fixed.
-                    $pdo->prepare('UPDATE students SET monthly_fee=?,tariff_vehicle_class=? WHERE id=? AND agency_id=?')
-                        ->execute([$rate['newParent'],(int)$class,$sid,$aid]);
+                    // Due rates are applied below; future rates remain dormant.
                 }
                 if($choices['updateDriverPay']){
                     $period->execute([$aid,$changeId,'driver_pay',$sid,$rate['serviceId'],
                         $choices['driverPayEffectiveDate'],$old['tariff_vehicle_class'],(int)$class,
                         $rate['oldDriver'],$rate['newDriver'],$rate['source'],self::json($rate)]);
-                    $pdo->prepare('UPDATE students SET driver_base_monthly=? WHERE id=? AND agency_id=?')
-                        ->execute([$rate['newDriver'],$sid,$aid]);
+                    // The driver rate is applied when its independent date arrives.
                 }
             }
-            // Service monthly net follows only explicit driver-pay consent.
-            if($choices['updateDriverPay']){
-                foreach($linked as $service) {
-                    $gross=0;
-                    foreach($oldRates as $rate)if($rate['serviceId']===(int)$service['id'])$gross+=$rate['newDriver'];
-                    $net=OperationsService::driverDeductions($gross,$aid)['net_earned'];
-                    $pdo->prepare('UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?')
-                        ->execute([$net,$service['id'],$aid]);
-                }
-            }
+            // Due-today rates are applied in this transaction, so any failure
+            // rolls back the vehicle transfer and all financial/audit writes.
+            // Future periods are idempotently activated on a later authorized API request.
+            VehicleClassRateApplication::applyDue($aid);
             return ['changeId'=>$changeId,'vehicleId'=>$vehicleId,'driverId'=>$driverId,
                 'affectedStudents'=>count($oldRates),'affectedServices'=>count($linked),'choices'=>$choices];
         });
