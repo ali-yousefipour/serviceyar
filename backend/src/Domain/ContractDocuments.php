@@ -581,7 +581,28 @@ HTML;
     CASE WHEN rendered_html IS NULL OR rendered_html='' THEN 0 ELSE 1 END AS printable
     FROM contracts WHERE agency_id=? AND party_type=? ORDER BY id DESC");
   $q->execute([$agencyId,$kind==='parent'?'student':'driver']);
-  return $q->fetchAll(PDO::FETCH_ASSOC);
+  $records=$q->fetchAll(PDO::FETCH_ASSOC);
+  if($kind==='parent'&&VehicleClassSchema::exists($pdo)){
+   // The financial overview must show the effective obligation on the *old*
+   // contract row, not only inside the printable amendment.
+   $adjust=$pdo->prepare("SELECT c.id AS contract_id,COALESCE(SUM(d.amount_irr),0) AS delta
+     FROM contracts c JOIN student_contract_invoices m ON m.contract_id=c.id AND m.agency_id=c.agency_id AND m.student_id=c.party_id
+     JOIN vehicle_class_debt_adjustments d ON d.agency_id=m.agency_id AND d.student_id=m.student_id
+       AND ".StudentBalance::yearSql('d.academic_year')."=".StudentBalance::yearSql('m.academic_year')."
+       AND d.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
+     WHERE c.agency_id=? AND c.party_type='student' AND c.status<>'cancelled'
+     GROUP BY c.id");
+   $adjust->execute([$agencyId]);
+   $byId=[];
+   foreach($adjust->fetchAll(PDO::FETCH_ASSOC) as $a)$byId[(int)$a['contract_id']]=(int)$a['delta'];
+   foreach($records as &$row){
+    $row['original_amount']=$row['amount'];
+    $row['class_adjustment_amount']=$row['status']==='cancelled'?0:($byId[(int)$row['id']]??0);
+    $row['effective_amount']=(int)$row['amount']+$row['class_adjustment_amount'];
+   }
+   unset($row);
+  }
+  return $records;
  }
  /** Freeze a reconstructed copy of a SQL-imported student contract without issuing new debt. */
  public static function archiveImportedStudentContract(int $id): bool {
