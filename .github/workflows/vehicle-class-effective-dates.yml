@@ -33,6 +33,7 @@ jobs:
           php -l backend/src/Domain/DomainService.php
           php -l backend/public/index.php
           node --check frontend/assets/operations.js
+          node --check frontend/assets/portal.js
           node tests/vehicle-class-workflow-contract.cjs
           php tests/static-smoke.php
           node tests/api-route-guard-contract.cjs
