@@ -38,8 +38,10 @@ final class FinancialReconciliation {
   // Fetch documents in bounded batches rather than issuing two queries per student.
   // Every query is tenant-scoped and still retains the original document ordering.
   $bounds=ContractBilling::defaults($year,false);$items=[];
-  $contractsByStudent=[];$invoicesByStudent=[];
-  foreach(array_chunk(array_map('intval',array_column($students,'id')),300) as $ids){
+  foreach(array_chunk($students,300) as $studentBatch){
+   // Do not retain all agency invoices/contracts until the entire report ends.
+   $contractsByStudent=[];$invoicesByStudent=[];
+   $ids=array_map('intval',array_column($studentBatch,'id'));
    $marks=implode(',',array_fill(0,count($ids),'?'));
    $c=$pdo->prepare("SELECT c.party_id,c.id,c.amount,c.start_date,c.end_date,c.status,m.invoice_id FROM contracts c LEFT JOIN student_contract_invoices m ON m.contract_id=c.id AND m.agency_id=c.agency_id AND m.student_id=c.party_id WHERE c.agency_id=? AND c.party_type='student' AND c.party_id IN ($marks) AND c.status<>'cancelled' AND (c.start_date IS NULL OR c.end_date IS NULL OR (c.start_date<=? AND c.end_date>=?)) ORDER BY c.id");
    $c->execute([$aid,...$ids,$bounds['endDate'],$bounds['startDate']]);
@@ -53,8 +55,7 @@ final class FinancialReconciliation {
     $sid=(int)$invoice['party_id'];unset($invoice['party_id']);
     $invoicesByStudent[$sid][]=$invoice;
    }
-  }
-  foreach($students as $st){
+   foreach($studentBatch as $st){
    $flags=[];$expected=null;$months=null;
    try{$months=ServiceFinancialBasis::monthsOfStudent($st);$expected=(int)round((float)$st['monthly_fee']*$months);}catch(AuthException $e){$flags[]='مقطع نامشخص';}
    $sid=(int)$st['id'];
@@ -84,6 +85,7 @@ final class FinancialReconciliation {
    if(!$flags)continue;
    $total=(int)array_sum(array_column(array_merge($valid,$unknown),'amount'));
    $items[]=['student_id'=>(int)$st['id'],'student'=>trim($st['first_name'].' '.$st['last_name']),'school'=>$st['school'],'monthly_fee'=>(int)$st['monthly_fee'],'annual_months'=>$months,'expected'=>$expected,'invoice_total'=>$total,'difference'=>$expected===null?null:$expected-$total,'contracts'=>$contracts,'invoices'=>array_merge($valid,$unknown),'issues'=>array_values(array_unique($flags))];
+   }
   }
   $schools=$pdo->prepare("SELECT id,name FROM schools WHERE agency_id=? ORDER BY name,id");
   $schools->execute([$aid]);
