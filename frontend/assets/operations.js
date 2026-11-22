@@ -1635,8 +1635,8 @@ function vehicleClassChangeWizard(id,row,body,onSaved){
  const dateToday=today();
  const values={updateContract:true,contractEffectiveDate:dateToday,updateStudentDebt:false,studentDebtEffectiveDate:dateToday,updateDriverPay:false,driverPayEffectiveDate:dateToday};
  const stages=[
-  {name:'قرارداد',title:'اصلاح کلاس خودرو در قرارداد',choice:'updateContract',date:'contractEffectiveDate',question:'آیا کلاس جدید خودرو در قراردادهای مرتبط ثبت شود؟',hint:'قراردادهای صادرشده تغییر نمی‌کنند؛ اصلاحیه با تاریخ انتخاب‌شده ثبت می‌شود.'},
-  {name:'بدهی دانش‌آموز',title:'اصلاح بدهی دانش‌آموزان',choice:'updateStudentDebt',date:'studentDebtEffectiveDate',question:'آیا نرخ جدید در بدهی دانش‌آموزان مرتبط اعمال شود؟',hint:'نرخ قبلی تا روز پیش از تاریخ انتخاب‌شده معتبر می‌ماند و پرداخت‌های ثبت‌شده حفظ می‌شوند.'},
+  {name:'قرارداد',title:'اصلاح کلاس خودرو در قرارداد',choice:'updateContract',date:'contractEffectiveDate',question:'آیا کلاس جدید خودرو در قراردادهای مرتبط ثبت شود؟',hint:'این انتخاب فقط کلاس خودرو را در الحاقیه قرارداد ثبت می‌کند. برای اصلاح مبلغ قرارداد و فاکتور قبلی، در مرحله بعد هم گزینه «بله» را انتخاب کنید.'},
+  {name:'بدهی و فاکتور',title:'اصلاح مبلغ فاکتور و بدهی دانش‌آموزان',choice:'updateStudentDebt',date:'studentDebtEffectiveDate',question:'آیا مبلغ قابل پرداخت در فاکتور قبلی و تعهد مالی دانش‌آموز مطابق نرخ جدید اصلاح شود؟',hint:'مبلغ اصلاح‌شده در همان فاکتور و قرارداد قبلی نمایش داده می‌شود؛ مبالغ اولیه اسناد صادرشده و پرداخت‌ها برای حسابرسی حفظ می‌شوند.'},
   {name:'حقوق راننده',title:'اصلاح نرخ سرویس و حقوق راننده',choice:'updateDriverPay',date:'driverPayEffectiveDate',question:'آیا نرخ جدید در محاسبه حقوق راننده و مبلغ سرویس اعمال شود؟',hint:'تاریخ اثر این بخش مستقل از تاریخ بدهی است؛ اسناد حقوق قطعی دست‌نخورده باقی می‌مانند.'},
   {name:'تأیید نهایی',title:'بررسی و تأیید تغییرات',hint:'پیش از تأیید نهایی، هیچ‌یک از تصمیم‌های جدید ثبت نمی‌شوند.'}
  ];
@@ -1660,7 +1660,7 @@ function vehicleClassChangeWizard(id,row,body,onSaved){
     '<div class="vcw-date" '+(!yes?'hidden':'')+'><label for="vcwEffectiveDate">تاریخ مؤثر تغییر</label><input id="vcwEffectiveDate" type="date" name="classEffectiveDate" value="'+safe(values[s.date])+'" required><p>تاریخ از تقویم شمسی سامانه انتخاب می‌شود.</p></div>';
   }else{
    content='<div class="vcw-review">'+stages.slice(0,3).map(x=>'<div class="vcw-review-item"><span>'+safe(x.name)+'</span><strong class="'+(decision(x)?'vcw-approved':'vcw-unchanged')+'">'+(decision(x)?'بله، از '+safe(shamsi(values[x.date])):'خیر، بدون تغییر')+'</strong></div>').join('')+'</div>'+
-    '<div class="vcw-notice"><strong>تأیید نهایی</strong><p>تنها پس از تأیید نهایی، خودرو و تصمیم‌های انتخابی ذخیره می‌شوند. لغو این مرحله تغییری ایجاد نمی‌کند.</p></div>';
+    '<div class="vcw-notice"><strong>تأیید نهایی</strong><p>تنها پس از تأیید نهایی، خودرو و تصمیم‌های انتخابی ذخیره می‌شوند. لغو این مرحله تغییری ایجاد نمی‌کند.</p>'+(values.updateStudentDebt?'':'<p><strong>توجه:</strong> با انتخاب «خیر» در مرحله بدهی، مبلغ فاکتور قبلی و تعهد مالی قرارداد تغییر نخواهد کرد.</p>')+'</div>';
   }
   root.innerHTML='<section class="sy-change-wizard vcw" dir="rtl" aria-labelledby="vcwTitle">'+
    '<div class="vcw-headline"><span>فرایند تغییر کلاس خودرو</span><span class="vcw-count">مرحله '+fa(stage+1)+' از '+fa(stages.length)+'</span></div>'+
