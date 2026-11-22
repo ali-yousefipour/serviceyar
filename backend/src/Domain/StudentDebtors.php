@@ -57,7 +57,11 @@ final class StudentDebtors
         }
         foreach (['student','schoolName'] as $key) {
             $value=$filter[$key]??'';
-            if (!is_string($value)||trim($value)==='') continue;
+            if($value===null||$value==='')continue;
+            if(!is_string($value)||strlen($value)>160)
+                throw new AuthException(422,'عبارت جستجوی گزارش بدهکاران معتبر یا در محدوده مجاز نیست.','VALIDATION_ERROR');
+            $value=trim($value);
+            if($value==='')continue;
             $column=$key==='student'?'student':'school';
             $normalize=static fn(string $s): string => str_replace(['ي','ك','‌',' '],['ی','ک','',''],trim($s));
             $where[]="REPLACE(REPLACE(REPLACE(REPLACE($column,'ي','ی'),'ك','ک'),'‌',''),' ','') LIKE :$key ESCAPE '!'";
