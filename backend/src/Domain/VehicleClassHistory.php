@@ -16,6 +16,7 @@ final class VehicleClassHistory
         Authorization::requirePermission($uid,'drivers.view');
         if($vehicleId!==null&&$vehicleId<1)
             throw new AuthException(422,'شناسه خودرو نامعتبر است.','INVALID_VEHICLE');
+        VehicleClassSchema::ensure();
         $pdo=Connection::get();
         try {
             $pdo->query('SELECT id FROM vehicle_class_changes LIMIT 0');
