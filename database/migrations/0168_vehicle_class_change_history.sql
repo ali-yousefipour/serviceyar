@@ -38,9 +38,11 @@ CREATE TABLE IF NOT EXISTS vehicle_class_rate_periods (
   new_monthly_irr BIGINT NOT NULL,
   fee_source VARCHAR(24) NOT NULL,
   calculation_snapshot JSON NOT NULL,
+  applied_at DATETIME NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_vehicle_change_subject (change_id, subject_type, subject_id, service_id),
   INDEX idx_vehicle_class_period_subject (agency_id, subject_type, subject_id, effective_date),
+  INDEX idx_vehicle_class_period_due (agency_id, applied_at, effective_date),
   CONSTRAINT fk_vehicle_class_period_change FOREIGN KEY (change_id) REFERENCES vehicle_class_changes(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
