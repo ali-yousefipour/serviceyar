@@ -57,14 +57,30 @@ final class KavenegarSms
     {
         if(!Authorization::isSuperAdmin($actor))
             throw new AuthException(403,'فقط ادمین کل به تنظیمات کاوه‌نگار دسترسی دارد.','SUPER_ADMIN_REQUIRED');
-        $c=self::credentials();
-        return [
-            'enabled'=>$c['enabled'],
-            'credentialsConfigured'=>$c['key']!=='',
-            'sender'=>$c['sender'],
-            'curlAvailable'=>function_exists('curl_init'),
-            'ready'=>self::ready(),
-        ];
+        $curlAvailable=function_exists('curl_init');
+        try {
+            $c=self::credentials();
+            return [
+                'enabled'=>$c['enabled'],
+                'credentialsConfigured'=>$c['key']!=='',
+                'sender'=>$c['sender'],
+                'curlAvailable'=>$curlAvailable,
+                'ready'=>$c['enabled'] && $c['key']!=='' && $curlAvailable,
+            ];
+        } catch (AuthException $error) {
+            // A corrupted or lost encryption key must not lock the administrator
+            // out of this form. A new key can repair the saved credential.
+            if(!in_array($error->codeName,['SMS_ENCRYPTION_ERROR','SMS_ENCRYPTION_UNAVAILABLE'],true))
+                throw $error;
+            return [
+                'enabled'=>false,
+                'credentialsConfigured'=>false,
+                'sender'=>'',
+                'curlAvailable'=>$curlAvailable,
+                'ready'=>false,
+                'configurationError'=>true,
+            ];
+        }
     }
 
     public static function configure(int $actor,array $input): array
@@ -144,6 +160,8 @@ final class KavenegarSms
                 CURLOPT_SSL_VERIFYPEER=>true,
                 CURLOPT_SSL_VERIFYHOST=>2,
                 CURLOPT_FOLLOWLOCATION=>false,
+                CURLOPT_PROTOCOLS=>CURLPROTO_HTTPS,
+                CURLOPT_MAXREDIRS=>0,
             ]);
             $body=curl_exec($handle);
             $status=(int)curl_getinfo($handle,CURLINFO_HTTP_CODE);
