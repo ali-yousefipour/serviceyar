@@ -43,3 +43,35 @@ CREATE TABLE IF NOT EXISTS vehicle_class_rate_periods (
   INDEX idx_vehicle_class_period_subject (agency_id, subject_type, subject_id, effective_date),
   CONSTRAINT fk_vehicle_class_period_change FOREIGN KEY (change_id) REFERENCES vehicle_class_changes(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Financial and contract appendices are independent of original issued records.
+CREATE TABLE IF NOT EXISTS vehicle_class_contract_appendices (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  agency_id BIGINT UNSIGNED NOT NULL,
+  change_id BIGINT UNSIGNED NOT NULL,
+  contract_id BIGINT UNSIGNED NOT NULL,
+  effective_date DATE NOT NULL,
+  old_class TINYINT UNSIGNED NULL,
+  new_class TINYINT UNSIGNED NOT NULL,
+  original_contract_snapshot JSON NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_vehicle_class_contract_appendix (change_id,contract_id),
+  INDEX idx_vehicle_contract_appendix (agency_id,contract_id),
+  CONSTRAINT fk_vehicle_appendix_change FOREIGN KEY (change_id) REFERENCES vehicle_class_changes(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS vehicle_class_debt_adjustments (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  agency_id BIGINT UNSIGNED NOT NULL,
+  change_id BIGINT UNSIGNED NOT NULL,
+  student_id BIGINT UNSIGNED NOT NULL,
+  service_id BIGINT UNSIGNED NOT NULL,
+  academic_year VARCHAR(15) NOT NULL,
+  effective_date DATE NOT NULL,
+  amount_irr BIGINT NOT NULL,
+  rate_snapshot JSON NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_vehicle_debt_change_student (change_id,student_id,service_id),
+  INDEX idx_vehicle_debt_student_year (agency_id,student_id,academic_year),
+  CONSTRAINT fk_vehicle_debt_change FOREIGN KEY (change_id) REFERENCES vehicle_class_changes(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
