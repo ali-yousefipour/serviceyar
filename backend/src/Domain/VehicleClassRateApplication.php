@@ -17,7 +17,7 @@ final class VehicleClassRateApplication
         if(!VehicleClassSchema::exists())return 0;
         $pdo=Connection::get();
         $probe=$pdo->prepare("SELECT id FROM vehicle_class_rate_periods
-          WHERE agency_id=? AND applied_at IS NULL AND effective_date<=CURRENT_DATE() LIMIT 1");
+          WHERE agency_id=? AND applied_at IS NULL AND effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE) LIMIT 1");
         $probe->execute([$agencyId]);
         if(!$probe->fetchColumn())return 0;
         return OperationsService::transaction(function(PDO $pdo)use($agencyId){
@@ -26,7 +26,7 @@ final class VehicleClassRateApplication
                 $q=$pdo->prepare("SELECT p.id,p.subject_type,p.subject_id,p.service_id,
                       p.new_class,p.new_monthly_irr
                       FROM vehicle_class_rate_periods p
-                      WHERE p.agency_id=? AND p.applied_at IS NULL AND p.effective_date<=CURRENT_DATE()
+                      WHERE p.agency_id=? AND p.applied_at IS NULL AND p.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
                       ORDER BY p.effective_date,p.id LIMIT 500 FOR UPDATE");
                 $q->execute([$agencyId]);$pending=$q->fetchAll(PDO::FETCH_ASSOC);
                 foreach($pending as $p){
