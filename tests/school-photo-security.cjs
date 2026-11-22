@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const php=fs.readFileSync('backend/src/Domain/SchoolPhotos.php','utf8');
+const upload=php.slice(php.indexOf('public static function upload('),php.indexOf('public static function stream('));
+const decode=php.slice(php.indexOf('public static function prepareImage('),php.indexOf('public static function upload('));
+assert.ok(decode.indexOf('$info=@getimagesize($file)')<decode.indexOf('@imagecreatefromstring($sourceData)'), 'Untrusted image dimensions must be validated before GD decode');
+assert.match(decode,/\$sourceWidth\*\$sourceHeight>20000000/, 'Reject decompression bombs with more than 20 million pixels');
+assert.match(decode,/\$bytes>5\*1024\*1024/, 'Bound input bytes');
+assert.match(decode,/\(\$info\['mime'\]\?\?'\)\!==\$mime/, 'Do not trust caller-provided image MIME');
+assert.match(upload,/\$school=self::school\(\$uid,\$aid,\$id,true\)/, 'Image replacement must be permission-scoped');
+assert.match(upload,/private-schools\/\(\[0-9\]\+\)\/\(\[0-9\]\+\)\/\(\[a-f0-9\]\{32\}\)/, 'Only managed private photos may be removed');
+assert.match(upload,/\(int\)\$old\[1\]===\$aid&&\(int\)\$old\[2\]===\$id/, 'Old image cleanup must require matching tenant and school');
+assert.ok(upload.indexOf('$update->execute([$relative,$id,$aid])')<upload.indexOf('@unlink($previousFile)'), 'Old school photo must not be deleted before a successful database update');
+assert.ok(upload.includes('catch(\\Throwable $e){@unlink($destination);throw $e;}'), 'Failed database writes should remove only the new file');
+console.log('School photo upload decompression and safe replacement checks: OK');
