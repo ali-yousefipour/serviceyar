@@ -14,13 +14,14 @@ final class Request
         $raw=file_get_contents('php://input');
         if ($raw===false || trim($raw)==='') return [];
         try {
-            $data=json_decode($raw,false,512,JSON_THROW_ON_ERROR);
+            // Preserve associative nested objects expected throughout the domain layer.
+            $data=json_decode($raw,true,512,JSON_THROW_ON_ERROR);
         } catch (\JsonException) {
             Response::json(['ok'=>false,'error'=>['code'=>'INVALID_JSON','message'=>'بدنه JSON معتبر نیست.']],400);
         }
-        if (!is_object($data)) {
+        if (!str_starts_with(ltrim($raw),'{')) {
             Response::json(['ok'=>false,'error'=>['code'=>'INVALID_JSON_OBJECT','message'=>'بدنه درخواست باید یک شیء JSON باشد.']],400);
         }
-        return (array)$data;
+        return $data;
     }
 }
