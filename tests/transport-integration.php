@@ -300,6 +300,14 @@ try{
  $listed=D::list($uid,$feeAgency,'students',[])['items'][0];
  $debtorFilter=['academicYear'=>'1405/1406','schoolId'=>$feeSchool['id'],'minDebt'=>(string)$listed['outstanding_fee']];
  $debtors=\ServiceYar\Domain\StudentDebtors::report($uid,$feeAgency,$debtorFilter);
+ rejected(fn()=>\ServiceYar\Domain\StudentDebtors::report($uid,$feeAgency,
+  ['academicYear'=>'1405-1406','student'=>['invalid']]),'VALIDATION_ERROR');
+ rejected(fn()=>\ServiceYar\Domain\StudentDebtors::report($uid,$feeAgency,
+  ['academicYear'=>'1405-1406','schoolName'=>str_repeat('a',161)]),'VALIDATION_ERROR');
+ check(\ServiceYar\Domain\StudentDebtors::report($uid,$feeAgency,
+  ['academicYear'=>'1405-1406','student'=>'%_'])['items']===[],
+  'Debtor search treats SQL LIKE wildcard symbols literally');
+
  check(count($debtors['items'])===1&&(float)$debtors['items'][0]['debt']===(float)$listed['outstanding_fee']
    &&(float)$debtors['items'][0]['paid']===(float)$listed['paid_total']&&(float)$debtors['items'][0]['paid']>0
    &&(float)$debtors['items'][0]['monthly_fee']===(float)$listed['monthly_fee']
