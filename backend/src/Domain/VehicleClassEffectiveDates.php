@@ -59,6 +59,38 @@ final class VehicleClassEffectiveDates
      * of that accounting period; final rounding happens only once.
      * This routine must never be called across multiple accounting months.
      */
+    /**
+     * Blend multiple successive class changes within one accounting period.
+     * The periods must be ordered chronologically; the oldest entry contains
+     * the immutable rate that applied before the first change.
+     * Returns the existing monthly rate when no approved changes exist.
+     */
+    public static function blendedRate(string $from,string $to,int $currentMonthly,array $periods): int
+    {
+        self::requireDate($from,'شروع دوره');
+        self::requireDate($to,'پایان دوره');
+        if($from>$to||$currentMonthly<0)
+            throw new AuthException(422,'بازه یا مبلغ محاسبه نامعتبر است.','INVALID_RATE_PERIOD');
+        if(!$periods)return $currentMonthly;
+        usort($periods,static fn($a,$b)=>strcmp((string)$a['effective_date'],(string)$b['effective_date'])
+            ?: ((int)($a['id']??0)<=>(int)($b['id']??0)));
+        $first=new DateTimeImmutable($from.'T12:00:00+00:00');
+        $last=new DateTimeImmutable($to.'T12:00:00+00:00');
+        $days=(int)$first->diff($last)->days+1;
+        if($days>31)throw new AuthException(422,'محاسبه دوره‌ای باید برای یک ماه انجام شود.','INVALID_RATE_PERIOD');
+        $sum=0.0;
+        for($date=$first;$date<=$last;$date=$date->modify('+1 day')){
+            $day=$date->format('Y-m-d');
+            $rate=(int)$periods[0]['old_monthly_irr'];
+            foreach($periods as $period){
+                if((string)$period['effective_date']>$day)break;
+                $rate=(int)$period['new_monthly_irr'];
+            }
+            $sum+=$rate/$days;
+        }
+        return (int)round($sum);
+    }
+
     public static function splitRates(string $start,string $end,string $effectiveDate,
         int $oldMonthly,int $newMonthly): array
     {
