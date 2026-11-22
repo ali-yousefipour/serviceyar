@@ -38,4 +38,11 @@ $periods=[
 check(Rates::blendedRate('2026-11-01','2026-11-30',9000000,$periods)===6000000,'Multi-change November blend must be exact');
 check(Rates::blendedRate('2026-10-01','2026-10-31',9000000,$periods)===3000000,'Prior months must retain original class rate');
 check(Rates::blendedRate('2026-12-01','2026-12-31',9000000,$periods)===9000000,'Future months must use final class rate');
+check(Rates::annualEntitlement('1405-1406',true,100,[])===850,
+ 'Primary entitlement must remain eight and a half months');
+check(Rates::annualEntitlement('1405-1406',false,100,[])===900,
+ 'Secondary entitlement must remain nine months');
+check(Rates::annualEntitlement('1405-1406',true,900,[
+ ['id'=>1,'effective_date'=>'2028-01-01','old_monthly_irr'=>100,'new_monthly_irr'=>900],
+])===850,'Change after school year must not rewrite prior driver entitlement');
 echo "Vehicle class effective-date rules: OK\n";
