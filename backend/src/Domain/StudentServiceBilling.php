@@ -34,8 +34,14 @@ final class StudentServiceBilling {
   foreach($ledger as $row){$received+=($row['direction']==='receipt'?1:-1)*(float)$row['amount'];$payments[]=[
    'id'=>$row['id'],'invoice_id'=>null,'amount'=>($row['direction']==='receipt'?1:-1)*(float)$row['amount'],
    'payment_date'=>$row['payment_date'],'method'=>$row['method'],'reference_no'=>$row['reference_no'],'source'=>'ledger'];}
+  $adj=$pdo->prepare("SELECT a.id,a.change_id,a.academic_year,a.effective_date,a.amount_irr,vc.old_vehicle_class,vc.new_vehicle_class
+      FROM vehicle_class_debt_adjustments a JOIN vehicle_class_changes vc ON vc.id=a.change_id AND vc.agency_id=a.agency_id
+      WHERE a.agency_id=? AND a.student_id=? ORDER BY a.effective_date DESC,a.id DESC");
+  $adj->execute([$agencyId,$studentId]);
+  $adjustments=$adj->fetchAll(PDO::FETCH_ASSOC);
+  $total+=(float)array_sum(array_column($adjustments,'amount_irr'));
   StudentBalance::allocate($invoices,$received);
-  return ['invoices'=>$invoices,'payments'=>$payments,'totals'=>StudentBalance::totals($total,$received)];
+  return ['invoices'=>$invoices,'payments'=>$payments,'vehicleClassAdjustments'=>$adjustments,'totals'=>StudentBalance::totals($total,$received)];
  }
 
  public static function driverAccount(int $uid,int $agencyId,int $driverId): array {
