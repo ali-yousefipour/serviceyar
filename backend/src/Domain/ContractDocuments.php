@@ -646,14 +646,17 @@ HTML;
   // Original signed HTML and base amounts stay immutable. The appendices show
   // approved class and financial adjustments without rewriting prior invoices.
   if(!VehicleClassSchema::exists($pdo))return $html;
+  $yearMatch="EXISTS(SELECT 1 FROM student_contract_invoices m
+       WHERE m.agency_id=c.agency_id AND m.contract_id=c.id AND m.student_id=c.party_id
+         AND ".StudentBalance::yearSql('m.academic_year')."=".StudentBalance::yearSql('d.academic_year').")";
   $query=$pdo->prepare("SELECT a.change_id,a.effective_date,a.old_class,a.new_class,ch.old_vehicle_model,ch.new_vehicle_model,
       ch.update_student_debt,ch.student_debt_effective_date,c.party_type,c.party_id,c.amount AS original_amount,
       (SELECT COALESCE(SUM(d.amount_irr),0) FROM vehicle_class_debt_adjustments d
        WHERE d.agency_id=a.agency_id AND d.change_id=a.change_id
-         AND c.party_type='student' AND d.student_id=c.party_id) AS adjustment_amount,
+         AND c.party_type='student' AND d.student_id=c.party_id AND $yearMatch) AS adjustment_amount,
       (SELECT COALESCE(SUM(d.amount_irr),0) FROM vehicle_class_debt_adjustments d
        WHERE d.agency_id=a.agency_id AND c.party_type='student' AND d.student_id=c.party_id
-         AND d.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)) AS total_due_adjustments
+         AND $yearMatch AND d.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)) AS total_due_adjustments
     FROM vehicle_class_contract_appendices a
     JOIN vehicle_class_changes ch ON ch.id=a.change_id AND ch.agency_id=a.agency_id
     JOIN contracts c ON c.id=a.contract_id AND c.agency_id=a.agency_id
