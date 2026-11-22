@@ -41,7 +41,7 @@ final class StudentServiceBilling {
       WHERE a.agency_id=? AND a.student_id=? ORDER BY a.effective_date DESC,a.id DESC");
   $adj->execute([$agencyId,$studentId]);
   $adjustments=$adj->fetchAll(PDO::FETCH_ASSOC);
-  $total+=(float)array_sum(array_map(static fn($a)=>((string)$a['effective_date']<=date('Y-m-d'))?(float)$a['amount_irr']:0.0,$adjustments));
+  $total+=(float)array_sum(array_map(static fn($a)=>((string)$a['effective_date']<=(new \DateTimeImmutable('now',new \DateTimeZone('Asia/Tehran')))->format('Y-m-d'))?(float)$a['amount_irr']:0.0,$adjustments));
   }
   StudentBalance::allocate($invoices,$received);
   return ['invoices'=>$invoices,'payments'=>$payments,'vehicleClassAdjustments'=>$adjustments,'totals'=>StudentBalance::totals($total,$received)];
