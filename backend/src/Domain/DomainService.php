@@ -794,6 +794,9 @@ if($resource==='ledger'&&!in_array('company_account_id',thisColumns('ledger_entr
    if(!ctype_digit((string)$data['make_year'])||(int)$data['make_year']<1300||(int)$data['make_year']>1600)
     throw new AuthException(422,'سال ساخت خودرو نامعتبر است.','INVALID_MAKE_YEAR');
   }
+  if($resource==='vehicles'&&$id&&array_key_exists('tariff_vehicle_class',$data)
+   &&(string)($existing['tariff_vehicle_class']??'')!==(string)($data['tariff_vehicle_class']??''))
+   throw new AuthException(409,'برای تغییر کلاس خودرو از فرآیند تاریخ‌دار تغییر کلاس استفاده کنید.','VEHICLE_CLASS_WORKFLOW_REQUIRED');
   if($resource==='vehicles'&&array_key_exists('tariff_vehicle_class',$data)){
    $class=(string)($data['tariff_vehicle_class']??'');
    if(!in_array($class,['1','2','3'],true))throw new AuthException(422,
