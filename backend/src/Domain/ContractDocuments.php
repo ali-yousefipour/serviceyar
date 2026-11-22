@@ -720,7 +720,15 @@ HTML;
    $content.='</div>';
   }
   $content.='<p>این الحاقیه به‌جای تغییر مبلغ یا متن سند امضاشده، سابقه و مبالغ تعدیل را مستند می‌کند.</p></section>';
-  return str_contains($html,'</body>')?str_replace('</body>',$content.'</body>',$html):$html.$content;
+  // The approved amendment is presented before the historical signed copy,
+  // so the effective payable amount is not buried after several pages.
+  // The persisted original HTML is never overwritten.
+  $content='<div class="vehicle-class-amendment-front" style="direction:rtl;font-family:Vazirmatn,Tahoma,sans-serif;padding:18px;line-height:2;border:2px solid #b7d4c4;margin:12px 0;break-after:page">'.$content.'</div>';
+  if(preg_match('/<body\\b[^>]*>/i',$html,$match,PREG_OFFSET_CAPTURE)){
+   $position=$match[0][1]+strlen($match[0][0]);
+   return substr($html,0,$position).$content.substr($html,$position);
+  }
+  return $content.$html;
  }
  public static function printable(int $uid,int $agencyId,int $contractId): array {
   self::scope($uid,$agencyId);$pdo=Connection::get();self::ensureSchema($pdo);
