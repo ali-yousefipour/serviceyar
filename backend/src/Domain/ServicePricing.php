@@ -78,6 +78,8 @@ final class ServicePricing {
             return;
         }
         $previous=(string)($vehicle['tariff_vehicle_class']??'');
+        if($previous!==$class)
+            throw new AuthException(409,'تغییر کلاس تعرفه تنها از فرایند تاریخ‌دار بخش خودروها مجاز است تا قرارداد، بدهی دانش‌آموز و حقوق راننده بدون اجازه تغییر نکند.','VEHICLE_CLASS_WORKFLOW_REQUIRED');
         $pdo->prepare('UPDATE vehicles SET model=?,vehicle_trim=?,tariff_vehicle_class=? WHERE id=? AND agency_id=?')
             ->execute([$model,$model,(int)$class,(int)$vehicle['id'],$agencyId]);
         if($previous!==$class){
