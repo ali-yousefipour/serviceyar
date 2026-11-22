@@ -389,6 +389,21 @@ HTML;
   $snapshot=json_decode((string)$row['snapshot_json'],true);
   $kind=$row['party_type']==='student'?'parent':'driver';
   $values=$snapshot['values']??self::data($pdo,$aid,$kind,(int)$row['party_id']);
+  // A previously issued contract can have an effective, consented tuition
+  // amendment without replacing its signed HTML or stored base amount.
+  $row['original_amount']=$row['amount'];
+  $row['class_adjustment_amount']=0;
+  $row['effective_amount']=$row['amount'];
+  if($kind==='parent'&&VehicleClassSchema::exists($pdo)){
+   $adj=$pdo->prepare("SELECT COALESCE(SUM(d.amount_irr),0) FROM student_contract_invoices m
+      JOIN vehicle_class_debt_adjustments d ON d.agency_id=m.agency_id AND d.student_id=m.student_id
+       AND ".StudentBalance::yearSql('d.academic_year')."=".StudentBalance::yearSql('m.academic_year')."
+       AND d.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
+      WHERE m.agency_id=? AND m.contract_id=? AND m.student_id=?");
+   $adj->execute([$aid,$id,$row['party_id']]);
+   $row['class_adjustment_amount']=(int)$adj->fetchColumn();
+   $row['effective_amount']=(int)$row['amount']+$row['class_adjustment_amount'];
+  }
   unset($row['snapshot_json']);return $row+['values'=>$values,'kind'=>$kind];
  }
  public static function edit(int $uid,int $aid,int $id,array $input): array {
