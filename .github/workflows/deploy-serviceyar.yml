@@ -92,6 +92,7 @@ jobs:
           node tests/admin-impersonation-contract.cjs
           node tests/admin-driver-preview-contract.cjs
           node tests/portal-mobile-parent-representative-contract.cjs
+          node tests/portal-schema-perf.cjs
           node tests/portal-company-design-parity.cjs
           node tests/portal-responsive-debtors-contract.cjs
           node tests/portal-driver-admin-edit-contract.cjs
