@@ -173,7 +173,7 @@ final class VehicleClassChangeWorkflow
                 VALUES(?,?,?,?,?,?,?,?)");
             $contract=$pdo->prepare("SELECT c.start_date,c.end_date,m.academic_year FROM student_contract_invoices m
               JOIN contracts c ON c.id=m.contract_id AND c.agency_id=m.agency_id
-              WHERE m.agency_id=? AND m.student_id=?
+              WHERE m.agency_id=? AND m.student_id=? AND m.academic_year=?
               ORDER BY c.id DESC LIMIT 1 FOR UPDATE");
             foreach($oldRates as $sid=>$rate){
                 $student=$rate['student'];
@@ -181,7 +181,8 @@ final class VehicleClassChangeWorkflow
                     $period->execute([$aid,$changeId,'student_debt',$sid,$rate['serviceId'],
                         $choices['studentDebtEffectiveDate'],$old['tariff_vehicle_class'],(int)$class,
                         $rate['oldParent'],$rate['newParent'],$rate['source'],self::json($rate)]);
-                    $contract->execute([$aid,$sid]);$bound=$contract->fetch(PDO::FETCH_ASSOC);
+                    $studentYear=ContractBilling::year((string)($student['academic_year']??''));
+                    $contract->execute([$aid,$sid,$studentYear]);$bound=$contract->fetch(PDO::FETCH_ASSOC);
                     if(!$bound||!$bound['start_date']||!$bound['end_date'])
                         throw new AuthException(409,'برای تغییر بدهی دانش‌آموز، قرارداد صادرشده و بازه معتبر الزامی است. ابتدا پرونده مالی دانش‌آموز را تکمیل کنید.','CONTRACT_REQUIRED_FOR_DEBT_ADJUSTMENT');
                     if($bound&&$bound['start_date']&&$bound['end_date']){
