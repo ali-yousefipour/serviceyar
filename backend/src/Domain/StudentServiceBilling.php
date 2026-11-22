@@ -43,6 +43,27 @@ final class StudentServiceBilling {
   $adjustments=$adj->fetchAll(PDO::FETCH_ASSOC);
   $total+=(float)array_sum(array_map(static fn($a)=>((string)$a['effective_date']<=(new \DateTimeImmutable('now',new \DateTimeZone('Asia/Tehran')))->format('Y-m-d'))?(float)$a['amount_irr']:0.0,$adjustments));
   }
+  // Apply only the effective, year-matched correction to the same
+  // already-issued invoice shown on the student's financial account.
+  // No SQL UPDATE is performed on the historic document or its payments.
+  if($adjustments&&$invoices){
+   $adjustByInvoice=$pdo->prepare("SELECT m.invoice_id,COALESCE(SUM(a.amount_irr),0) amount
+     FROM student_contract_invoices m JOIN vehicle_class_debt_adjustments a
+      ON a.agency_id=m.agency_id AND a.student_id=m.student_id
+      AND ".StudentBalance::yearSql('a.academic_year')."=".StudentBalance::yearSql('m.academic_year')."
+      AND a.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
+     WHERE m.agency_id=? AND m.student_id=? GROUP BY m.invoice_id");
+   $adjustByInvoice->execute([$agencyId,$studentId]);
+   $deltas=[];
+   foreach($adjustByInvoice->fetchAll(PDO::FETCH_ASSOC) as $item)$deltas[(int)$item['invoice_id']]=(int)$item['amount'];
+   foreach($invoices as &$invoice){
+    $invoice['originalAmount']=$invoice['amount'];
+    $invoice['classAdjustmentAmount']=$deltas[(int)$invoice['id']]??0;
+    $invoice['effectiveAmount']=(int)$invoice['amount']+$invoice['classAdjustmentAmount'];
+    $invoice['amount']=$invoice['effectiveAmount'];
+   }
+   unset($invoice);
+  }
   StudentBalance::allocate($invoices,$received);
   return ['invoices'=>$invoices,'payments'=>$payments,'vehicleClassAdjustments'=>$adjustments,'totals'=>StudentBalance::totals($total,$received)];
  }
