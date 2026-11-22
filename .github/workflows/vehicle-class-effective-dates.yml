@@ -19,6 +19,11 @@ jobs:
       - name: Validate source syntax
         run: |
           php -l backend/src/Domain/VehicleClassEffectiveDates.php
+          php -l backend/src/Domain/VehicleClassChangeWorkflow.php
+          php -l backend/src/Domain/VehicleClassHistory.php
+          php -l backend/src/Domain/DomainService.php
+          php -l backend/public/index.php
+          node --check frontend/assets/operations.js
           php -l tests/vehicle-class-effective-dates.php
       - name: Check date and proration contracts
         run: php tests/vehicle-class-effective-dates.php
