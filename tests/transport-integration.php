@@ -888,6 +888,23 @@ try{
  check((int)$afterRejectedVehicleEdit['tariff_vehicle_class']===2
    &&(int)$afterRejectedVehicleEdit['monthly_fee']===$expectedClassTwo['parentMonthly'],
    'Unconsented direct class changes must preserve the previous student tariff and invoice');
+ $consentedClassChange=\ServiceYar\Domain\VehicleClassChangeWorkflow::apply($uid,$a,(int)$classVehicle['id'],[
+    'driverId'=>(int)$classDriver['id'],'tariffVehicleClass'=>'3',
+    'updateContract'=>false,'updateStudentDebt'=>false,'updateDriverPay'=>false
+ ]);
+ check((int)$consentedClassChange['changeId']>0,
+    'An explicit vehicle-only class change is transactionally recorded');
+ check((int)D::get($uid,$a,'vehicles',(int)$classVehicle['id'])['tariff_vehicle_class']===3,
+    'Vehicle class is updated after the consent wizard decisions');
+ $afterIndependentConsent=D::get($uid,$a,'students',(int)$taxiStudent['id']);
+ check((int)$afterIndependentConsent['tariff_vehicle_class']===2
+   &&(int)$afterIndependentConsent['monthly_fee']===$expectedClassTwo['parentMonthly'],
+   'Declining debt and payroll adjustments preserves the previous student rates');
+ $classAudit=$p->prepare('SELECT id,old_vehicle_class,new_vehicle_class,update_student_debt,update_driver_pay FROM vehicle_class_changes WHERE id=? AND agency_id=?');
+ $classAudit->execute([(int)$consentedClassChange['changeId'],$a]);$auditRow=$classAudit->fetch(\PDO::FETCH_ASSOC);
+ check($auditRow && (int)$auditRow['old_vehicle_class']===2&&(int)$auditRow['new_vehicle_class']===3
+   &&(int)$auditRow['update_student_debt']===0&&(int)$auditRow['update_driver_pay']===0,
+   'Historic class and independent consent decisions survive the transaction');
  $tariffPreview=\ServiceYar\Domain\LegacyServiceTariffMigration::run($uid,$a,false);
  check(($tariffPreview['servicesToChange']??-1)===
    (($tariffPreview['servicesAmountToChange']??0)+($tariffPreview['servicesSourceOnlyToChange']??0)),
