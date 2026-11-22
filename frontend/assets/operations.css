@@ -3687,3 +3687,33 @@ dialog.sy-contract-edit-dialog::backdrop{background:rgba(10,30,23,.55)}
 @media(max-width:640px){#modal:has(.vcw) .modal{width:calc(100vw - 16px);max-height:95dvh} .vcw .vcw-steps{gap:5px}.vcw .vcw-steps li{display:grid;justify-items:center;align-content:center;gap:4px;min-height:70px;padding:5px 3px;font-size:.69rem}.vcw .vcw-classes{gap:10px;padding:11px}.vcw .vcw-actions{padding-bottom:max(8px,env(safe-area-inset-bottom))}.vcw .vcw-actions>div{flex:1}.vcw .vcw-actions>div button{flex:1}}
 @media(max-width:390px){.vcw .vcw-steps li{font-size:.65rem}.vcw .vcw-choice-card{padding:10px}.vcw button.vcw-button{padding:8px 9px;font-size:.78rem}.vcw .vcw-actions{gap:7px}}
 @media(prefers-reduced-motion:reduce){.vcw *{scroll-behavior:auto;transition:none!important}}
+
+/* Vehicle class financial history: searchable responsive report */
+.sy-class-report-modal{width:min(1120px,calc(100vw - 26px));max-width:1120px;max-height:93dvh;overflow-y:auto}
+.sy-class-report{direction:rtl;display:grid;gap:16px;font-family:Vazirmatn,sans-serif;font-size:14px;line-height:1.85;color:var(--text,#213c36)}
+.sy-class-report-head h3{margin:0;font-size:1.12rem;line-height:1.7}
+.sy-class-report-head p{margin:5px 0 0;font-size:.86rem;color:#62776d}
+.sy-class-report-filters{display:grid;grid-template-columns:minmax(190px,2fr) repeat(4,minmax(110px,1fr));gap:10px;padding:15px;border:1px solid #d6e7dd;border-radius:14px;background:#f5faf7}
+.sy-class-report-filters label{display:grid;gap:5px;min-width:0;font-size:.81rem;font-weight:700}
+.sy-class-report-filters input,.sy-class-report-filters select{width:100%;min-width:0;min-height:42px;border:1px solid #c8dbd0;border-radius:10px;background:#fff;font-family:inherit;font-size:.86rem}
+.sy-class-report-filters .solar-date-field{width:100%;min-width:0}
+.sy-class-report-tools{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.sy-class-report-tools button{min-height:42px;padding:8px 12px;font-size:.82rem;font-family:inherit;border-radius:9px}
+.sy-class-report-tools button:disabled{opacity:.5}
+.sy-class-report-summary{color:#476656;font-weight:700;font-size:.87rem}
+.sy-class-report-table{max-height:53dvh;overflow:auto;border:1px solid #d6e5dc;border-radius:13px}
+.sy-class-report-table table{width:100%;min-width:950px;border-collapse:separate;border-spacing:0;font-size:.8rem}
+.sy-class-report-table th{position:sticky;top:0;z-index:2;background:#edf7f2;white-space:nowrap;padding:12px 9px;border-bottom:1px solid #bfd8c8}
+.sy-class-report-table td{padding:10px 9px;border-bottom:1px solid #e5eee8;vertical-align:middle}
+.sy-class-report-table tr:hover td{background:#f8fcf9}
+.sy-class-report-table button{min-height:36px;white-space:nowrap;font-family:inherit}
+.sy-class-report-plate{display:block;color:#63786e;font-size:.75rem;line-height:1.7}
+.sy-class-report-detail{border:1px solid #b8d8c7;background:#fbfdfa;border-radius:13px;padding:16px;display:grid;gap:12px}
+.sy-class-report-detail-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sy-class-report-detail-head h4,.sy-class-report-detail h5{margin:0}
+.sy-class-report-detail p{margin:0;font-size:.85rem}
+.sy-class-report-detail .table-wrap{overflow-x:auto;max-width:100%}
+.sy-class-report-detail table{min-width:540px;width:100%}
+@media(max-width:980px){.sy-class-report-filters{grid-template-columns:repeat(3,minmax(0,1fr))}.sy-class-report-filters label:first-child{grid-column:1/-1}}
+@media(max-width:600px){.sy-class-report-modal{width:calc(100vw - 16px)}.sy-class-report{gap:11px}.sy-class-report-filters{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px}.sy-class-report-filters label:first-child{grid-column:1/-1}.sy-class-report-tools button{flex:1 1 135px}.sy-class-report-table{max-height:55dvh}.sy-class-report-detail{padding:11px}}
+@media print{body:has(.sy-class-report-printing) *{visibility:hidden!important}body:has(.sy-class-report-printing) #modal .sy-class-report,body:has(.sy-class-report-printing) #modal .sy-class-report *{visibility:visible!important}body:has(.sy-class-report-printing) #modal{position:absolute!important;inset:0!important;overflow:visible!important;background:#fff!important}body:has(.sy-class-report-printing) .sy-class-report-modal{overflow:visible!important;max-height:none!important;width:100%!important}body:has(.sy-class-report-printing) .sy-class-report-filters,body:has(.sy-class-report-printing) .sy-class-report-detail,body:has(.sy-class-report-printing) .sy-class-report-table button{display:none!important}body:has(.sy-class-report-printing) .sy-class-report-table{max-height:none;overflow:visible}body:has(.sy-class-report-printing) .sy-class-report-table table{min-width:0;font-size:9px}}
