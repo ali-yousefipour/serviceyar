@@ -55,11 +55,17 @@ $pdo->prepare("INSERT INTO vehicle_class_rate_periods
  old_monthly_irr,new_monthly_irr,fee_source,calculation_snapshot)
  VALUES(1,?,'student_debt',101,102,'2000-01-01',1,2,1000000,1400000,'taxi','{}')")
  ->execute([$change]);
+$pdo->exec("INSERT INTO vehicle_class_changes
+ (agency_id,driver_id,vehicle_id,old_vehicle_model,new_vehicle_model,old_vehicle_class,new_vehicle_class,
+ contract_effective_date,update_student_debt,student_debt_effective_date,update_driver_pay,driver_pay_effective_date,
+ old_vehicle_snapshot,new_vehicle_snapshot,decision_snapshot,created_by)
+ VALUES(1,11,23,'ساینا','دنا',2,3,NULL,1,'2099-01-01',0,NULL,'{}','{}','{}',99)");
+$futureChange=(int)$pdo->lastInsertId();
 $pdo->prepare("INSERT INTO vehicle_class_rate_periods
  (agency_id,change_id,subject_type,subject_id,service_id,effective_date,old_class,new_class,
  old_monthly_irr,new_monthly_irr,fee_source,calculation_snapshot)
  VALUES(1,?,'student_debt',101,102,'2099-01-01',2,3,1400000,1800000,'taxi','{}')")
- ->execute([$change]);
+ ->execute([$futureChange]);
 $property=new ReflectionProperty(\ServiceYar\Database\Connection::class,'pdo');
 $property->setValue(null,$pdo);
 $applied=\ServiceYar\Domain\VehicleClassRateApplication::applyDue(1);
