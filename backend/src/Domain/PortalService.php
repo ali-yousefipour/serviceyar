@@ -243,11 +243,17 @@ final class PortalService {
                   'reference_no'=>$line['reference_no'],'source'=>'ledger'];
             }
             $total=array_sum(array_map(static fn($i)=>(float)$i['amount'],$invoices));
+            $classAdjustments=VehicleClassSchema::exists($pdo)
+                ?self::rows($pdo,"SELECT academic_year,effective_date,amount_irr
+                    FROM vehicle_class_debt_adjustments
+                    WHERE agency_id=? AND student_id=? AND effective_date<=CURRENT_DATE()
+                    ORDER BY effective_date,id",[$agencyId,$partyId]):[];
+            $total+=array_sum(array_map(static fn($a)=>(float)$a['amount_irr'],$classAdjustments));
             StudentBalance::allocate($invoices,(float)$received);
             $totals=StudentBalance::totals((float)$total,(float)$received);
             return $base+['student'=>$student,'guardian'=>$guardian,'services'=>$services,
                 'finance'=>['invoices'=>$invoices,'installments'=>$installments,'payments'=>$payments,
-                   'total'=>$total,'paid'=>$received,'balance'=>$totals['balance'],
+                   'vehicleClassAdjustments'=>$classAdjustments,'total'=>$total,'paid'=>$received,'balance'=>$totals['balance'],
                    'credit'=>$totals['credit']],
                 'installmentsNote'=>'برنامه اقساط بر اساس سند قطعی شرکت نمایش داده می‌شود؛ برای تاریخ سررسید قطعی از شرکت استعلام کنید.'];
         }
