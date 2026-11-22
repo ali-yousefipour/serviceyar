@@ -35,6 +35,19 @@ final class SchoolPhotos {
  public static function prepareImage(string $file,string $mime): array {
   if(!function_exists('imagecreatefromstring')||!function_exists('imagejpeg'))
    throw new AuthException(503,'پردازش تصویر روی سرور فعال نیست؛ افزونه GD باید نصب شود.','IMAGE_PROCESSOR_UNAVAILABLE');
+  // Read cheap, bounded metadata BEFORE decoding untrusted compressed pixels.
+  // PNG/WebP/JPEG can claim huge dimensions in only a few bytes.
+  $bytes=@filesize($file);
+  if($bytes===false||$bytes<1||$bytes>5*1024*1024)
+   throw new AuthException(422,'تصویر باید معتبر و حداکثر ۵ مگابایت باشد.','INVALID_IMAGE');
+  $info=@getimagesize($file);
+  if(!is_array($info)||!in_array($mime,['image/jpeg','image/png','image/webp'],true)
+   ||($info['mime']??'')!==$mime)
+   throw new AuthException(422,'فایل تصویر معتبر نیست.','INVALID_IMAGE');
+  $sourceWidth=(int)($info[0]??0);$sourceHeight=(int)($info[1]??0);
+  if($sourceWidth<1||$sourceHeight<1||$sourceWidth>6000||$sourceHeight>6000
+   ||$sourceWidth*$sourceHeight>20000000)
+   throw new AuthException(422,'ابعاد تصویر نامعتبر یا بیش از حد بزرگ است.','IMAGE_TOO_LARGE');
   $sourceData=file_get_contents($file);
   if($sourceData===false||$sourceData==='')
    throw new AuthException(422,'فایل تصویر قابل خواندن نیست.','INVALID_IMAGE');
@@ -104,9 +117,6 @@ final class SchoolPhotos {
   $extensions=['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'];
   if(!isset($extensions[$type])||getimagesize($tmp)===false)
    throw new AuthException(422,'فقط تصاویر JPEG، PNG و WebP قابل بارگذاری هستند.','INVALID_IMAGE_TYPE');
-  $dimensions=getimagesize($tmp);
-  if(($dimensions[0]??0)>6000||($dimensions[1]??0)>6000)
-   throw new AuthException(422,'ابعاد تصویر نباید بیشتر از ۶۰۰۰ پیکسل باشد.','IMAGE_TOO_LARGE');
   $compressed=self::prepareImage($tmp,$type);
   $directory=self::root().'/storage/uploads/school-images/'.$aid.'/'.$id;
   if(!is_dir($directory)&&!mkdir($directory,0750,true)&&!is_dir($directory))
