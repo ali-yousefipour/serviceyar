@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS vehicle_class_changes (
   new_vehicle_model VARCHAR(255) NULL,
   old_vehicle_class TINYINT UNSIGNED NULL,
   new_vehicle_class TINYINT UNSIGNED NOT NULL,
-  contract_effective_date DATE NOT NULL,
+  contract_effective_date DATE NULL,
   update_student_debt TINYINT(1) NOT NULL DEFAULT 0,
   student_debt_effective_date DATE NULL,
   update_driver_pay TINYINT(1) NOT NULL DEFAULT 0,
