@@ -28,6 +28,6 @@ try{
  Rates::parseChoices(['contractEffectiveDate'=>'2026-11-22','updateStudentDebt'=>true,'updateDriverPay'=>false]);
  throw new RuntimeException('Missing effective date accepted');
 }catch(\ServiceYar\Auth\AuthException $e){
- check($e->getCode()===422,'Expected validation error');
+ check($e->status===422,'Expected validation error');
 }
 echo "Vehicle class effective-date rules: OK\n";
