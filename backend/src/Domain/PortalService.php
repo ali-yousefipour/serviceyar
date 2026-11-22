@@ -246,7 +246,7 @@ final class PortalService {
             $classAdjustments=VehicleClassSchema::exists($pdo)
                 ?self::rows($pdo,"SELECT academic_year,effective_date,amount_irr
                     FROM vehicle_class_debt_adjustments
-                    WHERE agency_id=? AND student_id=? AND effective_date<=CURRENT_DATE()
+                    WHERE agency_id=? AND student_id=? AND effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
                     ORDER BY effective_date,id",[$agencyId,$partyId]):[];
             $total+=array_sum(array_map(static fn($a)=>(float)$a['amount_irr'],$classAdjustments));
             StudentBalance::allocate($invoices,(float)$received);
