@@ -74,6 +74,7 @@ jobs:
           test -f frontend/assets/public-site.css
           node --check frontend/assets/task-progress.js
           node tests/task-progress.cjs
+          node tests/school-photo-security.cjs
           node tests/ui-consistency.cjs
           node tests/filter-consistency.cjs
           node tests/lazy-operations.cjs
