@@ -1214,6 +1214,12 @@ async function resourcePage(key,token=pageToken,options={}){
 };
  const pageIntro=pageIntroductions[key];
  $('content').innerHTML=`<section class="toolbar ${isLedger?'sy-ledger-page-header':''} ${key==='services'?'services-page-head':''}"><div class="${key==='services'?'services-page-title':'sy-directory-heading'}">${key==='services'?'<span class="services-eyebrow">مدیریت ناوگان و مسیرها</span>':pageIntro?`<span class="sy-directory-eyebrow">${esc(pageIntro[0])}</span>`:''}<h2>${resourceName(key)}</h2>${key==='services'?'<p>جست‌وجو، بررسی و مدیریت یکپارچه سرویس‌های مدارس</p>':pageIntro?`<p>${esc(pageIntro[1])}</p>`:''}</div><div class="toolbar-buttons">${can(key,'manage')?`<button class="primary" id="addBtn">${key==='students'?'دانش‌آموز جدید':key==='drivers'?'ثبت راننده جدید':'ثبت جدید'}</button>`:''}${['schools','students','drivers','services','invoices','payments','driver-work'].includes(key)&&can('reports')?'<button id="gridExport">خروجی Excel</button>':''}${isLedger&&can('reports')?'<button type="button" id="ledgerExport" class="sy-ledger-export">خروجی اکسل</button>':''}<button id="printGrid">چاپ</button></div></section>${isLedger?ledgerSummaryMarkup():''}${isStudents?'<div class="status-tabs" id="studentStatuses" role="group" aria-label="فیلتر وضعیت دانش‌آموز">'+['','no_request','pending','prepayment','waiting','assigned','cancelled'].map(k=>`<button data-status="${k}">${statuses[k]||'همه'}</button>`).join('')+'</div>':''}${isLedger&&can('reports')?'<nav class="ledger-report-tabs" aria-label="بخش‌های دریافت و پرداخت"><button type="button" class="active" aria-current="page">ثبت و مدیریت اسناد</button><button type="button" id="ledgerTabReport">گزارش‌گیری</button></nav>':''}<section class="panel ${isLedger?'sy-ledger-page-panel':''}">${key==='services'?serviceFilterForm(schoolFilter):isLedger?ledgerFilterForm():`<form id="gridFilters" class="filters ${isStudents||isDrivers?'directory-filters':''}" aria-label="جست‌وجو و فیلتر ${resourceName(key)}"><label class="directory-search">جست‌وجوی سریع<input name="search" id="search" type="search" placeholder="${isStudents?'نام، نام خانوادگی یا کد ملی دانش‌آموز':isDrivers?'نام، نام خانوادگی، کد ملی یا شماره همراه راننده':isVehicles?'مدل خودرو، نام مالک یا شماره پلاک':'جست‌وجو'}" aria-label="جست‌وجو" value="${esc(initialSearch)}"></label>${schoolFilter?'<label class="directory-filter-field">مدرسه<select name="schoolId" aria-label="فیلتر مدرسه"><option value="">همه مدارس</option></select></label>':''}${isVehicles?`<label class="vehicle-driver-filter">نام راننده<input type="search" name="driverSearch" placeholder="نام یا نام خانوادگی راننده" autocomplete="off"></label><fieldset class="vehicle-plate-filter"><legend>جست‌وجوی پلاک ایران</legend>${iranPlateInput("filter")}<small>هر بخش را جداگانه وارد کنید؛ بخش‌های خالی در جست‌وجو محدودیتی ایجاد نمی‌کنند.</small></fieldset>`:''}${isStudents?`<label class="directory-filter-field">سال تحصیلی<input name="academicYear" aria-label="سال تحصیلی" placeholder="مثلاً ${year()}" value="${options.previous?esc((Number(year().split('/')[0])-1)+'/'+year().split('/')[0]):''}"></label><label class="directory-filter-field">شماره همراه ولی<input name="mobile" type="search" inputmode="tel" placeholder="جست‌وجو با شماره همراه" aria-label="شماره همراه ولی"></label><input type="hidden" name="serviceStatus">`:''}${isDrivers?'<label>وضعیت راننده<select name="status"><option value="">همه وضعیت‌ها</option><option value="active">تأییدشده</option><option value="pending">در انتظار بررسی</option><option value="inactive">غیرفعال</option></select></label>':''}${key==='schools'?'<input name="schoolType" placeholder="نوع مدرسه" aria-label="نوع مدرسه">':''} ${key==='driver-work'?'<label>وضعیت بررسی<select name="status"><option value="">همه وضعیت‌ها</option><option value="approved">بررسی‌شده</option><option value="pending">نیاز به بررسی</option><option value="cancelled">لغوشده</option></select></label><label>کارکرد از<input name="dateFrom" type="date"></label><label>تا تاریخ<input name="dateTo" type="date"></label>':''}<label class="directory-filter-field">وضعیت فعالیت<select name="active" aria-label="فعال بودن"><option value="1">فعال</option><option value="0">غیرفعال</option><option value="">همه سوابق</option></select></label><button type="submit" class="primary directory-search-button">اعمال جست‌وجو و فیلتر</button><button type="reset" class="directory-reset-button">پاک‌کردن فیلترها</button></form>`}<div class="bulk-toolbar ${isLedger?'sy-ledger-bulk-toolbar':''}">${['students','drivers'].includes(key)&&can('messages','manage')?'<button id="bulkMessage">پیامک به انتخاب‌شده‌ها</button>':''}${isStudents&&can('services','manage')&&can('students','manage')?'<button id="bulkFees">تغییر سریع هزینه سرویس</button>':''}${key==='drivers'&&can('drivers','manage')?'<button class="primary" id="bulkDriverStatus" type="button">عملیات گروهی · فعال / غیرفعال</button>':''}${key==='services'&&can('services','manage')?'<button class="primary" id="bulkServiceStatus" type="button" disabled>تغییر وضعیت گروهی سرویس‌ها</button>':''}<span id="selectedCount"></span></div><div id="table" class="${isLedger?'sy-ledger-results':''}"></div></section><div id="modal"></div>`;
+ if(isVehicles&&can('drivers','view')){
+  const historyButton=document.createElement('button');
+  historyButton.type='button';historyButton.id='vehicleClassHistory';historyButton.textContent='تاریخچه تغییر کلاس خودرو';
+  $('content').querySelector('.toolbar-buttons')?.prepend(historyButton);
+  historyButton.onclick=()=>void vehicleClassHistoryDialog();
+ }
  if(key==='students'&&initialStudentStatus){$('gridFilters').elements.serviceStatus.value=initialStudentStatus;$('studentStatuses')?.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.status===initialStudentStatus));initialStudentStatus='';}
  const filterForm=$('gridFilters'),state=gridState;
  let syncInvoiceSolarDates=()=>true;
@@ -1624,6 +1630,58 @@ function closeDialog(){
  if(opener?.isConnected)opener.focus({preventScroll:true});
 }
 document.addEventListener('keydown',e=>{if(e.defaultPrevented)return;const modal=$('modal')?.querySelector('.modal[role="dialog"]');if(!modal)return;if(e.key==='Escape'){if(document.querySelector('.solar-calendar'))return;e.preventDefault();closeDialog();return;}if(e.key==='Tab'){const items=[...modal.querySelectorAll('button,input,select,textarea,a[href],[tabindex="0"]')].filter(x=>!x.disabled&&x.type!=='hidden'&&x.getClientRects().length&&!x.closest('[hidden]'));const first=items[0],last=items.at(-1);if(!first){e.preventDefault();modal.focus();}else if(e.shiftKey&&(document.activeElement===first||document.activeElement===modal)){e.preventDefault();last.focus();}else if(!e.shiftKey&&(document.activeElement===last||document.activeElement===modal)){e.preventDefault();first.focus();}}});
+function vehicleClassChangeWizard(id,row,body,onSaved){
+ const today=()=>{const parts=new Intl.DateTimeFormat('en-US',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'Asia/Tehran'}).formatToParts(new Date());const get=t=>parts.find(p=>p.type===t)?.value||'';return get('year')+'-'+get('month')+'-'+get('day');};
+ const values={updateContract:true,contractEffectiveDate:today(),updateStudentDebt:false,studentDebtEffectiveDate:today(),updateDriverPay:false,driverPayEffectiveDate:today()};
+ let step=0,saving=false;
+ const steps=[
+  {title:'اعمال تغییر در قرارداد',choice:'updateContract',date:'contractEffectiveDate',question:'آیا تغییر کلاس خودرو از تاریخ انتخاب‌شده در الحاقیه قرارداد ثبت شود؟'},
+  {title:'اصلاح بدهی دانش‌آموزان',choice:'updateStudentDebt',date:'studentDebtEffectiveDate',question:'آیا تغییر نرخ کلاس خودرو در بدهی دانش‌آموزان اعمال شود؟ سوابق پرداخت‌شده تغییر نمی‌کنند.'},
+  {title:'اصلاح سرویس و حقوق راننده',choice:'updateDriverPay',date:'driverPayEffectiveDate',question:'آیا مبلغ سرویس و مبنای حقوق راننده از تاریخ انتخاب‌شده اصلاح شود؟'},
+  {title:'تأیید نهایی تغییرات'}
+ ];
+ const render=()=>{
+  const current=steps[step],modal=document.querySelector('#modal .modal-body');
+  if(!modal)return;
+  const info='<p class="sy-change-wizard-context">کلاس قبلی: <strong>'+esc(String(row.tariff_vehicle_class??'نامشخص'))+'</strong> | کلاس جدید: <strong>'+esc(String(body.tariffVehicleClass))+'</strong></p>';
+  const field=current.choice?'<fieldset class="sy-change-wizard-choice"><legend>'+esc(current.question)+'</legend><label><input type="radio" name="classConsent" value="yes" '+(values[current.choice]?'checked':'')+'> بله، اعمال شود</label><label><input type="radio" name="classConsent" value="no" '+(!values[current.choice]?'checked':'')+'> خیر، مبالغ قبلی حفظ شوند</label></fieldset><label class="sy-change-wizard-date" '+(!values[current.choice]?'hidden':'')+'>تاریخ اثر (شمسی)<input type="date" name="classEffectiveDate" value="'+esc(values[current.date])+'" required></label>':'<section class="sy-change-wizard-review">'+steps.slice(0,3).map(st=>'<p><strong>'+esc(st.title)+':</strong> '+(values[st.choice]?'بله · '+esc(values[st.date]):'خیر؛ بدون تغییر مالی')+'</p>').join('')+'</section>';
+  modal.innerHTML='<div class="sy-change-wizard"><p class="sy-operation-kicker">مرحله '+(step+1)+' از ۴ · تغییر کلاس خودرو</p><h4>'+esc(current.title)+'</h4>'+info+field+'<div id="classChangeError" class="error" role="alert" hidden></div><div class="sy-new-service-actions"><button type="button" id="classChangeCancel">انصراف</button><button type="button" id="classChangeBack" '+(step===0?'disabled':'')+'>قبلی</button><button type="button" class="primary" id="classChangeNext">'+(step===3?'تأیید و ذخیره نهایی':'مرحله بعد')+'</button></div></div>';
+  const choice=modal.querySelectorAll('[name=classConsent]'),date=modal.querySelector('[name=classEffectiveDate]'),dateLabel=modal.querySelector('.sy-change-wizard-date');
+  choice.forEach(input=>input.onchange=()=>{values[current.choice]=input.value==='yes';dateLabel.hidden=!values[current.choice];});
+  modal.querySelector('#classChangeCancel').onclick=()=>{closeDialog();void formResource('vehicles',id,onSaved);};
+  modal.querySelector('#classChangeBack').onclick=()=>{step--;render();};
+  modal.querySelector('#classChangeNext').onclick=async()=>{
+   const error=modal.querySelector('#classChangeError');
+   if(current.choice&&values[current.choice]){
+    if(!date.value||!/^\d{4}-\d{2}-\d{2}$/.test(date.value)){error.textContent='تاریخ معتبر شمسی را از تقویم انتخاب کنید.';error.hidden=false;return;}
+    values[current.date]=date.value;
+   }
+   if(step<3){step++;render();return;}
+   if(saving)return;
+   saving=true;const btn=modal.querySelector('#classChangeNext');btn.disabled=true;btn.textContent='در حال ذخیره و محاسبه…';
+   try{
+    const payload={...body,...values};
+    for(const st of steps.slice(0,3))if(!values[st.choice])payload[st.date]=null;
+    const result=await write('/api/v1/vehicles/'+id+'/class-change',payload,'PUT');
+    lookupCache={};closeDialog();notify('تغییر کلاس خودرو و تصمیم‌های مالی ثبت شد. شناسه تغییر: '+number(result.changeId));
+    if(onSaved)onSaved();else await loadResource('vehicles');
+   }catch(e){error.textContent=e.message;error.hidden=false;btn.disabled=false;btn.textContent='تأیید و ذخیره نهایی';}
+   finally{saving=false;}
+  };
+ };
+ dialog('فرایند تاریخ‌دار تغییر کلاس خودرو','<div class="sy-change-wizard" role="status">در حال آماده‌سازی مراحل…</div>');
+ render();
+}
+async function vehicleClassHistoryDialog(){
+ dialog('تاریخچه تغییر کلاس خودرو','<p role="status">در حال دریافت تاریخچه تغییرات…</p>');
+ const host=document.querySelector('#modal .modal-body');
+ try{
+  const rows=await api(scoped('/api/v1/vehicles/class-change-history'));
+  if(!host?.isConnected)return;
+  if(!rows.length){host.innerHTML='<p>تغییر کلاس تاریخ‌دار ثبت نشده است.</p>';return;}
+  host.innerHTML='<div class="table-wrap" tabindex="0"><table><thead><tr><th>زمان ثبت</th><th>راننده / پلاک</th><th>کلاس قبلی و جدید</th><th>قرارداد</th><th>بدهی</th><th>حقوق راننده</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc(r.created_at||'')+'</td><td>'+esc((r.driver_name||'—')+' · '+(r.current_plate||'—'))+'</td><td>'+esc(String(r.old_vehicle_class??'—')+' ← '+String(r.new_vehicle_class))+'</td><td>'+esc(r.contract_effective_date||'بدون تغییر')+'</td><td>'+esc(Number(r.update_student_debt)?r.student_debt_effective_date:'بدون تغییر')+'</td><td>'+esc(Number(r.update_driver_pay)?r.driver_pay_effective_date:'بدون تغییر')+'</td></tr>').join('')+'</tbody></table></div>';
+ }catch(e){if(host?.isConnected)host.textContent=e.message;}
+}
 function resourceWizard(form,key){
  const definitions={students:[['اطلاعات ولی',['mobile','guardianFirstName','guardianLastName','guardianNationalCode','guardianRelation','emergencyPhone']],['مشخصات دانش‌آموز',['firstName','lastName','gender','nationality','nationalCode','fatherName','healthStatus']],['نشانی و مدرسه',['address','returnAddress','latitude','longitude','schoolId','grade','shift','academicYear']],['وضعیت و هزینه',['serviceStatus','tariffDistanceKm','tariffVehicleClass','monthlyFee']]],drivers:[['مشخصات راننده',['firstName','lastName','nationalCode','mobile','status']],['خودرو و نشانی',['vehicleId','isRepresentative','address']],['اطلاعات بانکی',['bankName','bankAccount','iban']]],services:[['مشخصات سرویس',['title','capacity','shift','status']],['مدرسه و راننده',['schoolId','driverId','vehicleModel','packId']],['مسیر و مبالغ',['startAddress','endAddress','feeSource','agreedAmount']]]};
  definitions.cheques=[['مشخصات چک',['bankName','branchName','serialNo','bankAccount']],['دریافت و سررسید',['receivedFrom','accountId','amount','receivedDate','dueDate','description','counterAccountId']]];
@@ -2490,6 +2548,10 @@ if(form.elements.mobile){const mobile=form.elements.mobile;mobile.pattern='09[0-
     throw Error('نوع خودرو را از فهرست جستجوی مدل‌های تأییدشده انتخاب کنید.');
   }
   if(key==='vehicles'&&id&&body.tariffVehicleClass==='')delete body.tariffVehicleClass;
+   if(key==='vehicles'&&id&&body.tariffVehicleClass!==undefined
+      &&String(body.tariffVehicleClass)!==String(row?.tariff_vehicle_class??'')){
+    vehicleClassChangeWizard(id,row,body,onSaved);return;
+   }
   if(key==='services'){
    if(!form.elements.vehicleModel?.dataset.vehicleFamily){
     if(form.elements.vehicleModel?.dataset.vehicleTouched)throw Error('برای ثبت نوع خودرو، آن را از فهرست مدل‌های تأییدشده انتخاب کنید.');
