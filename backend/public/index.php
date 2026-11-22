@@ -563,6 +563,9 @@ try {
   }
  }
  $aid=agencyId($s);
+ // Activate consented, future-dated vehicle rates on the first authorized
+ // company request after their effective date; never alter posted invoices.
+ \ServiceYar\Domain\VehicleClassRateApplication::applyDue($aid);
  if(preg_match('#^/api/v1/users/(\d+)/(password)$#',$path,$m)&&$method==='POST'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>UserService::changePassword($s['id'],$aid,(int)$m[1],Request::json())]);}
  if($method==='POST'&&$path==='/api/v1/operations/financial-preview'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>FinancialRules::preview($s['id'],$aid,Request::json())]);}
  if($method==='GET'&&$path==='/api/v1/reports/school-workbook.xlsx')ExportService::schoolWorkbook($s['id'],$aid,(string)($_GET['period']??'Mehr'));
