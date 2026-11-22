@@ -645,6 +645,7 @@ HTML;
  private static function vehicleClassAppendixPrint(\PDO $pdo,int $aid,int $id,string $html): string {
   // Append the amendment to the print *view* only; preserve the original
   // issued signed document, its HTML snapshot and its amount.
+  if(!VehicleClassSchema::exists($pdo))return $html;
   $q=$pdo->prepare("SELECT a.effective_date,a.old_class,a.new_class,ch.old_vehicle_model,ch.new_vehicle_model,ch.created_at
     FROM vehicle_class_contract_appendices a
     JOIN vehicle_class_changes ch ON ch.id=a.change_id AND ch.agency_id=a.agency_id
