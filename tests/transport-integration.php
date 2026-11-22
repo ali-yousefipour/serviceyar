@@ -967,6 +967,22 @@ try{
  $classAccount=\ServiceYar\Domain\StudentServiceBilling::account($uid,$a,(int)$taxiStudent['id']);
  check((int)$classAccount['totals']['invoiced']===$classOriginalAmount+$expectedAdjustment,
    'Student account includes the signed adjustment in collectible annual tuition');
+ $classInvoiceAccount=array_values(array_filter($classAccount['invoices'],static fn($i)=>(int)$i['id']===$classInvoice));
+ check(count($classInvoiceAccount)===1
+   &&(int)$classInvoiceAccount[0]['originalAmount']===$classOriginalAmount
+   &&(int)$classInvoiceAccount[0]['effectiveAmount']===$classOriginalAmount+$expectedAdjustment
+   &&(int)$classInvoiceAccount[0]['remainingAmount']===$classOriginalAmount+$expectedAdjustment-500000-0,
+   'Previously issued invoice displays corrected effective amount and due balance while preserving original');
+ $existingContractRows=\ServiceYar\Domain\ContractDocuments::listing($uid,$a,'parent');
+ $amendedContractRow=array_values(array_filter($existingContractRows,static fn($row)=>(int)$row['id']===(int)$classStudentContract['id']));
+ check(count($amendedContractRow)===1
+   &&(int)$amendedContractRow[0]['original_amount']===$classOriginalAmount
+   &&(int)$amendedContractRow[0]['effective_amount']===$classOriginalAmount+$expectedAdjustment,
+   'Previous parent contract list shows its corrected amount on the original record');
+ $existingInvoiceDetail=D::get($uid,$a,'invoices',$classInvoice);
+ check((int)$existingInvoiceDetail['original_amount']===$classOriginalAmount
+   &&(int)$existingInvoiceDetail['effective_amount']===$classOriginalAmount+$expectedAdjustment,
+   'Existing invoice details expose effective amount with the original audit value');
  $listedInvoice=D::list($uid,$a,'invoices',['search'=>'شهریه آزمایشی تغییر کلاس']);
  $effectiveInvoice=null;
  foreach($listedInvoice['items'] as $row)if((int)$row['id']===$classInvoice)$effectiveInvoice=$row;
