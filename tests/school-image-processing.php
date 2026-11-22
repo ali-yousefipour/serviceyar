@@ -40,3 +40,35 @@ foreach($cases as [$label,$width,$height,$mime,$targetW,$targetH]){
   echo "PASS {$label}: {$output[0]}x{$output[1]} / {$result['sizeBytes']} bytes\n";
  }finally{unlink($source);}
 }
+
+
+// A valid PNG IHDR may claim 6000x6000 pixels while occupying <100 bytes.
+// The endpoint must reject it by metadata, BEFORE allocating/decompressing GD.
+$oversized=tempnam(sys_get_temp_dir(),'school-bomb-');
+try{
+ $ihdr=pack('NNCCCCC',6000,6000,8,2,0,0,0);
+ $chunk='IHDR'.$ihdr;
+ file_put_contents($oversized,"\x89PNG\r\n\x1a\n".pack('N',13).$chunk.pack('N',crc32($chunk)));
+ $metadata=@getimagesize($oversized);
+ if(!$metadata||$metadata[0]!==6000||$metadata[1]!==6000)
+  throw new RuntimeException('Oversized image test fixture is invalid');
+ try{
+  SchoolPhotos::prepareImage($oversized,'image/png');
+  throw new RuntimeException('Image decompression bomb was accepted');
+ }catch(\ServiceYar\Auth\AuthException $e){
+  if($e->codeName!=='IMAGE_TOO_LARGE')throw $e;
+ }
+ echo "PASS compressed image bomb dimensions rejected before decode\n";
+}finally{unlink($oversized);}
+
+// Reject a MIME mismatch without invoking the image decoder.
+$validJpeg=$make(640,480,'image/jpeg');
+try{
+ try{
+  SchoolPhotos::prepareImage($validJpeg,'image/png');
+  throw new RuntimeException('Forged MIME type was accepted');
+ }catch(\ServiceYar\Auth\AuthException $e){
+  if($e->codeName!=='INVALID_IMAGE')throw $e;
+ }
+ echo "PASS forged MIME rejected before decode\n";
+}finally{unlink($validJpeg);}
