@@ -954,7 +954,7 @@ try {
  if($path==='/api/v1/school-catalog/select'&&$method==='POST'){$auth->requireCsrf($s);Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\SchoolCatalog::select($s['id'],$aid,Request::json())]);}
  if($method==='PUT'&&preg_match('#^/api/v1/vehicles/(\\d+)/class-change$#',$path,$vehicleClassMatch)){
   $auth->requireCsrf($s);
-  Response::json(['ok'=>true,'data'=>\\ServiceYar\\Domain\\VehicleClassChangeWorkflow::apply((int)$s['id'],$aid,(int)$vehicleClassMatch[1],Request::json())]);
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\VehicleClassChangeWorkflow::apply((int)$s['id'],$aid,(int)$vehicleClassMatch[1],Request::json())]);
  }
  if($path==='/api/v1/vehicles/class-change-history'&&$method==='GET'){
   $vehicleId=isset($_GET['vehicleId'])?filter_var($_GET['vehicleId'],FILTER_VALIDATE_INT):null;
