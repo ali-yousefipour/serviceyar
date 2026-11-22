@@ -27,6 +27,16 @@ function insertFixture(string $table,array $data): int{global $p;$fields=array_k
 try{
  $queueIndex=$p->query("SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='messages' AND INDEX_NAME='idx_messages_sms_queue'")->fetchColumn();
  check($queueIndex==='channel,status,id','SMS queue has an indexed global FIFO claim path');
+
+ foreach(['contracts','invoices'] as $documentTable){
+  $indexQuery=$p->prepare("SELECT INDEX_NAME,GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX SEPARATOR ',') AS cols
+   FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?
+   GROUP BY INDEX_NAME HAVING cols='agency_id,party_type,party_id' OR cols LIKE 'agency_id,party_type,party_id,%'");
+  $indexQuery->execute([$documentTable]);
+  check((bool)$indexQuery->fetch(PDO::FETCH_ASSOC),
+   'Batched tenant-scoped '.$documentTable.' queries have a covering party identity index');
+ }
+
  $tag=bin2hex(random_bytes(4));
  $uid=insertFixture('users',['uuid'=>Uuid::v4(),'username'=>'test_'.$tag,'password_hash'=>password_hash('unused-test-password',PASSWORD_DEFAULT)]);
  $viewer=insertFixture('users',['uuid'=>Uuid::v4(),'username'=>'viewer_'.$tag,'password_hash'=>'unused']);
