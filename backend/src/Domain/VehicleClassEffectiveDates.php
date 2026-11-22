@@ -53,6 +53,38 @@ final class VehicleClassEffectiveDates
     }
 
     /**
+     * Project the full contracted school year by successive signed rate
+     * periods. The academic-year boundaries and 8.5/9 month rule come from
+     * ContractBilling, so the source invoice is never recalculated in place.
+     */
+    public static function annualEntitlement(string $year,bool $primary,int $currentMonthly,array $periods): int
+    {
+        $bounds=ContractBilling::defaults($year,$primary);
+        $start=$bounds['startDate'];$end=$bounds['endDate'];
+        if(!$periods){
+            $months=ContractBilling::quote($year,$start,$end,0)['months'];
+            return (int)round($currentMonthly*$months);
+        }
+        usort($periods,static fn($a,$b)=>strcmp((string)$a['effective_date'],(string)$b['effective_date'])
+            ?:((int)($a['id']??0)<=>(int)($b['id']??0)));
+        $rate=(int)$periods[0]['old_monthly_irr'];
+        $cursor=$start;$total=0.0;
+        foreach($periods as $period){
+            $effective=self::requireDate($period['effective_date'],'تاریخ دوره');
+            if($effective>$cursor){
+                $last=min($end,(new DateTimeImmutable($effective))->modify('-1 day')->format('Y-m-d'));
+                if($cursor<=$last)
+                    $total+=$rate*ContractBilling::quote($year,$cursor,$last,0)['months'];
+            }
+            $cursor=max($cursor,$effective);
+            $rate=(int)$period['new_monthly_irr'];
+            if($cursor>$end)break;
+        }
+        if($cursor<=$end)$total+=$rate*ContractBilling::quote($year,$cursor,$end,0)['months'];
+        return (int)round($total);
+    }
+
+    /**
      * Prorate a continuous ISO date period [start,end] with old/new monthly
      * rates. The caller supplies ONE complete accounting month (normally
      * a Jalali month converted to ISO). Denominator is the actual day count
