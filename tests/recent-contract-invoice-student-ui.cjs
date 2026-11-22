@@ -12,7 +12,9 @@ const migration = read('database/migrations/0164_restore_active_students_service
 const reconciliation = read('backend/src/Domain/FinancialReconciliation.php');
 // Reconciliation queries must remain bounded and tenant-scoped: O(ceil(N/300))
 // document batches rather than two queries for each student.
-assert.match(reconciliation, /array_chunk\(array_map\('intval',array_column\(\$students,'id'\)\),300\)/, 'Reconciliation must use bounded document batches');
+assert.match(reconciliation, /array_chunk\(\$students,300\)/, 'Reconciliation must process students in bounded batches');
+assert.match(reconciliation, /\$contractsByStudent=\[\];\$invoicesByStudent=\[\];/, 'Reconciliation must release document groups for every student batch');
+assert.match(reconciliation, /foreach\(\$studentBatch as \$st\)/, 'Reconciliation must process each student while its document batch is in memory');
 assert.match(reconciliation, /c\.agency_id=\? AND c\.party_type='student' AND c\.party_id IN \(\$marks\)/, 'Contract lookup must remain tenant scoped');
 assert.match(reconciliation, /i\.agency_id=\? AND i\.party_type='student' AND i\.party_id IN \(\$marks\)/, 'Invoice lookup must remain tenant scoped');
 assert.match(reconciliation, /\$contracts=\$contractsByStudent\[\$sid\]\?\?\[\]/, 'Reconciliation must return contracts per student');
