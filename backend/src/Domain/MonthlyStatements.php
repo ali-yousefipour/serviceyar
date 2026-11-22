@@ -137,6 +137,17 @@ final class MonthlyStatements
         $referenceTotals=array_fill_keys($referenceKeys,0.0);
         $referenceDrivers=[];
         $validationErrors=[];$reconciliationWarnings=[];$missingDriver=[];
+        // Read all approved driver-pay effective dates once (no per-row queries).
+        // Existing finalized statement snapshots remain immutable.
+        $rateRows=$pdo->prepare("SELECT p.id,p.subject_id,p.service_id,p.effective_date,
+                    p.old_monthly_irr,p.new_monthly_irr
+                    FROM vehicle_class_rate_periods p
+                    WHERE p.agency_id=? AND p.subject_type='driver_pay'
+                    ORDER BY p.subject_id,p.service_id,p.effective_date,p.id");
+        $rateRows->execute([$aid]);
+        $rateHistory=[];
+        foreach($rateRows->fetchAll(\PDO::FETCH_ASSOC) as $period)
+            $rateHistory[(int)$period['subject_id'].':'.(int)$period['service_id']][]=$period;
         foreach($q->fetchAll() as $row){
             if(isset($seenStudents[$row['student_id']]))throw new AuthException(409,'یک دانش‌آموز به چند سرویس فعال تخصیص داده شده است؛ پیش از ثبت صورت‌وضعیت اصلاح کنید.','DUPLICATE_STUDENT_ASSIGNMENT');
             $seenStudents[$row['student_id']]=true;
@@ -148,7 +159,9 @@ final class MonthlyStatements
                     'message'=>'راننده برای سرویس تعیین نشده است.'
                 ];
             }
-            $gross=max(0,(float)($row['driver_base_monthly']??$row['monthly_fee']));
+            $periods=$rateHistory[(int)$row['student_id'].':'.(int)$row['service_id']]??[];
+            $gross=max(0,(float)VehicleClassEffectiveDates::blendedRate($from,$to,
+                (int)round((float)($row['driver_base_monthly']??$row['monthly_fee'])),$periods));
             $calc=DriverDeductionPolicy::calculate($gross,$rates);
             // SchoolServiceStatement follows the original 1405 reference file:
             // service fee + 3% oversight + 1% coordination + 7% company
