@@ -70,6 +70,9 @@
   display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
   align-items:end;gap:10px;padding:10px 12px;
  }
+ #app form.filters .sy-directory-advanced:not([open])>.sy-directory-advanced-fields{
+  display:none;
+ }
  #app form.filters .sy-directory-advanced-fields>label{min-width:0;max-width:100%;}
  #app form.filters .sy-directory-advanced-fields>.sy-grid-sort-controls{
   min-width:0;max-width:100%;grid-column:span 2;
