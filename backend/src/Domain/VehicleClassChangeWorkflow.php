@@ -100,7 +100,7 @@ final class VehicleClassChangeWorkflow
                  VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
             $q->execute([$aid,$driverId,$vehicleId,$old['model'],$new['model'],
                 $old['tariff_vehicle_class'],(int)$class,
-                $choices['contractEffectiveDate']??'1000-01-01',
+                $choices['contractEffectiveDate'],
                 (int)$choices['updateStudentDebt'],$choices['studentDebtEffectiveDate'],
                 (int)$choices['updateDriverPay'],$choices['driverPayEffectiveDate'],
                 self::json($old),self::json($new),self::json($choices),$uid]);
