@@ -7,7 +7,7 @@ const decode=php.slice(php.indexOf('public static function prepareImage('),php.i
 assert.ok(decode.indexOf('$info=@getimagesize($file)')<decode.indexOf('@imagecreatefromstring($sourceData)'), 'Untrusted image dimensions must be validated before GD decode');
 assert.match(decode,/\$sourceWidth\*\$sourceHeight>20000000/, 'Reject decompression bombs with more than 20 million pixels');
 assert.match(decode,/\$bytes>5\*1024\*1024/, 'Bound input bytes');
-assert.match(decode,/\(\$info\['mime'\]\?\?'\)\!==\$mime/, 'Do not trust caller-provided image MIME');
+assert.ok(decode.includes("($info['mime']??'')!==$mime"), 'Do not trust caller-provided image MIME');
 assert.match(upload,/\$school=self::school\(\$uid,\$aid,\$id,true\)/, 'Image replacement must be permission-scoped');
 assert.match(upload,/private-schools\/\(\[0-9\]\+\)\/\(\[0-9\]\+\)\/\(\[a-f0-9\]\{32\}\)/, 'Only managed private photos may be removed');
 assert.match(upload,/\(int\)\$old\[1\]===\$aid&&\(int\)\$old\[2\]===\$id/, 'Old image cleanup must require matching tenant and school');
