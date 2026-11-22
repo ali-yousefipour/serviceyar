@@ -29,7 +29,7 @@ final class ServicePricing {
         $q->execute([$aid,$driverId]);$change=$q->fetch(PDO::FETCH_ASSOC);
         return $change!==false&&(int)$change['new_vehicle_class']===$actualClass
             &&(!(int)$change['update_student_debt']
-                ||(string)($change['student_debt_effective_date']??'9999-12-31')>date('Y-m-d'));
+                ||(string)($change['student_debt_effective_date']??'9999-12-31')>(new \DateTimeImmutable('now',new \DateTimeZone('Asia/Tehran')))->format('Y-m-d'));
     }
     public static function assignedVehicleClass(PDO $pdo,int $aid,int $studentId): ?int {
         $stmt=$pdo->prepare("SELECT v.tariff_vehicle_class AS actual_class,
