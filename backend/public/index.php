@@ -15,7 +15,24 @@ use ServiceYar\Integrations\BalePaymentService;
 use ServiceYar\Integrations\MapService;
 
 $method=$_SERVER['REQUEST_METHOD']??'GET';$path=parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH)?:'/';$requestId=bin2hex(random_bytes(8));header('X-Request-ID: '.$requestId);
-function agencyId(array $session): int { $raw=$_GET['agencyId']??null; $contextAgency=(int)($session['impersonation']['agencyId']??0); $id=$raw!==null?(int)$raw:($contextAgency>0?$contextAgency:AgencyService::currentId($session['id'])); if($id<1)throw new AuthException(422,'شناسه شرکت نامعتبر است.','VALIDATION_ERROR'); Authorization::requireAgencyAccess($session['id'],$id); return $id; }
+function agencyId(array $session): int {
+ // Reject malformed, array-valued or overflowing identifiers instead of silently
+ // coercing values such as "12other" into a valid tenant ID.
+ $raw=$_GET['agencyId']??null;
+ $contextAgency=(int)($session['impersonation']['agencyId']??0);
+ if($raw!==null){
+  if(!is_string($raw)||!preg_match('/^[1-9][0-9]*$/D',$raw))
+   throw new AuthException(422,'شناسه شرکت نامعتبر است.','VALIDATION_ERROR');
+  $valid=filter_var($raw,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
+  if($valid===false)throw new AuthException(422,'شناسه شرکت نامعتبر است.','VALIDATION_ERROR');
+  $id=$valid;
+ }else{
+  $id=$contextAgency>0?$contextAgency:AgencyService::currentId($session['id']);
+ }
+ if($id<1)throw new AuthException(422,'شناسه شرکت نامعتبر است.','VALIDATION_ERROR');
+ Authorization::requireAgencyAccess($session['id'],$id);
+ return $id;
+}
 try {
  if($method==='OPTIONS'){http_response_code(204);exit;}
  if($method==='POST'&&preg_match('#^/api/v1/integrations/bale/webhook/([a-zA-Z0-9_-]+)$#',$path,$m)){
