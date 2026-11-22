@@ -41,6 +41,7 @@ final class VehicleClassChangeWorkflow
         if(!in_array($class,['1','2','3'],true))
             throw new AuthException(422,'کلاس جدید خودرو باید ۱، ۲ یا ۳ باشد.','INVALID_VEHICLE_CLASS');
 
+        VehicleClassSchema::ensure();
         return OperationsService::transaction(function(PDO $pdo) use($uid,$aid,$vehicleId,$body,$class,$choices){
             self::assertSchema($pdo);
             $q=$pdo->prepare('SELECT * FROM vehicles WHERE id=? AND agency_id=? FOR UPDATE');
