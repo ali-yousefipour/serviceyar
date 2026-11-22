@@ -51,6 +51,7 @@ jobs:
           node tests/portal-responsive-debtors-contract.cjs
           node tests/portal-driver-admin-edit-contract.cjs
           node tests/api-route-guard-contract.cjs
+          node tests/tenant-identifier-contract.cjs
           node tests/payroll-reconciliation-contract.cjs
           node tests/taxi-tariff-footnotes-contract.cjs
           node tests/admin-production-schema-contract.cjs
