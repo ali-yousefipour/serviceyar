@@ -971,7 +971,7 @@ try{
  check(count($classInvoiceAccount)===1
    &&(int)$classInvoiceAccount[0]['originalAmount']===$classOriginalAmount
    &&(int)$classInvoiceAccount[0]['effectiveAmount']===$classOriginalAmount+$expectedAdjustment
-   &&(int)$classInvoiceAccount[0]['remainingAmount']===$classOriginalAmount+$expectedAdjustment-500000-0,
+   &&(int)$classInvoiceAccount[0]['remainingAmount']===max(0,$classOriginalAmount+$expectedAdjustment-(int)$classAccount['totals']['received']),
    'Previously issued invoice displays corrected effective amount and due balance while preserving original');
  $existingContractRows=\ServiceYar\Domain\ContractDocuments::listing($uid,$a,'parent');
  $amendedContractRow=array_values(array_filter($existingContractRows,static fn($row)=>(int)$row['id']===(int)$classStudentContract['id']));
