@@ -105,7 +105,7 @@ final class SchoolPhotos {
   }finally{imagedestroy($original);}
  }
  public static function upload(int $uid,int $aid,int $id,array $files): array {
-  self::school($uid,$aid,$id,true);
+  $school=self::school($uid,$aid,$id,true);
   $upload=$files['photo']??null;
   if(!is_array($upload)||($upload['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_OK)
    throw new AuthException(422,'تصویر مدرسه بارگذاری نشده یا انتقال آن ناموفق بوده است.','PHOTO_UPLOAD_ERROR');
@@ -133,6 +133,15 @@ final class SchoolPhotos {
    $update=Connection::get()->prepare('UPDATE schools SET photo_path=? WHERE id=? AND agency_id=?');
    $update->execute([$relative,$id,$aid]);
   }catch(\Throwable $e){@unlink($destination);throw $e;}
+  // A school keeps exactly one current managed photo. Repeated replacements
+  // must not accumulate orphaned private files on shared hosting.
+  $previous=(string)($school['photo_path']??'');
+  if(preg_match('~^private-schools/([0-9]+)/([0-9]+)/([a-f0-9]{32})\\.jpg$~D',$previous,$old)
+    &&(int)$old[1]===$aid&&(int)$old[2]===$id
+    &&$old[3]!==substr($name,0,32)){
+   $previousFile=$directory.'/'.$old[3].'.jpg';
+   if(is_file($previousFile))@unlink($previousFile);
+  }
   return ['schoolId'=>$id,'hasPhoto'=>true,'width'=>$compressed['width'],'height'=>$compressed['height'],'sizeBytes'=>$compressed['sizeBytes'],'mime'=>'image/jpeg'];
  }
  public static function stream(int $uid,int $aid,int $id): never {
