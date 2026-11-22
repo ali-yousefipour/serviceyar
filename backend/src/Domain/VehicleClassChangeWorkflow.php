@@ -152,6 +152,16 @@ final class VehicleClassChangeWorkflow
                       AND ((c.party_type='driver' AND c.party_id=?)
                         OR (c.party_type='student' AND c.party_id=?))
                       AND (c.end_date IS NULL OR c.end_date>=?) FOR UPDATE");
+                // Driver-only contracts must receive the appendix even if
+                // no student is currently assigned to the service.
+                $contracts->execute([$aid,$driverId,0,$choices['contractEffectiveDate']]);
+                foreach($contracts->fetchAll(PDO::FETCH_ASSOC) as $driverContract){
+                    $pdo->prepare("INSERT IGNORE INTO vehicle_class_contract_appendices
+                        (agency_id,change_id,contract_id,effective_date,old_class,new_class,original_contract_snapshot)
+                        VALUES(?,?,?,?,?,?,?)")
+                        ->execute([$aid,$changeId,$driverContract['id'],$choices['contractEffectiveDate'],
+                            $old['tariff_vehicle_class'],(int)$class,self::json($driverContract)]);
+                }
                 foreach($oldRates as $sid=>$rate){
                     $contracts->execute([$aid,$driverId,$sid,$choices['contractEffectiveDate']]);
                     foreach($contracts->fetchAll(PDO::FETCH_ASSOC) as $contract){
