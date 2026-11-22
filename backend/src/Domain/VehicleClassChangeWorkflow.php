@@ -182,6 +182,8 @@ final class VehicleClassChangeWorkflow
                         $choices['studentDebtEffectiveDate'],$old['tariff_vehicle_class'],(int)$class,
                         $rate['oldParent'],$rate['newParent'],$rate['source'],self::json($rate)]);
                     $contract->execute([$aid,$sid]);$bound=$contract->fetch(PDO::FETCH_ASSOC);
+                    if(!$bound||!$bound['start_date']||!$bound['end_date'])
+                        throw new AuthException(409,'برای تغییر بدهی دانش‌آموز، قرارداد صادرشده و بازه معتبر الزامی است. ابتدا پرونده مالی دانش‌آموز را تکمیل کنید.','CONTRACT_REQUIRED_FOR_DEBT_ADJUSTMENT');
                     if($bound&&$bound['start_date']&&$bound['end_date']){
                         $start=max($bound['start_date'],$choices['studentDebtEffectiveDate']);
                         $delta=0;
