@@ -8,6 +8,7 @@ function check(bool $condition,string $message): void {
  if(!$condition)throw new RuntimeException($message);
 }
 $choices=Rates::parseChoices([
+ 'updateContract'=>true,
  'contractEffectiveDate'=>'2026-11-22',
  'updateStudentDebt'=>false,
  'updateDriverPay'=>true,
@@ -25,7 +26,7 @@ check($previous['newDays']===0&&$previous['amountIrr']===3000000,'Future change 
 $before=Rates::splitRates('2026-11-01','2026-11-30','2026-10-30',3000000,6000000);
 check($before['oldDays']===0&&$before['amountIrr']===6000000,'Earlier change must apply new rate');
 try{
- Rates::parseChoices(['contractEffectiveDate'=>'2026-11-22','updateStudentDebt'=>true,'updateDriverPay'=>false]);
+ Rates::parseChoices(['updateContract'=>false,'updateStudentDebt'=>true,'updateDriverPay'=>false]);
  throw new RuntimeException('Missing effective date accepted');
 }catch(\ServiceYar\Auth\AuthException $e){
  check($e->status===422,'Expected validation error');
