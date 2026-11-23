@@ -62,5 +62,9 @@ assert.ok(finance.includes('SUM(st.driver_base_monthly)'),'Driver service gross 
 assert.ok(!accounts.includes('COALESCE(st.driver_base_monthly,st.monthly_fee)'),'Driver account cannot substitute parent tuition');
 assert.ok(!operations.includes("(int)round((float)$member['monthly_fee'])"),'Driver payroll cannot use student tuition as its non-historical basis');
 
+const history=read('backend/src/Domain/VehicleClassHistory.php');
+assert.ok(history.includes('application_status'),'Financial rate audit must expose activation state');
+assert.ok(history.includes("'needs_review'"),'Orphaned rates must be flagged for reconciliation');
+assert.ok(ui.includes('نیازمند تطبیق سرویس'),'Class change UI must show unreconciled historical rates');
 assert.ok(contracts.includes('vehicleClassAppendixPrint'),'Missing printable contract appendix');
 console.log('Vehicle class workflow static contract: OK');
