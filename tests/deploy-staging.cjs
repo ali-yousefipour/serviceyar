@@ -25,7 +25,7 @@ for(const asset of ['public-site.js','public-site.css','public-site-content.html
 }
 assert.match(workflow,/cancel-in-progress: true/,'Supersede stuck old release runs');
 assert.doesNotMatch(workflow,/production-preflight:|Invalid service-yar\\.ir TLS or unreachable site/,'A bad certificate must not block FTP publication');
-assert.match(workflow,/needs: validate/,'Publishing must still depend on successful code checks');
+assert.match(workflow,/needs:\s*\[validate, finance-mysql\]/,'Publishing must depend on both static validation and financial MySQL checks');
 assert.ok(source.includes('with urlopen(request, timeout=35, context=ssl._create_unverified_context())'),'Deployment verification may skip certificate trust checks');
 assert.ok(source.includes('sha256(body).hexdigest()'),'Live asset hashes must still be checked');
 const legacyHost=['challi','.ir'].join('');
