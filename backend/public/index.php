@@ -794,6 +794,7 @@ try {
  }
  if($method==='GET'&&$path==='/api/v1/operations/dashboard')Response::json(['ok'=>true,'data'=>OperationsService::summary($s['id'],$aid)]);
  if($method==='GET'&&$path==='/api/v1/operations/schools')Response::json(['ok'=>true,'data'=>OperationsService::schoolReport($s['id'],$aid)]);
+ if($method==='GET'&&$path==='/api/v1/operations/payroll/conflicts.xlsx')\ServiceYar\Reports\PayrollConflictsWorkbook::download($s['id'],$aid,$_GET);
  if($method==='GET'&&$path==='/api/v1/operations/payroll')Response::json(['ok'=>true,'data'=>OperationsService::payroll($s['id'],$aid,$_GET)]);
  if($method==='GET'&&$path==='/api/v1/operations/ledger')Response::json(['ok'=>true,'data'=>OperationsService::ledgerReport($s['id'],$aid,$_GET)]);
  if($method==='GET'&&$path==='/api/v1/operations/grouping')Response::json(['ok'=>true,'data'=>OperationsService::grouping($s['id'],$aid,$_GET)]);
