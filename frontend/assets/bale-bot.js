@@ -82,8 +82,11 @@
   };
   try{await refresh();}catch(e){message(status,e.message,true);}
  };
- const previousProfileDialog=ownProfileDialog;
- ownProfileDialog=async function(){
+ function attachProfileIntegration(){
+  if(typeof ownProfileDialog!=='function')return;
+  if(ownProfileDialog.__syBaleIntegrated)return;
+  const previousProfileDialog=ownProfileDialog;
+  const wrappedProfileDialog=async function(){
   await previousProfileDialog();
   const form=document.getElementById('syOwnProfileForm');if(!form)return;
   const block=el('section','sy-bale-profile-panel');
@@ -116,7 +119,12 @@
    catch(e){message(feedback,e.message,true);}
   };
   try{await refresh();}catch(e){showLinkError(feedback,e);}
- };
+  };
+  wrappedProfileDialog.__syBaleIntegrated=true;
+  ownProfileDialog=wrappedProfileDialog;
+ }
+ window.addEventListener('serviceyar:operations-ready',attachProfileIntegration);
+ attachProfileIntegration();
  const previousSettingsPage=settingsPage;
  settingsPage=async function(){
   await previousSettingsPage();
