@@ -111,12 +111,10 @@ $pdo->prepare("INSERT INTO vehicle_class_rate_periods
  old_monthly_irr,new_monthly_irr,fee_source,calculation_snapshot)
  VALUES(1,?,'student_debt',101,999,'2001-01-01',2,3,1400000,9999999,'taxi','{}')")
  ->execute([$staleChange]);
-try{
- \ServiceYar\Domain\VehicleClassRateApplication::applyDue(1);
- throw new RuntimeException('Stale service assignment was allowed to reprice student');
-}catch(\ServiceYar\Auth\AuthException $e){
- if($e->codeName!=='STALE_VEHICLE_RATE_ASSIGNMENT')throw $e;
-}
+if(\ServiceYar\Domain\VehicleClassRateApplication::applyDue(1)!==0)
+ throw new RuntimeException('Orphaned rate incorrectly applied to a new student assignment');
+if((int)$pdo->query("SELECT COUNT(*) FROM vehicle_class_rate_periods WHERE change_id=$staleChange AND applied_at IS NULL")->fetchColumn()!==1)
+ throw new RuntimeException('Unreconciled orphaned rate should remain pending');
 if((int)$pdo->query('SELECT monthly_fee FROM students WHERE id=101')->fetchColumn()!==1400000)
  throw new RuntimeException('Stale adjustment modified the student's tuition');
 
