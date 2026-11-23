@@ -46,6 +46,7 @@ $pdo->exec("INSERT INTO students(id,agency_id,monthly_fee,tariff_vehicle_class,d
  VALUES(101,1,1000000,1,800000)");
 $pdo->exec("CREATE TABLE IF NOT EXISTS services(
  id BIGINT UNSIGNED PRIMARY KEY,agency_id BIGINT UNSIGNED NOT NULL,
+ driver_id BIGINT UNSIGNED NULL,
  is_active TINYINT NOT NULL DEFAULT 1,status VARCHAR(20) NOT NULL DEFAULT 'active',
  monthly_fee BIGINT NOT NULL DEFAULT 0
 ) ENGINE=InnoDB");
@@ -53,7 +54,7 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS service_students(
  service_id BIGINT UNSIGNED NOT NULL,student_id BIGINT UNSIGNED NOT NULL,
  PRIMARY KEY(service_id,student_id)
 ) ENGINE=InnoDB");
-$pdo->exec("INSERT INTO services(id,agency_id,is_active,status) VALUES(102,1,1,'active')");
+$pdo->exec("INSERT INTO services(id,agency_id,driver_id,is_active,status) VALUES(102,1,11,1,'active')");
 $pdo->exec("INSERT INTO service_students(service_id,student_id) VALUES(102,101)");
 $pdo->exec("INSERT INTO vehicle_class_changes
  (agency_id,driver_id,vehicle_id,old_vehicle_model,new_vehicle_model,old_vehicle_class,new_vehicle_class,
@@ -94,6 +95,34 @@ try{
  if($e->codeName!=='DRIVER_BASE_MONTHLY_REQUIRED')throw $e;
 }
 $pdo->exec('UPDATE students SET driver_base_monthly=800000 WHERE id=101');
+
+// Same service, different driver: a dated approval for the former
+// driver must NEVER reprice the successor's students or salary.
+$pdo->exec("INSERT INTO vehicle_class_changes
+ (agency_id,driver_id,vehicle_id,old_vehicle_model,new_vehicle_model,old_vehicle_class,new_vehicle_class,
+ contract_effective_date,update_student_debt,student_debt_effective_date,update_driver_pay,driver_pay_effective_date,
+ old_vehicle_snapshot,new_vehicle_snapshot,decision_snapshot,created_by)
+ VALUES(1,11,22,'پراید','ساینا',1,2,NULL,0,NULL,1,'2001-01-01','{}','{}','{}',99)");
+$oldDriverChange=(int)$pdo->lastInsertId();
+$pdo->prepare("INSERT INTO vehicle_class_rate_periods
+ (agency_id,change_id,subject_type,subject_id,service_id,effective_date,old_class,new_class,
+ old_monthly_irr,new_monthly_irr,fee_source,calculation_snapshot)
+ VALUES(1,?,'driver_pay',101,102,'2001-01-01',1,2,800000,1600000,'taxi','{}')")
+ ->execute([$oldDriverChange]);
+$pdo->exec('UPDATE services SET driver_id=12 WHERE id=102');
+if(\ServiceYar\Domain\VehicleClassRateApplication::applyDue(1)!==0)
+ throw new RuntimeException('Former driver rate was applied to newly assigned driver');
+if((int)$pdo->query("SELECT driver_base_monthly FROM students WHERE id=101")->fetchColumn()!==800000)
+ throw new RuntimeException('Wrong driver changed student payroll basis');
+if((int)$pdo->query("SELECT COUNT(*) FROM vehicle_class_rate_periods WHERE change_id=$oldDriverChange AND applied_at IS NULL")->fetchColumn()!==1)
+ throw new RuntimeException('Former driver rate must remain pending for reconciliation');
+$pdo->exec('UPDATE services SET driver_id=11 WHERE id=102');
+if(\ServiceYar\Domain\VehicleClassRateApplication::applyDue(1)!==1)
+ throw new RuntimeException('Reinstated approved driver did not receive its due rate');
+if((int)$pdo->query("SELECT driver_base_monthly FROM students WHERE id=101")->fetchColumn()!==1600000)
+ throw new RuntimeException('Approved driver remuneration not applied');
+$pdo->exec('UPDATE students SET driver_base_monthly=800000 WHERE id=101');
+
 if(\ServiceYar\Domain\VehicleClassRateApplication::applyDue(1)!==0)
  throw new RuntimeException('Due rate was applied twice');
 $future=(int)$pdo->query("SELECT COUNT(*) FROM vehicle_class_rate_periods WHERE applied_at IS NULL")->fetchColumn();
