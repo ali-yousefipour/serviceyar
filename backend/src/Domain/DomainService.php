@@ -854,7 +854,7 @@ if($resource==='ledger'&&!in_array('company_account_id',thisColumns('ledger_entr
    $test->execute([$aid,$data['vin'],$id??0]);
    if($test->fetchColumn())throw new AuthException(409,'این VIN قبلاً برای خودروی دیگری در شرکت ثبت شده است.','DUPLICATE_VIN');
   }
-  if($resource==='vehicles'&&array_key_exists('make_year',$data)&&$data['make_year']!==''){
+  if($resource==='vehicles'&&isset($data['make_year'])&&$data['make_year']!==''){
    if(!ctype_digit((string)$data['make_year'])||(int)$data['make_year']<1300||(int)$data['make_year']>1600)
     throw new AuthException(422,'سال ساخت خودرو نامعتبر است.','INVALID_MAKE_YEAR');
   }
