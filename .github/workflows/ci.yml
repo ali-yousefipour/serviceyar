@@ -62,6 +62,7 @@ jobs:
           node tests/kavenegar-sms-contract.cjs
           php tests/kavenegar-sms.php
           node tests/bale-integration-contract.cjs
+          node tests/bale-lazy-integration-runtime.cjs
           node tests/bale-anonymous-login.cjs
           node tests/bale-regular-user-link.cjs
           node --check frontend/assets/vehicle-class-admin.js
