@@ -2,7 +2,9 @@ name: Vehicle class effective-date regression
 
 on:
   push:
-    branches: [feature/vehicle-class-effective-dates]
+    branches: [main, feature/vehicle-class-effective-dates]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
