@@ -3548,11 +3548,14 @@ async function operationPage(key,token){
   const conflicts=e.details.conflicts;
   const rows=conflicts.map((c,i)=>'<tr><td>'+number(i+1)+'</td><td>'+esc(c.studentName||('شناسه '+c.studentId))+'</td><td>'+esc(c.driverName||('شماره '+number(c.driverId||0)))+'</td><td>'+esc(currentAgency?.name||'—')+'</td><td>'+esc(c.serviceName||('سرویس '+number(c.serviceId||0)))+'</td><td>'+esc(c.vehicleName||'—')+'</td><td>'+esc(c.vehicleClass??'—')+'</td><td>'+dateText(c.effectiveDate)+'</td><td>'+esc(c.recordedBasis??'ثبت نشده')+'</td><td>'+esc(c.reason||'مبنای مالی نامعتبر')+'</td><td>'+esc(c.suggestedAction||'بررسی اطلاعات مالی')+'</td><td><a href="#students" class="button">بررسی دانش‌آموز</a></td></tr>').join('');
   const content='<div class="sy-payroll-conflict-summary" role="alert"><p>تعداد مغایرت‌های مسدودکننده: <strong>'+number(e.details.summary?.blocking??conflicts.length)+'</strong></p><p>شناسه پیگیری: <code>'+esc(e.details.requestId||'—')+'</code></p></div>'+
+   '<div class="sy-payroll-conflict-actions"><button type="button" id="payrollConflictExport">خروجی Excel مغایرت‌ها</button><button type="button" id="payrollConflictRecheck">بررسی مجدد مغایرت‌ها</button></div>'+ 
    '<label>جستجو در مغایرت‌ها<input type="search" id="payrollConflictSearch" placeholder="دانش‌آموز یا علت مغایرت"></label>'+
    '<div class="table-wrap" role="region" tabindex="0" aria-label="مغایرت‌های حقوق"><table><thead><tr><th>ردیف</th><th>دانش‌آموز</th><th>راننده</th><th>شرکت</th><th>سرویس</th><th>خودرو</th><th>کلاس</th><th>تاریخ مؤثر</th><th>مبنای ثبت‌شده</th><th>علت</th><th>اقدام پیشنهادی</th><th>عملیات</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
   dialog('مغایرت‌های مبنای محاسبه حقوق رانندگان',content);
   const search=$('payrollConflictSearch');
   if(search)search.oninput=()=>{const term=search.value.trim().toLocaleLowerCase('fa');search.closest('.modal-card')?.querySelectorAll('tbody tr').forEach(row=>{row.hidden=!row.textContent.toLocaleLowerCase('fa').includes(term);});};
+  $('payrollConflictExport')?.addEventListener('click',()=>downloadFile(scoped('/api/v1/operations/payroll/conflicts.xlsx?'+query.toString()),'مغایرت‌های-حقوق-رانندگان.xlsx'));
+  $('payrollConflictRecheck')?.addEventListener('click',()=>{closeDialog();load();});
  }
  if(token===pageToken&&current===request){status.textContent='دریافت گزارش ناموفق بود';result.removeAttribute('aria-busy');submit.disabled=false;result.innerHTML='<div class="sy-operation-error" role="alert"><strong>دریافت اطلاعات انجام نشد</strong><p>'+esc(e.message)+'</p><button type="button" id="operationRetry">تلاش مجدد</button></div>';$('operationRetry').onclick=load;}}};
  $('operationFilters').onsubmit=e=>{e.preventDefault();if(key==='payroll')payrollServiceDays={};load();};if(key==='payroll')payrollServiceDays={};if(!group||$('groupSchool').value)await load();
