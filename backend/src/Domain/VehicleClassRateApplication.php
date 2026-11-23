@@ -23,8 +23,12 @@ final class VehicleClassRateApplication
         $eligible="EXISTS(SELECT 1 FROM service_students ss
               JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=p.agency_id
               JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id
+              JOIN vehicle_class_changes ch ON ch.id=p.change_id AND ch.agency_id=p.agency_id
               WHERE ss.service_id=p.service_id AND ss.student_id=p.subject_id
-                AND st.is_active=1 AND sv.is_active=1 AND sv.status<>'cancelled')";
+                AND sv.driver_id=ch.driver_id
+                AND ((p.subject_type='student_debt' AND ch.update_student_debt=1)
+                  OR (p.subject_type='driver_pay' AND ch.update_driver_pay=1))
+                AND st.is_active=1 AND sv.is_active=1 AND sv.status='active')";
         $probe=$pdo->prepare("SELECT p.id FROM vehicle_class_rate_periods p
           WHERE p.agency_id=? AND p.applied_at IS NULL
             AND p.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
@@ -34,7 +38,7 @@ final class VehicleClassRateApplication
         return OperationsService::transaction(function(PDO $pdo)use($agencyId,$eligible){
             $count=0;$services=[];
             do {
-                $q=$pdo->prepare("SELECT p.id,p.subject_type,p.subject_id,p.service_id,
+                $q=$pdo->prepare("SELECT p.id,p.change_id,p.subject_type,p.subject_id,p.service_id,
                       p.new_class,p.new_monthly_irr
                       FROM vehicle_class_rate_periods p
                       WHERE p.agency_id=? AND p.applied_at IS NULL AND p.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
@@ -44,13 +48,15 @@ final class VehicleClassRateApplication
                 $assignment=$pdo->prepare("SELECT 1 FROM service_students ss
                     JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=?
                     JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id
+                    JOIN vehicle_class_changes ch ON ch.id=? AND ch.agency_id=sv.agency_id
                     WHERE ss.service_id=? AND ss.student_id=?
-                      AND sv.is_active=1 AND sv.status<>'cancelled'
-                      AND st.is_active=1 LIMIT 1");
+                      AND sv.driver_id=ch.driver_id
+                      AND st.is_active=1 AND sv.is_active=1 AND sv.status='active'
+                      LIMIT 1");
                 foreach($pending as $p){
                     // A future-dated adjustment must never overwrite a student
                     // who has since moved to an unrelated service or company.
-                    $assignment->execute([$agencyId,$p['service_id'],$p['subject_id']]);
+                    $assignment->execute([$agencyId,$p['change_id'],$p['service_id'],$p['subject_id']]);
                     if(!$assignment->fetchColumn())
                         continue; // A concurrent transfer is reconciled, never repriced here.
                     if($p['subject_type']==='student_debt'){
