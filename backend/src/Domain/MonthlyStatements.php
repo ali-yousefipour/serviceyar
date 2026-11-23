@@ -139,16 +139,19 @@ final class MonthlyStatements
         $validationErrors=[];$reconciliationWarnings=[];$missingDriver=[];
         // Read all approved driver-pay effective dates once (no per-row queries).
         // Existing finalized statement snapshots remain immutable.
-        $rateHistory=[];
+        $rateHistory=[];$parentRateHistory=[];
         if(VehicleClassSchema::exists($pdo)){
-        $rateRows=$pdo->prepare("SELECT p.id,p.subject_id,p.service_id,p.effective_date,
-                    p.old_monthly_irr,p.new_monthly_irr
+        $rateRows=$pdo->prepare("SELECT p.id,p.subject_type,p.subject_id,p.service_id,p.effective_date,
+                    p.old_class,p.new_class,p.old_monthly_irr,p.new_monthly_irr
                     FROM vehicle_class_rate_periods p
-                    WHERE p.agency_id=? AND p.subject_type='driver_pay'
+                    WHERE p.agency_id=? AND p.subject_type IN ('driver_pay','student_debt')
                     ORDER BY p.subject_id,p.service_id,p.effective_date,p.id");
         $rateRows->execute([$aid]);
-        foreach($rateRows->fetchAll(\PDO::FETCH_ASSOC) as $period)
-            $rateHistory[(int)$period['subject_id'].':'.(int)$period['service_id']][]=$period;
+        foreach($rateRows->fetchAll(\PDO::FETCH_ASSOC) as $period){
+            $key=(int)$period['subject_id'].':'.(int)$period['service_id'];
+            if($period['subject_type']==='driver_pay')$rateHistory[$key][]=$period;
+            else $parentRateHistory[$key][]=$period;
+        }
         }
         foreach($q->fetchAll() as $row){
             if(isset($seenStudents[$row['student_id']]))throw new AuthException(409,'یک دانش‌آموز به چند سرویس فعال تخصیص داده شده است؛ پیش از ثبت صورت‌وضعیت اصلاح کنید.','DUPLICATE_STUDENT_ASSIGNMENT');
@@ -162,6 +165,7 @@ final class MonthlyStatements
                 ];
             }
             $periods=$rateHistory[(int)$row['student_id'].':'.(int)$row['service_id']]??[];
+            $parentPeriods=$parentRateHistory[(int)$row['student_id'].':'.(int)$row['service_id']]??[];
             // Never substitute a parent's tuition for a missing payroll basis.
             // The preview may surface the defective row, but finalization is blocked.
             $invalidDriverRate=$row['driver_base_monthly']===null
@@ -194,7 +198,7 @@ final class MonthlyStatements
                 // For a mid-month class switch, blend every component of
                 // the official workbook rate using actual effective-day shares.
                 $weights=VehicleClassEffectiveDates::classWeights(
-                    $from,$to,$periods,(int)($row['tariff_vehicle_class']??0));
+                    $from,$to,$parentPeriods,(int)($row['tariff_vehicle_class']??0));
                 $reference=[];
                 foreach($weights as $historicClass=>$share){
                     $quote=SchoolServiceStatement::fromSchoolTariff(
@@ -207,11 +211,14 @@ final class MonthlyStatements
                 if(count($weights)>1)$reference['source']='school-workbook-rates-1405-effective-dated';
                 $row['historic_class_weights']=$weights;
                 $row['reference_tariff_verified']=true;
-                if($gross>0 && abs((float)$reference['parent_total']-$gross)>1.0){
+                $parentMonthly=VehicleClassEffectiveDates::blendedRate(
+                    $from,$to,(int)round((float)$row['monthly_fee']),$parentPeriods);
+                if($parentMonthly>0 && abs((float)$reference['parent_total']-$parentMonthly)>1.0){
                     $reconciliationWarnings[]=[
                         'student_id'=>(int)$row['student_id'],
                         'student_name'=>$row['student_name'],
                         'recorded_monthly_fee'=>(float)$row['monthly_fee'],
+                        'effective_parent_monthly_fee'=>(float)$parentMonthly,
                         'reference_parent_fee'=>$reference['parent_total'],
                         'message'=>'مبلغ ماهانه ذخیره‌شده با بهای خدمات محاسبه‌شده از نرخ‌نامه مرجع برابر نیست.'
                     ];
