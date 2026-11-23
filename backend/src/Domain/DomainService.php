@@ -478,7 +478,19 @@ final class DomainService {
   return "ROUND(COALESCE(students.monthly_fee,0) * ".self::studentAnnualMonthsSql().",0)";
  }
  public static function studentContractAmountSql(): string {
-  return "(SELECT c.amount FROM student_contract_invoices m JOIN contracts c ON c.id=m.contract_id AND c.agency_id=m.agency_id WHERE m.agency_id=students.agency_id AND m.student_id=students.id AND c.status='active' AND ".StudentBalance::yearSql('m.academic_year')."=".StudentBalance::yearSql('students.academic_year')." LIMIT 1)";
+  $base="(SELECT c.amount FROM student_contract_invoices m
+     JOIN contracts c ON c.id=m.contract_id AND c.agency_id=m.agency_id
+     WHERE m.agency_id=students.agency_id AND m.student_id=students.id
+      AND c.status='active'
+      AND ".StudentBalance::yearSql('m.academic_year')."=".StudentBalance::yearSql('students.academic_year')."
+     ORDER BY c.id DESC LIMIT 1)";
+  if(!VehicleClassSchema::exists())return $base;
+  $adjustments="(SELECT COALESCE(SUM(d.amount_irr),0)
+     FROM vehicle_class_debt_adjustments d
+     WHERE d.agency_id=students.agency_id AND d.student_id=students.id
+       AND ".StudentBalance::yearSql('d.academic_year')."=".StudentBalance::yearSql('students.academic_year')."
+       AND d.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE))";
+  return "(CASE WHEN $base IS NULL THEN NULL ELSE ($base + $adjustments) END)";
  }
  public static function studentInvoiceTotalSql(): string {
   return StudentBalance::invoicesSql();
