@@ -37,4 +37,10 @@ assert.match(backend,/HISTORICAL_SERVICE_DAYS_UNVERIFIED/,'Late-start services m
 assert.match(backend,/\$previousRate!==null/,'Rate period discontinuities must require review');
 assert.match(backend,/\$estimateRequested && \$history/,'Recorded work must not depend on historical estimate-rate validity');
 assert.match(operations,/activeQueryKey===queryKey/,'Identical in-flight payroll calls must deduplicate');
+assert.match(router,/\[ServiceYar\]\[payroll\]/,'Payroll conflicts must leave a traceable sanitized server log');
+assert.match(operations,/payrollConflictSort/,'Conflict UI must permit sorting');
+assert.match(operations,/payrollConflictType/,'Conflict UI must filter reason codes');
+assert.match(operations,/provisionalDrivers/,'Unaffected drivers must be previewed without final approval');
+assert.match(read('backend/src/Domain/PayrollDocuments.php'),/verifyEstimatedDraft/,'Estimated draft must be revalidated before approval');
+assert.match(read('backend/src/Domain/DomainService.php'),/DRIVER_CHANGE_APPROVAL_REQUIRED/,'Active service driver replacement must require approval workflow');
 console.log('Bale lazy integration and payroll conflict regression contracts: OK');
