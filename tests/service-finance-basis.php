@@ -25,7 +25,7 @@ same(1000000,(int)$policy['coordination_deduction'],'Coordination 1%');
 same(7000000,(int)$policy['overhead_deduction'],'Overhead 7%');
 same(7800000,(int)$policy['insurance_deduction'],'Insurance 7.8%');
 same(18800000,(int)$policy['total_deductions'],'Combined 18.8%');
-same(81200000,(int)$policy['net_earned'],'Net from parent tuition');
+same(81200000,(int)$policy['net_earned'],'Net from driver gross');
 same(8.5,Finance::monthsOfStudent(['school_type'=>'دبستان','grade'=>'اول']),'Primary duration');
 same(9.0,Finance::monthsOfStudent(['school_type'=>'متوسطه اول','grade'=>'1']),'Secondary precedence');
 same(8.5,Finance::monthsOfStudent(['school_type'=>'غیردولتی','education_levels'=>'دبستان','grade'=>'اول']),'Private primary');
