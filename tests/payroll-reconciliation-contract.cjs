@@ -12,7 +12,7 @@ assert.match(payroll,/driver_work w[\s\S]*?work_date BETWEEN :wf AND :wt/,'Earni
 assert.match(payroll,/JOIN service_students ss ON ss.service_id=s.id/,'Reference uses service assignments');
 assert.match(payroll,/JOIN students st ON st.id=ss.student_id AND st.agency_id=s.agency_id/,'Assignments are tenant-scoped');
 assert.match(payroll,/s.is_active=1 AND s.status=\\'active\\' AND st.is_active=1/,'Reference excludes inactive, draft or cancelled services and students');
-assert.match(payroll,/SUM\(st.monthly_fee\)/,'Monthly service entitlement derives from parent tuition');
+assert.match(payroll,/SUM\(st.driver_base_monthly\)/,'Monthly service entitlement derives from independent driver remuneration');
 assert.match(payroll,/ServiceFinancialBasis::prorate/,'Per-service days prorated over thirty days');
 assert.match(payroll,/\$gross=\(float\)\$r\['earned'\]/,'Payroll continues from recorded work');
 assert.match(payroll,/\$r\['assigned_monthly_net'\]/,'Monthly reference net exposed');
