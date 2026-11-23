@@ -116,7 +116,7 @@ if(\ServiceYar\Domain\VehicleClassRateApplication::applyDue(1)!==0)
 if((int)$pdo->query("SELECT driver_base_monthly FROM students WHERE id=101")->fetchColumn()!==800000)
  throw new RuntimeException('Wrong driver changed student payroll basis');
 if((int)$pdo->query("SELECT monthly_fee FROM services WHERE id=102")->fetchColumn()!==0)
- throw new RuntimeException('A successor driver inherited an old driver's service recalculation');
+ throw new RuntimeException('A replacement driver inherited an earlier driver service recalculation');
 if((int)$pdo->query("SELECT COUNT(*) FROM vehicle_class_rate_periods WHERE change_id=$oldDriverChange AND applied_at IS NULL")->fetchColumn()!==1)
  throw new RuntimeException('Former driver rate must remain pending for reconciliation');
 $pdo->exec('UPDATE services SET driver_id=11 WHERE id=102');
