@@ -302,10 +302,21 @@ final class OperationsService
                 'title'=>$member['title'],'code'=>$member['code'],
                 'fee_source'=>$member['fee_source'],'student_count'=>0,'monthly_gross'=>0];
             $history=$rateHistory[$studentId.':'.$serviceId]??[];
-            if($estimateRequested && ($member['driver_base_monthly']===null
-                || $member['driver_base_monthly']===''
-                || !is_numeric($member['driver_base_monthly'])
-                || (float)$member['driver_base_monthly']<0)){
+            $currentBasisValid=$member['driver_base_monthly']!==null
+                && $member['driver_base_monthly']!==''
+                && is_numeric($member['driver_base_monthly'])
+                && (float)$member['driver_base_monthly']>=0;
+            // An approved, signed rate history is a valid independent source
+            // even when the legacy current-rate field was never backfilled.
+            $historyBasisValid=count($history)>0;
+            foreach($history as $period){
+                if(!is_numeric($period['old_monthly_irr'])||!is_numeric($period['new_monthly_irr'])
+                    ||(float)$period['old_monthly_irr']<0||(float)$period['new_monthly_irr']<0){
+                    $historyBasisValid=false;
+                    break;
+                }
+            }
+            if($estimateRequested && (!$historyBasisValid && !$currentBasisValid)){
                 $conflicts[]=[
                     'studentId'=>$studentId,
                     'studentName'=>trim((string)$member['student_first_name'].' '.(string)$member['student_last_name']),
@@ -324,7 +335,7 @@ final class OperationsService
                 ];
                 continue;
             }
-            $base=$member['driver_base_monthly']===null?0:(int)round((float)$member['driver_base_monthly']);
+            $base=$currentBasisValid?(int)round((float)$member['driver_base_monthly']):0;
             $monthly=$history
                 ?VehicleClassEffectiveDates::blendedRate($from,$to,$base,$history)
                 :$base;
