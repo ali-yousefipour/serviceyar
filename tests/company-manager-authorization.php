@@ -60,7 +60,7 @@ try {
  $secondManager=$makeUser('manager2_'.$tag);
  $p->prepare('INSERT INTO user_roles(user_id,role_id) VALUES(?,?)')->execute([$secondManager,$roleId]);
  $p->prepare('INSERT INTO agency_users(agency_id,user_id) VALUES(?,?)')->execute([$agency,$secondManager]);
- $photoAccess=new ReflectionMethod(\\ServiceYar\\Users\\UserPhotos::class,'access');
+ $photoAccess=new ReflectionMethod(\ServiceYar\Users\UserPhotos::class,'access');
  $reject(fn()=>$photoAccess->invoke(null,$manager,$agency,$secondManager,true),'PROTECTED_USER');
  // Read-only access remains explicitly permitted within the same agency.
  $photoAccess->invoke(null,$manager,$agency,$secondManager,false);
