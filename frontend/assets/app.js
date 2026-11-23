@@ -51,7 +51,7 @@ function ensureOperationsModule(){
   const version=appScript?new URL(appScript.src,location.href).searchParams.get('v'):null;
   script.src='/assets/operations.js'+(version?'?v='+encodeURIComponent(version):'');
   script.async=true;
-  script.onload=()=>{loading?.finish();window.dispatchEvent(new Event('serviceyar:operations-ready'));resolve();};
+  script.onload=()=>{loading?.finish();window.__serviceYarOperationsReady=true;window.dispatchEvent(new Event('serviceyar:operations-ready'));resolve();};
   script.onerror=()=>{
    loading?.finish();script.remove();operationsModulePromise=null;
    reject(new Error('بارگذاری بخش عملیاتی سامانه ناموفق بود. اتصال شبکه را بررسی و دوباره تلاش کنید.'));
