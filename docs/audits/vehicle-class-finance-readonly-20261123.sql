@@ -171,7 +171,8 @@ HAVING COUNT(DISTINCT contract_id)>1 OR COUNT(DISTINCT invoice_id)>1;
 SELECT p.agency_id,p.id AS period_id,p.change_id,
  p.subject_type,p.subject_id AS student_id,p.service_id,p.effective_date,p.applied_at
 FROM vehicle_class_rate_periods p
-WHERE p.effective_date<=DATE(UTC_TIMESTAMP()+INTERVAL 210 MINUTE)
+WHERE p.applied_at IS NULL
+ AND p.effective_date<=DATE(UTC_TIMESTAMP()+INTERVAL 210 MINUTE)
  AND NOT EXISTS (
   SELECT 1 FROM service_students ss
   JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=p.agency_id
