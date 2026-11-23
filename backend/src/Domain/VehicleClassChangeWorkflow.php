@@ -178,7 +178,7 @@ final class VehicleClassChangeWorkflow
                     JOIN student_contract_invoices m ON m.contract_id=c.id AND m.agency_id=c.agency_id
                     JOIN invoices i ON i.id=m.invoice_id AND i.agency_id=m.agency_id
                     WHERE c.agency_id=? AND c.party_type='student' AND c.party_id=?
-                      AND c.status='active' AND i.status<>'cancelled'
+                      AND c.status<>'cancelled' AND i.status<>'cancelled'
                       AND ".StudentBalance::yearSql('m.academic_year')."=?
                       AND c.start_date<=? AND (c.end_date IS NULL OR c.end_date>=?)
                     ORDER BY c.id FOR UPDATE");
