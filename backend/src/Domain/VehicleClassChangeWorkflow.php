@@ -15,6 +15,25 @@ use ServiceYar\Database\Connection;
  */
 final class VehicleClassChangeWorkflow
 {
+    public static function capacityWarnings(PDO $pdo,int $aid,int $driverId,int $seats): array {
+        if($seats<1||$seats>1000)
+            throw new AuthException(422,'ظرفیت خودرو نامعتبر است.','VALIDATION_ERROR');
+        // Count real active passengers, not stale/inactive assignment rows.
+        $q=$pdo->prepare("SELECT sv.id,COUNT(DISTINCT st.id) assigned FROM services sv
+            LEFT JOIN service_students ss ON ss.service_id=sv.id
+            LEFT JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id AND st.is_active=1
+            WHERE sv.agency_id=? AND sv.driver_id=? AND sv.is_active=1 AND sv.status<>'cancelled'
+            GROUP BY sv.id ORDER BY sv.id");
+        $q->execute([$aid,$driverId]);$warnings=[];
+        foreach($q->fetchAll(PDO::FETCH_ASSOC) as $service){
+            $count=(int)$service['assigned'];$id=(int)$service['id'];
+            if($count>$seats)
+                throw new AuthException(409,"سرویس $id دارای $count دانش‌آموز فعال است؛ ظرفیت خودرو $seats نفر است.",'VEHICLE_CAPACITY_TOO_SMALL',
+                    ['serviceId'=>$id,'studentCount'=>$count,'vehicleCapacity'=>$seats]);
+            if($count<$seats)$warnings[]="هشدار: سرویس $id دارای $count دانش‌آموز فعال و ظرفیت خودرو $seats نفر است؛ ظرفیت خالی مانع ثبت نیست.";
+        }
+        return $warnings;
+    }
     private static function json(array $value): string {
         return json_encode($value,JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE|JSON_THROW_ON_ERROR);
     }
@@ -80,14 +99,7 @@ final class VehicleClassChangeWorkflow
             // The new registered vehicle and its existing service assignments
             // must remain capacity-compatible before any re-linking.
             $seats=(int)($body['capacity']??$target['capacity']);
-            $occupancy=$pdo->prepare('SELECT sv.id,COUNT(ss.student_id) assigned FROM services sv
-                LEFT JOIN service_students ss ON ss.service_id=sv.id
-                WHERE sv.agency_id=? AND sv.driver_id=? AND sv.is_active=1
-                GROUP BY sv.id');
-            $occupancy->execute([$aid,$driverId]);
-            foreach($occupancy->fetchAll(PDO::FETCH_ASSOC) as $serviceCapacity)
-                if((int)$serviceCapacity['assigned']>$seats)
-                    throw new AuthException(409,'ظرفیت خودروی جدید از تعداد دانش‌آموزان سرویس فعال کمتر است.','VEHICLE_CAPACITY_TOO_SMALL');
+            $capacityWarnings=self::capacityWarnings($pdo,$aid,$driverId,$seats);
 
             $services=$pdo->prepare("SELECT sv.id,sv.fee_source FROM services sv WHERE sv.agency_id=? AND sv.driver_id=? AND sv.is_active=1 AND sv.status<>'cancelled' ORDER BY sv.id FOR UPDATE");
             $services->execute([$aid,$driverId]);$linked=$services->fetchAll(PDO::FETCH_ASSOC);
@@ -276,7 +288,8 @@ final class VehicleClassChangeWorkflow
             // Future periods are idempotently activated on a later authorized API request.
             VehicleClassRateApplication::applyDue($aid);
             return ['changeId'=>$changeId,'vehicleId'=>$vehicleId,'driverId'=>$driverId,
-                'affectedStudents'=>count($oldRates),'affectedServices'=>count($linked),'choices'=>$choices];
+                'affectedStudents'=>count($oldRates),'affectedServices'=>count($linked),'choices'=>$choices,
+                'capacityWarnings'=>$capacityWarnings];
         });
     }
 }

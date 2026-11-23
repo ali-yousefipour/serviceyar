@@ -1698,6 +1698,8 @@ function vehicleClassChangeWizard(id,row,body,onSaved){
     for(const x of stages.slice(0,3))if(!values[x.choice])payload[x.date]=null;
     const data=await write('/api/v1/vehicles/'+encodeURIComponent(id)+'/class-change',payload,'PUT');
     lookupCache={};closeDialog();notify('تغییر کلاس خودرو ثبت شد. شناسه: '+number(data.changeId));
+    if(data.capacityWarnings?.length)dialog('تغییر کلاس ثبت شد؛ هشدار ظرفیت',
+     '<p>شناسه تغییر: '+esc(number(data.changeId))+'</p><ul>'+data.capacityWarnings.map(message=>'<li>'+esc(persianDigits(message))+'</li>').join('')+'</ul>');
     if(onSaved)await onSaved();else await loadResource('vehicles');
    }catch(err){
     error.textContent=err?.message||'عملیات ذخیره انجام نشد. دوباره تلاش کنید.';
