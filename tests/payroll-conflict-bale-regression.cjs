@@ -24,4 +24,10 @@ assert.match(backend,/'period'\s*=>/, 'Payroll conflicts include request period'
 assert.match(router,/array_merge\(\['code'=>\$e->codeName/, 'HTTP contract exposes structured exception context');
 assert.match(auth,/public readonly array \$context/, 'Domain exception permits scoped context');
 assert.match(operations,/e\.details\?\.conflicts/, 'UI reads financial conflict detail');
+const workbook=read('backend/src/Reports/PayrollConflictsWorkbook.php');
+assert.match(workbook,/OperationsService::payroll\(\$uid,\$agencyId,\$filter\)/,'XLSX must revalidate using authorized agency rather than trusting client rows');
+assert.match(workbook,/SimpleXLSXGen::fromArray/,'XLSX must use spreadsheet generator');
+assert.match(workbook,/Cache-Control: private, no-store/,'XLSX with personal data must not be cached');
+assert.match(read('backend/public/index.php'),/payroll\/conflicts\.xlsx/,'Scoped workbook route must exist');
+assert.match(operations,/payrollConflictExport/,'Payroll conflict dialog must link Excel export');
 console.log('Bale lazy integration and payroll conflict regression contracts: OK');
