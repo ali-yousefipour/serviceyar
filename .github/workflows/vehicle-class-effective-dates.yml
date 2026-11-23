@@ -45,6 +45,7 @@ jobs:
           node tests/new-service-wizard.cjs
           node tests/wizard-lookup.cjs
           php -l tests/vehicle-class-effective-dates.php
+          php -l tests/vehicle-class-db-integration.php
       - name: Check date and proration contracts
         run: php tests/vehicle-class-effective-dates.php
 
