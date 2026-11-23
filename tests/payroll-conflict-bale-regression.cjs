@@ -30,4 +30,11 @@ assert.match(workbook,/SimpleXLSXGen::fromArray/,'XLSX must use spreadsheet gene
 assert.match(workbook,/Cache-Control: private, no-store/,'XLSX with personal data must not be cached');
 assert.match(read('backend/public/index.php'),/payroll\/conflicts\.xlsx/,'Scoped workbook route must exist');
 assert.match(operations,/payrollConflictExport/,'Payroll conflict dialog must link Excel export');
+assert.match(backend,/rate_driver_id/,'Historical driver rates must be attributed to a driver');
+assert.match(backend,/ch\.update_driver_pay=1/,'Driver rate history requires explicit financial approval');
+assert.match(backend,/HISTORICAL_DRIVER_ASSIGNMENT_UNVERIFIED/,'Driver changes within the selected statement horizon block current-assignment estimates');
+assert.match(backend,/HISTORICAL_SERVICE_DAYS_UNVERIFIED/,'Late-start services must not be given a full month unconditionally');
+assert.match(backend,/\$previousRate!==null/,'Rate period discontinuities must require review');
+assert.match(backend,/\$estimateRequested && \$history/,'Recorded work must not depend on historical estimate-rate validity');
+assert.match(operations,/activeQueryKey===queryKey/,'Identical in-flight payroll calls must deduplicate');
 console.log('Bale lazy integration and payroll conflict regression contracts: OK');
