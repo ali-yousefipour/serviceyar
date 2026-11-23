@@ -283,9 +283,13 @@ final class OperationsService
                 $rateHistory[(int)$period['subject_id'].':'.(int)$period['service_id']][]=$period;
         }
         $details=$p->prepare("SELECT sv.id AS service_id,sv.driver_id,sv.title,sv.code,sv.fee_source,
-            st.id AS student_id,st.first_name AS student_first_name,st.last_name AS student_last_name,st.monthly_fee,st.driver_base_monthly
+            st.id AS student_id,st.first_name AS student_first_name,st.last_name AS student_last_name,st.monthly_fee,st.driver_base_monthly,
+            dr.first_name AS driver_first_name,dr.last_name AS driver_last_name,
+            vh.model AS vehicle_model,vh.plate AS vehicle_plate,vh.tariff_vehicle_class AS vehicle_class
             FROM services sv JOIN service_students ss ON ss.service_id=sv.id
             JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id AND st.is_active=1
+            LEFT JOIN drivers dr ON dr.id=sv.driver_id AND dr.agency_id=sv.agency_id
+            LEFT JOIN vehicles vh ON vh.id=dr.vehicle_id AND vh.agency_id=sv.agency_id
             WHERE sv.agency_id=? AND sv.is_active=1 AND sv.status='active'
             ORDER BY sv.id,st.id");
         $details->execute([$aid]);$servicesMap=[];$conflicts=[];
@@ -306,7 +310,11 @@ final class OperationsService
                     'studentId'=>$studentId,
                     'studentName'=>trim((string)$member['student_first_name'].' '.(string)$member['student_last_name']),
                     'driverId'=>(int)$member['driver_id'],
+                    'driverName'=>trim((string)$member['driver_first_name'].' '.(string)$member['driver_last_name']),
                     'serviceId'=>$serviceId,
+                    'serviceName'=>(string)$member['title'],
+                    'vehicleName'=>trim((string)$member['vehicle_model'].' '.(string)$member['vehicle_plate']),
+                    'vehicleClass'=>$member['vehicle_class']===null?null:(int)$member['vehicle_class'],
                     'reasonCode'=>'DRIVER_BASE_MONTHLY_REQUIRED',
                     'reason'=>'مبنای ماهانه حقوق راننده ثبت نشده یا نامعتبر است.',
                     'severity'=>'blocking',
