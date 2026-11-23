@@ -147,6 +147,46 @@ if((int)$pdo->query("SELECT COUNT(*) FROM vehicle_class_rate_periods WHERE chang
 if((int)$pdo->query('SELECT monthly_fee FROM students WHERE id=101')->fetchColumn()!==1400000)
  throw new RuntimeException("Stale adjustment modified the student's tuition");
 
+// Two successive overdue approved rates must be applied in the same
+// transaction/request, using the actual preceding amount as their base.
+// A manual change of the rate after approval must remain untouched until
+// it is explicitly reconciled with the approved financial record.
+$pdo->exec("INSERT INTO students(id,agency_id,monthly_fee,tariff_vehicle_class,driver_base_monthly)
+ VALUES(201,1,1000000,1,700000)");
+$pdo->exec("INSERT INTO services(id,agency_id,driver_id,is_active,status)
+ VALUES(202,1,11,1,'active')");
+$pdo->exec('INSERT INTO service_students(service_id,student_id) VALUES(202,201)');
+$chainSql="INSERT INTO vehicle_class_changes
+ (agency_id,driver_id,vehicle_id,old_vehicle_model,new_vehicle_model,old_vehicle_class,new_vehicle_class,
+ contract_effective_date,update_student_debt,student_debt_effective_date,update_driver_pay,driver_pay_effective_date,
+ old_vehicle_snapshot,new_vehicle_snapshot,decision_snapshot,created_by)
+ VALUES(1,11,22,'پراید','ساینا',1,2,NULL,1,'2000-01-01',0,NULL,'{}','{}','{}',99)";
+$chainRateSql="INSERT INTO vehicle_class_rate_periods
+ (agency_id,change_id,subject_type,subject_id,service_id,effective_date,old_class,new_class,
+ old_monthly_irr,new_monthly_irr,fee_source,calculation_snapshot)
+ VALUES(1,?,'student_debt',201,202,?,1,2,?,?,'taxi','{}')";
+$chainRate=$pdo->prepare($chainRateSql);
+foreach([['2000-01-01',1000000,1400000],['2000-02-01',1400000,1800000]] as [$day,$oldBase,$newBase]){
+ $pdo->exec($chainSql);$changeId=(int)$pdo->lastInsertId();
+ $chainRate->execute([$changeId,$day,$oldBase,$newBase]);
+}
+if(\ServiceYar\Domain\VehicleClassRateApplication::applyDue(1)!==2)
+ throw new RuntimeException('Consecutive approved rates were not applied in a single request');
+if((int)$pdo->query('SELECT monthly_fee FROM students WHERE id=201')->fetchColumn()!==1800000)
+ throw new RuntimeException('Consecutive approved tuition rate did not reach the final amount');
+$pdo->exec($chainSql);$manualChange=(int)$pdo->lastInsertId();
+$chainRate->execute([$manualChange,'2000-03-01',1800000,2000000]);
+$pdo->exec('UPDATE students SET monthly_fee=1700000 WHERE id=201');
+if(\ServiceYar\Domain\VehicleClassRateApplication::applyDue(1)!==0)
+ throw new RuntimeException('Manually overridden tuition was silently replaced by a later scheduled rate');
+if((int)$pdo->query("SELECT COUNT(*) FROM vehicle_class_rate_periods WHERE change_id=$manualChange AND applied_at IS NULL")->fetchColumn()!==1)
+ throw new RuntimeException('Unreconciled scheduled tuition rate was not preserved for review');
+$pdo->exec('UPDATE students SET monthly_fee=1800000 WHERE id=201');
+if(\ServiceYar\Domain\VehicleClassRateApplication::applyDue(1)!==1)
+ throw new RuntimeException('A reconciled scheduled rate was not applied');
+if((int)$pdo->query('SELECT monthly_fee FROM students WHERE id=201')->fetchColumn()!==2000000)
+ throw new RuntimeException('Reconciled scheduled tuition amount did not take effect');
+
 // Accounting invariant with an issued invoice, prior receipts, signed and
 // future-dated adjustments. Historical invoice and cash must not be rewritten.
 $pdo->exec("CREATE TABLE invoices(id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
