@@ -1,6 +1,8 @@
 /* ServiceYar Bale bot: admin configuration, user linking, login and scoped messaging. */
 'use strict';
 (function(){
+ if(window.__serviceYarBaleInitialized)return;
+ window.__serviceYarBaleInitialized=true;
  const el=(tag,cls,text)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(text!==undefined)node.textContent=text;return node;};
  const message=(node,text,invalid=false)=>{node.textContent=text;node.classList.toggle('error',invalid);};
  const normalizeUsername=value=>String(value||'').trim().replace(/[۰-۹]/g,ch=>String(ch.charCodeAt(0)-1776)).replace(/[٠-٩]/g,ch=>String(ch.charCodeAt(0)-1632));
@@ -41,8 +43,10 @@
    finally{button.disabled=false;}
   };
  }
- const previousCompaniesPage=companiesPage;
- companiesPage=async function(){
+ function attachCompaniesIntegration(){
+  if(typeof companiesPage!=='function'||companiesPage.__syBaleIntegrated)return;
+  const previousCompaniesPage=companiesPage;
+  const wrappedCompaniesPage=async function(){
   await previousCompaniesPage();
   if(!session?.roles?.includes('super_admin'))return;
   const target=document.getElementById('syAdminIntegrations');
@@ -81,7 +85,10 @@
    finally{button.disabled=false;}
   };
   try{await refresh();}catch(e){message(status,e.message,true);}
- };
+  };
+  wrappedCompaniesPage.__syBaleIntegrated=true;
+  companiesPage=wrappedCompaniesPage;
+ }
  function attachProfileIntegration(){
   if(typeof ownProfileDialog!=='function')return;
   if(ownProfileDialog.__syBaleIntegrated)return;
@@ -123,10 +130,10 @@
   wrappedProfileDialog.__syBaleIntegrated=true;
   ownProfileDialog=wrappedProfileDialog;
  }
- window.addEventListener('serviceyar:operations-ready',attachProfileIntegration);
- attachProfileIntegration();
- const previousSettingsPage=settingsPage;
- settingsPage=async function(){
+ function attachSettingsIntegration(){
+  if(typeof settingsPage!=='function'||settingsPage.__syBaleIntegrated)return;
+  const previousSettingsPage=settingsPage;
+  const wrappedSettingsPage=async function(){
   await previousSettingsPage();
   if(!session||!can('users','manage')||!document.getElementById('companyUserRows'))return;
   const usersPanel=document.getElementById('companyUserRows')?.closest('section');
@@ -151,6 +158,18 @@
    }catch(e){message(feedback,e.message,true);}
    finally{button.disabled=false;}
   };
- };
+  };
+  wrappedSettingsPage.__syBaleIntegrated=true;
+  settingsPage=wrappedSettingsPage;
+ }
+ function attachOperationsIntegrations(){
+  attachCompaniesIntegration();
+  attachProfileIntegration();
+  attachSettingsIntegration();
+ }
+ window.addEventListener('serviceyar:operations-ready',attachOperationsIntegrations);
+ // The operational functions are overwritten by the lazy-loaded bundle.
+ // Attach after it is ready, but also handle an already loaded bundle.
+ if(window.__serviceYarOperationsReady)attachOperationsIntegrations();
  // Unified three-method login interface is initialized by login-methods.js.
 })();
