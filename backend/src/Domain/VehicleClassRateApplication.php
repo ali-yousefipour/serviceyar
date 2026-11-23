@@ -4,6 +4,7 @@ namespace ServiceYar\Domain;
 
 use PDO;
 use ServiceYar\Database\Connection;
+use ServiceYar\Auth\AuthException;
 
 /**
  * Apply approved tuition/payroll rates only when their effective date arrives.
@@ -46,12 +47,16 @@ final class VehicleClassRateApplication
                 }
             }while(count($pending)===500);
             foreach(array_keys($services) as $serviceId){
-                $q=$pdo->prepare("SELECT COALESCE(SUM(COALESCE(st.driver_base_monthly,st.monthly_fee)),0)
+                $q=$pdo->prepare("SELECT COALESCE(SUM(st.driver_base_monthly),0) AS gross,
+                     SUM(CASE WHEN st.driver_base_monthly IS NULL OR st.driver_base_monthly<0 THEN 1 ELSE 0 END) AS invalid_driver_rates
                      FROM service_students ss
                      JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=?
                      JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id AND st.is_active=1
                      WHERE ss.service_id=?");
-                $q->execute([$agencyId,$serviceId]);$gross=(float)$q->fetchColumn();
+                $q->execute([$agencyId,$serviceId]);$result=$q->fetch(PDO::FETCH_ASSOC);
+                if((int)($result['invalid_driver_rates']??0)>0)
+                    throw new AuthException(409,'مبنای حقوق برخی دانش‌آموزان ثبت نشده است؛ بدون اصلاح داده‌های پایه، مبلغ سرویس به‌روزرسانی نمی‌شود.','DRIVER_BASE_MONTHLY_REQUIRED');
+                $gross=(float)($result['gross']??0);
                 $net=OperationsService::driverDeductions($gross,$agencyId)['net_earned'];
                 $pdo->prepare('UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?')
                     ->execute([$net,$serviceId,$agencyId]);
