@@ -56,6 +56,19 @@ try{
     $row=array_values(array_filter($good['items'],static fn($r)=>(int)$r['id']===$driver))[0]??null;
     requireInvariant($row!==null&&(int)$row['gross_earned']>=1000000,'Valid driver remuneration not calculated');
 
+    $p->prepare("INSERT INTO drivers(uuid,agency_id,first_name,last_name,status,is_active)
+        VALUES(?,?,?,?,'active',1)")
+      ->execute([Uuid::v4(),$agency,'راننده','جایگزین آزمایشی']);
+    $alternate=(int)$p->lastInsertId();
+    try{
+        \ServiceYar\Domain\DomainService::save($user,$agency,'services',
+            ['driverId'=>$alternate],(int)$service['id']);
+        throw new RuntimeException('Direct service driver edit bypassed review workflow');
+    }catch(AuthException $e){
+        requireInvariant($e->codeName==='DRIVER_CHANGE_APPROVAL_REQUIRED',
+            'Direct driver edit did not require historical approval');
+    }
+
     $draft=\ServiceYar\Domain\PayrollDocuments::create($user,$agency,[
         'from'=>$from,'to'=>$to,'calculationMode'=>'assignment_estimate',
         'confirmEstimate'=>true,'lines'=>[['driverId'=>$driver,'amount'=>800000]]
