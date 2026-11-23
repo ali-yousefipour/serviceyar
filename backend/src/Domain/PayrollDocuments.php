@@ -126,10 +126,91 @@ final class PayrollDocuments
         });
     }
 
+    /**
+     * An EST draft is non-final. Before approval, verify that every service,
+     * driver, rate, day count, deduction and prior payment still matches its
+     * immutable draft snapshot. A changed basis requires a new draft.
+     */
+    private static function verifyEstimatedDraft(PDO $p,int $uid,int $aid,int $id,string $from,string $to): void
+    {
+        $snap=$p->prepare("SELECT s.driver_id,s.service_id,s.monthly_gross,s.service_days,s.earned_gross
+            FROM payroll_service_day_snapshots s
+            JOIN payroll_documents d ON d.id=s.document_id AND d.agency_id=?
+            WHERE s.document_id=? ORDER BY s.driver_id,s.service_id");
+        $snap->execute([$aid,$id]);
+        $snapshots=$snap->fetchAll(PDO::FETCH_ASSOC);
+        if(!$snapshots)
+            throw new AuthException(409,'سند برآوردی فاقد ریز محاسبات قابل تأیید است.','PAYROLL_ESTIMATE_SNAPSHOT_MISSING');
+        $days=[];
+        $storedServices=[];
+        foreach($snapshots as $item){
+            $service=(int)$item['service_id'];
+            $driver=(int)$item['driver_id'];
+            if(isset($days[$service])&&(int)$days[$service] !== (int)$item['service_days'])
+                throw new AuthException(409,'روزهای سرویس در سند برآوردی ناسازگار است.','PAYROLL_ESTIMATE_STALE');
+            $days[$service]=(int)$item['service_days'];
+            $storedServices[$driver.':'.$service]=$item;
+        }
+        $current=OperationsService::payroll($uid,$aid,[
+            'from'=>$from,'to'=>$to,'calculationMode'=>'assignment_estimate','serviceDays'=>$days
+        ]);
+        $currentDrivers=[];
+        foreach($current['items'] as $driver)$currentDrivers[(int)$driver['id']]=$driver;
+        $lines=$p->prepare("SELECT l.driver_id,l.earned,l.paid,l.supervision_deduction,
+            l.coordination_deduction,l.overhead_deduction,l.insurance_deduction,l.total_deductions
+            FROM payroll_document_lines l JOIN payroll_documents d ON d.id=l.document_id
+            WHERE d.agency_id=? AND d.id=?");
+        $lines->execute([$aid,$id]);
+        $checked=[];
+        foreach($lines->fetchAll(PDO::FETCH_ASSOC) as $line){
+            $driverId=(int)$line['driver_id'];
+            $calculated=$currentDrivers[$driverId]??null;
+            if($calculated===null)
+                throw new AuthException(409,'راننده سند برآوردی دیگر در محاسبات معتبر نیست.','PAYROLL_ESTIMATE_STALE');
+            foreach(['earned','paid','supervision_deduction','coordination_deduction',
+                     'overhead_deduction','insurance_deduction','total_deductions'] as $field){
+                if(abs((float)$line[$field]-(float)$calculated[$field])>0.01)
+                    throw new AuthException(409,'مبنای حقوق یا کسورات سند پس از پیش‌نویس تغییر کرده است.','PAYROLL_ESTIMATE_STALE');
+            }
+            $currentServices=[];
+            foreach($calculated['service_details']??[] as $service){
+                $serviceKey=$driverId.':'.(int)$service['serviceId'];
+                $currentServices[$serviceKey]=true;
+                $snapshot=$storedServices[$serviceKey]??null;
+                if($snapshot===null)
+                    throw new AuthException(409,'سرویس جدید یا تخصیص تغییریافته در برآورد مشاهده شد.','PAYROLL_ESTIMATE_STALE');
+                foreach(['monthly_gross'=>'monthlyGross','service_days'=>'days','earned_gross'=>'earnedGross'] as $stored=>$now){
+                    if(abs((float)$snapshot[$stored]-(float)$service[$now])>0.01)
+                        throw new AuthException(409,'نرخ یا روزهای خدمت با پیش‌نویس تأییدنشده مغایرت دارد.','PAYROLL_ESTIMATE_STALE');
+                }
+            }
+            $checked+=$currentServices;
+        }
+        if(count($checked)!==count($storedServices))
+            throw new AuthException(409,'تخصیص سرویس در سند برآوردی تغییر کرده است.','PAYROLL_ESTIMATE_STALE');
+    }
+
     public static function approve(int $uid,int $aid,int $id,array $body=[]): array
     {
         Authorization::requirePermission($uid,'finance.manage');Authorization::requireAgencyAccess($uid,$aid);
-        return OperationsService::transaction(function(PDO $p)use($uid,$aid,$id,$body){$q=$p->prepare('SELECT status,document_no FROM payroll_documents WHERE id=:id AND agency_id=:a FOR UPDATE');$q->execute(['id'=>$id,'a'=>$aid]);$doc=$q->fetch(PDO::FETCH_ASSOC);if(!$doc)throw new AuthException(404,'سند حقوق پیدا نشد.','NOT_FOUND');$status=$doc['status'];if(str_starts_with((string)$doc['document_no'],'EST-')&&($body['confirmEstimate']??false)!==true)throw new AuthException(422,'تأیید حقوق برآوردی نیازمند تأیید بررسی دستی است.','ESTIMATE_APPROVAL_CONFIRMATION_REQUIRED');if($status!=='draft')throw new AuthException(409,'سند قبلاً تأیید شده است.','ALREADY_REVIEWED');$p->prepare("UPDATE payroll_documents SET status='approved' WHERE id=:id AND agency_id=:a")->execute(['id'=>$id,'a'=>$aid]);OperationsService::audit($uid,$aid,'approve_payroll','payroll_documents',$id);return ['status'=>'approved'];});
+        return OperationsService::transaction(function(PDO $p)use($uid,$aid,$id,$body){
+            $agency=$p->prepare('SELECT id FROM agencies WHERE id=? FOR UPDATE');
+            $agency->execute([$aid]);
+            $q=$p->prepare('SELECT status,document_no,date_from,date_to FROM payroll_documents WHERE id=:id AND agency_id=:a FOR UPDATE');
+            $q->execute(['id'=>$id,'a'=>$aid]);
+            $doc=$q->fetch(PDO::FETCH_ASSOC);
+            if(!$doc)throw new AuthException(404,'سند حقوق پیدا نشد.','NOT_FOUND');
+            if($doc['status']!=='draft')throw new AuthException(409,'سند قبلاً تأیید شده است.','ALREADY_REVIEWED');
+            if(str_starts_with((string)$doc['document_no'],'EST-')){
+                if(($body['confirmEstimate']??false)!==true)
+                    throw new AuthException(422,'تأیید حقوق برآوردی نیازمند تأیید بررسی دستی است.','ESTIMATE_APPROVAL_CONFIRMATION_REQUIRED');
+                self::verifyEstimatedDraft($p,$uid,$aid,$id,(string)$doc['date_from'],(string)$doc['date_to']);
+            }
+            $p->prepare("UPDATE payroll_documents SET status='approved' WHERE id=:id AND agency_id=:a")
+              ->execute(['id'=>$id,'a'=>$aid]);
+            OperationsService::audit($uid,$aid,'approve_payroll','payroll_documents',$id);
+            return ['status'=>'approved'];
+        });
     }
 
     public static function update(int $uid,int $aid,int $id,array $body): array
