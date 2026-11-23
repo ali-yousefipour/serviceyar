@@ -117,7 +117,8 @@ final class MonthlyStatements
           vh.plate vehicle_plate,vh.model vehicle_model
           FROM service_students ss
           JOIN students st ON st.id=ss.student_id AND st.agency_id=:a
-          JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=:agency AND sv.is_active=1
+          JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=:agency
+            AND sv.is_active=1 AND sv.status='active'
           LEFT JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id
           LEFT JOIN drivers dr ON dr.id=sv.driver_id AND dr.agency_id=sv.agency_id
           LEFT JOIN vehicles vh ON vh.id=dr.vehicle_id AND vh.agency_id=dr.agency_id
