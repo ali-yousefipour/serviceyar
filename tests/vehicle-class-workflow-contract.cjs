@@ -11,6 +11,7 @@ const schema=read('database/migrations/0168_vehicle_class_change_history.sql');
 const balance=read('backend/src/Domain/StudentBalance.php');
 const payroll=read('backend/src/Domain/MonthlyStatements.php');
 const contracts=read('backend/src/Domain/ContractDocuments.php');
+const operations=read('backend/src/Domain/OperationsService.php');
 
 for(const marker of ['vehicleClassChangeWizard','updateContract','contractEffectiveDate',
  'updateStudentDebt','studentDebtEffectiveDate','updateDriverPay','driverPayEffectiveDate',
@@ -49,7 +50,6 @@ assert.ok(domain.includes('studentContractAmountSql'),'Student list contract amo
 assert.ok(contracts.includes('VehicleClassEffectiveDates::annualEntitlement'),'Driver contract estimates must honor historical rate periods');
 assert.ok(operations.includes('ServiceFinancialBasis::grossOfService'),'Service recalculation must use shared driver gross');
 
-const operations=read('backend/src/Domain/OperationsService.php');
 const finance=read('backend/src/Domain/ServiceFinancialBasis.php');
 const accounts=read('backend/src/Domain/StudentServiceBilling.php');
 assert.ok(!finance.includes('SUM(st.monthly_fee)'),'Driver service gross must use driver base only');
