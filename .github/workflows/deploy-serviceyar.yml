@@ -223,6 +223,9 @@ jobs:
           # Match Apache's decoded URL path, not THE_REQUEST: encoded letters
           # such as /%62ackend must not bypass private-directory protection.
           RewriteRule ^(?:backend|database|storage)(?:/|$) - [F,END,NC]
+          # Legacy host files can remain after incremental FTP updates. Never
+          # expose their test scripts, internal documentation or source tree.
+          RewriteRule ^(?:docs|frontend|tests)(?:/|$) - [F,END,NC]
           <FilesMatch "^\.serviceyar-">
             Require all denied
           </FilesMatch>
