@@ -7,8 +7,9 @@ use ServiceYar\Auth\AuthException;
 
 /**
  * Single financial basis for student tuition, service entitlement and payroll.
- * Parent monthly fees are the gross contractual base. Apply agency deductions
- * exactly once, after summing the fees. All amounts are whole Iranian rials.
+ * Parent tuition and driver remuneration are independent accounting bases.
+ * Driver gross is the sum of explicit driver_base_monthly rates only.
+ * Apply agency deductions once. All amounts are whole Iranian rials.
  */
 final class ServiceFinancialBasis
 {
@@ -34,12 +35,17 @@ final class ServiceFinancialBasis
 
     public static function grossOfService(PDO $pdo,int $agencyId,int $serviceId): int
     {
-        $stmt=$pdo->prepare("SELECT COALESCE(SUM(st.monthly_fee),0)
+        $stmt=$pdo->prepare("SELECT COALESCE(SUM(st.driver_base_monthly),0) AS driver_gross,
+                SUM(CASE WHEN st.driver_base_monthly IS NULL OR st.driver_base_monthly<0
+                     THEN 1 ELSE 0 END) AS invalid_count
             FROM service_students ss JOIN students st ON st.id=ss.student_id
             JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=st.agency_id
             WHERE ss.service_id=? AND sv.agency_id=? AND st.is_active=1");
         $stmt->execute([$serviceId,$agencyId]);
-        return (int)round((float)$stmt->fetchColumn());
+        $totals=$stmt->fetch(PDO::FETCH_ASSOC);
+        if((int)($totals['invalid_count']??0)>0)
+            throw new AuthException(409,'مبنای حقوق راننده برای برخی دانش‌آموزان تنظیم نشده است.','DRIVER_BASE_MONTHLY_REQUIRED');
+        return (int)round((float)($totals['driver_gross']??0));
     }
 
     public static function netOfGross(int $gross,int $agencyId): array
