@@ -56,6 +56,33 @@ try{
     $row=array_values(array_filter($good['items'],static fn($r)=>(int)$r['id']===$driver))[0]??null;
     requireInvariant($row!==null&&(int)$row['gross_earned']>=1000000,'Valid driver remuneration not calculated');
 
+    $draft=\ServiceYar\Domain\PayrollDocuments::create($user,$agency,[
+        'from'=>$from,'to'=>$to,'calculationMode'=>'assignment_estimate',
+        'confirmEstimate'=>true,'lines'=>[['driverId'=>$driver,'amount'=>800000]]
+    ]);
+    $docId=(int)$draft['id'];
+    requireInvariant(str_starts_with((string)$draft['documentNo'],'EST-'),'Estimated payroll draft label missing');
+    $p->prepare('UPDATE students SET driver_base_monthly=? WHERE id=? AND agency_id=?')
+        ->execute([2000000,$student,$agency]);
+    try{
+        \ServiceYar\Domain\PayrollDocuments::approve($user,$agency,$docId,['confirmEstimate'=>true]);
+        throw new RuntimeException('Stale salary estimate was approved');
+    }catch(AuthException $e){
+        requireInvariant($e->codeName==='PAYROLL_ESTIMATE_STALE','Unexpected approval rejection: '.$e->codeName);
+    }
+    $p->prepare('UPDATE students SET driver_base_monthly=? WHERE id=? AND agency_id=?')
+        ->execute([1000000,$student,$agency]);
+    $approved=\ServiceYar\Domain\PayrollDocuments::approve($user,$agency,$docId,['confirmEstimate'=>true]);
+    requireInvariant(($approved['status']??'')==='approved','Unchanged estimate was not approved');
+    try{
+        \ServiceYar\Domain\PayrollDocuments::update($user,$agency,$docId,[
+            'lines'=>[['driverId'=>$driver,'amount'=>1]]
+        ]);
+        throw new RuntimeException('Approved payroll could be altered');
+    }catch(AuthException $e){
+        requireInvariant($e->codeName==='PAYROLL_LOCKED','Approved document did not remain immutable');
+    }
+
     $q=$p->prepare('SELECT vehicle_id FROM drivers WHERE id=? AND agency_id=?');
     $q->execute([$driver,$agency]);$vehicle=(int)$q->fetchColumn();
     requireInvariant($vehicle>0,'Missing CI driver vehicle');
