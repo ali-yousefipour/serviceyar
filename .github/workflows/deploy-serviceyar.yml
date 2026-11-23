@@ -130,9 +130,38 @@ jobs:
       - name: Financial quote integration (read-only fixture)
         run: php tests/taxi-financial-integration.php
 
+  finance-mysql:
+    name: Verify effective-date finance against MySQL
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: testpassword
+          MYSQL_DATABASE: serviceyar_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -ptestpassword"
+          --health-interval=10s --health-timeout=5s --health-retries=12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql
+      - name: Effective-date financial rules and real MySQL integrity
+        env:
+          SERVICEYAR_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=serviceyar_test;charset=utf8mb4
+          SERVICEYAR_TEST_USER: root
+          SERVICEYAR_TEST_PASSWORD: testpassword
+        run: |
+          php tests/vehicle-class-effective-dates.php
+          php tests/vehicle-class-db-integration.php
+
   deploy:
     name: Upload ServiceYar to service-yar.ir
-    needs: validate
+    needs: [validate, finance-mysql]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
