@@ -391,7 +391,7 @@ final class OperationsService
                 continue;
             }
             $base=$currentBasisValid?(int)round((float)$member['driver_base_monthly']):0;
-            $monthly=$history
+            $monthly=$estimateRequested && $history
                 ?VehicleClassEffectiveDates::blendedRate($from,$to,$base,$history)
                 :$base;
             $servicesMap[$serviceId]['student_count']++;
