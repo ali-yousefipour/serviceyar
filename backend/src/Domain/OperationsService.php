@@ -359,12 +359,17 @@ final class OperationsService
             // An approved, signed rate history is a valid independent source
             // even when the legacy current-rate field was never backfilled.
             $historyBasisValid=count($history)>0;
+            $previousRate=null;
             foreach($history as $period){
                 if(!is_numeric($period['old_monthly_irr'])||!is_numeric($period['new_monthly_irr'])
-                    ||(float)$period['old_monthly_irr']<0||(float)$period['new_monthly_irr']<0){
+                    ||(float)$period['old_monthly_irr']<0||(float)$period['new_monthly_irr']<0
+                    ||($previousRate!==null && (int)$period['old_monthly_irr']!==$previousRate)){
+                    // A rate series with a discontinuity cannot be silently
+                    // blended; it may reflect a later manual override.
                     $historyBasisValid=false;
                     break;
                 }
+                $previousRate=(int)$period['new_monthly_irr'];
             }
             if($estimateRequested && (($history && !$historyBasisValid) || (!$history && !$currentBasisValid))){
                 $conflicts[]=[
