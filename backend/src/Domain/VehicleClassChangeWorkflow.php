@@ -156,29 +156,42 @@ final class VehicleClassChangeWorkflow
             $changeId=(int)$pdo->lastInsertId();
 
             if($choices['updateContract']){
-                $contracts=$pdo->prepare("SELECT c.* FROM contracts c
-                    WHERE c.agency_id=? AND c.status<>'cancelled'
-                      AND ((c.party_type='driver' AND c.party_id=?)
-                        OR (c.party_type='student' AND c.party_id=?))
-                      AND (c.end_date IS NULL OR c.end_date>=?) FOR UPDATE");
-                // Driver-only contracts must receive the appendix even if
-                // no student is currently assigned to the service.
-                $contracts->execute([$aid,$driverId,0,$choices['contractEffectiveDate']]);
-                foreach($contracts->fetchAll(PDO::FETCH_ASSOC) as $driverContract){
-                    $pdo->prepare("INSERT IGNORE INTO vehicle_class_contract_appendices
-                        (agency_id,change_id,contract_id,effective_date,old_class,new_class,original_contract_snapshot)
-                        VALUES(?,?,?,?,?,?,?)")
-                        ->execute([$aid,$changeId,$driverContract['id'],$choices['contractEffectiveDate'],
-                            $old['tariff_vehicle_class'],(int)$class,self::json($driverContract)]);
+                // Driver agreements belong to the driver and must overlap the
+                // effective date. Never attach a new vehicle to an expired term.
+                $driverContracts=$pdo->prepare("SELECT c.* FROM contracts c
+                    WHERE c.agency_id=? AND c.party_type='driver' AND c.party_id=?
+                      AND c.status='active' AND c.start_date<=?
+                      AND (c.end_date IS NULL OR c.end_date>=?)
+                    ORDER BY c.id FOR UPDATE");
+                $driverContracts->execute([$aid,$driverId,
+                    $choices['contractEffectiveDate'],$choices['contractEffectiveDate']]);
+                $append=$pdo->prepare("INSERT IGNORE INTO vehicle_class_contract_appendices
+                    (agency_id,change_id,contract_id,effective_date,old_class,new_class,original_contract_snapshot)
+                    VALUES(?,?,?,?,?,?,?)");
+                foreach($driverContracts->fetchAll(PDO::FETCH_ASSOC) as $driverContract){
+                    $append->execute([$aid,$changeId,$driverContract['id'],$choices['contractEffectiveDate'],
+                        $old['tariff_vehicle_class'],(int)$class,self::json($driverContract)]);
                 }
+                // Match only the issued student-year agreement for each
+                // affected student. Future or unrelated years are excluded.
+                $studentContracts=$pdo->prepare("SELECT c.* FROM contracts c
+                    JOIN student_contract_invoices m ON m.contract_id=c.id AND m.agency_id=c.agency_id
+                    JOIN invoices i ON i.id=m.invoice_id AND i.agency_id=m.agency_id
+                    WHERE c.agency_id=? AND c.party_type='student' AND c.party_id=?
+                      AND c.status='active' AND i.status<>'cancelled'
+                      AND ".StudentBalance::yearSql('m.academic_year')."=?
+                      AND c.start_date<=? AND (c.end_date IS NULL OR c.end_date>=?)
+                    ORDER BY c.id FOR UPDATE");
                 foreach($oldRates as $sid=>$rate){
-                    $contracts->execute([$aid,$driverId,$sid,$choices['contractEffectiveDate']]);
-                    foreach($contracts->fetchAll(PDO::FETCH_ASSOC) as $contract){
-                        $pdo->prepare("INSERT IGNORE INTO vehicle_class_contract_appendices
-                            (agency_id,change_id,contract_id,effective_date,old_class,new_class,original_contract_snapshot)
-                            VALUES(?,?,?,?,?,?,?)")
-                            ->execute([$aid,$changeId,$contract['id'],$choices['contractEffectiveDate'],
-                                $old['tariff_vehicle_class'],(int)$class,self::json($contract)]);
+                    $year=ContractBilling::year((string)($rate['student']['academic_year']??''));
+                    $studentContracts->execute([$aid,$sid,$year,
+                        $choices['contractEffectiveDate'],$choices['contractEffectiveDate']]);
+                    $matches=$studentContracts->fetchAll(PDO::FETCH_ASSOC);
+                    if(count($matches)>1)
+                        throw new AuthException(409,'برای درج الحاقیه، قراردادهای متعدد در یک سال تحصیلی شناسایی شده‌اند. ابتدا تطبیق اسناد لازم است.','AMBIGUOUS_STUDENT_CONTRACT');
+                    foreach($matches as $contract){
+                        $append->execute([$aid,$changeId,$contract['id'],$choices['contractEffectiveDate'],
+                            $old['tariff_vehicle_class'],(int)$class,self::json($contract)]);
                     }
                 }
             }
