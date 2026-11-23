@@ -97,17 +97,24 @@ final class VehicleClassChangeWorkflow
                 $students->execute([$aid,$service['id']]);
                 foreach($students->fetchAll(PDO::FETCH_ASSOC) as $student) {
                     $sid=(int)$student['id'];
+                    if($choices['updateDriverPay'] && (
+                        $student['driver_base_monthly']===null
+                        || $student['driver_base_monthly']===''
+                        || !is_numeric($student['driver_base_monthly'])
+                        || (float)$student['driver_base_monthly']<0
+                    ))
+                        throw new AuthException(409,'ابتدا مبنای حقوق راننده دانش‌آموز را مشخص کنید؛ نرخ ولی جایگزین نرخ راننده نمی‌شود.','DRIVER_BASE_MONTHLY_REQUIRED');
                     if(isset($oldRates[$sid]) && $oldRates[$sid]['serviceId']!==(int)$service['id'])
                         throw new AuthException(409,'دانش‌آموز به چند سرویس فعال متصل است؛ ابتدا تخصیص تکراری را اصلاح کنید.','DUPLICATE_STUDENT_ASSIGNMENT');
                     $newRow=$student;$newRow['tariff_vehicle_class']=(int)$class;
                     $mode=ServicePricing::source($service['fee_source']??'taxi');
                     $quote=(!$choices['updateStudentDebt']&&!$choices['updateDriverPay'])||$mode==='agreed'
-                        ?['monthlyFee'=>(int)$student['monthly_fee'],'driverBaseMonthly'=>(int)($student['driver_base_monthly']??$student['monthly_fee'])]
+                        ?['monthlyFee'=>(int)$student['monthly_fee'],'driverBaseMonthly'=>(int)($student['driver_base_monthly']??0)]
                         :ServicePricing::quote($pdo,$aid,$newRow,$mode);
                     $oldRates[$sid]=[
                         'student'=>$student,'serviceId'=>(int)$service['id'],'source'=>$mode,
                         'oldParent'=>(int)$student['monthly_fee'],'newParent'=>(int)$quote['monthlyFee'],
-                        'oldDriver'=>(int)($student['driver_base_monthly']??$student['monthly_fee']),
+                        'oldDriver'=>(int)($student['driver_base_monthly']??0),
                         'newDriver'=>(int)$quote['driverBaseMonthly']
                     ];
                 }
