@@ -114,6 +114,18 @@ try{
     expectPayrollConflict($user,$agency,$filter,'HISTORICAL_SERVICE_DAYS_UNVERIFIED',$student);
     $p->prepare('UPDATE students SET created_at=? WHERE id=? AND agency_id=?')->execute(['2026-10-01 08:00:00',$student,$agency]);
 
+    $p->prepare("INSERT INTO services(uuid,agency_id,title,school_id,driver_id,capacity,status,is_active,created_at)
+        VALUES(?,?,?, ?,?,1,'active',1,'2026-10-01 08:00:00')")
+      ->execute([Uuid::v4(),$agency,'سرویس موازی آزمون',$service['school_id'],$driver]);
+    $parallelService=(int)$p->lastInsertId();
+    $p->prepare('INSERT INTO service_students(service_id,student_id) VALUES(?,?)')
+      ->execute([$parallelService,$student]);
+    expectPayrollConflict($user,$agency,$filter,'DUPLICATE_ACTIVE_SERVICE_ASSIGNMENT',$student);
+    $p->prepare('DELETE FROM service_students WHERE service_id=? AND student_id=?')
+      ->execute([$parallelService,$student]);
+    $p->prepare('DELETE FROM services WHERE id=? AND agency_id=?')
+      ->execute([$parallelService,$agency]);
+
     $p->prepare("INSERT INTO driver_changes
         (agency_id,service_id,old_driver_id,new_driver_id,status,reviewed_by,reviewed_at,created_at)
         VALUES(?,?,?,?,'approved',?,'2026-12-05 12:00:00','2026-12-04 12:00:00')")
