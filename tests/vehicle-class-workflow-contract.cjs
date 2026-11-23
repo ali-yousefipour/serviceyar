@@ -45,6 +45,10 @@ assert.ok(payroll.includes('invalidDriverRate'),'Statement preview must flag mis
 assert.ok(flow.includes('DRIVER_BASE_MONTHLY_REQUIRED'),'Class change approval must validate driver base');
 assert.ok(flow.includes('VEHICLE_CLASS_RATE_PERIOD_OVERLAP'),'Backdated changes must not silently overwrite later approved periods');
 assert.ok(flow.includes('AMBIGUOUS_STUDENT_CONTRACT'),'More than one contract for a student-year must not be amended arbitrarily');
+assert.ok(flow.includes("JOIN student_contract_invoices m ON m.contract_id=c.id"),'Student appendices must be scoped to an issued contract-year');
+assert.ok(flow.includes("JOIN invoices i ON i.id=m.invoice_id"),'Cancelled source invoices must not be amended');
+assert.ok(rateApplication.includes('AND $eligible'),'Deferred rate worker must avoid stale assignments in its pending queue');
+
 assert.ok(domain.includes('vehicle_class_debt_adjustments'),'Student contract list must include signed amendments');
 assert.ok(domain.includes('studentContractAmountSql'),'Student list contract amount must use shared financial reporting');
 assert.ok(contracts.includes('VehicleClassEffectiveDates::annualEntitlement'),'Driver contract estimates must honor historical rate periods');
