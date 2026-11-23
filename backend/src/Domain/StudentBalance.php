@@ -64,7 +64,9 @@ final class StudentBalance {
   usort($indices,static fn($a,$b)=>strcmp((string)($invoices[$a]['issue_date']??''),(string)($invoices[$b]['issue_date']??'')) ?: ((int)$invoices[$a]['id']<=>(int)$invoices[$b]['id']));
   $available=max(0,$received);
   foreach($indices as $index){
-   $amount=(float)$invoices[$index]['amount'];$allocated=min($amount,$available);
+   // Credit adjustments may exceed an issued invoice. Never allocate a
+   // negative invoice amount as a payment or increase the cash available.
+   $amount=max(0.0,(float)$invoices[$index]['amount']);$allocated=min($amount,$available);
    $available=round($available-$allocated,2);
    $invoices[$index]['paidAmount']=$allocated;
    $invoices[$index]['remainingAmount']=max(0,round($amount-$allocated,2));
