@@ -76,7 +76,7 @@ final class StudentServiceBilling {
   $monthly=(float)array_sum(array_column($services,'monthly_fee'));
   // Full academic-year driver entitlement is based on each student's driver
   // tariff and actual school duration, with agency deductions applied once.
-  $grossQuery=$pdo->prepare("SELECT st.id AS student_id,st.academic_year,sv.id AS service_id,st.grade,sc.school_type,sc.education_levels,COALESCE(st.driver_base_monthly,st.monthly_fee) base_monthly
+  $grossQuery=$pdo->prepare("SELECT st.id AS student_id,st.academic_year,sv.id AS service_id,st.grade,sc.school_type,sc.education_levels,st.driver_base_monthly base_monthly
    FROM service_students ss JOIN services sv ON sv.id=ss.service_id
    JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id
    JOIN schools sc ON sc.id=st.school_id AND sc.agency_id=st.agency_id
@@ -95,6 +95,8 @@ final class StudentServiceBilling {
   }
   $annualGross=0;
   foreach($grossQuery->fetchAll(PDO::FETCH_ASSOC) as $row){
+    if($row['base_monthly']===null || (float)$row['base_monthly']<0)
+      throw new AuthException(409,'مبنای حقوق راننده برای یک دانش‌آموز مشخص نیست.','DRIVER_BASE_MONTHLY_REQUIRED');
     $months=ServiceFinancialBasis::monthsOfStudent($row);
     $rate=$ratePeriods[(int)$row['student_id'].':'.(int)$row['service_id']]??[];
     if($rate && !empty($row['academic_year'])){
