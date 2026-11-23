@@ -316,7 +316,7 @@ final class OperationsService
                     break;
                 }
             }
-            if($estimateRequested && (!$historyBasisValid && !$currentBasisValid)){
+            if($estimateRequested && (($history && !$historyBasisValid) || (!$history && !$currentBasisValid))){
                 $conflicts[]=[
                     'studentId'=>$studentId,
                     'studentName'=>trim((string)$member['student_first_name'].' '.(string)$member['student_last_name']),
@@ -326,8 +326,8 @@ final class OperationsService
                     'serviceName'=>(string)$member['title'],
                     'vehicleName'=>trim((string)$member['vehicle_model'].' '.(string)$member['vehicle_plate']),
                     'vehicleClass'=>$member['vehicle_class']===null?null:(int)$member['vehicle_class'],
-                    'reasonCode'=>'DRIVER_BASE_MONTHLY_REQUIRED',
-                    'reason'=>'مبنای ماهانه حقوق راننده ثبت نشده یا نامعتبر است.',
+                    'reasonCode'=>$history?'INVALID_HISTORIC_DRIVER_RATE':'DRIVER_BASE_MONTHLY_REQUIRED',
+                    'reason'=>$history?'دوره تاریخی نرخ توافقی راننده دارای مبلغ نامعتبر است.':'مبنای ماهانه حقوق راننده ثبت نشده یا نامعتبر است.',
                     'severity'=>'blocking',
                     'effectiveDate'=>$from,
                     'recordedBasis'=>$member['driver_base_monthly'],
