@@ -932,6 +932,12 @@ if($resource==='ledger'&&!in_array('company_account_id',thisColumns('ledger_entr
   if($id&&$resource==='services'){
    $p=$pdo->prepare('SELECT id FROM services WHERE id=:id AND agency_id=:a FOR UPDATE');$p->execute(['id'=>$id,'a'=>$aid]);
    $p=$pdo->prepare('SELECT COUNT(*) FROM service_students WHERE service_id=:s');$p->execute(['s'=>$id]);$count=(int)$p->fetchColumn();
+   // Prevent silent reassignment from erasing the historical driver basis.
+   // Approved driver-change requests update services directly and retain
+   // their dated decision; generic service editing may not bypass that path.
+   if($count>0 && array_key_exists('driver_id',$data)
+     && (int)($data['driver_id']??0)!==(int)($existing['driver_id']??0))
+    throw new AuthException(409,'برای تغییر راننده سرویس دارای دانش‌آموز، درخواست تغییر راننده را ثبت و تأیید کنید.','DRIVER_CHANGE_APPROVAL_REQUIRED');
    if(isset($data['capacity'])&&(int)$data['capacity']<$count)throw new AuthException(409,'ظرفیت از دانش‌آموزان تخصیص‌یافته کمتر است.','CAPACITY_EXCEEDED');
    if($count&&isset($data['school_id'])&&(int)$data['school_id']!==(int)$existing['school_id'])throw new AuthException(409,'ابتدا تخصیص دانش‌آموزان سرویس را حذف کنید.','SCHOOL_MISMATCH');
    if(isset($data['is_active'])&&(int)$data['is_active']===1&&(int)$existing['is_active']===0){
