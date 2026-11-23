@@ -116,7 +116,7 @@ if(\ServiceYar\Domain\VehicleClassRateApplication::applyDue(1)!==0)
 if((int)$pdo->query("SELECT COUNT(*) FROM vehicle_class_rate_periods WHERE change_id=$staleChange AND applied_at IS NULL")->fetchColumn()!==1)
  throw new RuntimeException('Unreconciled orphaned rate should remain pending');
 if((int)$pdo->query('SELECT monthly_fee FROM students WHERE id=101')->fetchColumn()!==1400000)
- throw new RuntimeException('Stale adjustment modified the student's tuition');
+ throw new RuntimeException("Stale adjustment modified the student's tuition");
 
 // Accounting invariant with an issued invoice, prior receipts, signed and
 // future-dated adjustments. Historical invoice and cash must not be rewritten.
