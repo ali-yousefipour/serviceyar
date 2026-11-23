@@ -98,6 +98,7 @@ jobs:
           node tests/portal-driver-admin-edit-contract.cjs
           node tests/api-route-guard-contract.cjs
           node tests/payroll-reconciliation-contract.cjs
+          node tests/vehicle-class-workflow-contract.cjs
           node tests/taxi-tariff-footnotes-contract.cjs
           node tests/bale-integration-contract.cjs
           node tests/bale-anonymous-login.cjs
@@ -125,7 +126,8 @@ jobs:
       - name: Verified parent and driver portal security and UI contracts
         run: node tests/portal-access-contract.cjs
       - name: Official fare component unit test
-        run: php tests/taxi-fare-components.php
+        run: |
+          php tests/taxi-fare-components.php
           php tests/service-finance-basis.php
       - name: Financial quote integration (read-only fixture)
         run: php tests/taxi-financial-integration.php
