@@ -38,5 +38,15 @@ assert.ok(rateApplication.includes('DRIVER_BASE_MONTHLY_REQUIRED'),'Deferred dri
 assert.ok(!payroll.includes("row['driver_base_monthly']??$row['monthly_fee']"),'Statement preview must not use parent tuition as driver rate');
 assert.ok(payroll.includes('invalidDriverRate'),'Statement preview must flag missing driver bases');
 assert.ok(flow.includes('DRIVER_BASE_MONTHLY_REQUIRED'),'Class change approval must validate driver base');
+assert.ok(flow.includes('VEHICLE_CLASS_RATE_PERIOD_OVERLAP'),'Backdated changes must not silently overwrite later approved periods');
+assert.ok(flow.includes('AMBIGUOUS_STUDENT_CONTRACT'),'More than one contract for a student-year must not be amended arbitrarily');
+const operations=read('backend/src/Domain/OperationsService.php');
+const finance=read('backend/src/Domain/ServiceFinancialBasis.php');
+const accounts=read('backend/src/Domain/StudentServiceBilling.php');
+assert.ok(!finance.includes('SUM(st.monthly_fee)'),'Driver service gross must use driver base only');
+assert.ok(finance.includes('SUM(st.driver_base_monthly)'),'Driver service gross must derive from explicit remuneration');
+assert.ok(!accounts.includes('COALESCE(st.driver_base_monthly,st.monthly_fee)'),'Driver account cannot substitute parent tuition');
+assert.ok(!operations.includes("(int)round((float)$member['monthly_fee'])"),'Driver payroll cannot use student tuition as its non-historical basis');
+
 assert.ok(contracts.includes('vehicleClassAppendixPrint'),'Missing printable contract appendix');
 console.log('Vehicle class workflow static contract: OK');
