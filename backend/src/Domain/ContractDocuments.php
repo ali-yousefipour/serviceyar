@@ -165,7 +165,7 @@ HTML;
   */
  private static function driverAnnualAmount(PDO $pdo,int $agencyId,int $driverId): array {
   $query=$pdo->prepare("SELECT sv.id service_id,sv.title service_title,st.id student_id,
-   st.grade,sc.school_type,sc.education_levels,st.driver_base_monthly base_monthly
+   st.grade,st.academic_year,sc.school_type,sc.education_levels,st.driver_base_monthly base_monthly
    FROM services sv
    JOIN service_students ss ON ss.service_id=sv.id
    JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id
@@ -175,29 +175,50 @@ HTML;
     AND st.is_active=1 AND st.deleted_at IS NULL
    ORDER BY sv.id,st.id");
   $query->execute([$agencyId,$driverId]);$rows=$query->fetchAll(PDO::FETCH_ASSOC);
+  $historical=[];
+  if(VehicleClassSchema::exists($pdo)){
+   $ratesQuery=$pdo->prepare("SELECT p.subject_id,p.service_id,p.id,p.effective_date,
+      p.old_monthly_irr,p.new_monthly_irr FROM vehicle_class_rate_periods p
+      JOIN services sv ON sv.id=p.service_id AND sv.agency_id=p.agency_id
+      WHERE p.agency_id=? AND sv.driver_id=? AND p.subject_type='driver_pay'
+      ORDER BY p.subject_id,p.service_id,p.effective_date,p.id");
+   $ratesQuery->execute([$agencyId,$driverId]);
+   foreach($ratesQuery->fetchAll(PDO::FETCH_ASSOC) as $period)
+    $historical[(int)$period['subject_id'].':'.(int)$period['service_id']][]=$period;
+  }
   $grouped=[];
   foreach($rows as $row){
    $months=ServiceFinancialBasis::monthsOfStudent($row);
    $key=(int)$row['service_id'].':'.$months;
    if(!isset($grouped[$key]))$grouped[$key]=['serviceId'=>(int)$row['service_id'],
-    'serviceTitle'=>(string)$row['service_title'],'months'=>$months,'students'=>0,'grossMonthly'=>0];
+    'serviceTitle'=>(string)$row['service_title'],'months'=>$months,
+    'students'=>0,'grossMonthly'=>0,'grossAnnual'=>0];
    if($row['base_monthly']===null)
     throw new AuthException(409,'مبنای حقوق راننده برای دانش‌آموز مشخص نشده است.','DRIVER_BASE_MONTHLY_REQUIRED');
    $base=(float)$row['base_monthly'];
    if(!is_finite($base)||$base<0)throw new AuthException(422,'مبلغ پایه راننده برای یکی از دانش‌آموزان نامعتبر است.','INVALID_DRIVER_BASE');
+   $periods=$historical[(int)$row['student_id'].':'.(int)$row['service_id']]??[];
+   if($periods && empty($row['academic_year']))
+    throw new AuthException(409,'سال تحصیلی دانش‌آموز برای محاسبه نرخ تاریخی راننده مشخص نیست.','DRIVER_CONTRACT_YEAR_REQUIRED');
+   $grossAnnual=$periods
+    ?VehicleClassEffectiveDates::annualEntitlement(
+        ContractBilling::year((string)$row['academic_year']),$months===8.5,(int)round($base),$periods)
+    :(int)round($base*$months);
    $grouped[$key]['grossMonthly']+=$base;
+   $grouped[$key]['grossAnnual']+=$grossAnnual;
    $grouped[$key]['students']++;
   }
   if(!$grouped)throw new AuthException(409,'این راننده سرویس فعال دارای دانش‌آموز ندارد و مبلغ سالانه قابل محاسبه نیست.','DRIVER_CONTRACT_NO_SERVICES');
   $rates=DriverDeductionPolicy::rates($agencyId);
   $totalGross=0;$totalDeducted=0;$totalNet=0;$detail=[];
   foreach($grouped as $row){
-   $monthly=DriverDeductionPolicy::calculate($row['grossMonthly'],$rates);
-   $gross=(int)round($row['grossMonthly']*$row['months']);
-   $net=(int)round($monthly['net_earned']*$row['months']);
+   $gross=(int)round($row['grossAnnual']);
+   $annualPolicy=DriverDeductionPolicy::calculate($gross,$rates);
+   $monthly=DriverDeductionPolicy::calculate($gross/$row['months'],$rates);
+   $net=(int)round($annualPolicy['net_earned']);
    $deductions=[];
    foreach(array_keys(DriverDeductionPolicy::DEFAULTS) as $key)
-    $deductions[$key]=(int)round($monthly[$key.'_deduction']*$row['months']);
+    $deductions[$key]=(int)round($annualPolicy[$key.'_deduction']);
    $deducted=$gross-$net;
    $detail[]=$row+['grossAnnual'=>$gross,'netMonthly'=>(int)$monthly['net_earned'],
     'deductionsAnnual'=>$deductions,'totalDeductionsAnnual'=>$deducted,'netAnnual'=>$net];
