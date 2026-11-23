@@ -317,6 +317,8 @@ final class OperationsService
         $details=$p->prepare("SELECT sv.id AS service_id,sv.driver_id,sv.title,sv.code,sv.fee_source,sv.created_at AS service_created_at,
             st.id AS student_id,st.first_name AS student_first_name,st.last_name AS student_last_name,st.created_at AS student_created_at,st.monthly_fee,st.driver_base_monthly,
             dr.first_name AS driver_first_name,dr.last_name AS driver_last_name,
+            dr.is_active AS driver_active,dr.status AS driver_status,
+            vh.id AS vehicle_id,vh.is_active AS vehicle_active,
             vh.model AS vehicle_model,vh.plate AS vehicle_plate,vh.tariff_vehicle_class AS vehicle_class
             FROM services sv JOIN service_students ss ON ss.service_id=sv.id
             JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id AND st.is_active=1
@@ -326,9 +328,30 @@ final class OperationsService
             ORDER BY sv.id,st.id");
         $details->execute([$aid]);$servicesMap=[];$conflicts=[];
         foreach($details->fetchAll(\PDO::FETCH_ASSOC) as $member){
-            if($member['driver_id']===null)continue;
             $serviceId=(int)$member['service_id'];
             $studentId=(int)$member['student_id'];
+            $driverMissing=$member['driver_id']===null||$member['driver_active']===null
+                ||(int)$member['driver_active']!==1||(string)$member['driver_status']!=='active';
+            $vehicleMissing=$member['fee_source']==='taxi'
+                &&($member['vehicle_id']===null||(int)$member['vehicle_active']!==1);
+            if($estimateRequested&&($driverMissing||$vehicleMissing)){
+                $conflicts[]=[
+                    'studentId'=>$studentId,
+                    'studentName'=>trim((string)$member['student_first_name'].' '.(string)$member['student_last_name']),
+                    'driverId'=>(int)($member['driver_id']??0),
+                    'driverName'=>trim((string)$member['driver_first_name'].' '.(string)$member['driver_last_name']),
+                    'serviceId'=>$serviceId,'serviceName'=>(string)$member['title'],
+                    'vehicleName'=>trim((string)$member['vehicle_model'].' '.(string)$member['vehicle_plate']),
+                    'vehicleClass'=>$member['vehicle_class']===null?null:(int)$member['vehicle_class'],
+                    'reasonCode'=>$driverMissing?'INVALID_DRIVER_ASSIGNMENT':'INVALID_ACTIVE_VEHICLE',
+                    'reason'=>$driverMissing?'راننده فعال و تأییدشده برای این سرویس یافت نشد.':'خودروی فعال برای سرویس با نرخ رسمی مشخص نیست.',
+                    'severity'=>'blocking','effectiveDate'=>$from,
+                    'recordedBasis'=>$member['driver_base_monthly'],
+                    'suggestedAction'=>$driverMissing?'تخصیص راننده را در سرویس بررسی کنید.':'خودروی راننده و اعتبار کلاس خودرو را بررسی کنید.'
+                ];
+                continue;
+            }
+            if($member['driver_id']===null)continue;
             if(!isset($servicesMap[$serviceId]))$servicesMap[$serviceId]=[
                 'service_id'=>$serviceId,'driver_id'=>$member['driver_id'],
                 'title'=>$member['title'],'code'=>$member['code'],
