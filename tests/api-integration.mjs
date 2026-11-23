@@ -63,7 +63,7 @@ assert.equal(typeof platformStatus.neshanServiceConfigured,'boolean');checks++;
 await request(scoped('/api/v1/schools'),{method:'POST',body:{name:'not allowed'},token:false,status:419});
 const school=(await request(scoped('/api/v1/schools'),{method:'POST',body:{name:'مدرسه تست HTTP'},status:201})).data;
 await request(scoped('/api/v1/students'),{method:'POST',body:{schoolId:school.id,firstName:'نام',lastName:'آزمون',mobile:'bad'},status:422});
-const student=(await request(scoped('/api/v1/students'),{method:'POST',body:{schoolId:school.id,firstName:'دانش‌آموز',lastName:'تست HTTP',mobile:'09120000111',monthlyFee:1000,academicYear:'1405/1406'},status:201})).data;
+const student=(await request(scoped('/api/v1/students'),{method:'POST',body:{schoolId:school.id,firstName:'دانش‌آموز',lastName:'تست HTTP',mobile:'09120000111',monthlyFee:1000,feeSource:'agreed',academicYear:'1405/1406'},status:201})).data;
 assert.ok(student.uuid);checks++;
 const companyBankAccount=(await request(scoped('/api/v1/accounts'),{method:'POST',body:{code:'HTTP-BANK-'+Date.now(),title:'حساب آزمون شرکت'},status:201})).data;
 const ledgerEntry=(await request(scoped('/api/v1/ledger'),{method:'POST',body:{partyType:'student',partyId:student.id,direction:'receipt',amount:12345,entryDate:'2026-11-01',method:'cash',companyAccountId:companyBankAccount.id,referenceNo:'LEDGER-SEARCH-TEST'},status:201})).data;
