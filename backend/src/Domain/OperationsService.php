@@ -211,9 +211,8 @@ final class OperationsService
             if((float)$feeCheck->fetchColumn()>0)StudentServiceBilling::sync($p,$aid,$studentId);
             // Keep the saved driver net consistent for direct assignments as well
             // as the new-service wizard; avoid leaving a zero legacy monthly total.
-            $driverGross=$p->prepare('SELECT COALESCE(SUM(st.monthly_fee),0) FROM service_students ss JOIN students st ON st.id=ss.student_id AND st.agency_id=? WHERE ss.service_id=?');
-            $driverGross->execute([$aid,$serviceId]);
-            $net=self::driverDeductions((float)$driverGross->fetchColumn(),$aid)['net_earned'];
+            $driverGross=ServiceFinancialBasis::grossOfService($p,$aid,$serviceId);
+            $net=self::driverDeductions((float)$driverGross,$aid)['net_earned'];
             $p->prepare('UPDATE services SET monthly_fee=? WHERE id=? AND agency_id=?')->execute([$net,$serviceId,$aid]);
         });
         self::audit($uid,$aid,'assign_student','services',$serviceId);
@@ -260,7 +259,7 @@ final class OperationsService
           (SELECT COALESCE(SUM(dp.amount),0) FROM driver_payments dp WHERE dp.driver_id=d.id AND dp.agency_id=d.agency_id AND dp.payment_date BETWEEN :pf AND :pt) paid,
           (SELECT COALESCE(SUM(CASE WHEN le.direction=\'payment\' THEN le.amount ELSE -le.amount END),0) FROM ledger_entries le WHERE le.party_type=\'driver\' AND le.party_id=d.id AND le.agency_id=d.agency_id AND le.is_active=1 AND le.entry_date BETWEEN :lf AND :lt) ledger_paid,
           (SELECT COALESCE(SUM(s.agreed_amount),0) FROM services s WHERE s.driver_id=d.id AND s.agency_id=d.agency_id AND s.is_active=1) agreed,
-          (SELECT COALESCE(SUM(st.monthly_fee),0)
+          (SELECT COALESCE(SUM(st.driver_base_monthly),0)
              FROM services s
              JOIN service_students ss ON ss.service_id=s.id
              JOIN students st ON st.id=ss.student_id AND st.agency_id=s.agency_id
@@ -299,10 +298,15 @@ final class OperationsService
                 'title'=>$member['title'],'code'=>$member['code'],
                 'fee_source'=>$member['fee_source'],'student_count'=>0,'monthly_gross'=>0];
             $history=$rateHistory[$studentId.':'.$serviceId]??[];
+            if($estimateRequested && ($member['driver_base_monthly']===null
+                || $member['driver_base_monthly']===''
+                || !is_numeric($member['driver_base_monthly'])
+                || (float)$member['driver_base_monthly']<0))
+                throw new AuthException(409,'مبنای حقوق راننده برای یک دانش‌آموز معتبر نیست؛ پیش از برآورد حقوق آن را اصلاح کنید.','DRIVER_BASE_MONTHLY_REQUIRED');
+            $base=$member['driver_base_monthly']===null?0:(int)round((float)$member['driver_base_monthly']);
             $monthly=$history
-                ?VehicleClassEffectiveDates::blendedRate($from,$to,
-                    (int)round((float)($member['driver_base_monthly']??$member['monthly_fee'])),$history)
-                :(int)round((float)$member['monthly_fee']);
+                ?VehicleClassEffectiveDates::blendedRate($from,$to,$base,$history)
+                :$base;
             $servicesMap[$serviceId]['student_count']++;
             $servicesMap[$serviceId]['monthly_gross']+=$monthly;
         }
