@@ -201,6 +201,10 @@ try{
  D::save($uid,$a,'vehicles',['driverId'=>''],(int)$inverseVehicle['id']);
  check(D::get($uid,$a,'drivers',(int)$driver['id'])['vehicle_id']===null,'The existing capacity-one fixture remains independent from the inverse assignment test');
 
+ // This fixture has an explicit driver remuneration basis. Parent tuition
+ // and driver pay are distinct; assignment must never infer one from the other.
+ $p->prepare('UPDATE students SET driver_base_monthly=? WHERE id=? AND agency_id=?')
+   ->execute([800,$s1['id'],$a]);
  $service=D::save($uid,$a,'services',['title'=>'صبح','schoolId'=>$school['id'],'driverId'=>$driver['id'],'capacity'=>1]);
  D::assignStudent($uid,$a,(int)$service['id'],(int)$s1['id']);check(D::get($uid,$a,'students',(int)$s1['id'])['service_status']==='assigned','Assignment updates service status');
  $studentServices=D::list($uid,$a,'services',['studentSearch'=>'آرمان آزمایشی']);
