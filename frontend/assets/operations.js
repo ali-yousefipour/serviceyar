@@ -3554,7 +3554,7 @@ async function operationPage(key,token){
   dialog('مغایرت‌های مبنای محاسبه حقوق رانندگان',content);
   const search=$('payrollConflictSearch');
   if(search)search.oninput=()=>{const term=search.value.trim().toLocaleLowerCase('fa');search.closest('.modal-card')?.querySelectorAll('tbody tr').forEach(row=>{row.hidden=!row.textContent.toLocaleLowerCase('fa').includes(term);});};
-  $('payrollConflictExport')?.addEventListener('click',()=>downloadFile(scoped('/api/v1/operations/payroll/conflicts.xlsx?'+query.toString()),'مغایرت‌های-حقوق-رانندگان.xlsx'));
+  $('payrollConflictExport')?.addEventListener('click',()=>downloadFile('/api/v1/operations/payroll/conflicts.xlsx?'+query.toString(),'مغایرت‌های-حقوق-رانندگان.xlsx'));
   $('payrollConflictRecheck')?.addEventListener('click',()=>{closeDialog();load();});
  }
  if(token===pageToken&&current===request){status.textContent='دریافت گزارش ناموفق بود';result.removeAttribute('aria-busy');submit.disabled=false;result.innerHTML='<div class="sy-operation-error" role="alert"><strong>دریافت اطلاعات انجام نشد</strong><p>'+esc(e.message)+'</p><button type="button" id="operationRetry">تلاش مجدد</button></div>';$('operationRetry').onclick=load;}}};
