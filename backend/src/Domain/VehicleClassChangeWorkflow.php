@@ -183,6 +183,35 @@ final class VehicleClassChangeWorkflow
                 }
             }
 
+            // A second approved class change may precede activation of the
+            // first one. Read the preceding approved rate, not today's
+            // students.monthly_fee/driver_base_monthly snapshot. This prevents
+            // double charging the old-to-new difference on consecutive swaps.
+            // Earlier or same-date retroactive edits require an explicit
+            // rebase of existing appendices and cannot be silently inserted.
+            $previousRate=$pdo->prepare("SELECT effective_date,new_monthly_irr
+                FROM vehicle_class_rate_periods
+                WHERE agency_id=? AND subject_type=? AND subject_id=?
+                ORDER BY effective_date DESC,id DESC LIMIT 1 FOR UPDATE");
+            foreach($oldRates as $sid=>&$rate){
+                foreach([
+                    ['enabled'=>$choices['updateStudentDebt'],'subject'=>'student_debt',
+                     'date'=>$choices['studentDebtEffectiveDate'],'old'=>'oldParent'],
+                    ['enabled'=>$choices['updateDriverPay'],'subject'=>'driver_pay',
+                     'date'=>$choices['driverPayEffectiveDate'],'old'=>'oldDriver']
+                ] as $stream){
+                    if(!$stream['enabled'])continue;
+                    $previousRate->execute([$aid,$stream['subject'],$sid]);
+                    $previous=$previousRate->fetch(PDO::FETCH_ASSOC);
+                    if(!$previous)continue;
+                    if($stream['date']<=$previous['effective_date'])
+                        throw new AuthException(409,
+                            'تاریخ انتخاب‌شده با تغییر مالی ثبت‌شده قبلی تداخل دارد. برای اصلاح تاریخ گذشته ابتدا بازبینی و تعدیل رسمی انجام دهید.',
+                            'VEHICLE_CLASS_RATE_PERIOD_OVERLAP');
+                    $rate[$stream['old']]=(int)$previous['new_monthly_irr'];
+                }
+            }
+            unset($rate);
             $period=$pdo->prepare("INSERT INTO vehicle_class_rate_periods
                 (agency_id,change_id,subject_type,subject_id,service_id,effective_date,old_class,new_class,
                  old_monthly_irr,new_monthly_irr,fee_source,calculation_snapshot)
