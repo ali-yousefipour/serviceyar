@@ -17,17 +17,28 @@ final class VehicleClassRateApplication
     {
         if(!VehicleClassSchema::exists())return 0;
         $pdo=Connection::get();
-        $probe=$pdo->prepare("SELECT id FROM vehicle_class_rate_periods
-          WHERE agency_id=? AND applied_at IS NULL AND effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE) LIMIT 1");
+        // Only active, still-linked assignments may update current student
+        // caches. Orphaned periods remain pending for explicit reconciliation,
+        // but must never take the whole company's API offline.
+        $eligible="EXISTS(SELECT 1 FROM service_students ss
+              JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=p.agency_id
+              JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id
+              WHERE ss.service_id=p.service_id AND ss.student_id=p.subject_id
+                AND st.is_active=1 AND sv.is_active=1 AND sv.status<>'cancelled')";
+        $probe=$pdo->prepare("SELECT p.id FROM vehicle_class_rate_periods p
+          WHERE p.agency_id=? AND p.applied_at IS NULL
+            AND p.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
+            AND $eligible LIMIT 1");
         $probe->execute([$agencyId]);
         if(!$probe->fetchColumn())return 0;
-        return OperationsService::transaction(function(PDO $pdo)use($agencyId){
+        return OperationsService::transaction(function(PDO $pdo)use($agencyId,$eligible){
             $count=0;$services=[];
             do {
                 $q=$pdo->prepare("SELECT p.id,p.subject_type,p.subject_id,p.service_id,
                       p.new_class,p.new_monthly_irr
                       FROM vehicle_class_rate_periods p
                       WHERE p.agency_id=? AND p.applied_at IS NULL AND p.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
+                        AND $eligible
                       ORDER BY p.effective_date,p.id LIMIT 500 FOR UPDATE");
                 $q->execute([$agencyId]);$pending=$q->fetchAll(PDO::FETCH_ASSOC);
                 $assignment=$pdo->prepare("SELECT 1 FROM service_students ss
@@ -41,7 +52,7 @@ final class VehicleClassRateApplication
                     // who has since moved to an unrelated service or company.
                     $assignment->execute([$agencyId,$p['service_id'],$p['subject_id']]);
                     if(!$assignment->fetchColumn())
-                        throw new AuthException(409,'دانش‌آموز از سرویس مربوط به تغییر کلاس جدا شده است؛ سوابق مالی باید پیش از اعمال نرخ بررسی شود.','STALE_VEHICLE_RATE_ASSIGNMENT');
+                        continue; // A concurrent transfer is reconciled, never repriced here.
                     if($p['subject_type']==='student_debt'){
                         $pdo->prepare("UPDATE students SET monthly_fee=?,tariff_vehicle_class=?
                             WHERE id=? AND agency_id=?")
