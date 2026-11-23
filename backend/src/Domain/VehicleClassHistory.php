@@ -100,8 +100,17 @@ final class VehicleClassHistory
                      SELECT 1 FROM service_students ss
                      JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=p.agency_id
                      JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id
+                     JOIN vehicle_class_changes change_owner ON change_owner.id=p.change_id
+                       AND change_owner.agency_id=p.agency_id
                      WHERE ss.service_id=p.service_id AND ss.student_id=p.subject_id
-                       AND sv.is_active=1 AND sv.status<>'cancelled' AND st.is_active=1
+                       AND sv.driver_id=change_owner.driver_id
+                       AND ((p.subject_type='student_debt'
+                             AND change_owner.update_student_debt=1
+                             AND st.monthly_fee=p.old_monthly_irr)
+                         OR (p.subject_type='driver_pay'
+                             AND change_owner.update_driver_pay=1
+                             AND st.driver_base_monthly=p.old_monthly_irr))
+                       AND sv.is_active=1 AND sv.status='active' AND st.is_active=1
                    ) THEN 'needs_review'
                    ELSE 'pending'
                  END AS application_status
