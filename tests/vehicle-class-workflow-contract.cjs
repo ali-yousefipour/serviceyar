@@ -32,6 +32,10 @@ assert.ok(!flow.includes('UPDATE invoices SET'),'Issued invoices must never be o
 assert.ok(!flow.includes('UPDATE contracts SET'),'Issued contracts must never be overwritten');
 assert.ok(balance.includes('vehicle_class_debt_adjustments'),'Debt adjustments not in balances');
 assert.ok(payroll.includes('VehicleClassEffectiveDates::blendedRate'),'Payroll missing date split');
+assert.ok(payroll.includes('parentRateHistory'),'Parent-side annual reconciliation must not borrow driver consent history');
+assert.ok(payroll.includes('$from,$to,$parentPeriods'),'Reference parent class must follow debt-approved history');
+assert.ok(payroll.includes('old_class,p.new_class'),'Historical statement weighting needs original class from ledger');
+
 const rateApplication=read('backend/src/Domain/VehicleClassRateApplication.php');
 assert.ok(!rateApplication.includes('COALESCE(st.driver_base_monthly,st.monthly_fee)'),'Driver payroll may not silently fall back to parent fees');
 assert.ok(rateApplication.includes('DRIVER_BASE_MONTHLY_REQUIRED'),'Deferred driver rate must fail closed on missing payroll basis');
