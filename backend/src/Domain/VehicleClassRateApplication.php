@@ -26,8 +26,10 @@ final class VehicleClassRateApplication
               JOIN vehicle_class_changes ch ON ch.id=p.change_id AND ch.agency_id=p.agency_id
               WHERE ss.service_id=p.service_id AND ss.student_id=p.subject_id
                 AND sv.driver_id=ch.driver_id
-                AND ((p.subject_type='student_debt' AND ch.update_student_debt=1)
-                  OR (p.subject_type='driver_pay' AND ch.update_driver_pay=1))
+                AND ((p.subject_type='student_debt' AND ch.update_student_debt=1
+                      AND st.monthly_fee=p.old_monthly_irr)
+                  OR (p.subject_type='driver_pay' AND ch.update_driver_pay=1
+                      AND st.driver_base_monthly=p.old_monthly_irr))
                 AND st.is_active=1 AND sv.is_active=1 AND sv.status='active')";
         $probe=$pdo->prepare("SELECT p.id FROM vehicle_class_rate_periods p
           WHERE p.agency_id=? AND p.applied_at IS NULL
@@ -37,28 +39,37 @@ final class VehicleClassRateApplication
         if(!$probe->fetchColumn())return 0;
         return OperationsService::transaction(function(PDO $pdo)use($agencyId,$eligible){
             $count=0;$services=[];
-            do {
+            // Requery until no eligible due periods remain. This also
+            // activates multiple successive approved changes in date order,
+            // without requiring a second login or report request.
+            while(true) {
                 $q=$pdo->prepare("SELECT p.id,p.change_id,p.subject_type,p.subject_id,p.service_id,
-                      p.new_class,p.new_monthly_irr
+                      p.old_monthly_irr,p.new_class,p.new_monthly_irr
                       FROM vehicle_class_rate_periods p
                       WHERE p.agency_id=? AND p.applied_at IS NULL AND p.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
                         AND $eligible
                       ORDER BY p.effective_date,p.id LIMIT 500 FOR UPDATE");
                 $q->execute([$agencyId]);$pending=$q->fetchAll(PDO::FETCH_ASSOC);
-                $assignment=$pdo->prepare("SELECT 1 FROM service_students ss
+                $assignment=$pdo->prepare("SELECT st.monthly_fee,st.driver_base_monthly
+                    FROM service_students ss
                     JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=?
                     JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id
                     JOIN vehicle_class_changes ch ON ch.id=? AND ch.agency_id=sv.agency_id
                     WHERE ss.service_id=? AND ss.student_id=?
                       AND sv.driver_id=ch.driver_id
                       AND st.is_active=1 AND sv.is_active=1 AND sv.status='active'
-                      LIMIT 1");
+                      LIMIT 1 FOR UPDATE");
                 foreach($pending as $p){
                     // A future-dated adjustment must never overwrite a student
                     // who has since moved to an unrelated service or company.
                     $assignment->execute([$agencyId,$p['change_id'],$p['service_id'],$p['subject_id']]);
-                    if(!$assignment->fetchColumn())
+                    $source=$assignment->fetch(PDO::FETCH_ASSOC);
+                    if(!$source)
                         continue; // A concurrent transfer is reconciled, never repriced here.
+                    $sourceColumn=$p['subject_type']==='student_debt'?'monthly_fee':'driver_base_monthly';
+                    if($source[$sourceColumn]===null
+                       ||(int)$source[$sourceColumn] !== (int)$p['old_monthly_irr'])
+                        continue; // A manual rate override requires review, never a silent overwrite.
                     if($p['subject_type']==='student_debt'){
                         $pdo->prepare("UPDATE students SET monthly_fee=?,tariff_vehicle_class=?
                             WHERE id=? AND agency_id=?")
@@ -73,7 +84,8 @@ final class VehicleClassRateApplication
                         ->execute([$p['id'],$agencyId]);
                     $count++;
                 }
-            }while(count($pending)===500);
+                if(!$pending)break;
+            }
             foreach(array_keys($services) as $serviceId){
                 $q=$pdo->prepare("SELECT COALESCE(SUM(st.driver_base_monthly),0) AS gross,
                      SUM(CASE WHEN st.driver_base_monthly IS NULL OR st.driver_base_monthly<0 THEN 1 ELSE 0 END) AS invalid_driver_rates
