@@ -92,7 +92,19 @@ final class VehicleClassHistory
         $q->execute([$agencyId,$changeId]);
         $contracts=$q->fetchAll(PDO::FETCH_ASSOC);
         $q=$pdo->prepare("SELECT p.id,p.subject_type,p.subject_id,p.service_id,p.effective_date,
-                 p.old_monthly_irr,p.new_monthly_irr,p.applied_at
+                 p.old_monthly_irr,p.new_monthly_irr,p.applied_at,
+                 CASE
+                   WHEN p.applied_at IS NOT NULL THEN 'applied'
+                   WHEN p.effective_date>DATE(UTC_TIMESTAMP()+INTERVAL 210 MINUTE) THEN 'scheduled'
+                   WHEN NOT EXISTS (
+                     SELECT 1 FROM service_students ss
+                     JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=p.agency_id
+                     JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id
+                     WHERE ss.service_id=p.service_id AND ss.student_id=p.subject_id
+                       AND sv.is_active=1 AND sv.status<>'cancelled' AND st.is_active=1
+                   ) THEN 'needs_review'
+                   ELSE 'pending'
+                 END AS application_status
             FROM vehicle_class_rate_periods p
             WHERE p.agency_id=? AND p.change_id=? ORDER BY p.subject_type,p.id");
         $q->execute([$agencyId,$changeId]);
