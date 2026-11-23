@@ -10,6 +10,7 @@ $pdo=new PDO($dsn,getenv('SERVICEYAR_TEST_USER')?:'root',getenv('SERVICEYAR_TEST
  [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
 $pdo->exec('CREATE TABLE IF NOT EXISTS agencies(id BIGINT UNSIGNED PRIMARY KEY) ENGINE=InnoDB');
 $pdo->exec('INSERT IGNORE INTO agencies(id) VALUES(1)');
+$pdo->exec('CREATE TABLE IF NOT EXISTS agency_settings(agency_id BIGINT UNSIGNED NOT NULL, setting_key VARCHAR(100) NOT NULL, setting_value TEXT NULL, PRIMARY KEY(agency_id,setting_key)) ENGINE=InnoDB');
 VehicleClassSchema::ensure($pdo);
 foreach(['vehicle_class_changes','vehicle_class_rate_periods','vehicle_class_contract_appendices','vehicle_class_debt_adjustments'] as $table)
   $pdo->query("SELECT id FROM $table LIMIT 0");
