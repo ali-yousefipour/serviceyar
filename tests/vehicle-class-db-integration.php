@@ -44,6 +44,17 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS students(
 ) ENGINE=InnoDB");
 $pdo->exec("INSERT INTO students(id,agency_id,monthly_fee,tariff_vehicle_class,driver_base_monthly)
  VALUES(101,1,1000000,1,800000)");
+$pdo->exec("CREATE TABLE IF NOT EXISTS services(
+ id BIGINT UNSIGNED PRIMARY KEY,agency_id BIGINT UNSIGNED NOT NULL,
+ is_active TINYINT NOT NULL DEFAULT 1,status VARCHAR(20) NOT NULL DEFAULT 'active',
+ monthly_fee BIGINT NOT NULL DEFAULT 0
+) ENGINE=InnoDB");
+$pdo->exec("CREATE TABLE IF NOT EXISTS service_students(
+ service_id BIGINT UNSIGNED NOT NULL,student_id BIGINT UNSIGNED NOT NULL,
+ PRIMARY KEY(service_id,student_id)
+) ENGINE=InnoDB");
+$pdo->exec("INSERT INTO services(id,agency_id,is_active,status) VALUES(102,1,1,'active')");
+$pdo->exec("INSERT INTO service_students(service_id,student_id) VALUES(102,101)");
 $pdo->exec("INSERT INTO vehicle_class_changes
  (agency_id,driver_id,vehicle_id,old_vehicle_model,new_vehicle_model,old_vehicle_class,new_vehicle_class,
  contract_effective_date,update_student_debt,student_debt_effective_date,update_driver_pay,driver_pay_effective_date,
@@ -77,6 +88,28 @@ if(\ServiceYar\Domain\VehicleClassRateApplication::applyDue(1)!==0)
  throw new RuntimeException('Due rate was applied twice');
 $future=(int)$pdo->query("SELECT COUNT(*) FROM vehicle_class_rate_periods WHERE applied_at IS NULL")->fetchColumn();
 if($future!==1)throw new RuntimeException('Future rate should remain pending');
+// A period belonging to a former service must not modify the current student's
+// parent charge or payroll rate. Reconciliation is required, not auto-application.
+$pdo->exec("INSERT INTO vehicle_class_changes
+ (agency_id,driver_id,vehicle_id,old_vehicle_model,new_vehicle_model,old_vehicle_class,new_vehicle_class,
+ contract_effective_date,update_student_debt,student_debt_effective_date,update_driver_pay,driver_pay_effective_date,
+ old_vehicle_snapshot,new_vehicle_snapshot,decision_snapshot,created_by)
+ VALUES(1,11,24,'ساینا','دنا',2,3,NULL,1,'2001-01-01',0,NULL,'{}','{}','{}',99)");
+$staleChange=(int)$pdo->lastInsertId();
+$pdo->prepare("INSERT INTO vehicle_class_rate_periods
+ (agency_id,change_id,subject_type,subject_id,service_id,effective_date,old_class,new_class,
+ old_monthly_irr,new_monthly_irr,fee_source,calculation_snapshot)
+ VALUES(1,?,'student_debt',101,999,'2001-01-01',2,3,1400000,9999999,'taxi','{}')")
+ ->execute([$staleChange]);
+try{
+ \ServiceYar\Domain\VehicleClassRateApplication::applyDue(1);
+ throw new RuntimeException('Stale service assignment was allowed to reprice student');
+}catch(\ServiceYar\Auth\AuthException $e){
+ if($e->codeName!=='STALE_VEHICLE_RATE_ASSIGNMENT')throw $e;
+}
+if((int)$pdo->query('SELECT monthly_fee FROM students WHERE id=101')->fetchColumn()!==1400000)
+ throw new RuntimeException('Stale adjustment modified the student's tuition');
+
 // Accounting invariant with an issued invoice, prior receipts, signed and
 // future-dated adjustments. Historical invoice and cash must not be rewritten.
 $pdo->exec("CREATE TABLE invoices(id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
