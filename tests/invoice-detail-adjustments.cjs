@@ -17,3 +17,13 @@ assert(zero.includes('<dt>مبلغ قابل پرداخت پس از اصلاح</d
 assert(zero.includes('<dt>مانده اصلاح‌شده فاکتور</dt><dd>0</dd>'));
 assert(html(base).includes('<dt>مانده اصلاح‌شده فاکتور</dt><dd>270353421</dd>'));
 console.log('Invoice detail backend adjustment amounts: OK');
+const decorateStart=source.indexOf("  table?.querySelectorAll('tbody tr').forEach",source.indexOf("table?.classList.add('sy-invoice-table')"));
+const decorateEnd=source.indexOf("\n }",decorateStart);
+const status={innerHTML:''},paid={innerHTML:'0'};
+const tr={querySelector:selector=>selector==='td[data-label="وضعیت"]'?status:null,
+ querySelectorAll:()=>{throw Error('Invoice cells must be selected by label, not position');}};
+new Function('table','d','esc','persianDigits','display',source.slice(decorateStart,decorateEnd))(
+ {querySelectorAll:()=>[tr]}, {items:[{display_status:'paid',effective_display_status:'open'}]},String,String,()=> 'باز');
+assert(status.innerHTML.includes('data-state="open"'));
+assert.equal(paid.innerHTML,'0');
+console.log('Invoice status decoration preserves financial columns: OK');

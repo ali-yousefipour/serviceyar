@@ -1549,7 +1549,7 @@ async function loadResource(key){
 
   const kpis=$('syInvoiceKpis');if(kpis)kpis.innerHTML=[['تعداد فاکتورها',summary.records],['جمع فاکتور معتبر',summary.amount],['دریافتی مستقیم',summary.paid],['مانده فاکتورها',summary.remaining]].map(([label,value],i)=>'<div class="sy-invoice-kpi"><small>'+label+'</small><strong>'+number(value||0)+'</strong>'+(i?'<span>ریال</span>':'')+'</div>').join('');
   const table=$('table').querySelector('table');table?.classList.add('sy-invoice-table');
-  table?.querySelectorAll('tbody tr').forEach((tr,i)=>{const row=d.items[i];if(!row)return;const cells=tr.querySelectorAll('td');const party=cells[4];if(party&&row.party_meta)party.insertAdjacentHTML('beforeend','<small class="sy-invoice-meta">'+esc(persianDigits(row.party_meta))+'</small>');const st=cells[9];if(st)st.innerHTML='<span class="sy-invoice-status" data-state="'+esc(row.display_status)+'">'+esc(display(row,'status'))+'</span>';});
+  table?.querySelectorAll('tbody tr').forEach((tr,i)=>{const row=d.items[i];if(!row)return;const party=tr.querySelector('td[data-label="شخص / طرف حساب"]');if(party&&row.party_meta)party.insertAdjacentHTML('beforeend','<small class="sy-invoice-meta">'+esc(persianDigits(row.party_meta))+'</small>');const st=tr.querySelector('td[data-label="وضعیت"]');if(st)st.innerHTML='<span class="sy-invoice-status" data-state="'+esc(row.effective_display_status||row.display_status)+'">'+esc(display(row,'status'))+'</span>';});
  }
  if(key==='services'){
   const titleOf=r=>String(r.title||r.name||r.code||'سرویس بدون عنوان');
