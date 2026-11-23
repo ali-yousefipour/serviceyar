@@ -27,6 +27,9 @@ final class PayrollConflictsWorkbook
             if($e->codeName!=='DRIVER_BASE_MONTHLY_REQUIRED')throw $e;
             $conflicts=$e->context['conflicts']??[];
         }
+        $agencyStmt=\ServiceYar\Database\Connection::get()->prepare('SELECT name FROM agencies WHERE id=?');
+        $agencyStmt->execute([$agencyId]);
+        $agencyName=(string)($agencyStmt->fetchColumn()?:'');
         require_once __DIR__.'/../Vendor/SimpleXLSXGen.php';
         $headers=['ردیف','دانش‌آموز','شناسه دانش‌آموز','راننده','شناسه راننده','شرکت','سرویس','شناسه سرویس','خودرو','کلاس خودرو','تاریخ مؤثر','مبنای ثبت‌شده','علت مغایرت','اقدام پیشنهادی'];
         $rows=[$headers];
@@ -34,7 +37,7 @@ final class PayrollConflictsWorkbook
             $rows[]=[
                 $i+1,self::cell($c['studentName']??''),self::cell($c['studentId']??''),
                 self::cell($c['driverName']??''),self::cell($c['driverId']??''),
-                self::cell((string)$agencyId),self::cell($c['serviceName']??''),
+                self::cell($agencyName),self::cell($c['serviceName']??''),
                 self::cell($c['serviceId']??''),self::cell($c['vehicleName']??''),
                 self::cell($c['vehicleClass']??''),self::cell($c['effectiveDate']??''),
                 self::cell($c['recordedBasis']??'ثبت نشده'),
