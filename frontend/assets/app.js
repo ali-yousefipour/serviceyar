@@ -70,7 +70,11 @@ async function api(url,options={}){
   const d=await r.json().catch(()=>({}));
   if(!r.ok||!d.ok){
    const message=d?.error?.message||(r.status===401?'نشست معتبر نیست یا ورود انجام نشده است.':r.status===419?'توکن امنیتی منقضی شده است؛ صفحه را تازه‌سازی و دوباره وارد شوید.':r.status>=500?'خطای سرور یا پایگاه داده؛ وضعیت مهاجرت‌های دیتابیس بررسی شود.':'پاسخ نامعتبر از سرور');
-   throw new Error(message);
+   const error=new Error(message);
+   error.status=r.status;
+   error.code=d?.error?.code;
+   error.details=d?.error;
+   throw error;
   }
   return d.data;
  }finally{task?.finish();}
