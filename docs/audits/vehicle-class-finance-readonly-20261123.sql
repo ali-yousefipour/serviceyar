@@ -128,3 +128,54 @@ SELECT ch.agency_id,ch.id AS change_id,ch.driver_id,
    AND x.change_id=ch.id) AS appendix_rows
 FROM vehicle_class_changes ch
 ORDER BY ch.agency_id,ch.id;
+
+-- G) Missing driver basis; these rows must be reconciled from authoritative
+-- tariff or signed agreement before a payroll estimate can be finalized.
+SELECT sv.agency_id,sv.id AS service_id,sv.driver_id,
+ st.id AS student_id,st.monthly_fee AS parent_monthly_irr,
+ st.driver_base_monthly AS driver_monthly_irr
+FROM service_students ss
+JOIN services sv ON sv.id=ss.service_id
+JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id
+WHERE sv.is_active=1 AND sv.status<>'cancelled' AND st.is_active=1
+ AND (st.driver_base_monthly IS NULL OR st.driver_base_monthly<0)
+ORDER BY sv.agency_id,sv.id,st.id;
+
+-- H) Driver monthly basis compared with the cached service net.
+-- The policy-specific deductions must be evaluated in application code:
+-- do NOT interpret raw gross vs net differences as errors.
+SELECT sv.agency_id,sv.id AS service_id,sv.driver_id,
+ COUNT(st.id) AS students,
+ SUM(CASE WHEN st.driver_base_monthly IS NULL THEN 1 ELSE 0 END) AS missing_driver_bases,
+ COALESCE(SUM(st.monthly_fee),0) AS parent_gross_monthly_irr,
+ COALESCE(SUM(st.driver_base_monthly),0) AS driver_gross_monthly_irr,
+ sv.monthly_fee AS cached_driver_net_irr
+FROM services sv
+JOIN service_students ss ON ss.service_id=sv.id
+JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id AND st.is_active=1
+WHERE sv.is_active=1 AND sv.status<>'cancelled'
+GROUP BY sv.agency_id,sv.id,sv.driver_id,sv.monthly_fee
+ORDER BY sv.agency_id,sv.id;
+
+-- I) Multiple contract/invoice mappings for one student-year.
+-- A class adjustment MUST NOT be copied to multiple unrelated invoices.
+SELECT agency_id,student_id,academic_year,
+ COUNT(*) AS mapped_contract_rows,COUNT(DISTINCT contract_id) AS contracts,
+ COUNT(DISTINCT invoice_id) AS invoices
+FROM student_contract_invoices
+GROUP BY agency_id,student_id,academic_year
+HAVING COUNT(DISTINCT contract_id)>1 OR COUNT(DISTINCT invoice_id)>1;
+
+-- J) Due rate periods pointing to a service where the student is no longer
+-- actively assigned (must be reconciled; never replayed onto a new service).
+SELECT p.agency_id,p.id AS period_id,p.change_id,
+ p.subject_type,p.subject_id AS student_id,p.service_id,p.effective_date,p.applied_at
+FROM vehicle_class_rate_periods p
+WHERE p.effective_date<=DATE(UTC_TIMESTAMP()+INTERVAL 210 MINUTE)
+ AND NOT EXISTS (
+  SELECT 1 FROM service_students ss
+  JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=p.agency_id
+  JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id
+  WHERE ss.student_id=p.subject_id AND ss.service_id=p.service_id
+   AND st.is_active=1 AND sv.is_active=1 AND sv.status<>'cancelled')
+ORDER BY p.agency_id,p.id;
