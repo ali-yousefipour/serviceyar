@@ -275,9 +275,13 @@ final class OperationsService
         // only. Recorded driver_work and approved payroll remain immutable.
         $rateHistory=[];
         if(VehicleClassSchema::exists($p)){
-            $rateQuery=$p->prepare("SELECT subject_id,service_id,id,effective_date,old_monthly_irr,new_monthly_irr
-                FROM vehicle_class_rate_periods WHERE agency_id=? AND subject_type='driver_pay'
-                ORDER BY subject_id,service_id,effective_date,id");
+            $rateQuery=$p->prepare("SELECT rp.subject_id,rp.service_id,rp.id,rp.effective_date,
+                    rp.old_monthly_irr,rp.new_monthly_irr,ch.driver_id AS rate_driver_id
+                FROM vehicle_class_rate_periods rp
+                JOIN vehicle_class_changes ch ON ch.id=rp.change_id
+                    AND ch.agency_id=rp.agency_id AND ch.update_driver_pay=1
+                WHERE rp.agency_id=? AND rp.subject_type='driver_pay'
+                ORDER BY rp.subject_id,rp.service_id,rp.effective_date,rp.id");
             $rateQuery->execute([$aid]);
             foreach($rateQuery->fetchAll(\PDO::FETCH_ASSOC) as $period)
                 $rateHistory[(int)$period['subject_id'].':'.(int)$period['service_id']][]=$period;
@@ -318,7 +322,10 @@ final class OperationsService
                 'service_id'=>$serviceId,'driver_id'=>$member['driver_id'],
                 'title'=>$member['title'],'code'=>$member['code'],
                 'fee_source'=>$member['fee_source'],'student_count'=>0,'monthly_gross'=>0];
-            $history=$rateHistory[$studentId.':'.$serviceId]??[];
+            $history=array_values(array_filter(
+                $rateHistory[$studentId.':'.$serviceId]??[],
+                static fn(array $rate): bool=>(int)$rate['rate_driver_id']===(int)$member['driver_id']
+            ));
             $changes=$driverChangesByService[$serviceId]??[];
             // Approval timestamp is evidence of a reassignment, not an
             // authoritative effective date for daily salary apportionment.
