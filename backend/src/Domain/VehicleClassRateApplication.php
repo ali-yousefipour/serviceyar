@@ -30,7 +30,18 @@ final class VehicleClassRateApplication
                       WHERE p.agency_id=? AND p.applied_at IS NULL AND p.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
                       ORDER BY p.effective_date,p.id LIMIT 500 FOR UPDATE");
                 $q->execute([$agencyId]);$pending=$q->fetchAll(PDO::FETCH_ASSOC);
+                $assignment=$pdo->prepare("SELECT 1 FROM service_students ss
+                    JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=?
+                    JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id
+                    WHERE ss.service_id=? AND ss.student_id=?
+                      AND sv.is_active=1 AND sv.status<>'cancelled'
+                      AND st.is_active=1 LIMIT 1");
                 foreach($pending as $p){
+                    // A future-dated adjustment must never overwrite a student
+                    // who has since moved to an unrelated service or company.
+                    $assignment->execute([$agencyId,$p['service_id'],$p['subject_id']]);
+                    if(!$assignment->fetchColumn())
+                        throw new AuthException(409,'دانش‌آموز از سرویس مربوط به تغییر کلاس جدا شده است؛ سوابق مالی باید پیش از اعمال نرخ بررسی شود.','STALE_VEHICLE_RATE_ASSIGNMENT');
                     if($p['subject_type']==='student_debt'){
                         $pdo->prepare("UPDATE students SET monthly_fee=?,tariff_vehicle_class=?
                             WHERE id=? AND agency_id=?")
