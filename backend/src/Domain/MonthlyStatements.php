@@ -162,8 +162,20 @@ final class MonthlyStatements
                 ];
             }
             $periods=$rateHistory[(int)$row['student_id'].':'.(int)$row['service_id']]??[];
-            $gross=max(0,(float)VehicleClassEffectiveDates::blendedRate($from,$to,
-                (int)round((float)($row['driver_base_monthly']??$row['monthly_fee'])),$periods));
+            // Never substitute a parent's tuition for a missing payroll basis.
+            // The preview may surface the defective row, but finalization is blocked.
+            $invalidDriverRate=$row['driver_base_monthly']===null
+                || $row['driver_base_monthly']==='' || !is_numeric($row['driver_base_monthly'])
+                || (float)$row['driver_base_monthly']<0;
+            if($invalidDriverRate){
+                $validationErrors[]=[
+                    'student_id'=>(int)$row['student_id'],
+                    'student_name'=>$row['student_name'],
+                    'message'=>'مبنای ماهانه حقوق راننده برای این دانش‌آموز معتبر نیست. ابتدا نرخ راننده را تعیین کنید.'
+                ];
+            }
+            $gross=$invalidDriverRate?0.0:max(0,(float)VehicleClassEffectiveDates::blendedRate(
+                $from,$to,(int)round((float)$row['driver_base_monthly']),$periods));
             $calc=DriverDeductionPolicy::calculate($gross,$rates);
             // SchoolServiceStatement follows the original 1405 reference file:
             // service fee + 3% oversight + 1% coordination + 7% company
@@ -306,7 +318,7 @@ final class MonthlyStatements
         }
         if(!$data['items'])throw new AuthException(422,'برای این ماه هیچ تخصیص فعال و قابل محاسبه‌ای وجود ندارد.','STATEMENT_EMPTY');
         if(!empty($data['validation_errors'])){
-            throw new AuthException(422,'تعدادی از دانش‌آموزان کلاس خودرو، مسافت یا ناحیه معتبر ندارند. پیش از ثبت نهایی، اطلاعات نرخ‌نامه را اصلاح کنید.','STATEMENT_TARIFF_UNVERIFIED');
+            throw new AuthException(422,'نرخ راننده یا اطلاعات کلاس خودرو، مسافت و ناحیه برای برخی دانش‌آموزان نامعتبر است. پیش از ثبت نهایی اصلاح کنید.','STATEMENT_TARIFF_UNVERIFIED');
         }
         if(!empty($data['missing_driver_errors'])){
             throw new AuthException(422,'برای تعدادی از سرویس‌ها راننده تعیین نشده است. پیش از ثبت نهایی راننده‌ها را مشخص کنید.','STATEMENT_DRIVER_UNASSIGNED');
