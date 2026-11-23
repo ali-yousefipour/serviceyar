@@ -3553,7 +3553,7 @@ async function operationPage(key,token){
    '<div class="table-wrap" role="region" tabindex="0" aria-label="مغایرت‌های حقوق"><table><thead><tr><th>ردیف</th><th>دانش‌آموز</th><th>راننده</th><th>شرکت</th><th>سرویس</th><th>خودرو</th><th>کلاس</th><th>تاریخ مؤثر</th><th>مبنای ثبت‌شده</th><th>علت</th><th>اقدام پیشنهادی</th><th>عملیات</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
   dialog('مغایرت‌های مبنای محاسبه حقوق رانندگان',content);
   const search=$('payrollConflictSearch');
-  if(search)search.oninput=()=>{const term=search.value.trim().toLocaleLowerCase('fa');search.closest('.modal-card')?.querySelectorAll('tbody tr').forEach(row=>{row.hidden=!row.textContent.toLocaleLowerCase('fa').includes(term);});};
+  if(search)search.oninput=()=>{const term=search.value.trim().toLocaleLowerCase('fa');search.closest('.modal')?.querySelectorAll('tbody tr').forEach(row=>{row.hidden=!row.textContent.toLocaleLowerCase('fa').includes(term);});};
   $('payrollConflictExport')?.addEventListener('click',()=>downloadFile('/api/v1/operations/payroll/conflicts.xlsx?'+query.toString(),'مغایرت‌های-حقوق-رانندگان.xlsx'));
   $('payrollConflictRecheck')?.addEventListener('click',()=>{closeDialog();load();});
  }
