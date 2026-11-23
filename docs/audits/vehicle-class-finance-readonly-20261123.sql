@@ -15,7 +15,7 @@ SELECT p.agency_id,p.id AS period_id,p.change_id,p.subject_type,
  p.subject_id,p.service_id,p.effective_date,p.old_monthly_irr,p.new_monthly_irr,
  (SELECT prev.new_monthly_irr FROM vehicle_class_rate_periods prev
   WHERE prev.agency_id=p.agency_id AND prev.subject_type=p.subject_type
-    AND prev.subject_id=p.subject_id
+    AND prev.subject_id=p.subject_id AND prev.service_id=p.service_id
     AND (prev.effective_date<p.effective_date OR
       (prev.effective_date=p.effective_date AND prev.id<p.id))
   ORDER BY prev.effective_date DESC,prev.id DESC LIMIT 1) AS preceding_new_rate
@@ -23,13 +23,13 @@ FROM vehicle_class_rate_periods p
 WHERE EXISTS (
  SELECT 1 FROM vehicle_class_rate_periods prev
  WHERE prev.agency_id=p.agency_id AND prev.subject_type=p.subject_type
- AND prev.subject_id=p.subject_id
+ AND prev.subject_id=p.subject_id AND prev.service_id=p.service_id
  AND (prev.effective_date<p.effective_date OR
  (prev.effective_date=p.effective_date AND prev.id<p.id))
  AND prev.new_monthly_irr<>p.old_monthly_irr
  AND prev.id=(SELECT x.id FROM vehicle_class_rate_periods x
  WHERE x.agency_id=p.agency_id AND x.subject_type=p.subject_type
- AND x.subject_id=p.subject_id
+ AND x.subject_id=p.subject_id AND x.service_id=p.service_id
  AND (x.effective_date<p.effective_date OR
  (x.effective_date=p.effective_date AND x.id<p.id))
  ORDER BY x.effective_date DESC,x.id DESC LIMIT 1))
@@ -70,7 +70,7 @@ JOIN students s ON s.id=p.subject_id AND s.agency_id=p.agency_id
 WHERE p.effective_date<=DATE(UTC_TIMESTAMP()+INTERVAL 210 MINUTE)
  AND p.id=(SELECT newer.id FROM vehicle_class_rate_periods newer
    WHERE newer.agency_id=p.agency_id AND newer.subject_type=p.subject_type
-     AND newer.subject_id=p.subject_id
+     AND newer.subject_id=p.subject_id AND newer.service_id=p.service_id
      AND newer.effective_date<=DATE(UTC_TIMESTAMP()+INTERVAL 210 MINUTE)
    ORDER BY newer.effective_date DESC,newer.id DESC LIMIT 1)
  AND (p.applied_at IS NULL OR
