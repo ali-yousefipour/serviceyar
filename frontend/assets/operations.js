@@ -3550,7 +3550,7 @@ async function operationPage(key,token){
   const content='<div class="sy-payroll-conflict-summary" role="alert"><p>تعداد مغایرت‌های مسدودکننده: <strong>'+number(e.details.summary?.blocking??conflicts.length)+'</strong></p><p>شناسه پیگیری: <code>'+esc(e.details.requestId||'—')+'</code></p></div>'+
    '<div class="sy-payroll-conflict-actions"><button type="button" id="payrollConflictExport">خروجی Excel مغایرت‌ها</button><button type="button" id="payrollConflictRecheck">بررسی مجدد مغایرت‌ها</button></div>'+ 
    '<label>جستجو در مغایرت‌ها<input type="search" id="payrollConflictSearch" placeholder="دانش‌آموز یا علت مغایرت"></label>'+
-   '<div class="table-wrap" role="region" tabindex="0" aria-label="مغایرت‌های حقوق"><table><thead><tr><th>ردیف</th><th>دانش‌آموز</th><th>راننده</th><th>شرکت</th><th>سرویس</th><th>خودرو</th><th>کلاس</th><th>تاریخ مؤثر</th><th>مبنای ثبت‌شده</th><th>علت</th><th>اقدام پیشنهادی</th><th>عملیات</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+   '<div class="table-wrap" role="region" tabindex="0" aria-label="مغایرت‌های حقوق"><table class="sy-payroll-conflict-table"><thead><tr><th>ردیف</th><th>دانش‌آموز</th><th>راننده</th><th>شرکت</th><th>سرویس</th><th>خودرو</th><th>کلاس</th><th>تاریخ مؤثر</th><th>مبنای ثبت‌شده</th><th>علت</th><th>اقدام پیشنهادی</th><th>عملیات</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
   dialog('مغایرت‌های مبنای محاسبه حقوق رانندگان',content);
   const search=$('payrollConflictSearch');
   if(search)search.oninput=()=>{const term=search.value.trim().toLocaleLowerCase('fa');search.closest('.modal')?.querySelectorAll('tbody tr').forEach(row=>{row.hidden=!row.textContent.toLocaleLowerCase('fa').includes(term);});};
