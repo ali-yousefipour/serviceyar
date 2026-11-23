@@ -179,3 +179,18 @@ WHERE p.effective_date<=DATE(UTC_TIMESTAMP()+INTERVAL 210 MINUTE)
   WHERE ss.student_id=p.subject_id AND ss.service_id=p.service_id
    AND st.is_active=1 AND sv.is_active=1 AND sv.status<>'cancelled')
 ORDER BY p.agency_id,p.id;
+
+-- K) Signed debt memos lacking an active issued student contract/invoice.
+-- Cancellation after a memo requires a separately approved reversal; do not
+-- delete the original memo, move payments, or silently hide the discrepancy.
+SELECT d.agency_id,d.id AS adjustment_id,d.change_id,d.student_id,
+ d.service_id,d.academic_year,d.effective_date,d.amount_irr
+FROM vehicle_class_debt_adjustments d
+WHERE NOT EXISTS (
+ SELECT 1 FROM student_contract_invoices m
+ JOIN contracts c ON c.id=m.contract_id AND c.agency_id=m.agency_id
+ JOIN invoices i ON i.id=m.invoice_id AND i.agency_id=m.agency_id
+ WHERE m.agency_id=d.agency_id AND m.student_id=d.student_id
+  AND REPLACE(m.academic_year,'/','-')=REPLACE(d.academic_year,'/','-')
+  AND c.status<>'cancelled' AND i.status<>'cancelled')
+ORDER BY d.agency_id,d.student_id,d.id;
