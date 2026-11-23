@@ -28,6 +28,23 @@ foreach($tables as $table=>$columns){
  $actual=$q->fetchAll(PDO::FETCH_COLUMN);
  foreach($columns as $col)if(!in_array($col,$actual,true))$schemaProblems[]="$table.$col";
 }
+$requiredIndexes=[
+ 'vehicle_class_changes'=>['idx_vehicle_class_change_driver','idx_vehicle_class_change_vehicle'],
+ 'vehicle_class_rate_periods'=>['uq_vehicle_change_subject','idx_vehicle_class_period_subject','idx_vehicle_class_period_due'],
+ 'vehicle_class_contract_appendices'=>['uq_vehicle_class_contract_appendix','idx_vehicle_contract_appendix'],
+ 'vehicle_class_debt_adjustments'=>['uq_vehicle_debt_change_student','idx_vehicle_debt_student_year'],
+];
+$missingIndexes=[];
+$missingForeignKeys=[];
+foreach($requiredIndexes as $table=>$indexes){
+ $q=$pdo->prepare('SELECT DISTINCT INDEX_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=? AND TABLE_NAME=?');
+ $q->execute([$schema,$table]);
+ $found=$q->fetchAll(PDO::FETCH_COLUMN);
+ foreach($indexes as $index)if(!in_array($index,$found,true))$missingIndexes[]="$table.$index";
+ $q=$pdo->prepare('SELECT DISTINCT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA=? AND TABLE_NAME=? AND REFERENCED_TABLE_NAME IS NOT NULL');
+ $q->execute([$schema,$table]);
+ if(!$q->fetchColumn())$missingForeignKeys[]=$table;
+}
 $migrationRecorded=false;
 $q=$pdo->prepare("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=? AND TABLE_NAME='migrations'");
 $q->execute([$schema]);
@@ -40,6 +57,8 @@ $result=[
  'migration'=>'0168_vehicle_class_change_history.sql',
  'migration_recorded'=>$migrationRecorded,
  'missing_columns'=>$schemaProblems,
+ 'missing_indexes'=>$missingIndexes,
+ 'missing_foreign_keys'=>$missingForeignKeys,
  'tables'=>[],
  'tenant_reference_mismatches'=>[],
 ];
@@ -54,6 +73,6 @@ if(!$schemaProblems){
  foreach($checks as $key=>$sql)
   $result['tenant_reference_mismatches'][$key]=(int)$pdo->query($sql)->fetchColumn();
 }
-$result['ok']=$migrationRecorded && !$schemaProblems && array_sum($result['tenant_reference_mismatches'])===0;
+$result['ok']=$migrationRecorded && !$schemaProblems && !$missingIndexes && !$missingForeignKeys && array_sum($result['tenant_reference_mismatches'])===0;
 echo json_encode($result,JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),PHP_EOL;
 if(in_array('--strict',$argv,true) && !$result['ok'])exit(1);
