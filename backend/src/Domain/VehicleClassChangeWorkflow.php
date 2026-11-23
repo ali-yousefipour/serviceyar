@@ -160,7 +160,7 @@ final class VehicleClassChangeWorkflow
                 // effective date. Never attach a new vehicle to an expired term.
                 $driverContracts=$pdo->prepare("SELECT c.* FROM contracts c
                     WHERE c.agency_id=? AND c.party_type='driver' AND c.party_id=?
-                      AND c.status='active' AND c.start_date<=?
+                      AND c.status<>'cancelled' AND c.start_date<=?
                       AND (c.end_date IS NULL OR c.end_date>=?)
                     ORDER BY c.id FOR UPDATE");
                 $driverContracts->execute([$aid,$driverId,
