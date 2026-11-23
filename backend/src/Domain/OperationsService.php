@@ -425,13 +425,6 @@ final class OperationsService
             $servicesMap[$serviceId]['student_count']++;
             $servicesMap[$serviceId]['monthly_gross']+=$monthly;
         }
-        if($conflicts){
-            throw new AuthException(409,'مبنای حقوق برخی دانش‌آموزان برای برآورد معتبر نیست؛ موارد را بررسی کنید.','DRIVER_BASE_MONTHLY_REQUIRED',[
-                'period'=>['from'=>$from,'to'=>$to],
-                'summary'=>['total'=>count($conflicts),'blocking'=>count($conflicts)],
-                'conflicts'=>$conflicts
-            ]);
-        }
         $byDriver=[];
         foreach($servicesMap as $service)
             $byDriver[(int)$service['driver_id']][]=$service;
@@ -485,6 +478,27 @@ final class OperationsService
             $r['reconciliation_requires_review']=abs((float)$r['recorded_earned']-$assignedMonthly)>=1;
             $r['balance']=$deductions['net_earned']-$r['paid'];
         }unset($r);
+        if($conflicts){
+            $invalidDriverIds=[];
+            foreach($conflicts as $conflict)$invalidDriverIds[(int)$conflict['driverId']]=true;
+            $partial=[];
+            foreach($rows as $row){
+                if(isset($invalidDriverIds[(int)$row['id']])||empty($row['service_details']))continue;
+                $partial[]=[
+                    'driverId'=>(int)$row['id'],
+                    'driverName'=>trim((string)$row['first_name'].' '.(string)$row['last_name']),
+                    'grossRials'=>(float)$row['gross_earned'],
+                    'netRials'=>(float)$row['net_earned'],
+                    'serviceCount'=>count($row['service_details']),
+                    'provisional'=>true
+                ];
+            }
+            throw new AuthException(409,'مبنای حقوق برخی دانش‌آموزان برای برآورد معتبر نیست؛ موارد را بررسی کنید.','DRIVER_BASE_MONTHLY_REQUIRED',[
+                'period'=>['from'=>$from,'to'=>$to],
+                'summary'=>['total'=>count($conflicts),'blocking'=>count($conflicts),'provisionalDrivers'=>count($partial)],
+                'conflicts'=>$conflicts,'provisionalDrivers'=>$partial
+            ]);
+        }
         return ['items'=>$rows,'from'=>$from,'to'=>$to,'calculationMode'=>$estimateRequested?'assignment_estimate':'recorded','estimatedOnly'=>$estimateRequested,'estimatedWarning'=>'برآورد بر اساس تخصیص‌های جاری و دوره‌های تاریخ‌دار نرخ خودرو است؛ سوابق کارکرد و اسناد قطعی تغییر نمی‌کنند. روزهای واقعی سرویس را پیش از تأیید کنترل کنید.'];
     }
 
