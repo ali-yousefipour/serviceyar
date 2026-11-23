@@ -1776,7 +1776,7 @@ async function vehicleClassHistoryDialog(){
     '<h5>اسناد تعدیل بدهی دانش‌آموزان ('+fmt(adj.length)+')</h5>'+
     (adj.length?simpleTable(['دانش‌آموز','سال تحصیلی','تاریخ اثر','مبلغ تعدیل (ریال)'],adj.map(a=>[a.student_name||a.student_id,a.academic_year,solar(a.effective_date),fmt(a.amount_irr)])):'<p class="muted">سند تعدیل بدهی ثبت نشده است.</p>')+
     '<h5>تاریخچه نرخ مالی ('+fmt(rates.length)+')</h5>'+
-    (rates.length?simpleTable(['نوع','شناسه دانش‌آموز','تاریخ اثر','نرخ قبلی (ریال)','نرخ جدید (ریال)'],rates.map(p=>[p.subject_type==='driver_pay'?'حقوق راننده':'بدهی دانش‌آموز',p.subject_id,solar(p.effective_date),fmt(p.old_monthly_irr),fmt(p.new_monthly_irr)])):'<p class="muted">نرخی ثبت نشده است.</p>');
+    (rates.length?simpleTable(['نوع','شناسه دانش‌آموز','تاریخ اثر','نرخ قبلی (ریال)','نرخ جدید (ریال)','وضعیت اعمال'],rates.map(p=>[p.subject_type==='driver_pay'?'حقوق راننده':'بدهی دانش‌آموز',p.subject_id,solar(p.effective_date),fmt(p.old_monthly_irr),fmt(p.new_monthly_irr),({applied:'اعمال‌شده',scheduled:'زمان‌بندی‌شده',needs_review:'نیازمند تطبیق سرویس',pending:'در انتظار اعمال'})[p.application_status]||'نامشخص'])):'<p class="muted">نرخی ثبت نشده است.</p>');
    popup.querySelector('[data-close-report-detail]').onclick=()=>popup.remove();
    popup.scrollIntoView({block:'nearest',behavior:'smooth'});
   }catch(e){if(popup.isConnected)popup.innerHTML='<p class="error" role="alert">'+esc(e.message)+'</p>';}
