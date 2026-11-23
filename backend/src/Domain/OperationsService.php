@@ -294,7 +294,7 @@ final class OperationsService
                 FROM driver_changes dc
                 JOIN services sv ON sv.id=dc.service_id AND sv.agency_id=dc.agency_id
                 WHERE dc.agency_id=? AND dc.status='approved'
-                  AND dc.reviewed_at IS NOT NULL AND DATE(dc.reviewed_at)>=?
+                  AND dc.reviewed_at>=?
                 ORDER BY dc.service_id,dc.reviewed_at,dc.id");
             $changed->execute([$aid,$from]);
             foreach($changed->fetchAll(\PDO::FETCH_ASSOC) as $change){
