@@ -55,4 +55,17 @@ $futureWeights=Rates::classWeights('2026-11-01','2026-11-30',[
 ],2);
 check(abs(($futureWeights[1]??0)-1.0)<0.000001,
  'Future vehicle swaps must preserve the old class in statements');
+// A signed credit note larger than an issued invoice must not fabricate cash.
+$creditInvoices=[
+ ['id'=>1,'issue_date'=>'2026-11-01','amount'=>-500000],
+ ['id'=>2,'issue_date'=>'2026-11-02','amount'=>1000000],
+];
+\ServiceYar\Domain\StudentBalance::allocate($creditInvoices,300000);
+check($creditInvoices[0]['paidAmount']===0.0 || $creditInvoices[0]['paidAmount']===0,
+ 'Over-credit must never be allocated as a negative receipt');
+check(abs($creditInvoices[1]['paidAmount']-300000)<0.001,
+ 'Over-credit must not inflate the available cash for later invoices');
+check($creditInvoices[0]['remainingAmount']===0.0 || $creditInvoices[0]['remainingAmount']===0,
+ 'Over-credit invoice must not show a negative receivable');
+
 echo "Vehicle class effective-date rules: OK\n";
