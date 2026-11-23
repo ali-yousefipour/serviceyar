@@ -1157,6 +1157,44 @@ try{
  rejected(fn()=>\ServiceYar\Domain\FinancialReconciliation::report($uid,$a,['academicYear'=>'1405-1406','student'=>['invalid']]),'VALIDATION_ERROR');
  rejected(fn()=>\ServiceYar\Domain\FinancialReconciliation::report($uid,$a,['academicYear'=>'1405-1406','student'=>str_repeat('a',241)]),'VALIDATION_ERROR');
  rejected(fn()=>\ServiceYar\Domain\FinancialReconciliation::report($viewer,$b,['academicYear'=>'1405-1406']),'SCOPE_FORBIDDEN');
+ // End-to-end no-student class swap: approval, historical contract amendment,
+ // tenant isolation, idempotent retry and immutable monetary document.
+ $oldClassVehicle=D::save($uid,$a,'vehicles',[
+   'plate'=>'TEST-OLD-'.$tag,'capacity'=>4,'model'=>'پراید','tariffVehicleClass'=>1
+ ]);
+ $newClassVehicle=D::save($uid,$a,'vehicles',[
+   'plate'=>'TEST-NEW-'.$tag,'capacity'=>4,'model'=>'ساینا','tariffVehicleClass'=>2
+ ]);
+ $classDriver=D::save($uid,$a,'drivers',[
+   'firstName'=>'آزمون','lastName'=>'تغییرکلاس','status'=>'active',
+   'vehicleId'=>$oldClassVehicle['id']
+ ]);
+ $classDriverContract=D::save($uid,$a,'contracts',[
+   'title'=>'قرارداد راننده تغییر کلاس','partyType'=>'driver','partyId'=>$classDriver['id'],
+   'startDate'=>'2026-09-23','endDate'=>'2027-06-22','amount'=>'8000000'
+ ]);
+ $classChoices=[
+   'driverId'=>(int)$classDriver['id'],'tariffVehicleClass'=>2,
+   'updateContract'=>true,'contractEffectiveDate'=>'2026-11-16',
+   'updateStudentDebt'=>false,'updateDriverPay'=>false,
+ ];
+ $classSwap=\ServiceYar\Domain\VehicleClassChangeWorkflow::apply($uid,$a,(int)$newClassVehicle['id'],$classChoices);
+ check((int)$classSwap['driverId']===(int)$classDriver['id']
+   &&(int)$classSwap['affectedStudents']===0,'Approved empty-service swap has no invented student charges');
+ $classId=(int)$classSwap['changeId'];
+ $q=$p->prepare('SELECT COUNT(*) FROM vehicle_class_contract_appendices WHERE agency_id=? AND change_id=? AND contract_id=?');
+ $q->execute([$a,$classId,$classDriverContract['id']]);
+ check((int)$q->fetchColumn()===1,'Driver contract receives exactly one append-only amendment');
+ $q=$p->prepare('SELECT amount FROM contracts WHERE agency_id=? AND id=?');
+ $q->execute([$a,$classDriverContract['id']]);
+ check((int)$q->fetchColumn()===8000000,'Issued driver contract amount is never rewritten by class swap');
+ $q=$p->prepare('SELECT COUNT(*) FROM vehicle_class_debt_adjustments WHERE agency_id=? AND change_id=?');
+ $q->execute([$a,$classId]);
+ check((int)$q->fetchColumn()===0,'Declining student-debt adjustment leaves financial ledger untouched');
+ rejected(fn()=>\ServiceYar\Domain\VehicleClassChangeWorkflow::apply(
+   $uid,$a,(int)$newClassVehicle['id'],$classChoices),'VEHICLE_CLASS_NOT_CHANGED');
+ rejected(fn()=>\ServiceYar\Domain\VehicleClassHistory::detail($uid,$b,$classId),'CHANGE_NOT_FOUND');
+
  echo "Transport integration: $checks checks passed. All fixtures rolled back.\n";
 }finally{if($p->inTransaction())$p->rollBack();}
 
