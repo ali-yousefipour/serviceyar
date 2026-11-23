@@ -282,8 +282,25 @@ final class OperationsService
             foreach($rateQuery->fetchAll(\PDO::FETCH_ASSOC) as $period)
                 $rateHistory[(int)$period['subject_id'].':'.(int)$period['service_id']][]=$period;
         }
-        $details=$p->prepare("SELECT sv.id AS service_id,sv.driver_id,sv.title,sv.code,sv.fee_source,
-            st.id AS student_id,st.first_name AS student_first_name,st.last_name AS student_last_name,st.monthly_fee,st.driver_base_monthly,
+        // A current assignment is not a dated ledger. Never project a full
+        // historical month across a driver change without a signed day split.
+        $driverChangesByService=[];
+        if($estimateRequested){
+            $changed=$p->prepare("SELECT dc.service_id,dc.reviewed_at,dc.old_driver_id,dc.new_driver_id
+                FROM driver_changes dc
+                JOIN services sv ON sv.id=dc.service_id AND sv.agency_id=dc.agency_id
+                WHERE dc.agency_id=? AND dc.status='approved'
+                  AND dc.reviewed_at IS NOT NULL AND DATE(dc.reviewed_at)>=?
+                ORDER BY dc.service_id,dc.reviewed_at,dc.id");
+            $changed->execute([$aid,$from]);
+            foreach($changed->fetchAll(\PDO::FETCH_ASSOC) as $change){
+                // Changes after the reporting period also prove that the
+                // current driver cannot be assumed to have served that month.
+                $driverChangesByService[(int)$change['service_id']][]=$change;
+            }
+        }
+        $details=$p->prepare("SELECT sv.id AS service_id,sv.driver_id,sv.title,sv.code,sv.fee_source,sv.created_at AS service_created_at,
+            st.id AS student_id,st.first_name AS student_first_name,st.last_name AS student_last_name,st.created_at AS student_created_at,st.monthly_fee,st.driver_base_monthly,
             dr.first_name AS driver_first_name,dr.last_name AS driver_last_name,
             vh.model AS vehicle_model,vh.plate AS vehicle_plate,vh.tariff_vehicle_class AS vehicle_class
             FROM services sv JOIN service_students ss ON ss.service_id=sv.id
@@ -302,6 +319,32 @@ final class OperationsService
                 'title'=>$member['title'],'code'=>$member['code'],
                 'fee_source'=>$member['fee_source'],'student_count'=>0,'monthly_gross'=>0];
             $history=$rateHistory[$studentId.':'.$serviceId]??[];
+            $changes=$driverChangesByService[$serviceId]??[];
+            // Approval timestamp is evidence of a reassignment, not an
+            // authoritative effective date for daily salary apportionment.
+            $createdInOrAfterPeriod=substr((string)$member['student_created_at'],0,10)>$from
+                || substr((string)$member['service_created_at'],0,10)>$from;
+            if($estimateRequested && ($changes||$createdInOrAfterPeriod)){
+                $reasonCode=$changes?'HISTORICAL_DRIVER_ASSIGNMENT_UNVERIFIED':'HISTORICAL_SERVICE_DAYS_UNVERIFIED';
+                $reason=$changes
+                    ?'راننده این سرویس تغییر کرده است؛ تاریخچه تخصیص برای برآورد کل ماه کافی نیست.'
+                    :'دانش‌آموز یا سرویس پس از شروع دوره ثبت شده و خدمت کامل ماه تأیید نشده است.';
+                $conflicts[]=[
+                    'studentId'=>$studentId,
+                    'studentName'=>trim((string)$member['student_first_name'].' '.(string)$member['student_last_name']),
+                    'driverId'=>(int)$member['driver_id'],
+                    'driverName'=>trim((string)$member['driver_first_name'].' '.(string)$member['driver_last_name']),
+                    'serviceId'=>$serviceId,
+                    'serviceName'=>(string)$member['title'],
+                    'vehicleName'=>trim((string)$member['vehicle_model'].' '.(string)$member['vehicle_plate']),
+                    'vehicleClass'=>$member['vehicle_class']===null?null:(int)$member['vehicle_class'],
+                    'reasonCode'=>$reasonCode,'reason'=>$reason,'severity'=>'blocking',
+                    'effectiveDate'=>$changes?substr((string)$changes[0]['reviewed_at'],0,10):max(substr((string)$member['student_created_at'],0,10),substr((string)$member['service_created_at'],0,10)),
+                    'recordedBasis'=>$member['driver_base_monthly'],
+                    'suggestedAction'=>'برای این دوره از کارکرد ثبت‌شده و مستند استفاده کنید؛ برآورد کامل ماه با تخصیص جاری مجاز نیست.'
+                ];
+                continue;
+            }
             $currentBasisValid=$member['driver_base_monthly']!==null
                 && $member['driver_base_monthly']!==''
                 && is_numeric($member['driver_base_monthly'])
