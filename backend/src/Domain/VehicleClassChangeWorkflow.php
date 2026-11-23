@@ -191,7 +191,7 @@ final class VehicleClassChangeWorkflow
             // rebase of existing appendices and cannot be silently inserted.
             $previousRate=$pdo->prepare("SELECT effective_date,new_monthly_irr
                 FROM vehicle_class_rate_periods
-                WHERE agency_id=? AND subject_type=? AND subject_id=?
+                WHERE agency_id=? AND subject_type=? AND subject_id=? AND service_id=?
                 ORDER BY effective_date DESC,id DESC LIMIT 1 FOR UPDATE");
             foreach($oldRates as $sid=>&$rate){
                 foreach([
@@ -201,7 +201,7 @@ final class VehicleClassChangeWorkflow
                      'date'=>$choices['driverPayEffectiveDate'],'old'=>'oldDriver']
                 ] as $stream){
                     if(!$stream['enabled'])continue;
-                    $previousRate->execute([$aid,$stream['subject'],$sid]);
+                    $previousRate->execute([$aid,$stream['subject'],$sid,$rate['serviceId']]);
                     $previous=$previousRate->fetch(PDO::FETCH_ASSOC);
                     if(!$previous)continue;
                     if($stream['date']<=$previous['effective_date'])
