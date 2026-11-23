@@ -507,6 +507,8 @@ try{
  rejected(fn()=>D::save($uid,$a,'payments',['amount'=>1,'paymentDate'=>$date,'method'=>'bale','invoiceId'=>$invoice['id']]),'WORKFLOW_REQUIRED');
  $q=$p->prepare("UPDATE messages SET status='sent' WHERE agency_id=?");$q->execute([$a]);$message=D::list($uid,$a,'messages',[])['items'][0];rejected(fn()=>D::save($uid,$a,'messages',['status'=>'queued'],(int)$message['id']),'MESSAGE_LOCKED');
  $secondSchool=D::save($uid,$a,'schools',['name'=>'مدرسه دوم همین شرکت']);$secondStudent=D::save($uid,$a,'students',['schoolId'=>$secondSchool['id'],'firstName'=>'دانش','lastName'=>'مدرسه دوم','mobile'=>'09120000777']);
+ $p->prepare('UPDATE students SET driver_base_monthly=? WHERE id=? AND agency_id=?')
+   ->execute([500,$secondStudent['id'],$a]);
  $multi=D::save($uid,$a,'services',['title'=>'چندمدرسه‌ای','schoolId'=>$school['id'],'capacity'=>2]);
  rejected(fn()=>O::setServiceSchools($uid,$a,(int)$multi['id'],['schoolIds'=>[$school['id'],$otherSchool['id']]]),'CROSS_SCOPE_REFERENCE');
  O::setServiceSchools($uid,$a,(int)$multi['id'],['schoolIds'=>[$school['id'],$secondSchool['id']]]);check(count(O::serviceSchools($uid,$a,(int)$multi['id']))===2,'Service supports multiple schools');
@@ -793,6 +795,9 @@ try{
  for($i=0;$i<6;$i++){
   $seatStudents[]=D::save($uid,$a,'students',['schoolId'=>$school['id'],'firstName'=>'دانش‌آموز ظرفیت','lastName'=>(string)($i+1),'mobile'=>'09120008'.str_pad((string)(100+$i),3,'0',STR_PAD_LEFT)]);
  }
+ // Explicit payroll bases keep seat-capacity tests independent of tuition.
+ $payrollFixture=$p->prepare('UPDATE students SET driver_base_monthly=? WHERE id=? AND agency_id=?');
+ foreach($seatStudents as $seatStudent)$payrollFixture->execute([100,(int)$seatStudent['id'],$a]);
  for($i=0;$i<4;$i++)D::assignStudent($uid,$a,(int)$seatService['id'],(int)$seatStudents[$i]['id']);
  rejected(fn()=>D::assignStudent($uid,$a,(int)$seatService['id'],(int)$seatStudents[4]['id']),'CAPACITY_EXCEEDED');
  $seatVehicle=D::save($uid,$a,'vehicles',['capacity'=>5],(int)$seatVehicle['id']);
