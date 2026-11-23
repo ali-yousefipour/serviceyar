@@ -283,12 +283,12 @@ final class OperationsService
                 $rateHistory[(int)$period['subject_id'].':'.(int)$period['service_id']][]=$period;
         }
         $details=$p->prepare("SELECT sv.id AS service_id,sv.driver_id,sv.title,sv.code,sv.fee_source,
-            st.id AS student_id,st.monthly_fee,st.driver_base_monthly
+            st.id AS student_id,st.first_name AS student_first_name,st.last_name AS student_last_name,st.monthly_fee,st.driver_base_monthly
             FROM services sv JOIN service_students ss ON ss.service_id=sv.id
             JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id AND st.is_active=1
             WHERE sv.agency_id=? AND sv.is_active=1 AND sv.status='active'
             ORDER BY sv.id,st.id");
-        $details->execute([$aid]);$servicesMap=[];
+        $details->execute([$aid]);$servicesMap=[];$conflicts=[];
         foreach($details->fetchAll(\PDO::FETCH_ASSOC) as $member){
             if($member['driver_id']===null)continue;
             $serviceId=(int)$member['service_id'];
@@ -301,14 +301,34 @@ final class OperationsService
             if($estimateRequested && ($member['driver_base_monthly']===null
                 || $member['driver_base_monthly']===''
                 || !is_numeric($member['driver_base_monthly'])
-                || (float)$member['driver_base_monthly']<0))
-                throw new AuthException(409,'مبنای حقوق راننده برای یک دانش‌آموز معتبر نیست؛ پیش از برآورد حقوق آن را اصلاح کنید.','DRIVER_BASE_MONTHLY_REQUIRED');
+                || (float)$member['driver_base_monthly']<0)){
+                $conflicts[]=[
+                    'studentId'=>$studentId,
+                    'studentName'=>trim((string)$member['student_first_name'].' '.(string)$member['student_last_name']),
+                    'driverId'=>(int)$member['driver_id'],
+                    'serviceId'=>$serviceId,
+                    'reasonCode'=>'DRIVER_BASE_MONTHLY_REQUIRED',
+                    'reason'=>'مبنای ماهانه حقوق راننده ثبت نشده یا نامعتبر است.',
+                    'severity'=>'blocking',
+                    'effectiveDate'=>$from,
+                    'recordedBasis'=>$member['driver_base_monthly'],
+                    'suggestedAction'=>'مبنای توافقی حقوق راننده را در اطلاعات مالی دانش‌آموز و سرویس بررسی کنید.'
+                ];
+                continue;
+            }
             $base=$member['driver_base_monthly']===null?0:(int)round((float)$member['driver_base_monthly']);
             $monthly=$history
                 ?VehicleClassEffectiveDates::blendedRate($from,$to,$base,$history)
                 :$base;
             $servicesMap[$serviceId]['student_count']++;
             $servicesMap[$serviceId]['monthly_gross']+=$monthly;
+        }
+        if($conflicts){
+            throw new AuthException(409,'مبنای حقوق برخی دانش‌آموزان برای برآورد معتبر نیست؛ موارد را بررسی کنید.','DRIVER_BASE_MONTHLY_REQUIRED',[
+                'period'=>['from'=>$from,'to'=>$to],
+                'summary'=>['total'=>count($conflicts),'blocking'=>count($conflicts)],
+                'conflicts'=>$conflicts
+            ]);
         }
         $byDriver=[];
         foreach($servicesMap as $service)
