@@ -9,6 +9,10 @@ assert.match(source,/3 if name == "index.html"/,'HTML index must publish last');
 const workflow=readFileSync('.github/workflows/deploy-serviceyar.yml','utf8');
 assert.ok(workflow.includes('RewriteRule ^api/?$ backend/public/index.php [QSA,END]'), 'API endpoint must use an Apache 2.4 terminating rewrite');
 assert.ok(workflow.includes('RewriteRule ^(?:backend|database|storage)(?:/|$) - [F,END,NC]'), 'Private folders must be denied even with percent-encoded URL paths');
+assert.ok(workflow.includes('RewriteRule ^(?:docs|frontend|tests)(?:/|$) - [F,END,NC]'), 'Legacy test scripts and internal source/docs folders must remain inaccessible on incremental FTP deployments');
+for(const path of ['/docs/PHASE-17-PRODUCTION.md','/%64ocs/PHASE-17-PRODUCTION.md','/frontend/index.html','/%66rontend/index.html','/tests/api-integration.mjs','/%74ests/api-integration.mjs']){
+ assert.ok(source.includes(path),'Missing live-access audit path: '+path);
+}
 assert.ok(source.includes('/%62ackend/src/bootstrap.php') && source.includes('/%73torage/private/negin-sms.key'), 'Live release verification must check encoded path bypasses');
 const html=readFileSync('frontend/index.html','utf8');
 assert.ok(workflow.includes('<IfModule mod_deflate.c>'), 'Deployment should enable compression when supported by the web server');
