@@ -32,5 +32,11 @@ assert.ok(!flow.includes('UPDATE invoices SET'),'Issued invoices must never be o
 assert.ok(!flow.includes('UPDATE contracts SET'),'Issued contracts must never be overwritten');
 assert.ok(balance.includes('vehicle_class_debt_adjustments'),'Debt adjustments not in balances');
 assert.ok(payroll.includes('VehicleClassEffectiveDates::blendedRate'),'Payroll missing date split');
+const rateApplication=read('backend/src/Domain/VehicleClassRateApplication.php');
+assert.ok(!rateApplication.includes('COALESCE(st.driver_base_monthly,st.monthly_fee)'),'Driver payroll may not silently fall back to parent fees');
+assert.ok(rateApplication.includes('DRIVER_BASE_MONTHLY_REQUIRED'),'Deferred driver rate must fail closed on missing payroll basis');
+assert.ok(!payroll.includes("row['driver_base_monthly']??$row['monthly_fee']"),'Statement preview must not use parent tuition as driver rate');
+assert.ok(payroll.includes('invalidDriverRate'),'Statement preview must flag missing driver bases');
+assert.ok(flow.includes('DRIVER_BASE_MONTHLY_REQUIRED'),'Class change approval must validate driver base');
 assert.ok(contracts.includes('vehicleClassAppendixPrint'),'Missing printable contract appendix');
 console.log('Vehicle class workflow static contract: OK');
