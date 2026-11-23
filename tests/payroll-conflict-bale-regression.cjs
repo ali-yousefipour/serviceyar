@@ -20,7 +20,7 @@ assert.match(operations,/controller\.signal\.aborted/, 'Cancelled responses must
 assert.match(backend,/\$conflicts\[\]=\[/, 'Conflicts should accumulate instead of failing at the first invalid student');
 assert.match(backend,/driver_base_monthly/, 'Payroll uses independent driver remuneration basis');
 assert.match(backend,/VehicleClassEffectiveDates::blendedRate/, 'Historical approved class rates are used');
-assert.match(backend,/\['period'=>/, 'Payroll conflicts include request period');
+assert.match(backend,/'period'\s*=>/, 'Payroll conflicts include request period');
 assert.match(router,/array_merge\(\['code'=>\$e->codeName/, 'HTTP contract exposes structured exception context');
 assert.match(auth,/public readonly array \$context/, 'Domain exception permits scoped context');
 assert.match(operations,/e\.details\?\.conflicts/, 'UI reads financial conflict detail');
