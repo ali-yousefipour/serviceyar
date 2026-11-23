@@ -34,6 +34,7 @@ assert.ok(!flow.includes('UPDATE contracts SET'),'Issued contracts must never be
 assert.ok(balance.includes('vehicle_class_debt_adjustments'),'Debt adjustments not in balances');
 assert.ok(payroll.includes('VehicleClassEffectiveDates::blendedRate'),'Payroll missing date split');
 assert.ok(payroll.includes('parentRateHistory'),'Parent-side annual reconciliation must not borrow driver consent history');
+assert.ok(payroll.includes("AND sv.is_active=1 AND sv.status='active'"),'Cancelled services must not contribute to finalized monthly statements');
 assert.ok(payroll.includes('$from,$to,$parentPeriods'),'Reference parent class must follow debt-approved history');
 assert.ok(payroll.includes('old_class,p.new_class'),'Historical statement weighting needs original class from ledger');
 
