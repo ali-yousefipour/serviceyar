@@ -115,6 +115,8 @@ if(\ServiceYar\Domain\VehicleClassRateApplication::applyDue(1)!==0)
  throw new RuntimeException('Former driver rate was applied to newly assigned driver');
 if((int)$pdo->query("SELECT driver_base_monthly FROM students WHERE id=101")->fetchColumn()!==800000)
  throw new RuntimeException('Wrong driver changed student payroll basis');
+if((int)$pdo->query("SELECT monthly_fee FROM services WHERE id=102")->fetchColumn()!==0)
+ throw new RuntimeException('A successor driver inherited an old driver's service recalculation');
 if((int)$pdo->query("SELECT COUNT(*) FROM vehicle_class_rate_periods WHERE change_id=$oldDriverChange AND applied_at IS NULL")->fetchColumn()!==1)
  throw new RuntimeException('Former driver rate must remain pending for reconciliation');
 $pdo->exec('UPDATE services SET driver_id=11 WHERE id=102');
@@ -122,6 +124,9 @@ if(\ServiceYar\Domain\VehicleClassRateApplication::applyDue(1)!==1)
  throw new RuntimeException('Reinstated approved driver did not receive its due rate');
 if((int)$pdo->query("SELECT driver_base_monthly FROM students WHERE id=101")->fetchColumn()!==1600000)
  throw new RuntimeException('Approved driver remuneration not applied');
+$expectedNet=(int)\ServiceYar\Domain\OperationsService::driverDeductions(1600000,1)['net_earned'];
+if((int)$pdo->query("SELECT monthly_fee FROM services WHERE id=102")->fetchColumn()!==$expectedNet)
+ throw new RuntimeException('Service's stored payable did not follow approved dated driver remuneration');
 $pdo->exec('UPDATE students SET driver_base_monthly=800000 WHERE id=101');
 
 if(\ServiceYar\Domain\VehicleClassRateApplication::applyDue(1)!==0)
