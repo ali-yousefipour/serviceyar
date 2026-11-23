@@ -126,7 +126,7 @@ if((int)$pdo->query("SELECT driver_base_monthly FROM students WHERE id=101")->fe
  throw new RuntimeException('Approved driver remuneration not applied');
 $expectedNet=(int)\ServiceYar\Domain\OperationsService::driverDeductions(1600000,1)['net_earned'];
 if((int)$pdo->query("SELECT monthly_fee FROM services WHERE id=102")->fetchColumn()!==$expectedNet)
- throw new RuntimeException('Service's stored payable did not follow approved dated driver remuneration');
+ throw new RuntimeException('Stored service payable did not follow approved dated driver remuneration');
 $pdo->exec('UPDATE students SET driver_base_monthly=800000 WHERE id=101');
 
 if(\ServiceYar\Domain\VehicleClassRateApplication::applyDue(1)!==0)
