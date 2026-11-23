@@ -165,7 +165,7 @@ HTML;
   */
  private static function driverAnnualAmount(PDO $pdo,int $agencyId,int $driverId): array {
   $query=$pdo->prepare("SELECT sv.id service_id,sv.title service_title,st.id student_id,
-   st.grade,sc.school_type,sc.education_levels,COALESCE(st.driver_base_monthly,st.monthly_fee) base_monthly
+   st.grade,sc.school_type,sc.education_levels,st.driver_base_monthly base_monthly
    FROM services sv
    JOIN service_students ss ON ss.service_id=sv.id
    JOIN students st ON st.id=ss.student_id AND st.agency_id=sv.agency_id
@@ -181,6 +181,8 @@ HTML;
    $key=(int)$row['service_id'].':'.$months;
    if(!isset($grouped[$key]))$grouped[$key]=['serviceId'=>(int)$row['service_id'],
     'serviceTitle'=>(string)$row['service_title'],'months'=>$months,'students'=>0,'grossMonthly'=>0];
+   if($row['base_monthly']===null)
+    throw new AuthException(409,'مبنای حقوق راننده برای دانش‌آموز مشخص نشده است.','DRIVER_BASE_MONTHLY_REQUIRED');
    $base=(float)$row['base_monthly'];
    if(!is_finite($base)||$base<0)throw new AuthException(422,'مبلغ پایه راننده برای یکی از دانش‌آموزان نامعتبر است.','INVALID_DRIVER_BASE');
    $grouped[$key]['grossMonthly']+=$base;
