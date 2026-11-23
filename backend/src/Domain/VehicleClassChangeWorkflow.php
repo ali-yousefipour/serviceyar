@@ -220,9 +220,10 @@ final class VehicleClassChangeWorkflow
                 (agency_id,change_id,student_id,service_id,academic_year,effective_date,amount_irr,rate_snapshot)
                 VALUES(?,?,?,?,?,?,?,?)");
             $contract=$pdo->prepare("SELECT c.start_date,c.end_date,m.academic_year FROM student_contract_invoices m
-              JOIN contracts c ON c.id=m.contract_id AND c.agency_id=m.agency_id
+              JOIN contracts c ON c.id=m.contract_id AND c.agency_id=m.agency_id AND c.status<>'cancelled'
+              JOIN invoices i ON i.id=m.invoice_id AND i.agency_id=m.agency_id AND i.status<>'cancelled'
               WHERE m.agency_id=? AND m.student_id=? AND ".StudentBalance::yearSql('m.academic_year')."=?
-              ORDER BY c.id DESC LIMIT 1 FOR UPDATE");
+              ORDER BY c.id DESC LIMIT 2 FOR UPDATE");
             foreach($oldRates as $sid=>$rate){
                 $student=$rate['student'];
                 if($choices['updateStudentDebt']){
@@ -230,7 +231,11 @@ final class VehicleClassChangeWorkflow
                         $choices['studentDebtEffectiveDate'],$old['tariff_vehicle_class'],(int)$class,
                         $rate['oldParent'],$rate['newParent'],$rate['source'],self::json($rate)]);
                     $studentYear=ContractBilling::year((string)($student['academic_year']??''));
-                    $contract->execute([$aid,$sid,$studentYear]);$bound=$contract->fetch(PDO::FETCH_ASSOC);
+                    $contract->execute([$aid,$sid,$studentYear]);
+                    $matches=$contract->fetchAll(PDO::FETCH_ASSOC);
+                    if(count($matches)>1)
+                        throw new AuthException(409,'برای این دانش‌آموز بیش از یک قرارداد فعال در سال تحصیلی وجود دارد؛ ابتدا اسناد را تطبیق دهید.','AMBIGUOUS_STUDENT_CONTRACT');
+                    $bound=$matches[0]??null;
                     if(!$bound||!$bound['start_date']||!$bound['end_date'])
                         throw new AuthException(409,'برای تغییر بدهی دانش‌آموز، قرارداد صادرشده و بازه معتبر الزامی است. ابتدا پرونده مالی دانش‌آموز را تکمیل کنید.','CONTRACT_REQUIRED_FOR_DEBT_ADJUSTMENT');
                     if($bound&&$bound['start_date']&&$bound['end_date']){
