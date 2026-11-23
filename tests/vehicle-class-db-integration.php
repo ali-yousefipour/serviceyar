@@ -77,4 +77,46 @@ if(\ServiceYar\Domain\VehicleClassRateApplication::applyDue(1)!==0)
  throw new RuntimeException('Due rate was applied twice');
 $future=(int)$pdo->query("SELECT COUNT(*) FROM vehicle_class_rate_periods WHERE applied_at IS NULL")->fetchColumn();
 if($future!==1)throw new RuntimeException('Future rate should remain pending');
+// Accounting invariant with an issued invoice, prior receipts, signed and
+// future-dated adjustments. Historical invoice and cash must not be rewritten.
+$pdo->exec("CREATE TABLE invoices(id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ agency_id BIGINT UNSIGNED NOT NULL,party_type VARCHAR(20) NOT NULL,
+ party_id BIGINT UNSIGNED NOT NULL,amount BIGINT NOT NULL,status VARCHAR(20) NOT NULL) ENGINE=InnoDB");
+$pdo->exec("CREATE TABLE payments(id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ agency_id BIGINT UNSIGNED NOT NULL,invoice_id BIGINT UNSIGNED NOT NULL,
+ amount BIGINT NOT NULL) ENGINE=InnoDB");
+$pdo->exec("CREATE TABLE ledger_entries(id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ agency_id BIGINT UNSIGNED NOT NULL,party_type VARCHAR(20) NOT NULL,
+ party_id BIGINT UNSIGNED NOT NULL,direction VARCHAR(20) NOT NULL,
+ amount BIGINT NOT NULL,is_active TINYINT NOT NULL) ENGINE=InnoDB");
+$pdo->exec("INSERT INTO invoices(agency_id,party_type,party_id,amount,status)
+ VALUES(1,'student',101,2000000,'open')");
+$pdo->exec("INSERT INTO payments(agency_id,invoice_id,amount) VALUES(1,1,500000)");
+$pdo->exec("INSERT INTO ledger_entries(agency_id,party_type,party_id,direction,amount,is_active)
+ VALUES(1,'student',101,'receipt',100000,1)");
+$debtSql="INSERT INTO vehicle_class_debt_adjustments
+ (agency_id,change_id,student_id,service_id,academic_year,effective_date,amount_irr,rate_snapshot)
+ VALUES(1,?,101,102,'1405-1406',?,?,'{}')";
+$pdo->prepare($debtSql)->execute([$change,'2000-01-01',600000]);
+$pdo->prepare($debtSql)->execute([$futureChange,'2099-01-01',-200000]);
+$amounts=$pdo->query("SELECT ".\ServiceYar\Domain\StudentBalance::invoicesSql()." charges,
+ ".\ServiceYar\Domain\StudentBalance::receiptsSql()." received
+ FROM students WHERE id=101 AND agency_id=1")->fetch(PDO::FETCH_ASSOC);
+if((int)$amounts['charges']!==2600000||(int)$amounts['received']!==600000)
+ throw new RuntimeException('Issued invoice, paid amount, future adjustment or signed debt mismatch');
+if((int)$amounts['charges']-(int)$amounts['received']!==2000000)
+ throw new RuntimeException('Student balance must reconcile to the immutable invoice and actual cash');
+try{
+ $pdo->prepare($debtSql)->execute([$change,'2000-01-01',600000]);
+ throw new RuntimeException('Duplicate debt memo accepted');
+}catch(PDOException $e){
+ if((string)$e->getCode()!=='23000')throw $e;
+}
+if((int)$pdo->query('SELECT COUNT(*) FROM vehicle_class_debt_adjustments')->fetchColumn()!==2)
+ throw new RuntimeException('Duplicate debt adjustment was persisted');
+if((int)$pdo->query('SELECT amount FROM invoices WHERE id=1')->fetchColumn()!==2000000)
+ throw new RuntimeException('Issued invoice was rewritten');
+if((int)$pdo->query('SELECT amount FROM payments WHERE id=1')->fetchColumn()!==500000)
+ throw new RuntimeException('Existing student payment was rewritten');
+
 echo "Vehicle class schema and signed adjustment DB smoke: OK\n";
