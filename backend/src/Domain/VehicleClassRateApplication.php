@@ -50,6 +50,8 @@ final class VehicleClassRateApplication
                         AND $eligible
                       ORDER BY p.effective_date,p.id LIMIT 500 FOR UPDATE");
                 $q->execute([$agencyId]);$pending=$q->fetchAll(PDO::FETCH_ASSOC);
+                if(!$pending)break;
+                $appliedThisBatch=0;
                 $assignment=$pdo->prepare("SELECT st.monthly_fee,st.driver_base_monthly
                     FROM service_students ss
                     JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=?
@@ -83,8 +85,11 @@ final class VehicleClassRateApplication
                     $pdo->prepare('UPDATE vehicle_class_rate_periods SET applied_at=NOW() WHERE id=? AND agency_id=? AND applied_at IS NULL')
                         ->execute([$p['id'],$agencyId]);
                     $count++;
+                    $appliedThisBatch++;
                 }
-                if(!$pending)break;
+                // A concurrent assignment change can invalidate a queued
+                // period after discovery. Never spin indefinitely on it.
+                if($appliedThisBatch===0)break;
             }
             foreach(array_keys($services) as $serviceId){
                 $q=$pdo->prepare("SELECT COALESCE(SUM(st.driver_base_monthly),0) AS gross,
