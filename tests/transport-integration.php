@@ -706,8 +706,8 @@ try{
  D::save($uid,$a,'vehicles',['capacity'=>4],(int)$av['id']);
  check((int)$newService['driver_id']===(int)$ad['id'],'New service retains the selected driver');
  check(count(D::serviceStudents($uid,$a,(int)$newService['id']))===2,'New service saves selected schools and students together');
- $memberFees=array_column(D::serviceStudents($uid,$a,(int)$newService['id']),'monthly_fee');
- check((float)$newService['monthly_fee']===\ServiceYar\Domain\OperationsService::driverDeductions((float)array_sum($memberFees))['net_earned'],'Wizard saves the net driver fee after 18.8 percent deductions');
+ $driverGross=(float)\ServiceYar\Domain\ServiceFinancialBasis::grossOfService($p,$a,(int)$newService['id']);
+ check((float)$newService['monthly_fee']===\ServiceYar\Domain\OperationsService::driverDeductions($driverGross,$a)['net_earned'],'Wizard saves net driver remuneration from independent driver rates, not parent tuition');
  $matches=D::list($uid,$a,'services',['schoolId'=>$secondSchool['id'],'driverId'=>$ad['id'],'status'=>'active','search'=>'مدرسه دوم همین شرکت']);
  check(array_map('intval',array_column($matches['items'],'id'))===[(int)$newService['id']],'Service filters combine driver, status and a secondary school name');
  check(D::list($uid,$a,'services',['search'=>'تخصیص آزمون','shift'=>'no-such-shift'])['pagination']['total']===0,'Shift constrains service search by driver name');
@@ -715,6 +715,8 @@ try{
  rejected(fn()=>D::save($uid,$a,'services',['title'=>'rollback-service-'.$tag,'capacity'=>2,'driverId'=>$ad['id'],'schoolIds'=>[$school['id']],'studentIds'=>[$secondStudent['id']]]),'SCHOOL_MISMATCH');
  $q=$p->prepare('SELECT COUNT(*) FROM services WHERE agency_id=? AND title=?');$q->execute([$a,'rollback-service-'.$tag]);check((int)$q->fetchColumn()===0,'Failed member assignment rolls back service creation');
  $draftStudent=D::save($uid,$a,'students',['schoolId'=>$school['id'],'firstName'=>'آزمون','lastName'=>'مهر','mobile'=>'09120000982']);
+ $p->prepare('UPDATE students SET driver_base_monthly=? WHERE id=? AND agency_id=?')
+   ->execute([300,$draftStudent['id'],$a]);
  $draft=D::save($uid,$a,'services',['title'=>'پیش‌نویس مهر','code'=>'mehr1405-d'.$tag,'schoolId'=>$school['id'],'driverId'=>$ad['id'],'capacity'=>4,'status'=>'draft','isActive'=>0]);
  insertFixture('service_students',['service_id'=>$draft['id'],'student_id'=>$draftStudent['id']]);
  D::save($uid,$a,'drivers',['status'=>'pending'],(int)$ad['id']);
