@@ -84,6 +84,16 @@ if($applied!==1)throw new RuntimeException('Expected exactly one due period');
 $row=$pdo->query('SELECT monthly_fee,tariff_vehicle_class FROM students WHERE id=101')->fetch();
 if((int)$row['monthly_fee']!==1400000||(int)$row['tariff_vehicle_class']!==2)
  throw new RuntimeException('Due class did not update student tuition');
+if(\ServiceYar\Domain\ServiceFinancialBasis::grossOfService($pdo,1,102)!==800000)
+ throw new RuntimeException('Driver remuneration was incorrectly taken from parent tuition');
+$pdo->exec('UPDATE students SET driver_base_monthly=NULL WHERE id=101');
+try{
+ \ServiceYar\Domain\ServiceFinancialBasis::grossOfService($pdo,1,102);
+ throw new RuntimeException('Missing driver rate was silently replaced by parent tuition');
+}catch(\ServiceYar\Auth\AuthException $e){
+ if($e->codeName!=='DRIVER_BASE_MONTHLY_REQUIRED')throw $e;
+}
+$pdo->exec('UPDATE students SET driver_base_monthly=800000 WHERE id=101');
 if(\ServiceYar\Domain\VehicleClassRateApplication::applyDue(1)!==0)
  throw new RuntimeException('Due rate was applied twice');
 $future=(int)$pdo->query("SELECT COUNT(*) FROM vehicle_class_rate_periods WHERE applied_at IS NULL")->fetchColumn();
