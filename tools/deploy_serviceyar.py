@@ -263,6 +263,14 @@ def verify_live(base_url, build_id, expected_digests):
         "/database/migrations/0001_create_migrations_table.sql",
         "/storage/private/negin-sms.key",
         "/%73torage/private/negin-sms.key",
+        # Legacy files from older releases must never be readable from the
+        # public document root; use inert static paths only (not PHP tests).
+        "/docs/PHASE-17-PRODUCTION.md",
+        "/%64ocs/PHASE-17-PRODUCTION.md",
+        "/frontend/index.html",
+        "/%66rontend/index.html",
+        "/tests/api-integration.mjs",
+        "/%74ests/api-integration.mjs",
     ):
         request = Request(base + path + "?access_audit=" + build_id,
                           headers={"Cache-Control": "no-store", "User-Agent": "ServiceYar-Security-Smoke/1.0"})
