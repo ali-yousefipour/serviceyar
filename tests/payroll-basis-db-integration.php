@@ -56,6 +56,20 @@ try{
     $row=array_values(array_filter($good['items'],static fn($r)=>(int)$r['id']===$driver))[0]??null;
     requireInvariant($row!==null&&(int)$row['gross_earned']>=1000000,'Valid driver remuneration not calculated');
 
+    $p->prepare('UPDATE drivers SET is_active=0 WHERE id=? AND agency_id=?')->execute([$driver,$agency]);
+    expectPayrollConflict($user,$agency,$filter,'INVALID_DRIVER_ASSIGNMENT',$student);
+    $p->prepare('UPDATE drivers SET is_active=1 WHERE id=? AND agency_id=?')->execute([$driver,$agency]);
+
+    $sourceQuery=$p->prepare('SELECT fee_source FROM services WHERE id=? AND agency_id=?');
+    $sourceQuery->execute([$service['id'],$agency]);
+    if($sourceQuery->fetchColumn()==='taxi'){
+        $vehicleQuery=$p->prepare('SELECT vehicle_id FROM drivers WHERE id=? AND agency_id=?');
+        $vehicleQuery->execute([$driver,$agency]);$linkedVehicle=(int)$vehicleQuery->fetchColumn();
+        $p->prepare('UPDATE vehicles SET is_active=0 WHERE id=? AND agency_id=?')->execute([$linkedVehicle,$agency]);
+        expectPayrollConflict($user,$agency,$filter,'INVALID_ACTIVE_VEHICLE',$student);
+        $p->prepare('UPDATE vehicles SET is_active=1 WHERE id=? AND agency_id=?')->execute([$linkedVehicle,$agency]);
+    }
+
     $p->prepare("INSERT INTO drivers(uuid,agency_id,first_name,last_name,status,is_active)
         VALUES(?,?,?,?,'active',1)")
       ->execute([Uuid::v4(),$agency,'راننده','جایگزین آزمایشی']);
