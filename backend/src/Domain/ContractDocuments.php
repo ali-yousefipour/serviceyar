@@ -511,8 +511,10 @@ HTML;
   $values=array_replace($values,self::resolvedOverrides($overrides));
   if($kind==='parent')$values['academicYear']=$academicYear;
   $required=$kind==='parent'?['guardianName','guardianNationalCode','guardianMobile','studentName','studentNationalCode','schoolName','managerName','companyName']:['driverName','driverNationalCode','managerName','companyName'];
-  foreach($required as $field)if(trim((string)($values[$field]??''))==='')
-   throw new AuthException(422,'اطلاعات اصلی طرفین قرارداد کامل نیست؛ ابتدا مشخصات تکمیلی را وارد کنید.','CONTRACT_REQUIRED_DATA_MISSING');
+  $labels=['guardianName'=>'نام ولی','guardianNationalCode'=>'کد ملی ولی','guardianMobile'=>'شماره همراه ولی','studentName'=>'نام دانش‌آموز','studentNationalCode'=>'کد ملی دانش‌آموز','schoolName'=>'نام مدرسه','managerName'=>'نام مدیر شرکت','companyName'=>'نام شرکت','driverName'=>'نام راننده','driverNationalCode'=>'کد ملی راننده'];
+  $missing=[];
+  foreach($required as $field)if(trim((string)($values[$field]??''))==='')$missing[]=$labels[$field]??$field;
+  if($missing)throw new AuthException(422,'ثبت قرارداد ممکن نیست؛ اطلاعات زیر تکمیل نشده است: '.implode('، ',$missing).'. لطفاً اطلاعات پرونده دانش‌آموز، ولی یا شرکت را تکمیل و دوباره تلاش کنید.','CONTRACT_REQUIRED_DATA_MISSING');
   $template=self::template($pdo,$kind);
   return OperationsService::transaction(function(PDO $pdo)use($uid,$agencyId,$kind,$partyId,$start,$end,$amount,$values,$template) {
    $annual=$kind==='driver'?self::driverAnnualAmount($pdo,$agencyId,(int)$partyId):null;
