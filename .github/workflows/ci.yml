@@ -20,6 +20,7 @@ jobs:
           php tests/static-smoke.php
           php tests/vehicle-optional-year.php
           node tests/invoice-detail-adjustments.cjs
+          node tests/contract-inline-preview.cjs
           php tests/xlsx-writer.php
           php tests/sepand-xlsx.php
           php tests/excel-localization.php

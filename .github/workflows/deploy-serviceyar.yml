@@ -38,6 +38,7 @@ jobs:
           php tests/static-smoke.php
           php tests/vehicle-optional-year.php
           node tests/invoice-detail-adjustments.cjs
+          node tests/contract-inline-preview.cjs
           php -r 'if (!extension_loaded("gd")) { fwrite(STDERR, "GD is required for school photos\\n"); exit(1); }'
           php tests/school-image-processing.php
           php tests/xlsx-writer.php

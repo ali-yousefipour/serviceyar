@@ -994,7 +994,7 @@ async function contractsPage(token=pageToken){
     '<header class="sy-settings-section-head"><div><h3>قراردادهای صادرشده</h3><p>مشاهده و چاپ نسخه ذخیره‌شده قراردادها.</p></div>'+(can('contracts','manage')?'<button type="button" class="primary" data-new-contract>＋ قرارداد جدید</button>':'')+'</header>'+
     '<form class="sy-contract-filters"><label>جست‌وجوی قرارداد<input name="search" type="search" autocomplete="off" placeholder="نام، شماره قرارداد، عنوان یا کد ملی"></label><label>وضعیت<select name="status"><option value="">همه وضعیت‌ها</option><option value="active">فعال</option><option value="cancelled">ابطال‌شده</option></select></label><label>نسخه چاپی<select name="printable"><option value="">همه</option><option value="1">دارای نسخه چاپی</option><option value="0">فاقد نسخه چاپی</option></select></label><label>شروع از<input type="date" name="from"></label><label>شروع تا<input type="date" name="to"></label><div class="sy-contract-filter-actions"><button type="reset">پاک کردن فیلترها</button><span data-contract-count role="status"></span></div></form>'+
     '<div class="table-wrap sy-contract-list"><table><thead><tr><th>شماره</th><th>عنوان قرارداد</th><th>تاریخ شروع</th><th>تاریخ پایان</th><th>مبلغ اصلی (ریال)</th><th>تعدیل کلاس (ریال)</th><th>مبلغ اصلاح‌شده (ریال)</th><th>عملیات</th></tr></thead><tbody>'+
-    (docs.length?docs.map(c=>'<tr><td>'+esc(persianDigits(c.contract_no||'—'))+'</td><td>'+esc(c.title||'—')+'</td><td>'+esc(fmtDate(c.start_date))+'</td><td>'+esc(fmtDate(c.end_date))+'</td><td>'+number(c.original_amount??c.amount)+'</td><td>'+number(c.class_adjustment_amount||0)+'</td><td><strong>'+number(c.effective_amount??c.amount)+'</strong></td><td><button type="button" data-contract-print="'+Number(c.id)+'" data-contract-legacy="'+(Number(c.printable)?'0':'1')+'">'+'چاپ مجدد'+'</button>'+(c.status==='cancelled'?'<span class="muted">ابطال‌شده</span>':(can('contracts','manage')&&can('finance','manage')?'<button type="button" data-contract-edit="'+Number(c.id)+'">ویرایش</button><button type="button" class="danger" data-contract-delete="'+Number(c.id)+'">حذف</button>':''))+'</td></tr>').join(''):'<tr><td colspan="8">قراردادی در این بخش ثبت نشده است.</td></tr>')+
+    (docs.length?docs.map(c=>'<tr><td>'+esc(persianDigits(c.contract_no||'—'))+'</td><td>'+esc(c.title||'—')+'</td><td>'+esc(fmtDate(c.start_date))+'</td><td>'+esc(fmtDate(c.end_date))+'</td><td>'+number(c.original_amount??c.amount)+'</td><td>'+number(c.class_adjustment_amount||0)+'</td><td><strong>'+number(c.effective_amount??c.amount)+'</strong></td><td><button type="button" data-inline-preview="1" data-contract-print="'+Number(c.id)+'">پیش‌نمایش / PDF</button><button type="button" data-contract-print="'+Number(c.id)+'" data-contract-legacy="'+(Number(c.printable)?'0':'1')+'">'+'چاپ مجدد'+'</button>'+(c.status==='cancelled'?'<span class="muted">ابطال‌شده</span>':(can('contracts','manage')&&can('finance','manage')?'<button type="button" data-contract-edit="'+Number(c.id)+'">ویرایش</button><button type="button" class="danger" data-contract-delete="'+Number(c.id)+'">حذف</button>':''))+'</td></tr>').join(''):'<tr><td colspan="8">قراردادی در این بخش ثبت نشده است.</td></tr>')+
     '</tbody></table></div>';
    const filters=body.querySelector('.sy-contract-filters');
    const normalize=value=>String(ServiceYarDates.digits(String(value??''))).replace(/[يى]/g,'ی').replace(/ك/g,'ک').replace(/[\s\u200c]+/g,'').toLowerCase();
@@ -1141,7 +1141,10 @@ async function contractsPage(token=pageToken){
     }catch(error){notify(error.message,true);}
    });
    body.querySelectorAll('[data-contract-print]').forEach(button=>button.onclick=async()=>{
-    const printWindow=window.open('','_blank');
+    const inline=button.dataset.inlinePreview==='1';
+    if(inline)dialog('پیش‌نمایش قرارداد و الحاقیه',
+     '<p role="status">نسخه چاپی ذخیره‌شده همراه با اصلاحیه‌های معتبر نمایش داده می‌شود.</p><iframe id="syContractPreviewFrame" title="نسخه چاپی قرارداد و الحاقیه" sandbox="allow-same-origin allow-modals" style="width:100%;height:72vh;border:1px solid #ddd;background:white"></iframe>');
+    const printWindow=inline?$('syContractPreviewFrame').contentWindow:window.open('','_blank');
     if(!printWindow){notify('مرورگر پنجره چاپ را مسدود کرده است.',true);return;}
     printWindow.document.write('<html lang="fa" dir="rtl"><meta charset="utf-8"><body>در حال دریافت نسخه ذخیره‌شده قرارداد…</body></html>');printWindow.document.close();
     try{
@@ -1179,7 +1182,7 @@ async function contractsPage(token=pageToken){
      const printButton=printWindow.document.getElementById('syContractPrint')||printWindow.document.querySelector('button');
      if(printButton)printButton.addEventListener('click',async()=>{await printWindow.document.fonts?.ready;printWindow.focus();printWindow.print();});
      printWindow.focus();
-    }catch(error){printWindow.close();notify('چاپ قرارداد: '+error.message,true);}
+    }catch(error){if(inline)closeDialog();else printWindow.close();notify('چاپ قرارداد: '+error.message,true);}
    });
   }catch(error){if(request===serial&&body.isConnected)body.innerHTML='<p role="alert" class="error">'+esc(error.message)+'</p>';}
  };
