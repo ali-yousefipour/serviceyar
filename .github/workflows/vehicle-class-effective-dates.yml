@@ -76,3 +76,4 @@ jobs:
         run: |
           php -d display_errors=1 -d display_startup_errors=1 -d log_errors=1 -d error_reporting=-1 tests/vehicle-class-db-integration.php
           php tests/vehicle-class-capacity-db.php
+          php tests/financial-reconciliation-class-db.php
