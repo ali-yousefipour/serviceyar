@@ -82,6 +82,7 @@ final class ExportService
         Authorization::requirePermission($uid,$permission.'.view');
         if (!class_exists(\ZipArchive::class)) self::jsonError(500, 'EXPORT_DEPENDENCY_MISSING', 'امکان ساخت فایل Excel روی سرور فعال نیست.');
 
+        if ($resource === 'students') self::studentDirectory($uid,$aid,$_GET);
         $schema = self::SCHEMAS[$resource];
         $table = $schema['table'];
         $columns = $schema['columns'];
@@ -160,6 +161,84 @@ final class ExportService
         $rows = $statement->fetchAll(\PDO::FETCH_ASSOC);
 
         self::downloadRows($columns,$rows,$schema['filename']);
+    }
+
+    /** Same filter and financial semantics as the student directory. */
+    private static function studentDirectory(int $uid,int $aid,array $filter): never
+    {
+        $allowed=[
+            'id'=>'شناسه',
+            'first_name'=>'نام',
+            'last_name'=>'نام خانوادگی',
+            'national_code'=>'کد ملی',
+            'grade'=>'پایه تحصیلی',
+            'mobile'=>'شماره همراه ولی',
+            'school_id'=>'شناسه مدرسه',
+            'school_name'=>'نام مدرسه',
+            'region'=>'ناحیه',
+            'academic_year'=>'سال تحصیلی',
+            'service_status'=>'وضعیت سرویس',
+            'monthly_fee'=>'ماهیانه (ریال)',
+            'is_active'=>'وضعیت فعال',
+            'created_at'=>'تاریخ ثبت',
+            'father_name'=>'نام پدر',
+            'guardian_first_name'=>'نام ولی',
+            'guardian_last_name'=>'نام خانوادگی ولی',
+            'guardian_national_code'=>'کد ملی ولی',
+            'guardian_relation'=>'نسبت ولی',
+            'emergency_phone'=>'شماره اضطراری',
+            'address'=>'نشانی',
+            'return_address'=>'نشانی برگشت',
+            'gender'=>'جنسیت',
+            'nationality'=>'ملیت',
+            'shift'=>'شیفت',
+            'tariff_distance_km'=>'مسافت (کیلومتر)',
+            'tariff_vehicle_class'=>'کلاس خودرو',
+            'driver_name'=>'راننده',
+            'assigned_service_id'=>'شناسه سرویس',
+            'has_contract'=>'وضعیت قرارداد',
+            'annual_fee'=>'مبلغ سالانه (ریال)',
+            'contract_amount'=>'مبلغ قرارداد (ریال)',
+            'invoice_total'=>'جمع فاکتورها (ریال)',
+            'paid_total'=>'جمع دریافتی (ریال)',
+            'outstanding_fee'=>'مانده بدهی (ریال)',
+            'student_credit'=>'بستانکاری (ریال)'
+        ];
+        $default=['id','first_name','last_name','national_code','grade','mobile','school_id','school_name','region','academic_year','service_status','monthly_fee','is_active','created_at'];
+        $requested=$filter['columns']??implode(',',$default);
+        if(!is_string($requested))self::jsonError(422,'INVALID_COLUMNS','ستون‌های گزارش معتبر نیست.');
+        $keys=explode(',',$requested);
+        if(!$keys||count($keys)>count($allowed)||count(array_unique($keys))!==count($keys)||array_diff($keys,array_keys($allowed)))self::jsonError(422,'INVALID_COLUMNS','ستون‌های گزارش معتبر نیست.');
+        $columns=[];foreach($keys as $key)$columns[$key]=$allowed[$key];
+        $mode=$filter['exportMode']??'filtered';
+        if(!in_array($mode,['filtered','selected','all'],true))self::jsonError(422,'INVALID_EXPORT_MODE','نوع خروجی معتبر نیست.');
+        $ids=[];
+        if($mode==='selected'){
+            $raw=$filter['selectedIds']??'';
+            if(!is_string($raw)||strlen($raw)>12000||!preg_match('/^[1-9][0-9]*(,[1-9][0-9]*)*$/D',$raw))self::jsonError(422,'INVALID_SELECTION','دانش‌آموزان انتخاب‌شده معتبر نیستند.');
+            $ids=array_fill_keys(explode(',',$raw),true);
+        }
+        if($mode==='all')$filter=array_intersect_key($filter,array_flip(['academicYear','sortBy','sortDir']));
+        unset($filter['eligibleServiceId'],$filter['unassigned']);
+        $schoolQuery=Connection::get()->prepare('SELECT id,name,region FROM schools WHERE agency_id=?');
+        $schoolQuery->execute([$aid]);$schools=[];
+        foreach($schoolQuery->fetchAll(\PDO::FETCH_ASSOC) as $school)$schools[$school['id']]=$school;
+        $rows=[];$filter['limit']=200;
+        for($page=1;;$page++){
+            $filter['page']=$page;
+            $result=DomainService::list($uid,$aid,'students',$filter);
+            foreach($result['items'] as $row){
+                if($mode==='selected'&&!isset($ids[$row['id']]))continue;
+                $row['school_name']=$schools[$row['school_id']]['name']??'';
+                $row['region']=$schools[$row['school_id']]['region']??'';
+                $row['has_contract']=(int)$row['has_contract']===1?'دارای قرارداد':'فاقد قرارداد';
+                foreach(['national_code','mobile','guardian_national_code','emergency_phone'] as $field)$row[$field]=(string)($row[$field]??'');
+                if(isset($row['tariff_distance_km'])&&is_numeric($row['tariff_distance_km']))$row['tariff_distance_km']=(float)$row['tariff_distance_km'];
+                $rows[]=array_intersect_key($row,$columns);
+            }
+            if($page>=($result['pagination']['pages']??0))break;
+        }
+        self::downloadRows($columns,$rows,'students-report.xlsx',true);
     }
 
     public static function ledgerReport(int $uid,int $aid,array $filter): never

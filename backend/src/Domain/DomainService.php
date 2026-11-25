@@ -266,11 +266,29 @@ final class DomainService {
     $where.=" AND (REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(CONCAT_WS('',first_name,last_name),'ي','ی'),'ى','ی'),'ك','ک'),' ',''),'‌',''),'‍','') LIKE :member_name ESCAPE '!' OR national_code LIKE :member_code ESCAPE '!')";
     $params['member_name']=$params['member_code']='%'.strtr($term,['!'=>'!!','%'=>'!%','_'=>'!_']).'%';
    }
+  }elseif($resource==='students'){
   }elseif(isset($q['search'])&&trim((string)$q['search'])!==''){ $parts=[];foreach($c['search'] as $i=>$f){if($resource==='vehicles'&&$f==='owner_name'&&!in_array('owner_name',thisColumns('vehicles',Connection::get()),true))continue;$k='s'.$i;$parts[]="$f LIKE :$k";$params[$k]='%'.trim((string)$q['search']).'%';}if(in_array($resource,['students','drivers'],true)){$parts[]="CONCAT(first_name,' ',last_name) LIKE :full_name";$params['full_name']='%'.trim((string)$q['search']).'%';}$where.=' AND ('.implode(' OR ',$parts).')';}
   foreach($resource==='services'?[]:['schoolId'=>'school_id','driverId'=>'driver_id','packId'=>'pack_id','status'=>'status','serviceStatus'=>'service_status','academicYear'=>'academic_year','schoolType'=>'school_type','active'=>'is_active','mobile'=>'mobile'] as $key=>$column){
    if(isset($q[$key]) && $q[$key]!=='' && in_array($column,$c['fields'],true)){$where.=" AND $column=:filter_$column";$params['filter_'.$column]=(string)$q[$key];}
   }
   if($resource==='students'){
+   $term=$q['search']??'';
+   if(!is_string($term)||mb_strlen($term)>200)throw new AuthException(422,'عبارت جست‌وجو نامعتبر است.','VALIDATION_ERROR');
+   $term=preg_replace('/[\s\x{200c}\x{200d}]+/u','',strtr(trim($term),['ي'=>'ی','ى'=>'ی','ك'=>'ک','۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']));
+   if($term!==''){
+    $normalize=static fn($sql)=>"REPLACE(REPLACE(REPLACE(REPLACE(REPLACE($sql,'ي','ی'),'ى','ی'),'ك','ک'),' ',''),'‌','')";
+    $parts=[];$expressions=["CONCAT_WS('',students.first_name,students.last_name)",'students.national_code','students.mobile',"(SELECT sc.name FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id LIMIT 1)","(SELECT GROUP_CONCAT(CONCAT_WS('',d.first_name,d.last_name)) FROM service_students ss JOIN services sv ON sv.id=ss.service_id AND sv.agency_id=students.agency_id JOIN drivers d ON d.id=sv.driver_id AND d.agency_id=students.agency_id WHERE ss.student_id=students.id AND sv.is_active=1)"];
+    foreach($expressions as $i=>$expr){$key='student_quick_'.$i;$parts[]=$normalize($expr)." LIKE :$key ESCAPE '!'";$params[$key]='%'.strtr($term,['!'=>'!!','%'=>'!%','_'=>'!_']).'%';}
+    $where.=' AND ('.implode(' OR ',$parts).')';
+   }
+   foreach(['grade'=>'grade','vehicleClass'=>'tariff_vehicle_class'] as $field=>$column){
+    $value=$q[$field]??'';if($value==='')continue;
+    if(!is_string($value)||mb_strlen($value)>50)throw new AuthException(422,'فیلتر دانش‌آموز نامعتبر است.','VALIDATION_ERROR');
+    $where.=" AND students.$column=:$field";$params[$field]=$value;
+   }
+   $region=$q['region']??'';
+   if($region!==''){if(!is_string($region)||mb_strlen($region)>100)throw new AuthException(422,'ناحیه نامعتبر است.','VALIDATION_ERROR');$where.=" AND EXISTS(SELECT 1 FROM schools sc WHERE sc.id=students.school_id AND sc.agency_id=students.agency_id AND sc.region=:student_region)";$params['student_region']=$region;}
+   if(isset($q['distanceMin'],$q['distanceMax'])&&$q['distanceMin']!==''&&$q['distanceMax']!==''&&(float)$q['distanceMin']>(float)$q['distanceMax'])throw new AuthException(422,'حداقل مسافت نباید بیشتر از حداکثر باشد.','VALIDATION_ERROR');
    $contractState=$q['studentContractState']??'';
    if(!is_string($contractState)||!in_array($contractState,['','has_contract','no_contract'],true))
     throw new AuthException(422,'وضعیت قرارداد دانش‌آموز نامعتبر است.','VALIDATION_ERROR');

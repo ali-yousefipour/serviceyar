@@ -3753,3 +3753,6 @@ dialog.sy-contract-edit-dialog::backdrop{background:rgba(10,30,23,.55)}
 .sy-payroll-provisional{margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border,#d9e1e8)}
 .sy-payroll-provisional h4{margin:0 0 .5rem}
 .sy-payroll-provisional p{margin:0 0 .75rem}
+
+/* Student directory: compact adaptive search and export controls. */
+.sy-student-filter-v3 .sy-student-quick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.sy-student-filter-v3 .sy-student-general-search{grid-column:1/-1}.sy-student-filter-v3 .sy-student-quick input,.sy-student-filter-v3 .sy-student-advanced-grid input,.sy-student-filter-v3 select{min-width:0;width:100%}.sy-student-export-options{display:grid;gap:12px;padding:12px 0}.sy-student-export-options label{display:flex;align-items:center;gap:8px}.sy-student-export-options input{width:auto;min-width:0}.sy-student-export-dialog{max-width:min(92vw,560px)}@media(max-width:760px){.sy-student-filter-v3 .sy-student-quick{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:420px){.sy-student-filter-v3 .sy-student-quick{grid-template-columns:minmax(0,1fr)}}
