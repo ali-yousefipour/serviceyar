@@ -92,6 +92,8 @@ jobs:
         run: |
           php tests/taxi-fare-components.php
           php tests/service-finance-basis.php
+          php backend/tests/student_discount_math_test.php
+          php backend/tests/student_discount_periods_test.php
       - name: Financial quote integration (read-only fixture)
         run: php tests/taxi-financial-integration.php
   transport-integration:
