@@ -271,7 +271,7 @@ final class PortalService {
             }
             $studentDiscounts=[];
             if(StudentDiscountSchema::exists($pdo)){
-                $studentDiscounts=self::rows($pdo,"SELECT discount_id,invoice_id,effective_date,student_discount_irr
+                $studentDiscounts=self::rows($pdo,"SELECT discount_id,invoice_id,effective_date,CASE WHEN event_type='create' THEN student_discount_irr ELSE -student_discount_irr END student_discount_irr
                     FROM student_discount_financial_effects WHERE agency_id=? AND student_id=?
                     AND effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
                     ORDER BY effective_date,id",[$agencyId,$partyId]);
