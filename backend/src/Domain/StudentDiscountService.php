@@ -27,7 +27,7 @@ final class StudentDiscountService
         $q=$pdo->prepare('SELECT st.id,st.first_name,st.last_name,st.monthly_fee,st.driver_base_monthly,st.academic_year,st.school_id FROM students st WHERE st.id=? AND st.agency_id=? AND st.is_active=1');
         $q->execute([$sid,$aid]);$student=$q->fetch(PDO::FETCH_ASSOC);
         if(!$student)throw new AuthException(404,'دانش‌آموز فعال یافت نشد.','STUDENT_NOT_FOUND');
-        $q=$pdo->prepare("SELECT c.id,c.contract_no,c.start_date,c.end_date,c.amount,m.invoice_id,i.amount invoice_amount,i.status invoice_status
+        $q=$pdo->prepare("SELECT c.id,c.contract_no,c.start_date,c.end_date,c.amount,m.invoice_id,m.academic_year contract_year,i.amount invoice_amount,i.status invoice_status
             FROM contracts c JOIN student_contract_invoices m ON m.contract_id=c.id AND m.agency_id=c.agency_id AND m.student_id=c.party_id
             JOIN invoices i ON i.id=m.invoice_id AND i.agency_id=m.agency_id AND i.party_type='student' AND i.party_id=m.student_id
             WHERE c.agency_id=? AND c.party_type='student' AND c.party_id=? AND c.status='active'
@@ -54,6 +54,8 @@ final class StudentDiscountService
             (int)$student['monthly_fee']<0||(int)$student['driver_base_monthly']<0)
             throw new AuthException(409,'مبنای مالی دانش‌آموز یا راننده مشخص نیست.','DISCOUNT_FINANCIAL_BASIS_REQUIRED');
         $year=ContractBilling::year((string)$student['academic_year']);
+        if(ContractBilling::year((string)$contract['contract_year'])!==$year)
+            throw new AuthException(409,'سال تحصیلی پرونده با قرارداد قطعی متفاوت است؛ ابتدا تطبیق مالی انجام دهید.','DISCOUNT_YEAR_RECONCILIATION_REQUIRED');
         $overlap=StudentDiscountRepository::overlapping($pdo,$aid,(int)$sid,$from,$to);
         if($overlap)throw new AuthException(409,'برای این دانش‌آموز تخفیف هم‌پوشان وجود دارد.','DISCOUNT_OVERLAP');
         $rule=['effective_from'=>$from,'effective_to'=>$to,'rate_milli_percent'=>$rate,
