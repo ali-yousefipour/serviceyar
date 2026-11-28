@@ -188,4 +188,84 @@ final class StudentDiscountService
         });
     }
 
+    public static function listing(int $uid,int $aid,array $filter=[]): array
+    {
+        Authorization::requireAgencyAccess($uid,$aid);
+        Authorization::requirePermission($uid,'finance.view');
+        Authorization::requirePermission($uid,'students.view');
+        $pdo=Connection::get();
+        StudentDiscountSchema::requireReady($pdo);
+        $search=$filter['q']??'';
+        if(!is_string($search)||mb_strlen($search)>120)
+            throw new AuthException(422,'عبارت جستجوی تخفیف نامعتبر است.','INVALID_DISCOUNT_SEARCH');
+        $search=trim($search);
+        $where=['d.agency_id=?'];$args=[$aid];
+        if($search!==''){
+            $term=strtr($search,['!'=>'!!','%'=>'!%','_'=>'!_']);
+            $where[]="CONCAT_WS(' ',s.first_name,s.last_name) LIKE ? ESCAPE '!'";
+            $args[]='%'.$term.'%';
+        }
+        if(isset($filter['studentId'])&&$filter['studentId']!==''){
+            $id=filter_var($filter['studentId'],FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
+            if(!$id)throw new AuthException(422,'شناسه دانش‌آموز نامعتبر است.','INVALID_DISCOUNT_STUDENT');
+            $where[]='d.student_id=?';$args[]=$id;
+        }
+        if(isset($filter['schoolId'])&&$filter['schoolId']!==''){
+            $id=filter_var($filter['schoolId'],FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
+            if(!$id)throw new AuthException(422,'شناسه مدرسه نامعتبر است.','INVALID_DISCOUNT_SCHOOL');
+            $where[]='s.school_id=?';$args[]=$id;
+        }
+        $sql="SELECT d.id,d.student_id,d.contract_id,d.rate_milli_percent,d.reason,
+             d.effective_from,d.effective_to,d.apply_to_student,d.apply_to_driver,d.created_at,
+             CONCAT_WS(' ',s.first_name,s.last_name) student_name,sc.name school_name,
+             e.driver_id,e.service_id,e.invoice_id,e.student_discount_irr,e.driver_discount_irr,
+             e.effective_date,e.journal_document_id
+             FROM student_discounts d JOIN students s ON s.id=d.student_id AND s.agency_id=d.agency_id
+             LEFT JOIN schools sc ON sc.id=s.school_id AND sc.agency_id=s.agency_id
+             JOIN student_discount_financial_effects e ON e.discount_id=d.id AND e.agency_id=d.agency_id AND e.event_type='create'
+             WHERE ".implode(' AND ',$where)." ORDER BY d.created_at DESC,d.id DESC LIMIT 500";
+        $q=$pdo->prepare($sql);$q->execute($args);$rows=$q->fetchAll(PDO::FETCH_ASSOC);
+        $today=(new \DateTimeImmutable('now',new \DateTimeZone('Asia/Tehran')))->format('Y-m-d');
+        $summary=['count'=>count($rows),'active'=>0,'future'=>0,'ended'=>0,
+            'studentDiscountIrr'=>0,'driverDiscountIrr'=>0,'companyShareImpactIrr'=>0];
+        foreach($rows as &$row){
+            $row['status']=$row['effective_from']>$today?'future':
+                (($row['effective_to']??'9999-12-31')<=$today?'ended':'active');
+            $summary[$row['status']]++;
+            if($row['effective_date']<=$today){
+                $summary['studentDiscountIrr']+=(int)$row['student_discount_irr'];
+                $summary['driverDiscountIrr']+=(int)$row['driver_discount_irr'];
+            }
+        }
+        unset($row);
+        $summary['companyShareImpactIrr']=$summary['driverDiscountIrr']-$summary['studentDiscountIrr'];
+        return ['items'=>$rows,'summary'=>$summary,'readOnly'=>true];
+    }
+
+    public static function details(int $uid,int $aid,int $id): array
+    {
+        Authorization::requireAgencyAccess($uid,$aid);
+        Authorization::requirePermission($uid,'finance.view');
+        Authorization::requirePermission($uid,'students.view');
+        $pdo=Connection::get();
+        StudentDiscountSchema::requireReady($pdo);
+        $q=$pdo->prepare("SELECT d.*,CONCAT_WS(' ',s.first_name,s.last_name) student_name
+            FROM student_discounts d JOIN students s ON s.id=d.student_id AND s.agency_id=d.agency_id
+            WHERE d.id=? AND d.agency_id=?");
+        $q->execute([$id,$aid]);$discount=$q->fetch(PDO::FETCH_ASSOC);
+        if(!$discount)throw new AuthException(404,'تخفیف یافت نشد.','DISCOUNT_NOT_FOUND');
+        $q=$pdo->prepare('SELECT id,event_type,student_discount_irr,driver_discount_irr,effective_date,
+            journal_document_id,calculation_snapshot,created_at FROM student_discount_financial_effects
+            WHERE agency_id=? AND discount_id=? ORDER BY id');
+        $q->execute([$aid,$id]);$effects=$q->fetchAll(PDO::FETCH_ASSOC);
+        $q=$pdo->prepare('SELECT id,appendix_number,contract_id,effective_from,effective_to,
+            old_amount_irr,discount_amount_irr,effective_amount_irr,terms,created_at
+            FROM student_discount_contract_appendices WHERE agency_id=? AND discount_id=? ORDER BY id');
+        $q->execute([$aid,$id]);$appendices=$q->fetchAll(PDO::FETCH_ASSOC);
+        $q=$pdo->prepare('SELECT action,before_snapshot,after_snapshot,created_at FROM student_discount_audit_logs
+            WHERE discount_id=? ORDER BY id');
+        $q->execute([$id]);$history=$q->fetchAll(PDO::FETCH_ASSOC);
+        return ['discount'=>$discount,'effects'=>$effects,'appendices'=>$appendices,'history'=>$history];
+    }
+
 }
