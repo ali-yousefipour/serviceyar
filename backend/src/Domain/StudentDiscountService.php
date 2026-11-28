@@ -101,6 +101,7 @@ final class StudentDiscountService
         if(!is_string($key)||!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/Di',$key))
             throw new AuthException(422,'شناسه یکتای درخواست معتبر نیست.','INVALID_DISCOUNT_REQUEST_KEY');
         return OperationsService::transaction(function(PDO $pdo) use($uid,$aid,$sid,$rate,$key,$data) {
+            StudentDiscountSchema::requireReady($pdo);
             // Serialize all new discount requests on this student's row. This
             // also makes the overlap check safe against concurrent submissions.
             ContractBilling::lockStudent($pdo,$aid,(int)$sid);
