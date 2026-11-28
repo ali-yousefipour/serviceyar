@@ -69,4 +69,32 @@ final class StudentDiscountPeriods
             (int)$discount['rate_milli_percent'], (bool)$discount['apply_to_student'],
             (bool)$discount['apply_to_driver']);
     }
+    /**
+     * Aggregate discounts against independently calculated original segment
+     * amounts. The caller supplies the authoritative financial engine quote
+     * for each segment; never prorate an already discounted amount.
+     */
+    public static function calculatePeriod(string $from, string $to, array $discounts, callable $quote): array
+    {
+        $totals = ['studentBase'=>0,'driverBase'=>0,'studentDiscount'=>0,
+            'driverDiscount'=>0,'studentNet'=>0,'driverNet'=>0,'companyShare'=>0];
+        $details = [];
+        foreach (self::split($from, $to, $discounts) as $segment) {
+            $base = $quote($segment['from'], $segment['to']);
+            if (!is_array($base) || !is_int($base['studentBase'] ?? null) ||
+                !is_int($base['driverBase'] ?? null)) {
+                throw new \InvalidArgumentException('Authoritative integer segment bases required');
+            }
+            $amounts = self::calculateSegment($base['studentBase'], $base['driverBase'], $segment['discount']);
+            foreach ($totals as $key => $total) {
+                $value = $key === 'studentBase' || $key === 'driverBase' ? $base[$key] : $amounts[$key];
+                $next = $total + $value;
+                if (!is_int($next)) throw new \OverflowException('Discount period amount overflow');
+                $totals[$key] = $next;
+            }
+            $details[] = $segment + ['amounts'=>['studentBase'=>$base['studentBase'],'driverBase'=>$base['driverBase']] + $amounts];
+        }
+        return $totals + ['segments'=>$details];
+    }
+
 }
