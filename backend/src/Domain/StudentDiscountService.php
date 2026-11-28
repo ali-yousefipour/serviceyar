@@ -70,6 +70,11 @@ final class StudentDiscountService
             (int)$contract['invoice_amount']!==(int)$contract['amount']){
             throw new AuthException(409,'مبلغ قرارداد یا فاکتور با مبنای فعلی برابر نیست؛ ابتدا تطبیق مالی انجام دهید.','DISCOUNT_FINANCIAL_RECONCILIATION_REQUIRED');
         }
+        $account=StudentServiceBilling::account($uid,$aid,(int)$sid);
+        $before=$account['totals'];
+        $nextNet=(int)round((float)$before['net'])-$amounts['studentDiscount'];
+        $after=['balance'=>max(0,$nextNet),'credit'=>max(0,-$nextNet),
+            'net'=>$nextNet,'paid'=>(int)round((float)$before['received'])];
         return [
             'studentId'=>(int)$sid,'studentName'=>trim($student['first_name'].' '.$student['last_name']),
             'schoolId'=>(int)$student['school_id'],'serviceId'=>(int)$services[0]['service_id'],
@@ -78,7 +83,8 @@ final class StudentDiscountService
             'invoiceId'=>(int)$contract['invoice_id'],'academicYear'=>$year,
             'effectiveFrom'=>$from,'effectiveTo'=>$to,'rateMilliPercent'=>$rate,
             'applyToStudent'=>$parent,'applyToDriver'=>$driver,
-            'amounts'=>$amounts,'requiresConfirmation'=>true,'readOnly'=>true
+            'amounts'=>$amounts,'accountBefore'=>$before,'accountAfter'=>$after,
+            'requiresConfirmation'=>true,'readOnly'=>true
         ];
     }
     /**
