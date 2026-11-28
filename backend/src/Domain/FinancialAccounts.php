@@ -10,7 +10,7 @@ use ServiceYar\Database\Connection;
 final class FinancialAccounts
 {
     public const KEY='finance_accounts';
-    public const SLOTS=['serviceIncome','driverSalary','discount','penalty','bonus','cash','bank','absence','wallet','chequeReceivable'];
+    public const SLOTS=['serviceIncome','driverSalary','studentReceivable','driverPayable','discount','penalty','bonus','cash','bank','absence','wallet','chequeReceivable'];
 
     public static function get(int $uid,int $aid): array
     {
