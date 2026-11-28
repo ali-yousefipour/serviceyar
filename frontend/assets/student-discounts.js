@@ -33,11 +33,43 @@ window.studentDiscountsPage=async function studentDiscountsPage(token){
      '<p>دانش‌آموز: '+esc(item.student_name)+'</p><p>علت: '+esc(item.reason)+'</p>'+
      '<p>اسناد مالی: '+esc((data.effects||[]).map(x=>'#'+x.journal_document_id).join('، ')||'—')+'</p>'+
      '<p>الحاقیه‌ها: '+esc((data.appendices||[]).map(x=>x.appendix_number).join('، ')||'—')+'</p>'+
-     '<p>تاریخچه: '+number((data.history||[]).length)+' رویداد</p><button id="sdCloseDetails" type="button">بستن</button></div></div>';
+     '<p>تاریخچه: '+number((data.history||[]).length)+' رویداد</p>'+
+     (can('student-discounts','manage')&&item.status!=='cancelled'?'<div class="sy-discount-footer"><button id="sdTerminate" type="button">خاتمه تاریخ‌دار</button><button id="sdCancelDiscount" type="button">لغو با سند اصلاحی</button></div>':'')+
+     '<button id="sdCloseDetails" type="button">بستن</button></div></div>';
     document.getElementById('sdCloseDetails').onclick=closeDialog;
+    document.getElementById('sdTerminate')?.addEventListener('click',()=>revise('terminate',item));
+    document.getElementById('sdCancelDiscount')?.addEventListener('click',()=>revise('cancel',item));
+
    }catch(err){notify(err.message,true);}
   });
  };
+ async function revise(action,item){
+  const until=action==='terminate';
+  const render=()=>{
+   document.getElementById('modal').innerHTML='<div class="modal-backdrop"><div class="modal sy-discount-dialog" role="dialog" aria-modal="true" aria-label="اصلاح تخفیف">'+
+    '<header><h3>'+(until?'خاتمه تخفیف':'لغو تخفیف و برگشت سند مالی')+'</h3></header>'+
+    '<div class="sy-discount-body"><p>این عملیات با ثبت سند معکوس حسابداری انجام می‌شود؛ سند اصلی و پرداخت‌ها حذف نخواهند شد.</p>'+
+    (until?'<label>تاریخ پایان (اولین روز بدون تخفیف)<input id="sdRevisionDate" type="date" required value="'+esc(item.effective_to||'')+'"></label>':'')+
+    '<label>علت اصلاح <textarea id="sdRevisionReason" rows="3" required></textarea></label><p id="sdRevisionError" role="alert" hidden></p></div>'+
+    '<footer class="sy-discount-footer"><button id="sdRevisionClose" type="button">بازگشت</button><button id="sdRevisionSave" class="primary" type="button">ثبت سند اصلاحی</button></footer></div></div>';
+   document.getElementById('sdRevisionClose').onclick=closeDialog;
+   document.getElementById('sdRevisionSave').onclick=async()=>{
+    const button=document.getElementById('sdRevisionSave');
+    const reason=document.getElementById('sdRevisionReason').value.trim();
+    const date=until?document.getElementById('sdRevisionDate').value:'';
+    const error=document.getElementById('sdRevisionError');
+    if(!reason||until&&!date){error.textContent='علت اصلاح و تاریخ معتبر الزامی است.';error.hidden=false;return;}
+    button.disabled=true;
+    try{
+     await write('/api/v1/student-discounts/'+item.id+'/'+action,{
+      requestKey:crypto.randomUUID(),reason,effectiveTo:date
+     });
+     closeDialog();notify('سند اصلاحی تخفیف ثبت شد.');await renderList();
+    }catch(e){error.textContent=e.message;error.hidden=false;button.disabled=false;}
+   };
+  };
+  render();
+ }
  async function openWizard(){
   if(!can('student-discounts','manage'))return;
   const selected=await lookup('students');
