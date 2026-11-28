@@ -227,24 +227,31 @@ final class StudentDiscountService
         $sql="SELECT d.id,d.student_id,d.contract_id,d.rate_milli_percent,d.reason,
              d.effective_from,d.effective_to,d.apply_to_student,d.apply_to_driver,d.created_at,
              CONCAT_WS(' ',s.first_name,s.last_name) student_name,sc.name school_name,
-             e.driver_id,e.service_id,e.invoice_id,e.student_discount_irr,e.driver_discount_irr,
+             e.driver_id,e.service_id,e.invoice_id,
+             COALESCE(x.student_discount_irr,0) student_discount_irr,
+             COALESCE(x.driver_discount_irr,0) driver_discount_irr,
              e.effective_date,e.journal_document_id
              FROM student_discounts d JOIN students s ON s.id=d.student_id AND s.agency_id=d.agency_id
              LEFT JOIN schools sc ON sc.id=s.school_id AND sc.agency_id=s.agency_id
              JOIN student_discount_financial_effects e ON e.discount_id=d.id AND e.agency_id=d.agency_id AND e.event_type='create'
+             LEFT JOIN (SELECT agency_id,discount_id,
+                 SUM(CASE WHEN event_type='create' THEN student_discount_irr ELSE -student_discount_irr END) student_discount_irr,
+                 SUM(CASE WHEN event_type='create' THEN driver_discount_irr ELSE -driver_discount_irr END) driver_discount_irr
+                 FROM student_discount_financial_effects
+                 WHERE effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
+                 GROUP BY agency_id,discount_id) x ON x.agency_id=d.agency_id AND x.discount_id=d.id
              WHERE ".implode(' AND ',$where)." ORDER BY d.created_at DESC,d.id DESC LIMIT 500";
         $q=$pdo->prepare($sql);$q->execute($args);$rows=$q->fetchAll(PDO::FETCH_ASSOC);
         $today=(new \DateTimeImmutable('now',new \DateTimeZone('Asia/Tehran')))->format('Y-m-d');
-        $summary=['count'=>count($rows),'active'=>0,'future'=>0,'ended'=>0,
+        $summary=['count'=>count($rows),'active'=>0,'future'=>0,'ended'=>0,'cancelled'=>0,
             'studentDiscountIrr'=>0,'driverDiscountIrr'=>0,'companyShareImpactIrr'=>0];
         foreach($rows as &$row){
-            $row['status']=$row['effective_from']>$today?'future':
-                (($row['effective_to']??'9999-12-31')<=$today?'ended':'active');
+            $row['status']=$row['status']==='cancelled'?'cancelled':
+                ($row['effective_from']>$today?'future':
+                (($row['effective_to']??'9999-12-31')<=$today?'ended':'active'));
             $summary[$row['status']]++;
-            if($row['effective_date']<=$today){
-                $summary['studentDiscountIrr']+=(int)$row['student_discount_irr'];
-                $summary['driverDiscountIrr']+=(int)$row['driver_discount_irr'];
-            }
+            $summary['studentDiscountIrr']+=(int)$row['student_discount_irr'];
+            $summary['driverDiscountIrr']+=(int)$row['driver_discount_irr'];
         }
         unset($row);
         $summary['companyShareImpactIrr']=$summary['driverDiscountIrr']-$summary['studentDiscountIrr'];
