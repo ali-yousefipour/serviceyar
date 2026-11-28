@@ -74,7 +74,7 @@ final class StudentServiceBilling {
    $studentDiscounts=$q->fetchAll(PDO::FETCH_ASSOC);
    $discountByInvoice=[];
    foreach($studentDiscounts as $effect){
-    if((string)$effect['effective_date']>(new \\DateTimeImmutable('now',new \\DateTimeZone('Asia/Tehran')))->format('Y-m-d'))continue;
+    if((string)$effect['effective_date']>(new \DateTimeImmutable('now',new \DateTimeZone('Asia/Tehran')))->format('Y-m-d'))continue;
     $sum=(int)$effect['student_discount_irr'];
     $total-=$sum;
     $invoiceId=(int)$effect['invoice_id'];
