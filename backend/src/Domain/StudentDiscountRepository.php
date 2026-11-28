@@ -14,7 +14,7 @@ final class StudentDiscountRepository
 {
     public static function overlapping(PDO $pdo,int $agency,int $student,string $from,string $to): array
     {
-        $q=$pdo->prepare('SELECT * FROM student_discounts WHERE agency_id=? AND student_id=? AND effective_from<? AND (effective_to IS NULL OR effective_to>?) ORDER BY effective_from,id');
+        $q=$pdo->prepare('SELECT * FROM student_discounts WHERE agency_id=? AND student_id=? AND status<>'cancelled' AND effective_from<? AND (effective_to IS NULL OR effective_to>?) ORDER BY effective_from,id');
         $q->execute([$agency,$student,$to,$from]);
         return $q->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -53,7 +53,7 @@ final class StudentDiscountRepository
                 throw new AuthException(409,'شناسه درخواست قبلاً برای اطلاعات دیگری استفاده شده است.','DISCOUNT_REQUEST_CONFLICT');
             return ['id'=>(int)$old['id'],'alreadyCreated'=>true];
         }
-        $q=$pdo->prepare('SELECT id FROM student_discounts WHERE agency_id=? AND student_id=? AND effective_from<? AND (effective_to IS NULL OR effective_to>?) LIMIT 1 FOR UPDATE');
+        $q=$pdo->prepare('SELECT id FROM student_discounts WHERE agency_id=? AND student_id=? AND status<>'cancelled' AND effective_from<? AND (effective_to IS NULL OR effective_to>?) LIMIT 1 FOR UPDATE');
         $q->execute([$agency,$student,$to,$from]);
         if($q->fetchColumn())throw new AuthException(409,'تخفیف هم‌پوشان وجود دارد.','DISCOUNT_OVERLAP');
         $q=$pdo->prepare('INSERT INTO student_discounts(agency_id,student_id,contract_id,rate_milli_percent,reason,effective_from,effective_to,apply_to_student,apply_to_driver,request_key,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?)');
