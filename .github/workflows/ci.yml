@@ -95,6 +95,7 @@ jobs:
           php backend/tests/student_discount_math_test.php
           php backend/tests/student_discount_periods_test.php
           php backend/tests/student_discount_billing_quote_test.php
+          php backend/tests/student_discount_input_test.php
           php backend/tests/contract_parent_blank_overrides_test.php
       - name: Financial quote integration (read-only fixture)
         run: php tests/taxi-financial-integration.php
