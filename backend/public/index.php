@@ -1026,6 +1026,11 @@ try {
    Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\StudentDiscountService::create($s['id'],$aid,Request::json())],201);
   }
  }
+ if($method==='POST'&&preg_match('#^/api/v1/student-discounts/([0-9]+)/(terminate|cancel)$#D',$path,$discountMatch)){
+  $auth->requireCsrf($s);
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\StudentDiscountLifecycle::apply(
+    $s['id'],$aid,(int)$discountMatch[1],$discountMatch[2],Request::json())]);
+ }
  if($method==='GET'&&preg_match('#^/api/v1/student-discounts/([0-9]+)$#D',$path,$discountMatch)){
   header('Cache-Control: private, no-store');
   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\StudentDiscountService::details($s['id'],$aid,(int)$discountMatch[1])]);
