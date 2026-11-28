@@ -22,6 +22,8 @@ final class StudentDiscountSchema
     }
     public static function requireReady(PDO $pdo): void
     {
+        try {$pdo->query('SELECT status FROM student_discounts LIMIT 0');}
+        catch (\PDOException $e) {throw new AuthException(503,'ابتدا مهاجرت ۰۱۷۱ چرخه عمر تخفیف را اجرا کنید.','STUDENT_DISCOUNT_LIFECYCLE_SCHEMA_REQUIRED');}
         foreach (['student_discounts','student_discount_audit_logs',
             'student_discount_financial_effects','student_discount_contract_appendices'] as $table) {
             try {$pdo->query('SELECT id FROM '.$table.' LIMIT 0');}
