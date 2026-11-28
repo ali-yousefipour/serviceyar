@@ -139,6 +139,7 @@ final class StudentServiceBilling {
        JOIN service_students ss ON ss.student_id=st.id AND ss.service_id=e.service_id
        JOIN services sv ON sv.id=e.service_id AND sv.agency_id=e.agency_id AND sv.driver_id=e.driver_id
        WHERE e.agency_id=? AND e.driver_id=? AND sv.is_active=1 AND sv.status='active'
+        AND e.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
         AND ".StudentBalance::yearSql('e.academic_year')."=".StudentBalance::yearSql('st.academic_year')."
        ORDER BY e.effective_date,e.id");
    $q->execute([$agencyId,$driverId]);
