@@ -286,6 +286,22 @@ final class OperationsService
             foreach($rateQuery->fetchAll(\PDO::FETCH_ASSOC) as $period)
                 $rateHistory[(int)$period['subject_id'].':'.(int)$period['service_id']][]=$period;
         }
+        // Signed individual discounts affect estimates only; recorded work and
+        // approved payroll remain immutable. Driver and parent bases are separate.
+        $discountHistory=[];
+        if($estimateRequested&&StudentDiscountSchema::exists($p)){
+            $dq=$p->prepare("SELECT d.student_id,e.service_id,e.driver_id,d.rate_milli_percent,
+                d.effective_from,d.effective_to
+                FROM student_discounts d JOIN student_discount_financial_effects e
+                  ON e.discount_id=d.id AND e.agency_id=d.agency_id AND e.event_type='create'
+                WHERE d.agency_id=? AND d.status<>'cancelled' AND d.apply_to_driver=1
+                  AND d.effective_from<=? AND d.effective_to>?
+                ORDER BY d.student_id,d.effective_from,d.id");
+            $dq->execute([$aid,$to,$from]);
+            foreach($dq->fetchAll(PDO::FETCH_ASSOC) as $entry){
+                $discountHistory[(int)$entry['student_id'].':'.(int)$entry['service_id'].':'.(int)$entry['driver_id']][]=$entry;
+            }
+        }
         // A current assignment is not a dated ledger. Never project a full
         // historical month across a driver change without a signed day split.
         $driverChangesByService=[];
@@ -445,8 +461,22 @@ final class OperationsService
             $monthly=$estimateRequested && $history
                 ?VehicleClassEffectiveDates::blendedRate($from,$to,$base,$history)
                 :$base;
+            $individualDiscount=0;
+            if($estimateRequested){
+                foreach($discountHistory[$studentId.':'.$serviceId.':'.(int)$member['driver_id']]??[] as $discount){
+                    $lo=max($from,(string)$discount['effective_from']);
+                    $hi=min($to,(new \DateTimeImmutable((string)$discount['effective_to']))->modify('-1 day')->format('Y-m-d'));
+                    if($lo>$hi)continue;
+                    $days=(new \DateTimeImmutable($lo))->diff(new \DateTimeImmutable($hi))->days+1;
+                    $allDays=(new \DateTimeImmutable($from))->diff(new \DateTimeImmutable($to))->days+1;
+                    $fullDiscount=StudentDiscountMath::calculate(0,$monthly,(int)$discount['rate_milli_percent'],false,true)['driverDiscount'];
+                    $individualDiscount+=intdiv($fullDiscount*$days+intdiv($allDays,2),$allDays);
+                }
+            }
+            if($individualDiscount>$monthly)throw new AuthException(409,'تخفیف راننده از مبنای سرویس بیشتر است.','DISCOUNT_FINANCIAL_RECONCILIATION_REQUIRED');
             $servicesMap[$serviceId]['student_count']++;
-            $servicesMap[$serviceId]['monthly_gross']+=$monthly;
+            $servicesMap[$serviceId]['monthly_gross']+=$monthly-$individualDiscount;
+            $servicesMap[$serviceId]['student_discount_irr']=($servicesMap[$serviceId]['student_discount_irr']??0)+$individualDiscount;
         }
         $byDriver=[];
         foreach($servicesMap as $service)
@@ -470,7 +500,8 @@ final class OperationsService
                 $serviceRows[]=['serviceId'=>$serviceId,'title'=>$service['title'],
                   'code'=>$service['code'],'studentCount'=>(int)$service['student_count'],
                   'feeSource'=>$service['fee_source'],'monthlyGross'=>$amount,
-                  'days'=>$days,'earnedGross'=>$prorated];
+                  'days'=>$days,'earnedGross'=>$prorated,
+                  'studentDiscountIrr'=>ServiceFinancialBasis::prorate((int)($service['student_discount_irr']??0),$days)];
             }
             $r['service_details']=$serviceRows;
             $r['assigned_monthly_base']=$monthlyGross;

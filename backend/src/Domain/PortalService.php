@@ -269,11 +269,32 @@ final class PortalService {
                 }
                 unset($inv);
             }
+            $studentDiscounts=[];
+            if(StudentDiscountSchema::exists($pdo)){
+                $studentDiscounts=self::rows($pdo,"SELECT discount_id,invoice_id,effective_date,CASE WHEN event_type='create' THEN student_discount_irr ELSE -student_discount_irr END student_discount_irr
+                    FROM student_discount_financial_effects WHERE agency_id=? AND student_id=?
+                    AND effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
+                    ORDER BY effective_date,id",[$agencyId,$partyId]);
+                $discountByInvoice=[];
+                foreach($studentDiscounts as $effect){
+                    $delta=(int)$effect['student_discount_irr'];
+                    $total-=$delta;
+                    $invoiceId=(int)$effect['invoice_id'];
+                    $discountByInvoice[$invoiceId]=($discountByInvoice[$invoiceId]??0)+$delta;
+                }
+                foreach($invoices as &$inv){
+                    $inv['originalAmount']=$inv['originalAmount']??$inv['amount'];
+                    $inv['studentDiscountAmount']=$discountByInvoice[(int)$inv['id']]??0;
+                    $inv['effectiveAmount']=(int)$inv['amount']-$inv['studentDiscountAmount'];
+                    $inv['amount']=$inv['effectiveAmount'];
+                }
+                unset($inv);
+            }
             StudentBalance::allocate($invoices,(float)$received);
             $totals=StudentBalance::totals((float)$total,(float)$received);
             return $base+['student'=>$student,'guardian'=>$guardian,'services'=>$services,
                 'finance'=>['invoices'=>$invoices,'installments'=>$installments,'payments'=>$payments,
-                   'vehicleClassAdjustments'=>$classAdjustments,'total'=>$total,'paid'=>$received,'balance'=>$totals['balance'],
+                   'vehicleClassAdjustments'=>$classAdjustments,'studentDiscounts'=>$studentDiscounts,'total'=>$total,'paid'=>$received,'balance'=>$totals['balance'],
                    'credit'=>$totals['credit']],
                 'installmentsNote'=>'برنامه اقساط بر اساس سند قطعی شرکت نمایش داده می‌شود؛ برای تاریخ سررسید قطعی از شرکت استعلام کنید.'];
         }

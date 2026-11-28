@@ -1,0 +1,23 @@
+/* Financial student discounts screen and constrained five-step modal. */
+.sy-discounts{direction:rtl;font-family:Vazirmatn,Tahoma,sans-serif}
+.sy-discount-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin:14px 0}
+.sy-discount-stats>div{background:var(--surface,#f5f9f7);border:1px solid var(--border,#dce8e1);border-radius:12px;padding:12px;display:grid;gap:6px}
+.sy-discount-stats small{font-size:.79rem;color:var(--muted,#5d7067)}
+.sy-discount-stats strong{font-size:.95rem;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.sy-discount-filters{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin:12px 0 18px}
+.sy-discount-filters label{flex:1;min-width:220px;display:grid;gap:6px}
+.sy-discount-dialog{font-family:Vazirmatn,Tahoma,sans-serif;direction:rtl;width:min(760px,calc(100vw - 20px));max-width:760px;max-height:92dvh;display:flex;flex-direction:column;padding:0;overflow:hidden;border-radius:16px}
+.sy-discount-dialog>header{padding:16px 20px 8px}
+.sy-discount-dialog header h3{margin:0;font-size:1.12rem}
+.sy-discount-dialog header p{margin:5px 0 0;color:var(--muted,#566d62)}
+.sy-discount-steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;padding:8px 16px;margin:0;list-style:none}
+.sy-discount-steps li{padding:9px 4px;text-align:center;border-radius:8px;background:var(--surface,#f1f4f1);font-size:.72rem}
+.sy-discount-steps li.active{background:#d9eee4;color:#174c36;font-weight:700}
+.sy-discount-body{overflow:auto;min-height:125px;padding:14px 20px 20px;display:grid;gap:14px}
+.sy-discount-body label{display:grid;gap:7px}
+.sy-discount-body input,.sy-discount-body select,.sy-discount-body textarea{width:100%;max-width:100%;min-height:44px;box-sizing:border-box;font:inherit}
+.sy-discount-warning{font-size:.85rem;line-height:1.8}
+.sy-discount-footer{display:flex;justify-content:flex-end;align-items:center;gap:9px;padding:13px 20px;background:var(--surface,#f8faf8);border-top:1px solid var(--border,#dce8e1);flex-shrink:0}
+.sy-discount-footer button{min-height:44px;min-width:86px}
+.sy-discount-dialog [role=alert]:not([hidden]){margin:0 20px;color:#a52424}
+@media(max-width:580px){.sy-discount-dialog{max-height:96dvh}.sy-discount-steps{padding:5px;gap:2px}.sy-discount-steps li{font-size:.62rem;padding:6px 2px}.sy-discount-body{padding:10px}.sy-discount-footer{padding:9px 10px}.sy-discount-footer button{flex:1;min-width:0}}

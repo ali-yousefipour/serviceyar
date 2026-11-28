@@ -15,8 +15,9 @@ final class StudentBalance {
  }
  public static function invoicesSql(): string {
   $base="(SELECT COALESCE(SUM(i.amount),0) FROM invoices i WHERE i.party_type='student' AND i.party_id=students.id AND i.agency_id=students.agency_id AND i.status<>'cancelled')";
-  if(!VehicleClassSchema::exists())return $base;
-  return "($base + (SELECT COALESCE(SUM(adj.amount_irr),0) FROM vehicle_class_debt_adjustments adj WHERE adj.student_id=students.id AND adj.agency_id=students.agency_id AND adj.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)))";
+  if(VehicleClassSchema::exists())$base="($base + (SELECT COALESCE(SUM(adj.amount_irr),0) FROM vehicle_class_debt_adjustments adj WHERE adj.student_id=students.id AND adj.agency_id=students.agency_id AND adj.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)))";
+  if(StudentDiscountSchema::exists())$base="($base - (SELECT COALESCE(SUM(CASE WHEN sd.event_type='create' THEN sd.student_discount_irr ELSE -sd.student_discount_irr END),0) FROM student_discount_financial_effects sd WHERE sd.student_id=students.id AND sd.agency_id=students.agency_id AND sd.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)))";
+  return $base;
  }
  public static function receiptsSql(): string {
   return "((SELECT COALESCE(SUM(p.amount),0) FROM payments p JOIN invoices i ON i.id=p.invoice_id AND i.agency_id=p.agency_id WHERE i.party_type='student' AND i.party_id=students.id AND p.agency_id=students.agency_id) + (SELECT COALESCE(SUM(CASE WHEN le.direction='receipt' THEN le.amount ELSE -le.amount END),0) FROM ledger_entries le WHERE le.agency_id=students.agency_id AND le.party_type='student' AND le.party_id=students.id AND le.is_active=1))";
@@ -49,6 +50,17 @@ final class StudentBalance {
    $groups[$key]??=['invoiced'=>0.0,'received'=>0.0];
    $groups[$key]['invoiced']+=(float)$row['amount'];
   }
+  }
+  if(StudentDiscountSchema::exists($pdo)){
+   $q=$pdo->prepare("SELECT academic_year,SUM(CASE WHEN event_type='create' THEN student_discount_irr ELSE -student_discount_irr END) amount FROM student_discount_financial_effects
+       WHERE agency_id=? AND student_id=? AND effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
+       GROUP BY academic_year");
+   $q->execute([$agency,$student]);
+   foreach($q->fetchAll(PDO::FETCH_ASSOC) as $row){
+    $key=ContractBilling::year((string)$row['academic_year']);
+    $groups[$key]??=['invoiced'=>0.0,'received'=>0.0];
+    $groups[$key]['invoiced']-=(float)$row['amount'];
+   }
   }
   ksort($groups);
   foreach($groups as $key=>$row)$groups[$key]=self::totals($row['invoiced'],$row['received']);

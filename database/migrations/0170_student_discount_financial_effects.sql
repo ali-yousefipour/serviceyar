@@ -1,0 +1,52 @@
+-- Additive financial discount event ledger. Original invoices, contracts and payments are immutable.
+-- Each event is linked to a real approved accounting document; no free-standing financial mutation.
+CREATE TABLE IF NOT EXISTS student_discount_financial_effects (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ agency_id BIGINT UNSIGNED NOT NULL,
+ discount_id BIGINT UNSIGNED NOT NULL,
+ student_id BIGINT UNSIGNED NOT NULL,
+ driver_id BIGINT UNSIGNED NOT NULL,
+ service_id BIGINT UNSIGNED NOT NULL,
+ contract_id BIGINT UNSIGNED NOT NULL,
+ invoice_id BIGINT UNSIGNED NOT NULL,
+ academic_year VARCHAR(16) NOT NULL,
+ effective_date DATE NOT NULL,
+ event_type VARCHAR(24) NOT NULL DEFAULT 'create',
+ student_discount_irr BIGINT NOT NULL DEFAULT 0,
+ driver_discount_irr BIGINT NOT NULL DEFAULT 0,
+ journal_document_id BIGINT UNSIGNED NOT NULL,
+ request_key CHAR(36) NOT NULL,
+ calculation_snapshot JSON NOT NULL,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ UNIQUE KEY uq_discount_event_key (agency_id,request_key),
+ UNIQUE KEY uq_discount_event_revision (discount_id,event_type,request_key),
+ INDEX idx_discount_effect_student (agency_id,student_id,effective_date),
+ INDEX idx_discount_effect_invoice (agency_id,invoice_id,effective_date),
+ INDEX idx_discount_effect_driver (agency_id,driver_id,effective_date),
+ INDEX idx_discount_effect_contract (agency_id,contract_id),
+ CONSTRAINT fk_sde_discount FOREIGN KEY (discount_id) REFERENCES student_discounts(id) ON DELETE RESTRICT,
+ CONSTRAINT fk_sde_journal FOREIGN KEY (journal_document_id) REFERENCES accounting_documents(id) ON DELETE RESTRICT,
+ CONSTRAINT ck_sde_nonnegative CHECK (student_discount_irr>=0 AND driver_discount_irr>=0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS student_discount_contract_appendices (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ agency_id BIGINT UNSIGNED NOT NULL,
+ discount_id BIGINT UNSIGNED NOT NULL,
+ contract_id BIGINT UNSIGNED NOT NULL,
+ appendix_number VARCHAR(80) NOT NULL,
+ effective_from DATE NOT NULL,
+ effective_to DATE NOT NULL,
+ old_amount_irr BIGINT NOT NULL,
+ discount_amount_irr BIGINT NOT NULL,
+ effective_amount_irr BIGINT NOT NULL,
+ terms TEXT NOT NULL,
+ original_snapshot JSON NOT NULL,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ UNIQUE KEY uq_discount_appendix (agency_id,discount_id,contract_id),
+ UNIQUE KEY uq_discount_appendix_number (agency_id,appendix_number),
+ INDEX idx_discount_appendix_contract (agency_id,contract_id),
+ CONSTRAINT fk_sd_appendix_discount FOREIGN KEY (discount_id) REFERENCES student_discounts(id) ON DELETE RESTRICT,
+ CONSTRAINT fk_sd_appendix_contract FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE RESTRICT,
+ CONSTRAINT ck_sd_appendix_amount CHECK (old_amount_irr>=discount_amount_irr AND effective_amount_irr=old_amount_irr-discount_amount_irr)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

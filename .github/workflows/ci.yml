@@ -1,7 +1,7 @@
 name: ServiceYar CI
 on:
   push:
-    branches: [main]
+    branches: [main, feature/student-discounts-20261126]
   pull_request:
     branches: [main]
 jobs:
@@ -92,6 +92,13 @@ jobs:
         run: |
           php tests/taxi-fare-components.php
           php tests/service-finance-basis.php
+          php backend/tests/student_discount_math_test.php
+          php backend/tests/student_discount_periods_test.php
+          php backend/tests/student_discount_billing_quote_test.php
+          php backend/tests/student_discount_input_test.php
+          node tests/student-discount-workflow-contract.cjs
+          node --check frontend/assets/student-discounts.js
+          php backend/tests/contract_parent_blank_overrides_test.php
       - name: Financial quote integration (read-only fixture)
         run: php tests/taxi-financial-integration.php
   transport-integration:

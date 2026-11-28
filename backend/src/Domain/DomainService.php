@@ -502,13 +502,24 @@ final class DomainService {
       AND c.status='active'
       AND ".StudentBalance::yearSql('m.academic_year')."=".StudentBalance::yearSql('students.academic_year')."
      ORDER BY c.id DESC LIMIT 1)";
-  if(!VehicleClassSchema::exists())return $base;
-  $adjustments="(SELECT COALESCE(SUM(d.amount_irr),0)
+  $amount=$base;
+  if(VehicleClassSchema::exists()){
+   $adjustments="(SELECT COALESCE(SUM(d.amount_irr),0)
      FROM vehicle_class_debt_adjustments d
      WHERE d.agency_id=students.agency_id AND d.student_id=students.id
        AND ".StudentBalance::yearSql('d.academic_year')."=".StudentBalance::yearSql('students.academic_year')."
        AND d.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE))";
-  return "(CASE WHEN $base IS NULL THEN NULL ELSE ($base + $adjustments) END)";
+   $amount="($amount + $adjustments)";
+  }
+  if(StudentDiscountSchema::exists()){
+   $discounts="(SELECT COALESCE(SUM(CASE WHEN sd.event_type='create' THEN sd.student_discount_irr ELSE -sd.student_discount_irr END),0)
+     FROM student_discount_financial_effects sd
+     WHERE sd.agency_id=students.agency_id AND sd.student_id=students.id
+       AND ".StudentBalance::yearSql('sd.academic_year')."=".StudentBalance::yearSql('students.academic_year')."
+       AND sd.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE))";
+   $amount="($amount - $discounts)";
+  }
+  return "(CASE WHEN $base IS NULL THEN NULL ELSE $amount END)";
  }
  public static function studentInvoiceTotalSql(): string {
   return StudentBalance::invoicesSql();

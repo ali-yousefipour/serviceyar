@@ -1016,6 +1016,31 @@ try {
   Response::json(['ok'=>true,'data'=>DomainService::lookupVehicleByPlate($s['id'],$aid,$value)]);
  }
 
+ if($path==='/api/v1/student-discounts'){
+  if($method==='GET'){
+   header('Cache-Control: private, no-store');
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\StudentDiscountService::listing($s['id'],$aid,$_GET)]);
+  }
+  if($method==='POST'){
+   $auth->requireCsrf($s);
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\StudentDiscountService::create($s['id'],$aid,Request::json())],201);
+  }
+ }
+ if($method==='POST'&&preg_match('#^/api/v1/student-discounts/([0-9]+)/(terminate|cancel)$#D',$path,$discountMatch)){
+  $auth->requireCsrf($s);
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\StudentDiscountLifecycle::apply(
+    $s['id'],$aid,(int)$discountMatch[1],$discountMatch[2],Request::json())]);
+ }
+ if($method==='GET'&&preg_match('#^/api/v1/student-discounts/([0-9]+)$#D',$path,$discountMatch)){
+  header('Cache-Control: private, no-store');
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\StudentDiscountService::details($s['id'],$aid,(int)$discountMatch[1])]);
+ }
+ // A read-only financial preflight: this route never writes discounts or documents.
+ if($method==='POST'&&$path==='/api/v1/student-discounts/preview'){
+  $auth->requireCsrf($s);
+  header('Cache-Control: private, no-store');
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\StudentDiscountService::preview($s['id'],$aid,Request::json())]);
+ }
  if($method==='GET'&&preg_match('#^/api/v1/contract-documents/(parent|driver)/draft$#',$path,$match)){
   $partyId=filter_var($_GET['partyId']??null,FILTER_VALIDATE_INT);
   if($partyId===false||$partyId<1)throw new AuthException(422,'طرف قرارداد نامعتبر است.','INVALID_CONTRACT_PARTY');
