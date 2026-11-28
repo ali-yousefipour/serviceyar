@@ -64,8 +64,32 @@ final class StudentServiceBilling {
    }
    unset($invoice);
   }
+  $studentDiscounts=[];
+  if(StudentDiscountSchema::exists($pdo)){
+   $q=$pdo->prepare("SELECT id,discount_id,invoice_id,contract_id,academic_year,effective_date,
+       student_discount_irr,driver_discount_irr
+       FROM student_discount_financial_effects
+       WHERE agency_id=? AND student_id=? ORDER BY effective_date DESC,id DESC");
+   $q->execute([$agencyId,$studentId]);
+   $studentDiscounts=$q->fetchAll(PDO::FETCH_ASSOC);
+   $discountByInvoice=[];
+   foreach($studentDiscounts as $effect){
+    if((string)$effect['effective_date']>(new \\DateTimeImmutable('now',new \\DateTimeZone('Asia/Tehran')))->format('Y-m-d'))continue;
+    $sum=(int)$effect['student_discount_irr'];
+    $total-=$sum;
+    $invoiceId=(int)$effect['invoice_id'];
+    $discountByInvoice[$invoiceId]=($discountByInvoice[$invoiceId]??0)+$sum;
+   }
+   foreach($invoices as &$invoice){
+    $invoice['originalAmount']=$invoice['originalAmount']??$invoice['amount'];
+    $invoice['studentDiscountAmount']=$discountByInvoice[(int)$invoice['id']]??0;
+    $invoice['effectiveAmount']=(int)$invoice['amount']-$invoice['studentDiscountAmount'];
+    $invoice['amount']=$invoice['effectiveAmount'];
+   }
+   unset($invoice);
+  }
   StudentBalance::allocate($invoices,$received);
-  return ['invoices'=>$invoices,'payments'=>$payments,'vehicleClassAdjustments'=>$adjustments,'totals'=>StudentBalance::totals($total,$received)];
+  return ['invoices'=>$invoices,'payments'=>$payments,'vehicleClassAdjustments'=>$adjustments,'studentDiscounts'=>$studentDiscounts,'totals'=>StudentBalance::totals($total,$received)];
  }
 
  public static function driverAccount(int $uid,int $agencyId,int $driverId): array {
