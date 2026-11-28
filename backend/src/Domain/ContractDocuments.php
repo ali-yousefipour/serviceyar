@@ -290,7 +290,11 @@ HTML;
   foreach($body as $key=>$value){
    if(!in_array($key,$allowed,true)||!is_string($value)||mb_strlen($value)>500)
     throw new AuthException(422,'فیلد تکمیلی قرارداد نامعتبر است.','INVALID_CONTRACT_OVERRIDE');
-   $out[$key]=trim($value);
+   // Blank form overrides must not erase verified student, guardian or agency data.
+   // The issuance preflight and final validation must resolve the same sources.
+   $normalized=trim($value);
+   if($normalized==='')continue;
+   $out[$key]=$normalized;
   }
   return $out;
  }
