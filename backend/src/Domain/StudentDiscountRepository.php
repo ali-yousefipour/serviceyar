@@ -23,7 +23,7 @@ final class StudentDiscountRepository
     {
         if(!$pdo->inTransaction()) throw new \LogicException('Financial transaction required');
         $from=VehicleClassEffectiveDates::requireDate($input['effectiveFrom']??null,'تاریخ شروع تخفیف');
-        $rate=$input['rateMilliPercent']??20000;
+        $rate=StudentDiscountInput::rate($input);
         $parent=$input['applyToStudent']??null;
         $driver=$input['applyToDriver']??null;
         $reason=$input['reason']??null;
