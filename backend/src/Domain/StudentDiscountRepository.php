@@ -40,7 +40,8 @@ final class StudentDiscountRepository
         if(!$c||!$c['start_date']||!$c['end_date']||$from<$c['start_date']||$from>$c['end_date'])
             throw new AuthException(422,'تاریخ تخفیف باید در قرارداد فعال دانش‌آموز باشد.','DISCOUNT_CONTRACT_REQUIRED');
         $limit=(new \DateTimeImmutable($c['end_date']))->modify('+1 day')->format('Y-m-d');
-        $to=isset($input['effectiveTo'])?VehicleClassEffectiveDates::requireDate($input['effectiveTo'],'تاریخ پایان تخفیف'):$limit;
+        $to=isset($input['effectiveTo'])&&$input['effectiveTo']!==''
+            ?VehicleClassEffectiveDates::requireDate($input['effectiveTo'],'تاریخ پایان تخفیف'):$limit;
         if($to<=$from||$to>$limit)throw new AuthException(422,'بازه تخفیف نامعتبر است.','INVALID_DISCOUNT_PERIOD');
         $q=$pdo->prepare('SELECT * FROM student_discounts WHERE agency_id=? AND request_key=? FOR UPDATE');
         $q->execute([$agency,$key]);$old=$q->fetch(PDO::FETCH_ASSOC);
