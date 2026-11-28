@@ -647,7 +647,7 @@ HTML;
    unset($row);
   }
   if($kind==='parent'&&StudentDiscountSchema::exists($pdo)){
-   $q=$pdo->prepare("SELECT contract_id,COALESCE(SUM(student_discount_irr),0) discount_irr
+   $q=$pdo->prepare("SELECT contract_id,COALESCE(SUM(CASE WHEN event_type='create' THEN student_discount_irr ELSE -student_discount_irr END),0) discount_irr
        FROM student_discount_financial_effects
        WHERE agency_id=? AND effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
        GROUP BY contract_id");
