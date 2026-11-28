@@ -24,7 +24,8 @@ foreach ($scopes as [$s,$d]) {
         throw new RuntimeException('Discount split changed undiscounted contract totals');
     if (count($out['segments'])!==2)
         throw new RuntimeException('Effective date must split contract at exact day');
-    if ($out['segments'][0]['studentDiscount']??false)
+    if (($out['segments'][0]['amounts']['studentDiscount']??-1)!==0 ||
+        ($out['segments'][0]['amounts']['driverDiscount']??-1)!==0)
         throw new RuntimeException('Pre-effective segment must not be discounted');
     if ($s && $out['studentDiscount']<=0 || !$s && $out['studentDiscount']!==0 ||
         $d && $out['driverDiscount']<=0 || !$d && $out['driverDiscount']!==0)
