@@ -81,4 +81,110 @@ final class StudentDiscountService
             'amounts'=>$amounts,'requiresConfirmation'=>true,'readOnly'=>true
         ];
     }
+    /**
+     * Atomic write: issued contract and cash receipts stay immutable.
+     * Two independent discounted bases are posted to a balanced journal;
+     * failure to configure either accounting side aborts the entire transaction.
+     */
+    public static function create(int $uid,int $aid,array $input): array
+    {
+        Authorization::requireAgencyAccess($uid,$aid);
+        Authorization::requirePermission($uid,'finance.manage');
+        Authorization::requirePermission($uid,'finance.view');
+        Authorization::requirePermission($uid,'students.view');
+        $sid=filter_var($input['studentId']??null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
+        if(!$sid)throw new AuthException(422,'دانش‌آموز معتبر انتخاب کنید.','INVALID_DISCOUNT_STUDENT');
+        $rate=StudentDiscountInput::rate($input);
+        $data=$input;
+        $data['rateMilliPercent']=$rate;
+        $key=$data['requestKey']??null;
+        if(!is_string($key)||!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/Di',$key))
+            throw new AuthException(422,'شناسه یکتای درخواست معتبر نیست.','INVALID_DISCOUNT_REQUEST_KEY');
+        return OperationsService::transaction(function(PDO $pdo) use($uid,$aid,$sid,$rate,$key,$data) {
+            // Serialize all new discount requests on this student's row. This
+            // also makes the overlap check safe against concurrent submissions.
+            ContractBilling::lockStudent($pdo,$aid,(int)$sid);
+            $exists=$pdo->prepare('SELECT * FROM student_discounts WHERE agency_id=? AND request_key=? FOR UPDATE');
+            $exists->execute([$aid,strtolower($key)]);
+            $previous=$exists->fetch(PDO::FETCH_ASSOC);
+            if($previous){
+                $repeat=StudentDiscountRepository::insert($pdo,$aid,$uid,(int)$sid,(int)$previous['contract_id'],$data);
+                $effect=$pdo->prepare('SELECT journal_document_id FROM student_discount_financial_effects WHERE agency_id=? AND discount_id=? AND event_type=?');
+                $effect->execute([$aid,$repeat['id'],'create']);
+                $journal=$effect->fetchColumn();
+                if(!$journal)throw new AuthException(409,'ثبت مالی درخواست قبلی ناقص است؛ تطبیق لازم است.','DISCOUNT_POSTING_INCOMPLETE');
+                return ['id'=>$repeat['id'],'alreadyCreated'=>true,'journalDocumentId'=>(int)$journal];
+            }
+            $preview=self::preview($uid,$aid,$data);
+            $amounts=$preview['amounts'];
+            if(($amounts['studentDiscount']??0)===0 && ($amounts['driverDiscount']??0)===0)
+                throw new AuthException(422,'تخفیف انتخابی اثر مالی ندارد.','DISCOUNT_NO_FINANCIAL_EFFECT');
+            $accounts=FinancialAccounts::get($uid,$aid);
+            $need=[];
+            if($amounts['studentDiscount']>0)$need=array_merge($need,['discount','studentReceivable']);
+            if($amounts['driverDiscount']>0)$need=array_merge($need,['driverPayable','driverSalary']);
+            foreach($need as $slot) {
+                if(empty($accounts[$slot]))
+                    throw new AuthException(409,'ابتدا حساب‌های بدهکار و بستانکار تخفیف را در تنظیمات حساب‌های پیش‌فرض تعریف کنید.','DISCOUNT_ACCOUNT_MAPPING_REQUIRED');
+            }
+            $result=StudentDiscountRepository::insert($pdo,$aid,$uid,(int)$sid,
+                (int)$preview['contractId'],$data);
+            $discountId=$result['id'];
+            $lines=[];
+            $tracking='SD-'.$discountId;
+            if($amounts['studentDiscount']>0) {
+                if($accounts['discount']===$accounts['studentReceivable'])
+                    throw new AuthException(409,'حساب تخفیف و حساب مطالبات نباید یکسان باشند.','DISCOUNT_ACCOUNT_CONFLICT');
+                $value=(string)$amounts['studentDiscount'];
+                $lines[]=['accountId'=>$accounts['discount'],'debit'=>$value,'credit'=>'0',
+                    'description'=>'تخفیف بدهکاری دانش‌آموز #'.$sid,'trackingNo'=>$tracking];
+                $lines[]=['accountId'=>$accounts['studentReceivable'],'debit'=>'0','credit'=>$value,
+                    'description'=>'کاهش مطالبات دانش‌آموز #'.$sid,'trackingNo'=>$tracking];
+            }
+            if($amounts['driverDiscount']>0) {
+                if($accounts['driverPayable']===$accounts['driverSalary'])
+                    throw new AuthException(409,'حساب بدهی راننده و حساب هزینه حقوق نباید یکسان باشند.','DISCOUNT_ACCOUNT_CONFLICT');
+                $value=(string)$amounts['driverDiscount'];
+                $lines[]=['accountId'=>$accounts['driverPayable'],'debit'=>$value,'credit'=>'0',
+                    'description'=>'کاهش بدهی به راننده بابت دانش‌آموز #'.$sid,'trackingNo'=>$tracking];
+                $lines[]=['accountId'=>$accounts['driverSalary'],'debit'=>'0','credit'=>$value,
+                    'description'=>'تعدیل هزینه حقوق راننده بابت دانش‌آموز #'.$sid,'trackingNo'=>$tracking];
+            }
+            $journal=AccountingJournal::save($uid,$aid,[
+                'documentNo'=>$tracking,'documentDate'=>$preview['effectiveFrom'],
+                'description'=>'ثبت تخفیف اختصاصی دانش‌آموز #'.$sid.'، قرارداد #'.$preview['contractId'],
+                'lines'=>$lines
+            ]);
+            AccountingJournal::approve($uid,$aid,(int)$journal['id']);
+            $stmt=$pdo->prepare('INSERT INTO student_discount_financial_effects
+                (agency_id,discount_id,student_id,driver_id,service_id,contract_id,invoice_id,academic_year,
+                 effective_date,event_type,student_discount_irr,driver_discount_irr,
+                 journal_document_id,request_key,calculation_snapshot)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+            $stmt->execute([$aid,$discountId,(int)$sid,$preview['driverId'],$preview['serviceId'],
+                $preview['contractId'],$preview['invoiceId'],$preview['academicYear'],
+                $preview['effectiveFrom'],'create',$amounts['studentDiscount'],
+                $amounts['driverDiscount'],(int)$journal['id'],strtolower($key),
+                json_encode($preview,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)]);
+            if($amounts['studentDiscount']>0){
+                $terms='به موجب این الحاقیه، از تاریخ مؤثر، مبلغ حق سرویس دانش‌آموز به میزان تخفیف مصوب تعدیل می‌شود. سایر مفاد قرارداد اصلی معتبر است.';
+                $q=$pdo->prepare('INSERT INTO student_discount_contract_appendices
+                    (agency_id,discount_id,contract_id,appendix_number,effective_from,effective_to,
+                     old_amount_irr,discount_amount_irr,effective_amount_irr,terms,original_snapshot)
+                     VALUES(?,?,?,?,?,?,?,?,?,?,?)');
+                $q->execute([$aid,$discountId,$preview['contractId'],$tracking,
+                    $preview['effectiveFrom'],$preview['effectiveTo'],
+                    $amounts['studentBase'],$amounts['studentDiscount'],$amounts['studentNet'],$terms,
+                    json_encode(['contractId'=>$preview['contractId'],'invoiceId'=>$preview['invoiceId'],
+                        'contractNo'=>$preview['contractNo'],'originalAmount'=>$amounts['studentBase']],
+                        JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)]);
+            }
+            OperationsService::audit($uid,$aid,'create_student_discount','student_discounts',$discountId);
+            return ['id'=>$discountId,'alreadyCreated'=>false,
+                'journalDocumentId'=>(int)$journal['id'],
+                'amounts'=>$amounts,'contractId'=>$preview['contractId'],
+                'invoiceId'=>$preview['invoiceId']];
+        });
+    }
+
 }
