@@ -512,7 +512,7 @@ final class DomainService {
    $amount="($amount + $adjustments)";
   }
   if(StudentDiscountSchema::exists()){
-   $discounts="(SELECT COALESCE(SUM(sd.student_discount_irr),0)
+   $discounts="(SELECT COALESCE(SUM(CASE WHEN sd.event_type='create' THEN sd.student_discount_irr ELSE -sd.student_discount_irr END),0)
      FROM student_discount_financial_effects sd
      WHERE sd.agency_id=students.agency_id AND sd.student_id=students.id
        AND ".StudentBalance::yearSql('sd.academic_year')."=".StudentBalance::yearSql('students.academic_year')."
