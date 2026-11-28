@@ -646,6 +646,21 @@ HTML;
    }
    unset($row);
   }
+  if($kind==='parent'&&StudentDiscountSchema::exists($pdo)){
+   $q=$pdo->prepare("SELECT contract_id,COALESCE(SUM(student_discount_irr),0) discount_irr
+       FROM student_discount_financial_effects
+       WHERE agency_id=? AND effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
+       GROUP BY contract_id");
+   $q->execute([$agencyId]);
+   $amounts=[];
+   foreach($q->fetchAll(PDO::FETCH_ASSOC) as $a)$amounts[(int)$a['contract_id']]=(int)$a['discount_irr'];
+   foreach($records as &$row){
+    $row['original_amount']=$row['original_amount']??$row['amount'];
+    $row['student_discount_amount']=$row['status']==='cancelled'?0:($amounts[(int)$row['id']]??0);
+    $row['effective_amount']=(int)($row['effective_amount']??$row['amount'])-$row['student_discount_amount'];
+   }
+   unset($row);
+  }
   return $records;
  }
  /** Freeze a reconstructed copy of a SQL-imported student contract without issuing new debt. */
@@ -759,6 +774,41 @@ HTML;
   }
   return $content.$html;
  }
+
+ private static function studentDiscountAppendixPrint(\PDO $pdo,int $agencyId,int $contractId,string $html): string {
+  if(!StudentDiscountSchema::exists($pdo))return $html;
+  $q=$pdo->prepare("SELECT a.appendix_number,a.effective_from,a.effective_to,
+       a.old_amount_irr,a.discount_amount_irr,a.effective_amount_irr,a.terms,
+       d.rate_milli_percent,d.reason
+       FROM student_discount_contract_appendices a
+       JOIN student_discounts d ON d.id=a.discount_id AND d.agency_id=a.agency_id
+       WHERE a.agency_id=? AND a.contract_id=? ORDER BY a.effective_from,a.id");
+  $q->execute([$agencyId,$contractId]);$rows=$q->fetchAll(PDO::FETCH_ASSOC);
+  if(!$rows)return $html;
+  $content='<section class="contract-sheet" dir="rtl" style="font-family:Vazirmatn,Tahoma,sans-serif;padding:20px;line-height:2;break-after:page">';
+  $content.='<h2>الحاقیه تخفیف حق سرویس دانش‌آموز</h2><p>قرارداد اصلی و پرداخت‌های ثبت‌شده بدون تغییر باقی می‌مانند.</p>';
+  foreach($rows as $a){
+   $from=htmlspecialchars(self::jalali((string)$a['effective_from']),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
+   $until=(new \DateTimeImmutable((string)$a['effective_to']))->modify('-1 day')->format('Y-m-d');
+   $end=htmlspecialchars(self::jalali($until),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
+   $no=htmlspecialchars(self::persian((string)$a['appendix_number']),ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
+   $reason=htmlspecialchars((string)$a['reason'],ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
+   $terms=htmlspecialchars((string)$a['terms'],ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
+   $content.='<div style="border:1px solid #c0d6cc;padding:12px;margin:12px 0">'
+       .'<p>شماره الحاقیه: <strong>'.$no.'</strong> | بازه: '.$from.' تا '.$end.'</p>'
+       .'<p>درصد: '.self::persian(number_format((int)$a['rate_milli_percent']/1000,3)).'٪ | علت: '.$reason.'</p>'
+       .'<p>مبلغ اولیه: '.self::persian(number_format((int)$a['old_amount_irr'])).' ریال</p>'
+       .'<p>تخفیف: '.self::persian(number_format((int)$a['discount_amount_irr'])).' ریال</p>'
+       .'<p>مبلغ اصلاح‌شده: '.self::persian(number_format((int)$a['effective_amount_irr'])).' ریال</p>'
+       .'<p>'.$terms.'</p></div>';
+  }
+  $content.='<p>این الحاقیه صرفاً ثبت رسمی تعدیل است و به معنای امضای تازه والدین نیست.</p></section>';
+  if(preg_match('/<body\\b[^>]*>/i',$html,$match,PREG_OFFSET_CAPTURE)){
+   $position=$match[0][1]+strlen($match[0][0]);
+   return substr($html,0,$position).$content.substr($html,$position);
+  }
+  return $content.$html;
+ }
  public static function printable(int $uid,int $agencyId,int $contractId): array {
   self::scope($uid,$agencyId);$pdo=Connection::get();self::ensureSchema($pdo);
   $q=$pdo->prepare('SELECT id,contract_no,rendered_html,snapshot_json,issued_at,party_type,party_id,start_date,end_date,amount FROM contracts WHERE id=? AND agency_id=?');
@@ -770,7 +820,7 @@ HTML;
    // Do not alter an archived document in storage. Label reconstructed copies
    // only in the returned print view, never as an original signed issuance.
    $html=$reconstructed?self::markReconstructed((string)$row['rendered_html']):(string)$row['rendered_html'];
-   return ['html'=>self::vehicleClassAppendixPrint($pdo,$agencyId,$contractId,$html),'contractNo'=>$row['contract_no'],'legacyReconstructed'=>$reconstructed];
+   return ['html'=>self::studentDiscountAppendixPrint($pdo,$agencyId,$contractId,self::vehicleClassAppendixPrint($pdo,$agencyId,$contractId,$html)),'contractNo'=>$row['contract_no'],'legacyReconstructed'=>$reconstructed];
   }
   // Existing records before versioned issuance have no historical content.
   // Provide an explicitly watermarked reconstruction, never claim it is the
@@ -789,6 +839,6 @@ HTML;
    'payment20'=>self::persian(number_format((int)round($total*.2),0,'.',','))];
   // The current-data reconstruction must remain distinguishable from an original.
   $html=self::markReconstructed(self::document(self::template($pdo,$kind)['body_html'],$values));
-  return ['html'=>self::vehicleClassAppendixPrint($pdo,$agencyId,$contractId,$html),'contractNo'=>$row['contract_no'],'legacyReconstructed'=>true];
+  return ['html'=>self::studentDiscountAppendixPrint($pdo,$agencyId,$contractId,self::vehicleClassAppendixPrint($pdo,$agencyId,$contractId,$html)),'contractNo'=>$row['contract_no'],'legacyReconstructed'=>true];
  }
 }
