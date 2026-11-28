@@ -465,10 +465,10 @@ final class OperationsService
             if($estimateRequested){
                 foreach($discountHistory[$studentId.':'.$serviceId.':'.(int)$member['driver_id']]??[] as $discount){
                     $lo=max($from,(string)$discount['effective_from']);
-                    $hi=min($to,(new \\DateTimeImmutable((string)$discount['effective_to']))->modify('-1 day')->format('Y-m-d'));
+                    $hi=min($to,(new \DateTimeImmutable((string)$discount['effective_to']))->modify('-1 day')->format('Y-m-d'));
                     if($lo>$hi)continue;
-                    $days=(new \\DateTimeImmutable($lo))->diff(new \\DateTimeImmutable($hi))->days+1;
-                    $allDays=(new \\DateTimeImmutable($from))->diff(new \\DateTimeImmutable($to))->days+1;
+                    $days=(new \DateTimeImmutable($lo))->diff(new \DateTimeImmutable($hi))->days+1;
+                    $allDays=(new \DateTimeImmutable($from))->diff(new \DateTimeImmutable($to))->days+1;
                     $fullDiscount=StudentDiscountMath::calculate(0,$monthly,(int)$discount['rate_milli_percent'],false,true)['driverDiscount'];
                     $individualDiscount+=intdiv($fullDiscount*$days+intdiv($allDays,2),$allDays);
                 }
