@@ -41,6 +41,7 @@ final class FinancialReconciliation {
   foreach(array_chunk($students,300) as $studentBatch){
    // Do not retain all agency invoices/contracts until the entire report ends.
    $contractsByStudent=[];$invoicesByStudent=[];$adjustments=[];$periods=[];
+   $studentDiscountContract=[];$studentDiscountInvoice=[];$studentDiscountStudent=[];
    $ids=array_map('intval',array_column($studentBatch,'id'));
    $marks=implode(',',array_fill(0,count($ids),'?'));
    if(VehicleClassSchema::exists($pdo)){
@@ -56,13 +57,31 @@ final class FinancialReconciliation {
     $q->execute([$aid,...$ids]);
     foreach($q->fetchAll(PDO::FETCH_ASSOC) as $r)$periods[(int)$r['subject_id']][]=$r;
    }
+   if(StudentDiscountSchema::exists($pdo)){
+    $dq=$pdo->prepare("SELECT student_id,contract_id,invoice_id,
+        SUM(student_discount_irr) discount_irr
+        FROM student_discount_financial_effects
+        WHERE agency_id=? AND student_id IN ($marks)
+          AND ".StudentBalance::yearSql('academic_year')."=?
+          AND effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
+        GROUP BY student_id,contract_id,invoice_id");
+    $dq->execute([$aid,...$ids,$year]);
+    foreach($dq->fetchAll(PDO::FETCH_ASSOC) as $entry){
+     $delta=(int)$entry['discount_irr'];
+     $cid=(int)$entry['contract_id'];$iid=(int)$entry['invoice_id'];$sid=(int)$entry['student_id'];
+     $studentDiscountContract[$cid]=($studentDiscountContract[$cid]??0)+$delta;
+     $studentDiscountInvoice[$iid]=($studentDiscountInvoice[$iid]??0)+$delta;
+     $studentDiscountStudent[$sid]=($studentDiscountStudent[$sid]??0)+$delta;
+    }
+   }
    $c=$pdo->prepare("SELECT c.party_id,c.id,c.amount,c.start_date,c.end_date,c.status,m.invoice_id,m.academic_year FROM contracts c LEFT JOIN student_contract_invoices m ON m.contract_id=c.id AND m.agency_id=c.agency_id AND m.student_id=c.party_id WHERE c.agency_id=? AND c.party_type='student' AND c.party_id IN ($marks) AND c.status<>'cancelled' AND (c.start_date IS NULL OR c.end_date IS NULL OR (c.start_date<=? AND c.end_date>=?)) ORDER BY c.id");
    $c->execute([$aid,...$ids,$bounds['endDate'],$bounds['startDate']]);
    foreach($c->fetchAll(PDO::FETCH_ASSOC) as $contract){
     $sid=(int)$contract['party_id'];unset($contract['party_id']);
     $contract['class_adjustment_amount']=0;
     try{if(ContractBilling::year((string)($contract['academic_year']??''))===$year)$contract['class_adjustment_amount']=$adjustments[$sid]??0;}catch(AuthException $e){}
-    $contract['effective_amount']=(int)$contract['amount']+$contract['class_adjustment_amount'];
+    $contract['student_discount_amount']=$studentDiscountContract[(int)$contract['id']]??0;
+    $contract['effective_amount']=(int)$contract['amount']+$contract['class_adjustment_amount']-$contract['student_discount_amount'];
     $contractsByStudent[$sid][]=$contract;
    }
    $i=$pdo->prepare("SELECT i.party_id,i.id,i.amount,i.status,i.title,i.issue_date,m.academic_year contract_year,l.academic_year legacy_year FROM invoices i LEFT JOIN student_contract_invoices m ON m.invoice_id=i.id AND m.agency_id=i.agency_id AND m.student_id=i.party_id LEFT JOIN student_service_debt_invoices l ON l.invoice_id=i.id AND l.agency_id=i.agency_id AND l.student_id=i.party_id WHERE i.agency_id=? AND i.party_type='student' AND i.party_id IN ($marks) ORDER BY i.id");
@@ -71,12 +90,14 @@ final class FinancialReconciliation {
     $sid=(int)$invoice['party_id'];unset($invoice['party_id']);
     $invoice['class_adjustment_amount']=0;
     try{if(ContractBilling::year((string)($invoice['contract_year']??''))===$year)$invoice['class_adjustment_amount']=$adjustments[$sid]??0;}catch(AuthException $e){}
-    $invoice['effective_amount']=(int)$invoice['amount']+$invoice['class_adjustment_amount'];
+    $invoice['student_discount_amount']=$studentDiscountInvoice[(int)$invoice['id']]??0;
+    $invoice['effective_amount']=(int)$invoice['amount']+$invoice['class_adjustment_amount']-$invoice['student_discount_amount'];
     $invoicesByStudent[$sid][]=$invoice;
    }
    foreach($studentBatch as $st){
    $flags=[];$expected=null;$months=null;
    $sid=(int)$st['id'];
+   if($expected!==null)$expected-=$studentDiscountStudent[$sid]??0;
    try{$months=ServiceFinancialBasis::monthsOfStudent($st);$expected=VehicleClassEffectiveDates::annualEntitlement($year,$months===8.5,(int)$st['monthly_fee'],$periods[$sid]??[]);}catch(AuthException $e){$flags[]='مقطع یا تاریخچه نرخ نامعتبر';}
    $contracts=$contractsByStudent[$sid]??[];
    $invoices=$invoicesByStudent[$sid]??[];
