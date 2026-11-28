@@ -131,6 +131,21 @@ final class StudentServiceBilling {
       $annualGross+=(int)round((float)$row['base_monthly']*$months);
     }
   }
+  $driverDiscounts=[];
+  if(StudentDiscountSchema::exists($pdo)){
+   $q=$pdo->prepare("SELECT e.id,e.student_id,e.service_id,e.effective_date,e.driver_discount_irr
+       FROM student_discount_financial_effects e
+       JOIN students st ON st.id=e.student_id AND st.agency_id=e.agency_id AND st.is_active=1
+       JOIN service_students ss ON ss.student_id=st.id AND ss.service_id=e.service_id
+       JOIN services sv ON sv.id=e.service_id AND sv.agency_id=e.agency_id AND sv.driver_id=e.driver_id
+       WHERE e.agency_id=? AND e.driver_id=? AND sv.is_active=1 AND sv.status='active'
+        AND ".StudentBalance::yearSql('e.academic_year')."=".StudentBalance::yearSql('st.academic_year')."
+       ORDER BY e.effective_date,e.id");
+   $q->execute([$agencyId,$driverId]);
+   $driverDiscounts=$q->fetchAll(PDO::FETCH_ASSOC);
+   $annualGross-=(int)array_sum(array_column($driverDiscounts,'driver_discount_irr'));
+   if($annualGross<0)throw new AuthException(409,'کسر تخفیف از مبنای سالانه راننده بیشتر است؛ بررسی مالی لازم است.','DISCOUNT_DRIVER_RECONCILIATION_REQUIRED');
+  }
   $deductions=OperationsService::driverDeductions($annualGross,$agencyId);
   $annualNet=(float)$deductions['net_earned'];
   $p=$pdo->prepare('SELECT id,amount,payment_date,reference_no FROM driver_payments WHERE agency_id=? AND driver_id=? ORDER BY payment_date DESC,id DESC');
@@ -145,7 +160,7 @@ final class StudentServiceBilling {
     'reference_no'=>null,'source'=>'ledger'];
   }
   usort($paid,static fn($a,$b)=>strcmp((string)$b['payment_date'],(string)$a['payment_date']) ?: (int)$b['id']<=>(int)$a['id']);
-  return ['services'=>$services,'payments'=>$paid,'monthlyEntitlement'=>$monthly,
+  return ['services'=>$services,'payments'=>$paid,'studentDiscounts'=>$driverDiscounts,'monthlyEntitlement'=>$monthly,
    'estimatedAnnualEntitlement'=>$annualNet,'grossAnnualEntitlement'=>$annualGross,'paidTotal'=>$paidTotal,
    'remaining'=>max(0,$annualNet-$paidTotal),'overpaid'=>max(0,$paidTotal-$annualNet),
    'note'=>'برآورد سالانه بر اساس نرخ دانش‌آموزان تخصیص‌یافته و کسورات شرکت است؛ پرداخت‌های ثبت‌شده به راننده از آن کسر می‌شوند. اسناد نهایی حقوق مستقل هستند.'];
