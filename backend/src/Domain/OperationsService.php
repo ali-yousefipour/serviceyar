@@ -294,7 +294,7 @@ final class OperationsService
                 d.effective_from,d.effective_to
                 FROM student_discounts d JOIN student_discount_financial_effects e
                   ON e.discount_id=d.id AND e.agency_id=d.agency_id AND e.event_type='create'
-                WHERE d.agency_id=? AND d.apply_to_driver=1
+                WHERE d.agency_id=? AND d.status<>'cancelled' AND d.apply_to_driver=1
                   AND d.effective_from<=? AND d.effective_to>?
                 ORDER BY d.student_id,d.effective_from,d.id");
             $dq->execute([$aid,$to,$from]);
