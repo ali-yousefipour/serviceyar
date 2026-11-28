@@ -30,4 +30,25 @@ try {
  P::split('2026-02-30','2026-03-15',[]);
  throw new RuntimeException('Invalid date accepted');
 } catch (InvalidArgumentException $e) {}
+// A period can contain several tariff-derived segments; the authoritative quote
+// must be called once per segment and never receive a previously discounted base.
+$quotes=[];
+$aggregate=P::calculatePeriod('2026-11-01','2026-12-01',[$d,$d2],
+    static function(string $from,string $to) use (&$quotes): array {
+        $quotes[]=$from.'..'.$to;
+        return ['studentBase'=>1000,'driverBase'=>800];
+    });
+same($quotes,['2026-11-01..2026-11-15','2026-11-15..2026-11-25','2026-11-25..2026-12-01']);
+same($aggregate['studentBase'],3000);
+same($aggregate['driverBase'],2400);
+same($aggregate['studentDiscount'],200);
+same($aggregate['driverDiscount'],160);
+same($aggregate['studentNet'],2800);
+same($aggregate['driverNet'],2240);
+same($aggregate['companyShare'],560);
+same(count($aggregate['segments']),3);
+try {
+ P::calculatePeriod('2026-11-01','2026-12-01',[],static fn(): array=>['studentBase'=>1000.0,'driverBase'=>800]);
+ throw new RuntimeException('Non-integer quote accepted');
+} catch (InvalidArgumentException $e) {}
 echo "Student discount period tests passed\n";
