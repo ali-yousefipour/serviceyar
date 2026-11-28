@@ -1016,6 +1016,20 @@ try {
   Response::json(['ok'=>true,'data'=>DomainService::lookupVehicleByPlate($s['id'],$aid,$value)]);
  }
 
+ if($path==='/api/v1/student-discounts'){
+  if($method==='GET'){
+   header('Cache-Control: private, no-store');
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\StudentDiscountService::listing($s['id'],$aid,$_GET)]);
+  }
+  if($method==='POST'){
+   $auth->requireCsrf($s);
+   Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\StudentDiscountService::create($s['id'],$aid,Request::json())],201);
+  }
+ }
+ if($method==='GET'&&preg_match('#^/api/v1/student-discounts/([0-9]+)$#D',$path,$discountMatch)){
+  header('Cache-Control: private, no-store');
+  Response::json(['ok'=>true,'data'=>\ServiceYar\Domain\StudentDiscountService::details($s['id'],$aid,(int)$discountMatch[1])]);
+ }
  // A read-only financial preflight: this route never writes discounts or documents.
  if($method==='POST'&&$path==='/api/v1/student-discounts/preview'){
   $auth->requireCsrf($s);
