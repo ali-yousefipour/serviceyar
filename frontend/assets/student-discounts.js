@@ -53,7 +53,7 @@ window.studentDiscountsPage=async function studentDiscountsPage(token){
    let body='';
    if(stage===0){
     const options=selected.filter(x=>Number(x.is_active??1)!==0).map(x=>'<option value="'+Number(x.id)+'">'+esc([x.first_name,x.last_name].filter(Boolean).join(' '))+' · '+esc(x.national_code||'')+'</option>').join('');
-    body=field('دانش‌آموز','<select id="sdStudent" required><option value="">انتخاب دانش‌آموز…</option>'+options+'</select>')+
+    body=field('جستجوی دانش‌آموز','<input id="sdStudentSearch" type="search" placeholder="نام، نام خانوادگی یا کد ملی" autocomplete="off">')+field('دانش‌آموز','<select id="sdStudent" required><option value="">انتخاب دانش‌آموز…</option>'+options+'</select>')+
      field('درصد تخفیف','<input id="sdPercent" inputmode="decimal" required value="'+esc(values.percent)+'">');
    }
    if(stage===1)body=field('علت تخفیف','<textarea id="sdReason" rows="5" maxlength="4000" required>'+esc(values.reason)+'</textarea>');
@@ -70,6 +70,7 @@ window.studentDiscountsPage=async function studentDiscountsPage(token){
       ['اختلاف ناخالص',money(a.companyShare||0)]
     ].map(([k,v])=>'<div><small>'+k+'</small><strong>'+esc(v)+'</strong></div>').join('')+'</div>'+
     '<p>قرارداد: '+esc(preview?.contractNo||'—')+' | تاریخ مؤثر: '+esc(window.ServiceYarDates?.toSolar(values.effectiveFrom)||values.effectiveFrom)+'</p>'+
+    '<p>مانده قبل: '+money(preview?.accountBefore?.balance||0)+' | پرداخت قبلی: '+money(preview?.accountAfter?.paid||0)+' | مانده بعد: '+money(preview?.accountAfter?.balance||0)+' | بستانکاری احتمالی: '+money(preview?.accountAfter?.credit||0)+'</p>'+
     '<p class="sy-discount-warning">این پیش‌نمایش از API مالی دریافت شده است. سند اصلی و پرداخت‌های ثبت‌شده حفظ می‌شوند.</p>';
    }
    state.innerHTML='<div class="modal-backdrop"><div class="modal sy-discount-dialog" role="dialog" aria-modal="true" aria-label="ثبت تخفیف"><header><h3>ثبت تخفیف دانش‌آموز</h3><p>مرحله '+number(stage+1)+' از '+number(5)+'</p></header>'+
@@ -83,6 +84,11 @@ window.studentDiscountsPage=async function studentDiscountsPage(token){
     document.getElementById('sdStudent').value=values.studentId;
     document.getElementById('sdPercent').oninput=e=>{values.percent=e.target.value;};
     document.getElementById('sdStudent').onchange=e=>values.studentId=e.target.value;
+    document.getElementById('sdStudentSearch').oninput=e=>{
+     const q=String(e.target.value).trim().replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+     const selector=document.getElementById('sdStudent');
+     [...selector.options].forEach((option,index)=>{if(index>0)option.hidden=Boolean(q)&&!option.textContent.includes(q);});
+    };
    }
    if(stage===1)document.getElementById('sdReason').oninput=e=>values.reason=e.target.value;
    if(stage===2){
