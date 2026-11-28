@@ -97,8 +97,9 @@ final class FinancialReconciliation {
    foreach($studentBatch as $st){
    $flags=[];$expected=null;$months=null;
    $sid=(int)$st['id'];
-   if($expected!==null)$expected-=$studentDiscountStudent[$sid]??0;
+
    try{$months=ServiceFinancialBasis::monthsOfStudent($st);$expected=VehicleClassEffectiveDates::annualEntitlement($year,$months===8.5,(int)$st['monthly_fee'],$periods[$sid]??[]);}catch(AuthException $e){$flags[]='مقطع یا تاریخچه نرخ نامعتبر';}
+   if($expected!==null)$expected-=$studentDiscountStudent[$sid]??0;
    $contracts=$contractsByStudent[$sid]??[];
    $invoices=$invoicesByStudent[$sid]??[];
    $valid=[];$unknown=[];
