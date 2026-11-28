@@ -16,7 +16,7 @@ final class StudentBalance {
  public static function invoicesSql(): string {
   $base="(SELECT COALESCE(SUM(i.amount),0) FROM invoices i WHERE i.party_type='student' AND i.party_id=students.id AND i.agency_id=students.agency_id AND i.status<>'cancelled')";
   if(VehicleClassSchema::exists())$base="($base + (SELECT COALESCE(SUM(adj.amount_irr),0) FROM vehicle_class_debt_adjustments adj WHERE adj.student_id=students.id AND adj.agency_id=students.agency_id AND adj.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)))";
-  if(StudentDiscountSchema::exists())$base="($base - (SELECT COALESCE(SUM(sd.student_discount_irr),0) FROM student_discount_financial_effects sd WHERE sd.student_id=students.id AND sd.agency_id=students.agency_id AND sd.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)))";
+  if(StudentDiscountSchema::exists())$base="($base - (SELECT COALESCE(SUM(CASE WHEN sd.event_type='create' THEN sd.student_discount_irr ELSE -sd.student_discount_irr END),0) FROM student_discount_financial_effects sd WHERE sd.student_id=students.id AND sd.agency_id=students.agency_id AND sd.effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)))";
   return $base;
  }
  public static function receiptsSql(): string {
@@ -52,7 +52,7 @@ final class StudentBalance {
   }
   }
   if(StudentDiscountSchema::exists($pdo)){
-   $q=$pdo->prepare("SELECT academic_year,SUM(student_discount_irr) amount FROM student_discount_financial_effects
+   $q=$pdo->prepare("SELECT academic_year,SUM(CASE WHEN event_type='create' THEN student_discount_irr ELSE -student_discount_irr END) amount FROM student_discount_financial_effects
        WHERE agency_id=? AND student_id=? AND effective_date<=DATE(UTC_TIMESTAMP() + INTERVAL 210 MINUTE)
        GROUP BY academic_year");
    $q->execute([$agency,$student]);
