@@ -225,7 +225,7 @@ final class StudentDiscountService
             $where[]='s.school_id=?';$args[]=$id;
         }
         $sql="SELECT d.id,d.student_id,d.contract_id,d.rate_milli_percent,d.reason,
-             d.effective_from,d.effective_to,d.apply_to_student,d.apply_to_driver,d.created_at,
+             d.effective_from,d.effective_to,d.apply_to_student,d.apply_to_driver,d.status,d.created_at,
              CONCAT_WS(' ',s.first_name,s.last_name) student_name,sc.name school_name,
              e.driver_id,e.service_id,e.invoice_id,
              COALESCE(x.student_discount_irr,0) student_discount_irr,
