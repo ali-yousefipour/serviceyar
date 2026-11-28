@@ -59,7 +59,7 @@ final class FinancialReconciliation {
    }
    if(StudentDiscountSchema::exists($pdo)){
     $dq=$pdo->prepare("SELECT student_id,contract_id,invoice_id,
-        SUM(student_discount_irr) discount_irr
+        SUM(CASE WHEN event_type='create' THEN student_discount_irr ELSE -student_discount_irr END) discount_irr
         FROM student_discount_financial_effects
         WHERE agency_id=? AND student_id IN ($marks)
           AND ".StudentBalance::yearSql('academic_year')."=?
