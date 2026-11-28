@@ -67,7 +67,8 @@ final class StudentServiceBilling {
   $studentDiscounts=[];
   if(StudentDiscountSchema::exists($pdo)){
    $q=$pdo->prepare("SELECT id,discount_id,invoice_id,contract_id,academic_year,effective_date,
-       student_discount_irr,driver_discount_irr
+       CASE WHEN event_type='create' THEN student_discount_irr ELSE -student_discount_irr END student_discount_irr,
+       CASE WHEN event_type='create' THEN driver_discount_irr ELSE -driver_discount_irr END driver_discount_irr
        FROM student_discount_financial_effects
        WHERE agency_id=? AND student_id=? ORDER BY effective_date DESC,id DESC");
    $q->execute([$agencyId,$studentId]);
@@ -133,7 +134,7 @@ final class StudentServiceBilling {
   }
   $driverDiscounts=[];
   if(StudentDiscountSchema::exists($pdo)){
-   $q=$pdo->prepare("SELECT e.id,e.student_id,e.service_id,e.effective_date,e.driver_discount_irr
+   $q=$pdo->prepare("SELECT e.id,e.student_id,e.service_id,e.effective_date,CASE WHEN e.event_type='create' THEN e.driver_discount_irr ELSE -e.driver_discount_irr END driver_discount_irr
        FROM student_discount_financial_effects e
        JOIN students st ON st.id=e.student_id AND st.agency_id=e.agency_id AND st.is_active=1
        JOIN service_students ss ON ss.student_id=st.id AND ss.service_id=e.service_id
